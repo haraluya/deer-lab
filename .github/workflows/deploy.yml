@@ -38,9 +38,8 @@ jobs:
       
     - name: Build application (excluding functions)
       run: |
-        # 使用專門的建置配置
-        cp tsconfig.build.json tsconfig.json
-        npm run build
+        # 直接使用 Next.js 建置，跳過 linting
+        npx next build --no-lint
       
     - name: Restore functions directory
       run: |

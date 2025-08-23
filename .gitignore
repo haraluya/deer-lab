@@ -34,7 +34,6 @@ firebase-debug.log
 firebase-debug.*.log
 
 # Build artifacts
-tsconfig.build.json
 
 # IDE
 .vscode/
