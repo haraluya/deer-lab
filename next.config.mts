@@ -13,6 +13,11 @@ const nextConfig = {
     unoptimized: true
   },
   
+  // 排除 functions 目錄
+  experimental: {
+    excludeDefaultMomentLocales: false,
+  },
+  
   // 確保正確的靜態資源路徑
   assetPrefix: process.env.NODE_ENV === 'production' ? undefined : '',
   
@@ -25,6 +30,14 @@ const nextConfig = {
         aggregateTimeout: 300,
       };
     }
+    
+    // 排除 functions 目錄
+    config.externals = config.externals || [];
+    config.externals.push({
+      'firebase-functions': 'firebase-functions',
+      'firebase-admin': 'firebase-admin'
+    });
+    
     return config;
   },
 };

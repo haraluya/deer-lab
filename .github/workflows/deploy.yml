@@ -26,8 +26,19 @@ jobs:
     - name: Install Firebase CLI
       run: npm install -g firebase-tools
       
-    - name: Build application
-      run: npm run build
+    - name: Build application (excluding functions)
+      run: |
+        # 暫時移除 functions 目錄以避免 TypeScript 錯誤
+        mv functions functions_backup
+        npm run build
+        mv functions_backup functions
+      
+    - name: Build Firebase Functions
+      run: |
+        cd functions
+        npm ci
+        npm run build
+        cd ..
       
     - name: Deploy to Firebase
       if: github.ref == 'refs/heads/main'
