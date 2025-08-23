@@ -26,12 +26,18 @@ jobs:
     - name: Install Firebase CLI
       run: npm install -g firebase-tools
       
-    - name: Build application (excluding functions)
+    - name: Prepare build environment
       run: |
+        # 移除衝突的 ESLint 配置
+        rm -f .eslintrc.json
         # 暫時移除 functions 目錄以避免 TypeScript 錯誤
         mv functions functions_backup
-        npm run build
-        mv functions_backup functions
+      
+    - name: Build application (excluding functions)
+      run: npm run build
+      
+    - name: Restore functions directory
+      run: mv functions_backup functions
       
     - name: Build Firebase Functions
       run: |

@@ -13,11 +13,6 @@ const nextConfig = {
     unoptimized: true
   },
   
-  // 排除 functions 目錄
-  experimental: {
-    excludeDefaultMomentLocales: false,
-  },
-  
   // 確保正確的靜態資源路徑
   assetPrefix: process.env.NODE_ENV === 'production' ? undefined : '',
   
@@ -31,15 +26,29 @@ const nextConfig = {
       };
     }
     
-    // 排除 functions 目錄
+    // 排除 functions 目錄和相關模組
     config.externals = config.externals || [];
     config.externals.push({
       'firebase-functions': 'firebase-functions',
       'firebase-admin': 'firebase-admin'
     });
     
+    // 排除 functions 目錄的檔案
+    config.module.rules.push({
+      test: /functions/,
+      use: 'ignore-loader'
+    });
+    
     return config;
   },
+  
+  // 排除特定目錄和檔案
+  experimental: {
+    excludeDefaultMomentLocales: false,
+  },
+  
+  // 自訂建置輸出目錄
+  distDir: 'out',
 };
 
 export default nextConfig;
