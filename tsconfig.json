@@ -31,5 +31,5 @@
     "tailwind.config.ts",
     "postcss.config.mjs"
   ],
-  "exclude": ["node_modules", "functions/**/*"]
+  "exclude": ["node_modules", "functions/**/*", "functions_backup/**/*"]
 }

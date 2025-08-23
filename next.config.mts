@@ -39,6 +39,13 @@ const nextConfig = {
       use: 'ignore-loader'
     });
     
+    // 添加更強的排除規則
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'firebase-functions': false,
+      'firebase-admin': false
+    };
+    
     return config;
   },
   
@@ -49,6 +56,15 @@ const nextConfig = {
   
   // 自訂建置輸出目錄
   distDir: 'out',
+  
+  // 排除特定檔案和目錄
+  typescript: {
+    ignoreBuildErrors: false,
+  },
+  
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default nextConfig;

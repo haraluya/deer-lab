@@ -32,12 +32,20 @@ jobs:
         rm -f .eslintrc.json
         # 暫時移除 functions 目錄以避免 TypeScript 錯誤
         mv functions functions_backup
+        # 創建一個空的 functions 目錄以避免路徑問題
+        mkdir -p functions
+        echo "# This directory is temporarily empty during build" > functions/README.md
       
     - name: Build application (excluding functions)
-      run: npm run build
+      run: |
+        # 使用專門的建置配置
+        cp tsconfig.build.json tsconfig.json
+        npm run build
       
     - name: Restore functions directory
-      run: mv functions_backup functions
+      run: |
+        rm -rf functions
+        mv functions_backup functions
       
     - name: Build Firebase Functions
       run: |
