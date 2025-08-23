@@ -20,7 +20,14 @@
 4. 如果尚未設定，點擊 "Get started"
 5. 選擇 "Use an existing project" 並選擇 `deer-lab`
 
-#### 2. 取得 Firebase Token
+#### 2. 取得 Firebase 配置
+
+1. 在 Firebase Console 中，點擊專案設定（齒輪圖示）
+2. 在 "General" 標籤中，找到 "Your apps" 區段
+3. 如果沒有 Web 應用程式，點擊 "Add app" → "Web"
+4. 複製 Firebase 配置物件中的值
+
+#### 3. 取得 Firebase Token
 
 在本地端執行以下命令：
 
@@ -37,17 +44,23 @@ firebase login:ci
 
 複製產生的 token。
 
-#### 3. GitHub Secrets 設定
+#### 4. GitHub Secrets 設定
 
 1. 前往 GitHub 專案: https://github.com/haraluya/deer-lab
 2. 點擊 "Settings" 標籤
 3. 在左側選單中點擊 "Secrets and variables" → "Actions"
-4. 點擊 "New repository secret"
-5. 名稱輸入: `FIREBASE_TOKEN`
-6. 值輸入: 步驟 2 取得的 token
-7. 點擊 "Add secret"
+4. 點擊 "New repository secret" 並添加以下 secrets：
 
-#### 4. 推送程式碼
+**必需的 Secrets：**
+- `FIREBASE_TOKEN`: 步驟 3 取得的 token
+- `FIREBASE_API_KEY`: Firebase 配置中的 apiKey
+- `FIREBASE_AUTH_DOMAIN`: Firebase 配置中的 authDomain
+- `FIREBASE_PROJECT_ID`: Firebase 配置中的 projectId
+- `FIREBASE_STORAGE_BUCKET`: Firebase 配置中的 storageBucket
+- `FIREBASE_MESSAGING_SENDER_ID`: Firebase 配置中的 messagingSenderId
+- `FIREBASE_APP_ID`: Firebase 配置中的 appId
+
+#### 5. 推送程式碼
 
 ```bash
 # 確保在主分支
@@ -63,7 +76,7 @@ git commit -m "Setup deployment configuration"
 git push origin main
 ```
 
-#### 5. 自動部署
+#### 6. 自動部署
 
 推送程式碼後，GitHub Actions 會自動：
 1. 建置 Next.js 應用程式
@@ -95,10 +108,12 @@ npm run deploy
 
 1. **建置失敗**: 檢查 Node.js 版本是否為 18+
 2. **部署失敗**: 確認 Firebase token 是否正確設定
-3. **權限問題**: 確認 Firebase 專案權限設定
+3. **環境變數錯誤**: 確認所有 Firebase secrets 都已設定
+4. **權限問題**: 確認 Firebase 專案權限設定
 
 ### 注意事項
 
 - 每次推送到 `main` 分支都會觸發自動部署
 - 部署過程約需 2-5 分鐘
 - 可以在 GitHub Actions 頁面查看部署狀態
+- 確保所有 Firebase 環境變數都已正確設定
