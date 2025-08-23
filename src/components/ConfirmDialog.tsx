@@ -1,0 +1,51 @@
+// src/components/ConfirmDialog.tsx
+'use client';
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "./ui/button";
+
+interface ConfirmDialogProps {
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
+  onConfirm: () => void;
+  title: string;
+  description: string;
+}
+
+export function ConfirmDialog({
+  isOpen,
+  onOpenChange,
+  onConfirm,
+  title,
+  description,
+}: ConfirmDialogProps) {
+  return (
+    <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="bg-white dark:bg-slate-900" aria-describedby="confirm-dialog-description">
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription id="confirm-dialog-description">
+            {description}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel asChild>
+            <Button variant="outline">取消</Button>
+          </AlertDialogCancel>
+          <AlertDialogAction asChild>
+            <Button onClick={onConfirm}>確認</Button>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
