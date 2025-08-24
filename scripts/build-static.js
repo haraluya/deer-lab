@@ -106,6 +106,10 @@ function buildStatic() {
   console.log('🔧 修正 HTML 檔案路徑...');
   fixHtmlPaths();
   
+  // 修正 CSS 檔案中的路徑
+  console.log('🔧 修正 CSS 檔案路徑...');
+  fixCssPaths();
+  
   // 驗證建置結果
   validateBuild();
   
@@ -212,6 +216,43 @@ function fixHtmlPaths() {
     // 寫回檔案
     fs.writeFileSync(filePath, content);
     console.log(`✅ 修正路徑: ${path.relative(outDir, filePath)}`);
+  });
+}
+
+// 修正 CSS 檔案中的路徑
+function fixCssPaths() {
+  const outDir = path.join(__dirname, '..', 'out');
+  const cssDir = path.join(outDir, 'static/css');
+  
+  if (!fs.existsSync(cssDir)) {
+    console.log('⚠️  CSS 目錄不存在，跳過 CSS 路徑修正');
+    return;
+  }
+  
+  const cssFiles = fs.readdirSync(cssDir).filter(file => file.endsWith('.css'));
+  
+  cssFiles.forEach(fileName => {
+    const filePath = path.join(cssDir, fileName);
+    let content = fs.readFileSync(filePath, 'utf8');
+    
+    // 修正字體檔案路徑
+    const patterns = [
+      { from: /url\(\/_next\/static\/media\//g, to: 'url(/static/media/' },
+      { from: /url\("\/_next\/static\/media\//g, to: 'url("/static/media/' },
+      { from: /url\('\/_next\/static\/media\//g, to: "url('/static/media/" },
+      { from: /url\(\/next\/static\/media\//g, to: 'url(/static/media/' },
+      { from: /url\("\/next\/static\/media\//g, to: 'url("/static/media/' },
+      { from: /url\('\/next\/static\/media\//g, to: "url('/static/media/" }
+    ];
+    
+    // 應用所有修正模式
+    patterns.forEach(pattern => {
+      content = content.replace(pattern.from, pattern.to);
+    });
+    
+    // 寫回檔案
+    fs.writeFileSync(filePath, content);
+    console.log(`✅ 修正 CSS 路徑: ${fileName}`);
   });
 }
 
