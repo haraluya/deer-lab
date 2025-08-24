@@ -13,6 +13,9 @@ export const testFunction = onRequest((request, response) => {
   });
 });
 
+// 匯出測試函數
+export * from "./api/test";
+
 // 暫時註解掉複雜的模組匯出，避免建置錯誤
 /*
 export * from "./api/users";
