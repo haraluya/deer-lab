@@ -42,6 +42,16 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  
+  // 靜態匯出配置
+  trailingSlash: false,
+  skipTrailingSlashRedirect: true,
+  
+  // 確保正確的基礎路徑
+  basePath: '',
+  
+  // 確保正確的資產前綴
+  assetPrefix: '',
 };
 
 export default nextConfig;
