@@ -45,10 +45,6 @@ jobs:
         # 執行建置
         npm run build-static
         
-        # 執行路徑修正
-        echo "🔧 Running path fix script..."
-        node scripts/fix-paths.js
-        
         # 確保所有必要的頁面都存在
         echo "🔍 Checking generated pages..."
         if [ ! -f "out/index.html" ]; then
@@ -60,6 +56,14 @@ jobs:
           echo "❌ dashboard.html not found, creating basic one"
           echo '<!DOCTYPE html><html><head><title>Deer Lab Dashboard</title><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><div id="root"><h1>Deer Lab Dashboard</h1><p>Loading application...</p></div></body></html>' > out/dashboard.html
         fi
+        
+        # 執行路徑修正
+        echo "🔧 Running path fix script..."
+        node scripts/fix-paths.js
+        
+        # 驗證建置結果
+        echo "🔍 Verifying build result..."
+        node scripts/verify-build.js
         
         # 恢復 functions 目錄
         if [ -d "functions_backup" ]; then

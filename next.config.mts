@@ -51,7 +51,7 @@ const nextConfig = {
   basePath: '',
   
   // 修正靜態匯出的資產路徑問題 - 使用相對路徑
-  assetPrefix: './',
+  assetPrefix: '',
   
   // 修正靜態匯出的資產路徑問題
   experimental: {
