@@ -44,14 +44,14 @@ const nextConfig = {
   },
   
   // 靜態匯出配置
-  trailingSlash: true,
+  trailingSlash: false,
   skipTrailingSlashRedirect: true,
   
   // 確保正確的基礎路徑
   basePath: '',
   
   // 修正靜態匯出的資產路徑問題 - 使用相對路徑
-  assetPrefix: './',
+  assetPrefix: '',
   
   // 修正靜態匯出的資產路徑問題
   experimental: {
@@ -68,6 +68,24 @@ const nextConfig = {
   
   // 確保靜態匯出時的路徑正確
   generateEtags: false,
+  
+  // 改善靜態匯出的路徑處理
+  distDir: 'out',
+  
+  // 確保正確的靜態檔案路徑
+  async headers() {
+    return [
+      {
+        source: '/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

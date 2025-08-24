@@ -61,6 +61,13 @@ function buildStatic() {
   // 確保基本頁面存在
   ensureBasicPages();
   
+  // 修正所有 HTML 檔案的路徑
+  console.log('🔧 修正 HTML 檔案路徑...');
+  fixHtmlPaths();
+  
+  // 驗證建置結果
+  validateBuild();
+  
   console.log('✅ 靜態建置完成！');
 }
 
@@ -100,6 +107,93 @@ function ensureBasicPages() {
       console.log(`✅ 確保 ${path.basename(page.path)} 存在`);
     }
   });
+}
+
+// 修正 HTML 檔案中的路徑
+function fixHtmlPaths() {
+  const outDir = path.join(__dirname, '..', 'out');
+  
+  // 遞迴查找所有 HTML 檔案
+  function findHtmlFiles(dir) {
+    const files = [];
+    const items = fs.readdirSync(dir);
+    
+    items.forEach(item => {
+      const fullPath = path.join(dir, item);
+      const stats = fs.statSync(fullPath);
+      
+      if (stats.isDirectory()) {
+        files.push(...findHtmlFiles(fullPath));
+      } else if (item.endsWith('.html')) {
+        files.push(fullPath);
+      }
+    });
+    
+    return files;
+  }
+  
+  const htmlFiles = findHtmlFiles(outDir);
+  
+  htmlFiles.forEach(filePath => {
+    let content = fs.readFileSync(filePath, 'utf8');
+    
+    // 修正路徑模式
+    const patterns = [
+      // 修正 href 屬性中的路徑
+      { from: /href="\/_next\/static\//g, to: 'href="/static/' },
+      // 修正 src 屬性中的路徑
+      { from: /src="\/_next\/static\//g, to: 'src="/static/' },
+      // 修正 JavaScript 字串中的路徑（雙引號）
+      { from: /"\/_next\/static\//g, to: '"/static/' },
+      // 修正 JavaScript 字串中的路徑（單引號）
+      { from: /'\/_next\/static\//g, to: "'/static/" },
+      // 修正 JavaScript 字串中的路徑（模板字串）
+      { from: /`\/_next\/static\//g, to: '`/static/' },
+      // 修正相對路徑
+      { from: /href="\.\/static\//g, to: 'href="/static/' },
+      { from: /src="\.\/static\//g, to: 'src="/static/' },
+      // 修正其他可能的 Next.js 路徑
+      { from: /\/_next\//g, to: '/static/' }
+    ];
+    
+    // 應用所有修正模式
+    patterns.forEach(pattern => {
+      content = content.replace(pattern.from, pattern.to);
+    });
+    
+    // 寫回檔案
+    fs.writeFileSync(filePath, content);
+    console.log(`✅ 修正路徑: ${path.relative(outDir, filePath)}`);
+  });
+}
+
+// 驗證建置結果
+function validateBuild() {
+  const outDir = path.join(__dirname, '..', 'out');
+  
+  // 檢查必要檔案是否存在
+  const requiredFiles = [
+    'index.html',
+    'static/chunks',
+    'static/css',
+    'manifest.json'
+  ];
+  
+  requiredFiles.forEach(file => {
+    const filePath = path.join(outDir, file);
+    if (!fs.existsSync(filePath)) {
+      console.warn(`⚠️  警告: ${file} 不存在`);
+    } else {
+      console.log(`✅ 驗證: ${file} 存在`);
+    }
+  });
+  
+  // 檢查 JavaScript 檔案
+  const chunksDir = path.join(outDir, 'static/chunks');
+  if (fs.existsSync(chunksDir)) {
+    const jsFiles = fs.readdirSync(chunksDir).filter(file => file.endsWith('.js'));
+    console.log(`✅ 找到 ${jsFiles.length} 個 JavaScript 檔案`);
+  }
 }
 
 // 執行建置

@@ -6,12 +6,15 @@
     "dev": "next dev --port 8080",
     "build": "npx next build",
     "build-static": "node scripts/build-static.js",
-    "build-fixed": "npx next build && node scripts/fix-paths.js",
-    "build-github": "npx next build && node scripts/fix-paths.js",
+    "build-fixed": "node scripts/build-static.js",
+    "build-github": "node scripts/build-static.js",
     "start": "next start",
     "lint": "next lint",
     "export": "next build",
-    "deploy": "npm run build-fixed && firebase deploy"
+    "deploy": "npm run build-static && firebase deploy --only hosting",
+    "deploy-only": "firebase deploy --only hosting",
+    "test-deployment": "node scripts/test-deployment.js",
+    "deploy-and-test": "npm run deploy && npm run test-deployment"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

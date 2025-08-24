@@ -1,4 +1,4 @@
-name: Deploy to Firebase
+name: Deploy to Firebase Hosting
 
 on:
   push:
@@ -11,91 +11,38 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
-    
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '18'
         cache: 'npm'
-    
+        
     - name: Install dependencies
       run: npm ci
-    
-    - name: Install Firebase CLI
-      run: npm install -g firebase-tools
-    
-    - name: Make build script executable
-      run: chmod +x build-static.sh
-    
-    - name: Build application
-      env:
-        NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
-        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
-        NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
-        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
-        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
-        NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
-      run: |
-        # 暫時移動 functions 目錄
-        if [ -d "functions" ]; then
-          mv functions functions_backup
-        fi
-        
-        # 執行建置
-        npm run build-static
-        
-        # 確保所有必要的頁面都存在
-        echo "🔍 Checking generated pages..."
-        if [ ! -f "out/index.html" ]; then
-          echo "❌ index.html not found, creating basic one"
-          echo '<!DOCTYPE html><html><head><title>Deer Lab</title><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><div id="root">Loading...</div><script>window.location.href = "/dashboard";</script></body></html>' > out/index.html
-        fi
-        
-        if [ ! -f "out/dashboard.html" ]; then
-          echo "❌ dashboard.html not found, creating basic one"
-          echo '<!DOCTYPE html><html><head><title>Deer Lab Dashboard</title><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><div id="root"><h1>Deer Lab Dashboard</h1><p>Loading application...</p></div></body></html>' > out/dashboard.html
-        fi
-        
-        # 複製所有頁面
-        echo "📁 Copying all pages..."
-        node scripts/copy-all-pages.js
-        
-        # 執行徹底的路徑修正
-        echo "🔧 Running complete path fix script..."
-        node scripts/fix-paths-complete.js
-        
-        # 執行客戶端路由修正
-        echo "🔧 Running client routing fix script..."
-        node scripts/fix-client-routing.js
-        
-        # 測試建置結果
-        echo "🧪 Testing build result..."
-        node scripts/test-build.js
-        
-        # 驗證建置結果
-        echo "🔍 Verifying build result..."
-        node scripts/verify-build.js
-        
-        # 恢復 functions 目錄
-        if [ -d "functions_backup" ]; then
-          mv functions_backup functions
-        fi
-    
+      
+    - name: Build project
+      run: npm run build-static
+      
     - name: Verify build output
       run: |
-        echo "Checking out directory..."
-        ls -la out/
-        echo "Number of files in out directory:"
-        find out -type f | wc -l
-        echo "Checking for index.html..."
-        if [ -f "out/index.html" ]; then
-          echo "✅ index.html exists"
-          head -5 out/index.html
-        else
-          echo "❌ index.html not found"
+        if [ ! -f "out/index.html" ]; then
+          echo "❌ Build failed: index.html not found"
           exit 1
         fi
-    
-    - name: Deploy to Firebase Hosting
-      run: firebase deploy --only hosting --token "${{ secrets.FIREBASE_TOKEN }}"
+        if [ ! -d "out/static" ]; then
+          echo "❌ Build failed: static directory not found"
+          exit 1
+        fi
+        echo "✅ Build verification passed"
+        
+    - name: Deploy to Firebase
+      if: github.ref == 'refs/heads/main'
+      uses: FirebaseExtended/action-hosting-deploy@v0
+      with:
+        repoToken: '${{ secrets.GITHUB_TOKEN }}'
+        firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+        channelId: live
+        projectId: deer-lab
