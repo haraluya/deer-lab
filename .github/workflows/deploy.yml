@@ -40,6 +40,9 @@ jobs:
       run: |
         # 直接使用 Next.js 建置，跳過 linting
         npx next build --no-lint
+        # 驗證 out 目錄是否存在
+        ls -la out/
+        echo "Build completed successfully!"
       env:
         NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
         NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
@@ -62,6 +65,9 @@ jobs:
       
     - name: Deploy to Firebase
       if: github.ref == 'refs/heads/main'
-      run: firebase deploy --token "${{ secrets.FIREBASE_TOKEN }}" --project deer-lab
+      run: |
+        # 再次驗證 out 目錄存在
+        ls -la out/
+        firebase deploy --token "${{ secrets.FIREBASE_TOKEN }}" --project deer-lab
       env:
         FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}

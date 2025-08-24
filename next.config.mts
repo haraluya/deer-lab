@@ -36,9 +36,6 @@ const nextConfig = {
     return config;
   },
   
-  // 自訂建置輸出目錄
-  distDir: 'out',
-  
   // 跳過建置時的 ESLint 檢查
   eslint: {
     ignoreDuringBuilds: true,
@@ -48,10 +45,6 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  
-  // 靜態匯出配置
-  trailingSlash: false,
-  skipTrailingSlashRedirect: true,
 };
 
 export default nextConfig;
