@@ -16,8 +16,64 @@
         "destination": "/static/**"
       },
       {
-        "source": "/dashboard/**",
-        "destination": "/dashboard.html"
+        "source": "/dashboard/suppliers",
+        "destination": "/dashboard/suppliers.html"
+      },
+      {
+        "source": "/dashboard/personnel",
+        "destination": "/dashboard/personnel.html"
+      },
+      {
+        "source": "/dashboard/roles",
+        "destination": "/dashboard/roles.html"
+      },
+      {
+        "source": "/dashboard/material-categories",
+        "destination": "/dashboard/material-categories.html"
+      },
+      {
+        "source": "/dashboard/materials",
+        "destination": "/dashboard/materials.html"
+      },
+      {
+        "source": "/dashboard/fragrances",
+        "destination": "/dashboard/fragrances.html"
+      },
+      {
+        "source": "/dashboard/product-series",
+        "destination": "/dashboard/product-series.html"
+      },
+      {
+        "source": "/dashboard/products",
+        "destination": "/dashboard/products.html"
+      },
+      {
+        "source": "/dashboard/purchase-orders",
+        "destination": "/dashboard/purchase-orders.html"
+      },
+      {
+        "source": "/dashboard/production-calculator",
+        "destination": "/dashboard/production-calculator.html"
+      },
+      {
+        "source": "/dashboard/work-orders",
+        "destination": "/dashboard/work-orders.html"
+      },
+      {
+        "source": "/dashboard/inventory",
+        "destination": "/dashboard/inventory.html"
+      },
+      {
+        "source": "/dashboard/reports",
+        "destination": "/dashboard/reports.html"
+      },
+      {
+        "source": "/dashboard/cost-management",
+        "destination": "/dashboard/cost-management.html"
+      },
+      {
+        "source": "/dashboard/test",
+        "destination": "/dashboard/test.html"
       },
       {
         "source": "/dashboard",
