@@ -60,7 +60,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(firebaseUser);
           
           try {
-            const userDocRef = doc(db, 'users', firebaseUser.uid);
+            // 使用工號作為 document ID
+            const employeeId = firebaseUser.email?.split('@')[0]; // 從 email 提取工號
+            console.log('AuthContext: Loading user data for employeeId', employeeId);
+            
+            if (!employeeId) {
+              console.error('AuthContext: No employeeId found in email');
+              setAppUser(null);
+              return;
+            }
+
+            const userDocRef = doc(db, 'users', employeeId);
             const userDocSnap = await getDoc(userDocRef);
 
             if (!isMounted) return;
@@ -75,11 +85,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               console.log('AuthContext: User data loaded', userData);
               setAppUser(userData);
             } else {
-              console.error("Firebase Auth user exists but Firestore document is missing.");
+              console.error("AuthContext: Firestore document not found for employeeId", employeeId);
               setAppUser(null);
             }
           } catch (firestoreError) {
-            console.error('Error loading user data from Firestore:', firestoreError);
+            console.error('AuthContext: Error loading user data from Firestore:', firestoreError);
             setAppUser(null);
           }
         } else {
@@ -88,7 +98,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setAppUser(null);
         }
       } catch (error) {
-        console.error('Error in auth state change:', error);
+        console.error('AuthContext: Error in auth state change:', error);
         if (isMounted) {
           setUser(null);
           setAppUser(null);
