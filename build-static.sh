@@ -108,25 +108,24 @@ if [ -d ".next/static" ]; then
   cp -r .next/static out/
 fi
 
-# 複製 public 檔案（優先）
-echo "Copying public files..."
+# 複製 public 檔案（除了 HTML 檔案，因為我們要使用 Next.js 生成的）
+echo "Copying public files (excluding HTML files)..."
 if [ -d "public" ]; then
   echo "Copying public files..."
-  cp -r public/* out/
+  # 複製除了 HTML 檔案之外的所有檔案
+  find public -type f ! -name "*.html" -exec cp {} out/ \;
+  # 複製目錄結構
+  find public -type d -exec mkdir -p out/{} \;
 fi
 
-# 複製 Next.js 生成的 HTML 檔案（如果 public 中沒有對應的檔案）
+# 複製 Next.js 生成的 HTML 檔案（優先使用 Next.js 生成的）
 echo "Copying Next.js HTML files..."
 if [ -d ".next/server" ]; then
   echo "Finding HTML files in .next/server..."
   find .next/server -name "*.html" -exec sh -c '
     filename=$(basename "$1")
-    if [ ! -f "out/$filename" ]; then
-      echo "Copying $filename to out/"
-      cp "$1" out/
-    else
-      echo "Skipping $filename (already exists in public)"
-    fi
+    echo "Copying $filename to out/"
+    cp "$1" out/
   ' sh {} \;
 fi
 
