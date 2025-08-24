@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { collection, getDocs, DocumentReference, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
-import { AuthWrapper } from '@/components/AuthWrapper';
 import { MaterialDialog, MaterialData } from './MaterialDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { MoreHorizontal, ShoppingCart, ListChecks, Save, X, Loader2, Search, FileSpreadsheet, Eye, Edit, Warehouse, Building, Tag, Package } from 'lucide-react';
@@ -801,8 +800,6 @@ function MaterialsPageContent() {
 
 export default function MaterialsPage() {
   return (
-    <AuthWrapper>
-      <MaterialsPageContent />
-    </AuthWrapper>
+    <MaterialsPageContent />
   );
 }

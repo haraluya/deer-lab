@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
-import { AuthWrapper } from '@/components/AuthWrapper';
+
 import { RoleDialog } from './RoleDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Plus, MoreHorizontal, Trash2, Edit, Eye, Shield, Calendar } from 'lucide-react';
@@ -442,8 +442,6 @@ function RolesPageContent() {
 
 export default function RolesPage() {
   return (
-    <AuthWrapper>
-      <RolesPageContent />
-    </AuthWrapper>
+    <RolesPageContent />
   );
 }

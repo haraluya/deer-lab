@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { AuthWrapper } from '@/components/AuthWrapper'
+
 import { toast } from "sonner"
 import { Plus, Edit, Trash2, Tag, Calendar, MoreHorizontal, Eye } from "lucide-react"
 
@@ -486,8 +486,6 @@ function MaterialCategoriesPageContent() {
 
 export default function MaterialCategoriesPage() {
   return (
-    <AuthWrapper>
-      <MaterialCategoriesPageContent />
-    </AuthWrapper>
+    <MaterialCategoriesPageContent />
   );
 }

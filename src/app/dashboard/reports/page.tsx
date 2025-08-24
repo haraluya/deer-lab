@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { collection, getDocs, query, where, orderBy, limit } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { AuthWrapper } from '@/components/AuthWrapper'
+
 import { toast } from "sonner"
 import { BarChart3, TrendingUp, TrendingDown, Calendar, Package, ShoppingCart, ClipboardList, Factory, DollarSign } from "lucide-react"
 import ErrorBoundary from "@/components/ErrorBoundary"
@@ -852,8 +852,6 @@ function ReportsPageContent() {
 
 export default function ReportsPage() {
   return (
-    <AuthWrapper>
-      <ReportsPageContent />
-    </AuthWrapper>
+    <ReportsPageContent />
   );
 }

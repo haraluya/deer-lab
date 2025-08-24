@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { AuthWrapper } from '@/components/AuthWrapper'
+
 import { toast } from "sonner"
 import { DollarSign, TrendingUp, TrendingDown, Package, Droplets, Factory, Calculator, Calendar, ChevronLeft, ChevronRight } from "lucide-react"
 
@@ -720,8 +720,6 @@ function CostManagementPageContent() {
 
 export default function CostManagementPage() {
   return (
-    <AuthWrapper>
-      <CostManagementPageContent />
-    </AuthWrapper>
+    <CostManagementPageContent />
   );
 }

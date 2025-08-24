@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { collection, getDocs, DocumentReference } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
-import { AuthWrapper } from '@/components/AuthWrapper';
+
 import { SeriesDialog, SeriesData } from './SeriesDialog';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { MoreHorizontal, FileSpreadsheet, Plus, Eye, Edit, Trash2, Tag, Calendar, Package } from 'lucide-react';
@@ -469,8 +469,6 @@ function ProductSeriesPageContent() {
 
 export default function ProductSeriesPage() {
   return (
-    <AuthWrapper>
-      <ProductSeriesPageContent />
-    </AuthWrapper>
+    <ProductSeriesPageContent />
   );
 }

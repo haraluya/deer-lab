@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, getDocs, doc, getDoc, DocumentData, DocumentReference } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { AuthWrapper } from '@/components/AuthWrapper';
+
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { toast } from 'sonner';
 import { Calculator, Factory, Loader2, ChevronsRight, Package, Droplets, Plus } from 'lucide-react';
@@ -573,8 +573,6 @@ function ProductionCalculatorPageContent() {
 
 export default function ProductionCalculatorPage() {
   return (
-    <AuthWrapper>
-      <ProductionCalculatorPageContent />
-    </AuthWrapper>
+    <ProductionCalculatorPageContent />
   );
 }

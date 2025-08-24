@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { collection, getDocs, query, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { AuthWrapper } from '@/components/AuthWrapper'
+
 import { toast } from "sonner"
 import { DataTable } from "./data-table"
 import { columns } from "./columns"
@@ -121,8 +121,6 @@ function WorkOrdersPageContent() {
 
 export default function WorkOrdersPage() {
   return (
-    <AuthWrapper>
-      <WorkOrdersPageContent />
-    </AuthWrapper>
+    <WorkOrdersPageContent />
   );
 }

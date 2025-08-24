@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { AuthWrapper } from '@/components/AuthWrapper';
+
 
 function TestPageContent() {
   const pathname = usePathname();
@@ -50,8 +50,6 @@ function TestPageContent() {
 
 export default function TestPage() {
   return (
-    <AuthWrapper>
-      <TestPageContent />
-    </AuthWrapper>
+    <TestPageContent />
   );
 }

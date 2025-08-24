@@ -5,7 +5,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { collection, getDocs, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
-import { AuthWrapper } from '@/components/AuthWrapper';
 import { SupplierDialog, SupplierData } from './SupplierDialog';
 import { DetailViewDialog } from '@/components/DetailViewDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -498,8 +497,6 @@ function SuppliersPageContent() {
 
 export default function SuppliersPage() {
   return (
-    <AuthWrapper>
-      <SuppliersPageContent />
-    </AuthWrapper>
+    <SuppliersPageContent />
   );
 }

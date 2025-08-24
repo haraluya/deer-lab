@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { collection, getDocs, DocumentReference, QueryDocumentSnapshot, DocumentData, doc, updateDoc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
-import { AuthWrapper } from '@/components/AuthWrapper';
 import { FragranceDialog, FragranceData } from './FragranceDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { MoreHorizontal, ShoppingCart, Search, Package, Calculator, FileSpreadsheet, Warehouse, Plus, Eye, Edit, Droplets, Building, Calendar } from 'lucide-react';
@@ -788,8 +787,6 @@ function FragrancesPageContent() {
 
 export default function FragrancesPage() {
   return (
-    <AuthWrapper>
-      <FragrancesPageContent />
-    </AuthWrapper>
+    <FragrancesPageContent />
   );
 }

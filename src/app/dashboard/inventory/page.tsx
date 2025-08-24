@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { collection, getDocs, doc, updateDoc, addDoc, query, where, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { AuthWrapper } from '@/components/AuthWrapper'
 import { toast } from "sonner"
 import { Search, Plus, Minus, Package, TrendingUp, TrendingDown, AlertTriangle, Warehouse, Calendar } from "lucide-react"
 
@@ -649,8 +648,6 @@ function InventoryPageContent() {
 
 export default function InventoryPage() {
   return (
-    <AuthWrapper>
-      <InventoryPageContent />
-    </AuthWrapper>
+    <InventoryPageContent />
   );
 }
