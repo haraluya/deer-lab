@@ -61,6 +61,10 @@ jobs:
         echo "🔧 Running path fix script..."
         node scripts/fix-paths.js
         
+        # 執行客戶端路由修正
+        echo "🔧 Running client routing fix script..."
+        node scripts/fix-client-routing.js
+        
         # 驗證建置結果
         echo "🔍 Verifying build result..."
         node scripts/verify-build.js

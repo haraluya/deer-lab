@@ -57,6 +57,8 @@ const nextConfig = {
   experimental: {
     // 確保靜態匯出時資產路徑正確
     outputFileTracingRoot: process.cwd(),
+    // 啟用靜態匯出優化
+    optimizePackageImports: ['lucide-react'],
   },
   
   // 自定義靜態匯出後處理
