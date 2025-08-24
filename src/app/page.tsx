@@ -19,15 +19,18 @@ export default function LoginPage() {
   const [error, setError] = useState('');           // 錯誤訊息
   const [isLoading, setIsLoading] = useState(false);  // 載入狀態
 
-  const { user } = useAuth(); // 從我們的 AuthContext 取得使用者狀態
+  const { user, isLoading: authLoading } = useAuth(); // 從我們的 AuthContext 取得使用者狀態
   const router = useRouter(); // Next.js 的路由工具
 
   // 如果使用者已經登入，就直接導向到 dashboard
   useEffect(() => {
-    if (user && !isLoading) {
+    console.log('LoginPage: useEffect triggered', { user: user?.uid, authLoading });
+    
+    if (user && !authLoading) {
+      console.log('LoginPage: User authenticated, redirecting to dashboard');
       router.push('/dashboard');
     }
-  }, [user, router, isLoading]);
+  }, [user, router, authLoading]);
 
   // 表單提交處理函式
   const handleLogin = async (e: FormEvent) => {
@@ -35,8 +38,11 @@ export default function LoginPage() {
     setError('');
     setIsLoading(true);
 
+    console.log('LoginPage: Starting login process', { employeeId });
+
     // 檢查 Firebase 是否正確初始化
     if (!auth) {
+      console.error('LoginPage: Firebase auth not initialized');
       setError('系統初始化中，請稍後再試。');
       setIsLoading(false);
       return;
@@ -49,7 +55,9 @@ export default function LoginPage() {
     const email = `${employeeId}@deer-lab.local`;
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      console.log('LoginPage: Attempting sign in with email', email);
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      console.log('LoginPage: Sign in successful', result.user.uid);
       // 登入成功後，上面的 useEffect 會偵測到 user 狀態變化，並自動跳轉
     } catch (e) { // *** 修改點 1: 將 (error: any) 改為 (e)，讓 TypeScript 自動推斷為 'unknown' 型別，更安全。
       
@@ -57,7 +65,7 @@ export default function LoginPage() {
       // 這樣做可以避免執行時錯誤，並解決 ESLint 的警告。
       if (e instanceof Error && 'code' in e && typeof e.code === 'string') {
         const firebaseError = e as { code: string; message: string }; // 進行型別斷言，方便後續使用
-        console.error(firebaseError.code, firebaseError.message);
+        console.error('LoginPage: Firebase error', firebaseError.code, firebaseError.message);
         
         if (firebaseError.code === 'auth/invalid-credential' || firebaseError.code === 'auth/wrong-password' || firebaseError.code === 'auth/user-not-found') {
           setError('工號或密碼錯誤，請重新輸入。');
@@ -71,7 +79,7 @@ export default function LoginPage() {
       } else {
         // 如果錯誤不是我們預期的格式，給一個通用的錯誤訊息
         setError('發生一個非預期的錯誤。');
-        console.error("An unexpected error occurred:", e);
+        console.error("LoginPage: An unexpected error occurred:", e);
       }
 
     } finally {
@@ -80,12 +88,24 @@ export default function LoginPage() {
   };
 
   // 如果正在載入或已經登入，顯示載入中，避免使用者看到登入頁
-  if (isLoading) {
+  if (authLoading || isLoading) {
     return (
       <main className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">正在處理登入...</p>
+        </div>
+      </main>
+    );
+  }
+
+  // 如果已經登入，不顯示登入頁
+  if (user) {
+    return (
+      <main className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">正在跳轉到系統...</p>
         </div>
       </main>
     );
