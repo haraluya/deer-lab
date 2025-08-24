@@ -34,61 +34,50 @@ function fixPathsComplete() {
     
     console.log(`處理檔案: ${path.relative(outDir, filePath)}`);
     
-    // 修正所有可能的 /_next/static/ 路徑
-    const originalContent = content;
-    
-    // 修正 href 屬性中的路徑
-    content = content.replace(
-      /href="\/_next\/static\//g,
-      'href="./static/'
-    );
-    
-    // 修正 src 屬性中的路徑
-    content = content.replace(
-      /src="\/_next\/static\//g,
-      'src="./static/'
-    );
-    
-    // 修正 JavaScript 字串中的路徑（雙引號）
-    content = content.replace(
-      /"\/_next\/static\//g,
-      '"./static/'
-    );
-    
-    // 修正 JavaScript 字串中的路徑（單引號）
-    content = content.replace(
-      /'\/_next\/static\//g,
-      "'./static/"
-    );
-    
-    // 修正 JavaScript 字串中的路徑（模板字串）
-    content = content.replace(
-      /`\/_next\/static\//g,
-      '`./static/'
-    );
-    
-    // 修正其他可能的 Next.js 路徑
-    content = content.replace(
-      /\/_next\//g,
-      './static/'
-    );
-    
-    // 修正 __NEXT_DATA__ 中的路徑
-    content = content.replace(
-      /"\/_next\//g,
-      '"./static/'
-    );
-    
-    // 修正所有剩餘的絕對路徑為相對路徑
-    content = content.replace(
-      /href="\/(?!static\/)/g,
-      'href="./'
-    );
-    
-    content = content.replace(
-      /src="\/(?!static\/)/g,
-      'src="./'
-    );
+               // 修正所有可能的 /_next/static/ 路徑
+           const originalContent = content;
+
+           // 修正 href 屬性中的路徑
+           content = content.replace(
+             /href="\/_next\/static\//g,
+             'href="/static/'
+           );
+
+           // 修正 src 屬性中的路徑
+           content = content.replace(
+             /src="\/_next\/static\//g,
+             'src="/static/'
+           );
+
+           // 修正 JavaScript 字串中的路徑（雙引號）
+           content = content.replace(
+             /"\/_next\/static\//g,
+             '"/static/'
+           );
+
+           // 修正 JavaScript 字串中的路徑（單引號）
+           content = content.replace(
+             /'\/_next\/static\//g,
+             "'/static/"
+           );
+
+           // 修正 JavaScript 字串中的路徑（模板字串）
+           content = content.replace(
+             /`\/_next\/static\//g,
+             '`/static/'
+           );
+
+           // 修正其他可能的 Next.js 路徑
+           content = content.replace(
+             /\/_next\//g,
+             '/static/'
+           );
+
+           // 修正 __NEXT_DATA__ 中的路徑
+           content = content.replace(
+             /"\/_next\//g,
+             '"/static/'
+           );
     
     // 檢查是否有修改
     if (content !== originalContent) {
