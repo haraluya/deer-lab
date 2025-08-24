@@ -57,7 +57,9 @@ function buildStatic() {
   // 執行 Next.js 建置
   console.log('📦 執行 Next.js 建置...');
   try {
-    execSync('npx next build', { stdio: 'inherit' });
+    // 設定生產環境變數
+    const buildEnv = { ...process.env, NODE_ENV: 'production' };
+    execSync('npx next build', { stdio: 'inherit', env: buildEnv });
     console.log('✅ Next.js 建置完成');
   } catch (error) {
     console.error('❌ Next.js 建置失敗');
@@ -176,24 +178,31 @@ function fixHtmlPaths() {
   htmlFiles.forEach(filePath => {
     let content = fs.readFileSync(filePath, 'utf8');
     
-    // 修正路徑模式
-    const patterns = [
-      // 修正 href 屬性中的路徑
-      { from: /href="\/_next\/static\//g, to: 'href="/static/' },
-      // 修正 src 屬性中的路徑
-      { from: /src="\/_next\/static\//g, to: 'src="/static/' },
-      // 修正 JavaScript 字串中的路徑（雙引號）
-      { from: /"\/_next\/static\//g, to: '"/static/' },
-      // 修正 JavaScript 字串中的路徑（單引號）
-      { from: /'\/_next\/static\//g, to: "'/static/" },
-      // 修正 JavaScript 字串中的路徑（模板字串）
-      { from: /`\/_next\/static\//g, to: '`/static/' },
-      // 修正相對路徑
-      { from: /href="\.\/static\//g, to: 'href="/static/' },
-      { from: /src="\.\/static\//g, to: 'src="/static/' },
-      // 修正其他可能的 Next.js 路徑
-      { from: /\/_next\//g, to: '/static/' }
-    ];
+      // 修正路徑模式
+  const patterns = [
+    // 修正 href 屬性中的路徑
+    { from: /href="\/_next\/static\//g, to: 'href="/static/' },
+    // 修正 src 屬性中的路徑
+    { from: /src="\/_next\/static\//g, to: 'src="/static/' },
+    // 修正 JavaScript 字串中的路徑（雙引號）
+    { from: /"\/_next\/static\//g, to: '"/static/' },
+    // 修正 JavaScript 字串中的路徑（單引號）
+    { from: /'\/_next\/static\//g, to: "'/static/" },
+    // 修正 JavaScript 字串中的路徑（模板字串）
+    { from: /`\/_next\/static\//g, to: '`/static/' },
+    // 修正相對路徑
+    { from: /href="\.\/static\//g, to: 'href="/static/' },
+    { from: /src="\.\/static\//g, to: 'src="/static/' },
+    // 修正字體檔案路徑
+    { from: /href="\/next\/static\/media\//g, to: 'href="/static/media/' },
+    { from: /src="\/next\/static\/media\//g, to: 'src="/static/media/' },
+    { from: /"\/next\/static\/media\//g, to: '"/static/media/' },
+    { from: /'\/next\/static\/media\//g, to: "'/static/media/" },
+    { from: /`\/next\/static\/media\//g, to: '`/static/media/' },
+    // 修正其他可能的 Next.js 路徑
+    { from: /\/_next\//g, to: '/static/' },
+    { from: /\/next\/static\//g, to: '/static/' }
+  ];
     
     // 應用所有修正模式
     patterns.forEach(pattern => {

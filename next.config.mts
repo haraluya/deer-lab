@@ -5,8 +5,10 @@ const nextConfig = {
   // 啟用嚴格模式
   reactStrictMode: true,
   
-  // 設定為靜態匯出模式
-  output: 'export',
+  // 只在生產環境啟用靜態匯出
+  ...(process.env.NODE_ENV === 'production' && {
+    output: 'export',
+  }),
   
   // 停用圖片最佳化（靜態匯出不支援）
   images: {

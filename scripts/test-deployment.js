@@ -66,6 +66,11 @@ async function testDeployment() {
       expectedContentType: 'application/javascript'
     },
     {
+      name: '字體檔案',
+      url: `${BASE_URL}/static/media/e4af272ccee01ff0-s.p.woff2`,
+      expectedContentType: 'font/woff2'
+    },
+    {
       name: 'Manifest 檔案',
       url: `${BASE_URL}/manifest.json`,
       expectedContentType: 'application/json'
