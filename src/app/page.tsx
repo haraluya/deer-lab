@@ -39,7 +39,13 @@ export default function LoginPage() {
     navigateTo('/dashboard');
   }, []);
 
-  // 移除重複的認證檢查，讓 AuthGuard 處理
+  // 檢查用戶是否已經認證，如果已認證則重定向到 dashboard
+  useEffect(() => {
+    if (user && !authLoading) {
+      console.log('LoginPage: User already authenticated, redirecting to dashboard');
+      redirectToDashboard();
+    }
+  }, [user, authLoading, redirectToDashboard]);
 
   // 表單提交處理函式
   const handleLogin = async (e: FormEvent) => {
