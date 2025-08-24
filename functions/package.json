@@ -2,7 +2,7 @@
   "name": "functions",
   "scripts": {
     "lint": "echo 'Linting skipped'",
-    "build": "tsc",
+    "build": "bash build.sh",
     "build:watch": "tsc --watch",
     "serve": "npm run build && firebase emulators:start --only functions",
     "shell": "npm run build && firebase functions:shell",
@@ -19,6 +19,7 @@
     "firebase-functions": "^6.4.0"
   },
   "devDependencies": {
+    "@types/node": "^20.0.0",
     "firebase-functions-test": "^3.1.0",
     "typescript": "^5.4.5"
   },
