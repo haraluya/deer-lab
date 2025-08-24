@@ -21,7 +21,11 @@ export const ensureIsAdmin = async (uid: string | undefined) => {
     throw new HttpsError("permission-denied", "使用者沒有指派角色，權限不足。");
   }
   const roleDoc = await roleRef.get();
-  if (!roleDoc.exists || roleDoc.data()?.name !== "管理員") {
+  if (!roleDoc.exists) {
+    throw new HttpsError("permission-denied", "找不到使用者角色資料。");
+  }
+  const roleName = roleDoc.data()?.name;
+  if (roleName !== "管理員" && roleName !== "超級管理員") {
     throw new HttpsError("permission-denied", "權限不足，只有管理員才能執行此操作。");
   }
 };
@@ -43,8 +47,11 @@ export const ensureIsAdminOrForeman = async (uid: string | undefined) => {
     throw new HttpsError("permission-denied", "使用者沒有指派角色，權限不足。");
   }
   const roleDoc = await roleRef.get();
+  if (!roleDoc.exists) {
+    throw new HttpsError("permission-denied", "找不到使用者角色資料。");
+  }
   const roleName = roleDoc.data()?.name;
-  if (!roleDoc.exists || (roleName !== "管理員" && roleName !== "領班")) {
+  if (roleName !== "管理員" && roleName !== "超級管理員" && roleName !== "領班") {
     throw new HttpsError("permission-denied", "權限不足，只有管理員或領班才能執行此操作。");
   }
 };

@@ -12,10 +12,10 @@ export const createPersonnel = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
   await ensureIsAdmin(contextAuth?.uid);
   
-  const { name, email, employeeId, department, position, roleId, password, status } = data;
+  const { name, employeeId, phone, roleId, password, status } = data;
   
-  if (!name || !employeeId || !roleId || !password || !status) {
-    throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (姓名、員工編號、角色、密碼、狀態)。");
+  if (!name || !employeeId || !phone || !roleId || !password || !status) {
+    throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (姓名、員工編號、電話、角色、密碼、狀態)。");
   }
 
   try {
@@ -28,35 +28,15 @@ export const createPersonnel = onCall(async (request) => {
       throw new HttpsError("already-exists", "員工編號已存在，請使用不同的編號。");
     }
 
-    // 檢查電子郵件是否已存在（僅當有提供電子郵件時）
-    if (email && email.trim()) {
-      const existingEmails = await db.collection("users")
-        .where("email", "==", email)
-        .get();
-      
-      if (!existingEmails.empty) {
-        throw new HttpsError("already-exists", "電子郵件已存在，請使用不同的郵件地址。");
-      }
-    }
+
 
     // 創建 Firebase Auth 用戶
-    const authData: {
-      uid: string;
-      password: string;
-      displayName: string;
-      disabled: boolean;
-      email?: string;
-    } = {
+    const authData = {
       uid: employeeId,
       password: password,
       displayName: name,
       disabled: status === "inactive"
     };
-
-    // 如果有提供電子郵件，則加入
-    if (email && email.trim()) {
-      authData.email = email;
-    }
 
     const userRecord = await auth.createUser(authData);
 
@@ -66,10 +46,8 @@ export const createPersonnel = onCall(async (request) => {
     // 儲存到 Firestore
     const personnelData = {
       name,
-      email: email || "",
       employeeId,
-      department: department || "",
-      position: position || "",
+      phone,
       roleRef,
       status,
       createdAt: FieldValue.serverTimestamp(),
@@ -98,10 +76,10 @@ export const updatePersonnel = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
   await ensureIsAdmin(contextAuth?.uid);
   
-  const { personnelId, name, email, employeeId, department, position, roleId, password, status } = data;
+  const { personnelId, name, employeeId, phone, roleId, password, status } = data;
   
-  if (!personnelId || !name || !employeeId || !roleId || !status) {
-    throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (人員ID、姓名、員工編號、角色、狀態)。");
+  if (!personnelId || !name || !employeeId || !phone || !roleId || !status) {
+    throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (人員ID、姓名、員工編號、電話、角色、狀態)。");
   }
 
   try {
@@ -122,24 +100,13 @@ export const updatePersonnel = onCall(async (request) => {
       throw new HttpsError("already-exists", "員工編號已存在，請使用不同的編號。");
     }
 
-    // 檢查電子郵件是否已被其他用戶使用（僅當有提供電子郵件時）
-    if (email && email.trim()) {
-      const existingEmails = await db.collection("users")
-        .where("email", "==", email)
-        .get();
-      
-      const emailExists = existingEmails.docs.some(doc => doc.id !== personnelId);
-      if (emailExists) {
-        throw new HttpsError("already-exists", "電子郵件已存在，請使用不同的郵件地址。");
-      }
-    }
+
 
     // 更新 Firebase Auth 用戶
     const updateAuthData: {
       displayName: string;
       disabled: boolean;
       password?: string;
-      email?: string;
     } = {
       displayName: name,
       disabled: status === "inactive"
@@ -150,12 +117,6 @@ export const updatePersonnel = onCall(async (request) => {
       updateAuthData.password = password;
     }
 
-    // 如果電子郵件有變更，則更新電子郵件
-    const currentData = userDoc.data();
-    if (email && email.trim() && currentData?.email !== email) {
-      updateAuthData.email = email;
-    }
-
     await auth.updateUser(personnelId, updateAuthData);
 
     // 創建角色引用
@@ -164,10 +125,8 @@ export const updatePersonnel = onCall(async (request) => {
     // 更新 Firestore 資料
     const updateData = {
       name,
-      email: email || "",
       employeeId,
-      department: department || "",
-      position: position || "",
+      phone,
       roleRef,
       status,
       updatedAt: FieldValue.serverTimestamp(),

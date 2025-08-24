@@ -34,10 +34,8 @@ interface UserWithRole {
   id: string;
   uid: string;
   name: string;
-  email: string;
   employeeId: string;
-  department?: string;
-  position?: string;
+  phone: string;
   roleRef?: DocumentReference;
   roleName: string;
   status: string;
@@ -248,7 +246,7 @@ function PersonnelPageContent() {
                           </div>
                           <div>
                             <div className="font-medium text-gray-900 text-sm">{user.name || 'N/A'}</div>
-                            <div className="text-xs text-gray-500">{user.email}</div>
+                            <div className="text-xs text-gray-500">{user.phone || 'N/A'}</div>
                           </div>
                         </div>
                         <DropdownMenu>
@@ -386,7 +384,7 @@ function PersonnelPageContent() {
                       </div>
                       <div>
                         <div className="font-medium text-gray-900">{user.name || 'N/A'}</div>
-                        <div className="text-xs text-gray-500">{user.email}</div>
+                        <div className="text-xs text-gray-500">{user.phone || 'N/A'}</div>
                       </div>
                     </div>
                   </TableCell>
@@ -511,9 +509,7 @@ function PersonnelPageContent() {
               fields: [
                 { label: "姓名", value: selectedDetailUser.name },
                 { label: "工號", value: selectedDetailUser.employeeId },
-                { label: "電子郵件", value: selectedDetailUser.email },
-                { label: "部門", value: selectedDetailUser.department },
-                { label: "職位", value: selectedDetailUser.position },
+                { label: "電話", value: selectedDetailUser.phone },
                 { label: "狀態", value: selectedDetailUser.status, type: "badge" },
               ]
             },

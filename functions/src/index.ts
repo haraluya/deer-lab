@@ -16,8 +16,7 @@ export const testFunction = onRequest((request, response) => {
 // 匯出測試函數
 export * from "./api/test";
 
-// 暫時註解掉複雜的模組匯出，避免建置錯誤
-/*
+// 匯出所有 API 函數
 export * from "./api/users";
 export * from "./api/suppliers";
 export * from "./api/materials";
@@ -30,4 +29,3 @@ export * from "./api/workOrders";
 export * from "./api/roles";
 export * from "./api/personnel";
 export * from "./api/auth";
-*/

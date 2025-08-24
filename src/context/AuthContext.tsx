@@ -13,8 +13,8 @@ export interface AppUser extends DocumentData {
   uid: string;
   name: string;
   employeeId: string;
+  phone: string;
   status: 'active' | 'inactive';
-  hourlyWage: number;
   roleRef: DocumentReference; 
 }
 
@@ -78,8 +78,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               uid: firebaseUser.uid,
               name: firebaseUser.displayName || '使用者',
               employeeId: employeeId,
+              phone: '0900000000', // 預設電話
               status: 'active' as const,
-              hourlyWage: 0,
               roleRef: null as any,
             } as AppUser;
             

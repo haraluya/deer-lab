@@ -20,10 +20,8 @@ import { Badge } from "@/components/ui/badge"
 // 表單驗證 Schema
 const formSchema = z.object({
   name: z.string().min(2, { message: "姓名至少需要 2 個字元" }),
-  email: z.string().optional(),
   employeeId: z.string().min(1, { message: "員工編號為必填欄位" }),
-  department: z.string().optional(),
-  position: z.string().optional(),
+  phone: z.string().min(1, { message: "電話為必填欄位" }),
   roleId: z.string({ required_error: "必須選擇一個角色" }),
   password: z.string().min(6, { message: "密碼至少需要 6 個字元" }).optional(),
   confirmPassword: z.string().optional(),
@@ -50,10 +48,8 @@ interface Role {
 interface PersonnelData {
   id: string
   name: string
-  email: string
   employeeId: string
-  department?: string
-  position?: string
+  phone: string
   roleRef?: DocumentReference
   status: string
 }
@@ -80,10 +76,8 @@ export function PersonnelDialog({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      email: "",
       employeeId: "",
-      department: "",
-      position: "",
+      phone: "",
       roleId: "",
       password: "",
       confirmPassword: "",
@@ -117,10 +111,8 @@ export function PersonnelDialog({
     if (isOpen && personnelData) {
       form.reset({
         name: personnelData.name || "",
-        email: personnelData.email || "",
         employeeId: personnelData.employeeId || "",
-        department: personnelData.department || "",
-        position: personnelData.position || "",
+        phone: personnelData.phone || "",
         roleId: personnelData.roleRef?.id || "",
         password: "",
         confirmPassword: "",
@@ -130,10 +122,8 @@ export function PersonnelDialog({
     } else if (isOpen && !personnelData) {
       form.reset({
         name: "",
-        email: "",
         employeeId: "",
-        department: "",
-        position: "",
+        phone: "",
         roleId: "",
         password: "",
         confirmPassword: "",
@@ -195,8 +185,8 @@ export function PersonnelDialog({
              className="space-y-6"
            >
             {/* 基本資料 */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium flex items-center gap-2">
+            <div className="space-y-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+              <h3 className="text-lg font-semibold flex items-center gap-2 text-blue-800">
                 <User className="h-4 w-4" />
                 基本資料
               </h3>
@@ -232,40 +222,16 @@ export function PersonnelDialog({
 
                 <FormField
                   control={form.control}
-                  name="email"
+                  name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>電子郵件</FormLabel>
+                      <FormLabel className="text-red-600 font-semibold">電話 *</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="請輸入電子郵件（選填）" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="department"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>部門</FormLabel>
-                      <FormControl>
-                        <Input placeholder="請輸入部門" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="position"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>職位</FormLabel>
-                      <FormControl>
-                        <Input placeholder="請輸入職位" {...field} />
+                        <Input 
+                          placeholder="請輸入電話號碼" 
+                          {...field} 
+                          className="border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -297,8 +263,8 @@ export function PersonnelDialog({
             </div>
 
             {/* 權限設定 */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium flex items-center gap-2">
+            <div className="space-y-4 p-4 bg-gradient-to-r from-purple-50 to-violet-50 rounded-lg border border-purple-200">
+              <h3 className="text-lg font-semibold flex items-center gap-2 text-purple-800">
                 <Shield className="h-4 w-4" />
                 權限設定
               </h3>
@@ -335,9 +301,9 @@ export function PersonnelDialog({
             </div>
 
             {/* 密碼設定 */}
-            <div className="space-y-4">
+            <div className="space-y-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium flex items-center gap-2">
+                <h3 className="text-lg font-semibold flex items-center gap-2 text-green-800">
                   <Lock className="h-4 w-4" />
                   密碼設定
                 </h3>

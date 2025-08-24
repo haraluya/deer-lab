@@ -11,12 +11,21 @@ const auth = getAuth();
 export const createUser = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
   await ensureIsAdmin(contextAuth?.uid);
-  const { employeeId, password, name, roleId, hourlyWage, status } = data;
-  if (!employeeId || !password || !name || !roleId || !status) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (工號、密碼、姓名、角色、狀態)。"); }
+  const { employeeId, password, name, roleId, phone, status } = data;
+  if (!employeeId || !password || !name || !roleId || !phone || !status) { 
+    throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (工號、密碼、姓名、角色、電話、狀態)。"); 
+  }
   try {
     const userRecord = await auth.createUser({ uid: employeeId, password: password, displayName: name });
     const roleRef = db.collection("roles").doc(roleId);
-    await db.collection("users").doc(userRecord.uid).set({ name: name, employeeId: employeeId, roleRef: roleRef, hourlyWage: Number(hourlyWage) || 0, status: status, createdAt: FieldValue.serverTimestamp(), });
+    await db.collection("users").doc(userRecord.uid).set({ 
+      name: name, 
+      employeeId: employeeId, 
+      phone: phone,
+      roleRef: roleRef, 
+      status: status, 
+      createdAt: FieldValue.serverTimestamp(), 
+    });
     logger.info(`管理員 ${contextAuth?.uid} 成功建立新使用者: ${userRecord.uid}`);
     return { status: "success", message: `使用者 ${name} (${employeeId}) 已成功建立。`, uid: userRecord.uid };
   } catch (error) { logger.error("建立使用者時發生錯誤:", error); throw new HttpsError("internal", "建立使用者時發生未知錯誤。"); }
@@ -25,12 +34,19 @@ export const createUser = onCall(async (request) => {
 export const updateUser = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
   await ensureIsAdmin(contextAuth?.uid);
-  const { uid, name, roleId, hourlyWage } = data;
-  if (!uid || !name || !roleId) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (uid, name, roleId)。"); }
+  const { uid, name, roleId, phone } = data;
+  if (!uid || !name || !roleId || !phone) { 
+    throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (uid, name, roleId, phone)。"); 
+  }
   try {
     const userDocRef = db.collection("users").doc(uid);
     const roleRef = db.collection("roles").doc(roleId);
-    const updateData = { name: name, roleRef: roleRef, hourlyWage: Number(hourlyWage) || 0, updatedAt: FieldValue.serverTimestamp(), };
+    const updateData = { 
+      name: name, 
+      phone: phone,
+      roleRef: roleRef, 
+      updatedAt: FieldValue.serverTimestamp(), 
+    };
     await userDocRef.update(updateData);
     const userRecord = await auth.getUser(uid);
     if (userRecord.displayName !== name) { await auth.updateUser(uid, { displayName: name }); }
