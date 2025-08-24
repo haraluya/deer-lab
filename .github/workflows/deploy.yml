@@ -11,82 +11,59 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
+    - uses: actions/checkout@v4
+    
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20'
         cache: 'npm'
-        
+    
     - name: Install dependencies
       run: npm ci
-      
+    
     - name: Install Firebase CLI
       run: npm install -g firebase-tools
-      
-    - name: Prepare build environment
-      run: |
-        # 移除衝突的 ESLint 配置
-        rm -f .eslintrc.json
-        # 暫時移除 functions 目錄以避免 TypeScript 錯誤
-        mv functions functions_backup
-        # 創建一個空的 functions 目錄以避免路徑問題
-        mkdir -p functions
-        echo "# This directory is temporarily empty during build" > functions/README.md
-        # 給建置腳本執行權限
-        chmod +x build-static.sh
-      
+    
+    - name: Make build script executable
+      run: chmod +x build-static.sh
+    
     - name: Build application (excluding functions)
+      env:
+        NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+        NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
       run: |
-        # 使用新的建置腳本
-        npm run build
-        # 檢查建置結果
-        echo "Checking build output..."
-        ls -la
-        if [ -d "out" ]; then
-          echo "✅ out directory exists"
-          ls -la out/
-          echo "Checking for index.html..."
-          if [ -f "out/index.html" ]; then
-            echo "✅ index.html found"
-          else
-            echo "❌ index.html not found"
-            exit 1
-          fi
-          echo "Number of files in out directory:"
-          find out -type f | wc -l
+        # 暫時移動 functions 目錄
+        if [ -d "functions" ]; then
+          mv functions functions_backup
+        fi
+        
+        # 執行建置
+        npm run build-static
+        
+        # 恢復 functions 目錄
+        if [ -d "functions_backup" ]; then
+          mv functions_backup functions
+        fi
+    
+    - name: Verify build output
+      run: |
+        echo "Checking out directory..."
+        ls -la out/
+        echo "Number of files in out directory:"
+        find out -type f | wc -l
+        echo "Checking for index.html..."
+        if [ -f "out/index.html" ]; then
+          echo "✅ index.html exists"
+          head -5 out/index.html
         else
-          echo "❌ out directory not found"
+          echo "❌ index.html not found"
           exit 1
         fi
-        echo "Build completed successfully!"
-      env:
-        NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
-        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
-        NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
-        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
-        NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
-      
-    - name: Restore functions directory
-      run: |
-        rm -rf functions
-        mv functions_backup functions
-      
-    - name: Build Firebase Functions
-      run: |
-        cd functions
-        npm ci --legacy-peer-deps
-        npm run build
-        cd ..
-      
+    
     - name: Deploy to Firebase
-      if: github.ref == 'refs/heads/main'
-      run: |
-        # 再次驗證 out 目錄存在
-        ls -la out/
-        firebase deploy --token "${{ secrets.FIREBASE_TOKEN }}" --project deer-lab
-      env:
-        FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+      run: firebase deploy --token "${{ secrets.FIREBASE_TOKEN }}"
