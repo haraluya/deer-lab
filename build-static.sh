@@ -136,16 +136,29 @@ if [ -d ".next/server" ]; then
     cp "$1" out/
   ' sh {} \;
   
+  # 複製 dashboard 目錄下的所有 HTML 檔案
+  if [ -d ".next/server/app/dashboard" ]; then
+    echo "Copying dashboard pages..."
+    find .next/server/app/dashboard -name "*.html" -exec sh -c '
+      # 獲取相對路徑
+      rel_path=$(echo "$1" | sed "s|.next/server/app/||")
+      target_path="out/$rel_path"
+      target_dir=$(dirname "$target_path")
+      
+      # 創建目標目錄
+      mkdir -p "$target_dir"
+      
+      echo "Copying $rel_path to $target_path"
+      cp "$1" "$target_path"
+    ' sh {} \;
+  fi
+  
   # 確保 dashboard 頁面存在
-  if [ -f ".next/server/dashboard.html" ]; then
-    echo "✅ dashboard.html found in .next/server"
-    cp .next/server/dashboard.html out/
+  if [ -f ".next/server/app/dashboard.html" ]; then
+    echo "✅ dashboard.html found in .next/server/app"
+    cp .next/server/app/dashboard.html out/
   else
-    echo "⚠️ dashboard.html not found in .next/server, checking for dashboard/index.html"
-    if [ -f ".next/server/dashboard/index.html" ]; then
-      echo "✅ dashboard/index.html found, copying as dashboard.html"
-      cp .next/server/dashboard/index.html out/dashboard.html
-    fi
+    echo "⚠️ dashboard.html not found in .next/server/app"
   fi
 fi
 
