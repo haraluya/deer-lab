@@ -16,6 +16,10 @@
         "destination": "/static/**"
       },
       {
+        "source": "/next/static/**",
+        "destination": "/static/**"
+      },
+      {
         "source": "/dashboard/suppliers",
         "destination": "/dashboard/suppliers.html"
       },

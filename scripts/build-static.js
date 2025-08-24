@@ -203,6 +203,11 @@ function fixHtmlPaths() {
     { from: /"\/next\/static\/media\//g, to: '"/static/media/' },
     { from: /'\/next\/static\/media\//g, to: "'/static/media/" },
     { from: /`\/next\/static\/media\//g, to: '`/static/media/' },
+    // 修正 JavaScript chunks 路徑
+    { from: /"\/next\/static\/chunks\//g, to: '"/static/chunks/' },
+    { from: /'\/next\/static\/chunks\//g, to: "'/static/chunks/" },
+    { from: /`\/next\/static\/chunks\//g, to: '`/static/chunks/' },
+    { from: /\/next\/static\/chunks\//g, to: '/static/chunks/' },
     // 修正其他可能的 Next.js 路徑
     { from: /\/_next\//g, to: '/static/' },
     { from: /\/next\/static\//g, to: '/static/' }
