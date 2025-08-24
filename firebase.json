@@ -76,6 +76,14 @@
         "destination": "/dashboard/test.html"
       },
       {
+        "source": "/dashboard/purchase-orders/create",
+        "destination": "/dashboard/purchase-orders/create.html"
+      },
+      {
+        "source": "/dashboard/work-orders/create",
+        "destination": "/dashboard/work-orders/create.html"
+      },
+      {
         "source": "/dashboard",
         "destination": "/dashboard.html"
       },
