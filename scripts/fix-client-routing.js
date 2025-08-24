@@ -33,6 +33,30 @@ function fixClientRouting() {
     (function() {
       // 檢查是否為客戶端路由
       if (typeof window !== 'undefined') {
+        // 確保所有靜態檔案路徑正確
+        function fixStaticPaths() {
+          const scripts = document.querySelectorAll('script[src]');
+          scripts.forEach(script => {
+            if (script.src.includes('/_next/static/')) {
+              script.src = script.src.replace('/_next/static/', './static/');
+            }
+          });
+          
+          const links = document.querySelectorAll('link[href]');
+          links.forEach(link => {
+            if (link.href.includes('/_next/static/')) {
+              link.href = link.href.replace('/_next/static/', './static/');
+            }
+          });
+        }
+        
+        // 頁面載入完成後修正路徑
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', fixStaticPaths);
+        } else {
+          fixStaticPaths();
+        }
+        
         // 處理瀏覽器的前進/後退按鈕
         window.addEventListener('popstate', function() {
           // 重新載入頁面以確保正確的狀態

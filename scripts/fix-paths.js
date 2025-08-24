@@ -48,6 +48,18 @@ const nextPatterns = [
   // 修正其他可能的 Next.js 路徑
   { from: /\/_next\//g, to: './static/' }
 ];
+
+// 修正所有可能的靜態檔案路徑
+const staticPatterns = [
+  // 修正 CSS 檔案路徑
+  { from: /href="\/_next\/static\/css\//g, to: 'href="./static/css/' },
+  // 修正 JavaScript 檔案路徑
+  { from: /src="\/_next\/static\/chunks\//g, to: 'src="./static/chunks/' },
+  // 修正其他靜態檔案路徑
+  { from: /src="\/_next\/static\/[^"]*"/g, to: (match) => match.replace('/_next/static/', './static/') },
+  // 修正 JavaScript 字串中的靜態檔案路徑
+  { from: /"\/_next\/static\/[^"]*"/g, to: (match) => match.replace('/_next/static/', './static/') }
+];
     
     // 應用所有修正模式
     patterns.forEach(pattern => {
@@ -57,6 +69,15 @@ const nextPatterns = [
     // 應用 Next.js 路由修正模式
     nextPatterns.forEach(pattern => {
       content = content.replace(pattern.from, pattern.to);
+    });
+    
+    // 應用靜態檔案路徑修正模式
+    staticPatterns.forEach(pattern => {
+      if (typeof pattern.to === 'function') {
+        content = content.replace(pattern.from, pattern.to);
+      } else {
+        content = content.replace(pattern.from, pattern.to);
+      }
     });
     
     // 寫回檔案
