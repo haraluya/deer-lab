@@ -304,7 +304,9 @@ export default function DashboardLayout({
 
         {/* 內容區域 */}
         <div className="flex-1 overflow-auto">
-          <div className="p-4 lg:p-6 lg:py-4">{children}</div>
+          <div className="p-4 lg:p-6 lg:py-4">
+            {children}
+          </div>
         </div>
       </main>
     </div>

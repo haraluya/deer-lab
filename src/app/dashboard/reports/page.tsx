@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { collection, getDocs, query, where, orderBy, limit } from "firebase/firestore"
 import { db } from "@/lib/firebase"
+import { AuthWrapper } from '@/components/AuthWrapper'
 import { toast } from "sonner"
 import { BarChart3, TrendingUp, TrendingDown, Calendar, Package, ShoppingCart, ClipboardList, Factory, DollarSign } from "lucide-react"
 import ErrorBoundary from "@/components/ErrorBoundary"
@@ -46,7 +47,7 @@ interface PurchaseOrder {
   createdAt: any
 }
 
-export default function ReportsPage() {
+function ReportsPageContent() {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
   const [materials, setMaterials] = useState<Material[]>([])
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([])
@@ -846,4 +847,13 @@ export default function ReportsPage() {
       </div>
     </ErrorBoundary>
   )
+}
+
+
+export default function ReportsPage() {
+  return (
+    <AuthWrapper>
+      <ReportsPageContent />
+    </AuthWrapper>
+  );
 }

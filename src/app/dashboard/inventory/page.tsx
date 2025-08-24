@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { collection, getDocs, doc, updateDoc, addDoc, query, where, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase"
+import { AuthWrapper } from '@/components/AuthWrapper'
 import { toast } from "sonner"
 import { Search, Plus, Minus, Package, TrendingUp, TrendingDown, AlertTriangle, Warehouse, Calendar } from "lucide-react"
 
@@ -34,7 +35,7 @@ interface StockAdjustment {
   notes?: string
 }
 
-export default function InventoryPage() {
+function InventoryPageContent() {
   const [materials, setMaterials] = useState<Material[]>([])
   const [filteredMaterials, setFilteredMaterials] = useState<Material[]>([])
   const [loading, setLoading] = useState(true)
@@ -643,4 +644,13 @@ export default function InventoryPage() {
       </Dialog>
     </div>
   )
+}
+
+
+export default function InventoryPage() {
+  return (
+    <AuthWrapper>
+      <InventoryPageContent />
+    </AuthWrapper>
+  );
 }

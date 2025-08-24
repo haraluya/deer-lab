@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { collection, getDocs, DocumentReference } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
+import { AuthWrapper } from '@/components/AuthWrapper';
 import { SeriesDialog, SeriesData } from './SeriesDialog';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { MoreHorizontal, FileSpreadsheet, Plus, Eye, Edit, Trash2, Tag, Calendar, Package } from 'lucide-react';
@@ -20,7 +21,7 @@ interface SeriesWithMaterials extends SeriesData {
   materialNames: string[];
 }
 
-export default function ProductSeriesPage() {
+function ProductSeriesPageContent() {
   const [series, setSeries] = useState<SeriesWithMaterials[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -462,5 +463,14 @@ export default function ProductSeriesPage() {
         ]}
       />
     </div>
+  );
+}
+
+
+export default function ProductSeriesPage() {
+  return (
+    <AuthWrapper>
+      <ProductSeriesPageContent />
+    </AuthWrapper>
   );
 }

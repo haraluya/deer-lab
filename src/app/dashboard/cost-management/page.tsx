@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase"
+import { AuthWrapper } from '@/components/AuthWrapper'
 import { toast } from "sonner"
 import { DollarSign, TrendingUp, TrendingDown, Package, Droplets, Factory, Calculator, Calendar, ChevronLeft, ChevronRight } from "lucide-react"
 
@@ -42,7 +43,7 @@ interface InventoryCost {
   type: "material" | "fragrance"
 }
 
-export default function CostManagementPage() {
+function CostManagementPageContent() {
   const [costSummary, setCostSummary] = useState<CostSummary>({
     totalInventoryCost: 0,
     totalMaterialCost: 0,
@@ -714,4 +715,13 @@ export default function CostManagementPage() {
       </div>
     </div>
   )
+}
+
+
+export default function CostManagementPage() {
+  return (
+    <AuthWrapper>
+      <CostManagementPageContent />
+    </AuthWrapper>
+  );
 }

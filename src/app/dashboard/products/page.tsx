@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { collection, getDocs, DocumentReference } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
+import { AuthWrapper } from '@/components/AuthWrapper';
 import { MoreHorizontal, Droplets, FileSpreadsheet, Eye, Edit, Package, Factory, Calendar, Plus, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -25,7 +26,7 @@ interface ProductWithDetails extends ProductData {
   fragranceName: string;
 }
 
-export default function ProductsPage() {
+function ProductsPageContent() {
   const [products, setProducts] = useState<ProductWithDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -554,5 +555,14 @@ export default function ProductsPage() {
         />
       )}
     </div>
+  );
+}
+
+
+export default function ProductsPage() {
+  return (
+    <AuthWrapper>
+      <ProductsPageContent />
+    </AuthWrapper>
   );
 }

@@ -3,12 +3,13 @@
 import { useState } from "react"
 import { collection, addDoc, getDocs } from "firebase/firestore"
 import { db } from "@/lib/firebase"
+import { AuthWrapper } from '@/components/AuthWrapper'
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TestTube, Database, Loader2 } from "lucide-react"
 
-export default function TestPage() {
+function TestPageContent() {
   const [testing, setTesting] = useState(false)
 
   const testWorkOrderCreation = async () => {
@@ -152,4 +153,13 @@ export default function TestPage() {
       </div>
     </div>
   )
+}
+
+
+export default function TestPage() {
+  return (
+    <AuthWrapper>
+      <TestPageContent />
+    </AuthWrapper>
+  );
 }

@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { collection, getDocs, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
+import { AuthWrapper } from '@/components/AuthWrapper';
 import { SupplierDialog, SupplierData } from './SupplierDialog';
 import { DetailViewDialog } from '@/components/DetailViewDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -30,7 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from '@/components/ui/badge';
 
-export default function SuppliersPage() {
+function SuppliersPageContent() {
   const [suppliers, setSuppliers] = useState<SupplierData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -491,5 +492,14 @@ export default function SuppliersPage() {
         />
       )}
     </div>
+  );
+}
+
+
+export default function SuppliersPage() {
+  return (
+    <AuthWrapper>
+      <SuppliersPageContent />
+    </AuthWrapper>
   );
 }

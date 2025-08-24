@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { collection, getDocs, query, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase"
+import { AuthWrapper } from '@/components/AuthWrapper'
 import { toast } from "sonner"
 import { DataTable } from "./data-table"
 import { columns } from "./columns"
@@ -11,7 +12,7 @@ import { WorkOrderColumn } from "./columns"
 import { Button } from "@/components/ui/button"
 import { Plus, Factory } from "lucide-react"
 
-export default function WorkOrdersPage() {
+function WorkOrdersPageContent() {
   const router = useRouter()
   const [workOrders, setWorkOrders] = useState<WorkOrderColumn[]>([])
   const [loading, setLoading] = useState(true)
@@ -115,4 +116,13 @@ export default function WorkOrdersPage() {
       </div>
     </div>
   )
+}
+
+
+export default function WorkOrdersPage() {
+  return (
+    <AuthWrapper>
+      <WorkOrdersPageContent />
+    </AuthWrapper>
+  );
 }

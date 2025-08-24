@@ -6,6 +6,7 @@ import { collection, getDocs, doc, getDoc, DocumentReference } from 'firebase/fi
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 import { AppUser } from '@/context/AuthContext';
+import { AuthWrapper } from '@/components/AuthWrapper';
 import { PersonnelDialog } from './PersonnelDialog';
 import { DetailViewDialog } from '@/components/DetailViewDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -43,7 +44,7 @@ interface UserWithRole {
   status: string;
 }
 
-export default function PersonnelPage() {
+function PersonnelPageContent() {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPersonnelDialogOpen, setIsPersonnelDialogOpen] = useState(false);
@@ -542,5 +543,13 @@ export default function PersonnelPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function PersonnelPage() {
+  return (
+    <AuthWrapper>
+      <PersonnelPageContent />
+    </AuthWrapper>
   );
 }

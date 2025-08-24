@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { collection, getDocs, DocumentReference, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
+import { AuthWrapper } from '@/components/AuthWrapper';
 import { MaterialDialog, MaterialData } from './MaterialDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { MoreHorizontal, ShoppingCart, ListChecks, Save, X, Loader2, Search, FileSpreadsheet, Eye, Edit, Warehouse, Building, Tag, Package } from 'lucide-react';
@@ -39,7 +40,7 @@ interface MaterialWithSupplier extends MaterialData {
   refPath: string; // 確保文檔路徑存在
 }
 
-export default function MaterialsPage() {
+function MaterialsPageContent() {
   const router = useRouter();
   const [materials, setMaterials] = useState<MaterialWithSupplier[]>([]);
   const [filteredMaterials, setFilteredMaterials] = useState<MaterialWithSupplier[]>([]);
@@ -794,5 +795,14 @@ export default function MaterialsPage() {
         />
       )}
     </div>
+  );
+}
+
+
+export default function MaterialsPage() {
+  return (
+    <AuthWrapper>
+      <MaterialsPageContent />
+    </AuthWrapper>
   );
 }

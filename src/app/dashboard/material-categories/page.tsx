@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
+import { AuthWrapper } from '@/components/AuthWrapper'
 import { toast } from "sonner"
 import { Plus, Edit, Trash2, Tag, Calendar, MoreHorizontal, Eye } from "lucide-react"
 
@@ -46,7 +47,7 @@ interface Category {
   usageCount: number
 }
 
-export default function MaterialCategoriesPage() {
+function MaterialCategoriesPageContent() {
   const [categories, setCategories] = useState<Category[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -480,4 +481,13 @@ export default function MaterialCategoriesPage() {
       </Dialog>
     </div>
   )
+}
+
+
+export default function MaterialCategoriesPage() {
+  return (
+    <AuthWrapper>
+      <MaterialCategoriesPageContent />
+    </AuthWrapper>
+  );
 }

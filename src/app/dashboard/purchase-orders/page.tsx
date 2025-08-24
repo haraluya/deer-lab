@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { AuthWrapper } from '@/components/AuthWrapper';
 import { toast } from 'sonner';
 import { MoreHorizontal, Eye, Edit, Trash2, ShoppingCart, Calendar, Building, User, Plus } from 'lucide-react';
 
@@ -23,7 +24,7 @@ interface PurchaseOrderView {
   createdAt: string;
 }
 
-export default function PurchaseOrdersPage() {
+function PurchaseOrdersPageContent() {
   const router = useRouter();
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderView[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -399,5 +400,13 @@ export default function PurchaseOrdersPage() {
       </div>
       </div>
     </div>
+  );
+}
+
+export default function PurchaseOrdersPage() {
+  return (
+    <AuthWrapper>
+      <PurchaseOrdersPageContent />
+    </AuthWrapper>
   );
 }

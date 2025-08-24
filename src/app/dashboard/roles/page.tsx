@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
+import { AuthWrapper } from '@/components/AuthWrapper';
 import { RoleDialog } from './RoleDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Plus, MoreHorizontal, Trash2, Edit, Eye, Shield, Calendar } from 'lucide-react';
@@ -37,7 +38,7 @@ interface Role {
   updatedAt?: any;
 }
 
-export default function RolesPage() {
+function RolesPageContent() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
@@ -437,3 +438,12 @@ export default function RolesPage() {
   );
 }
 
+
+
+export default function RolesPage() {
+  return (
+    <AuthWrapper>
+      <RolesPageContent />
+    </AuthWrapper>
+  );
+}
