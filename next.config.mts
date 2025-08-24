@@ -13,6 +13,9 @@ const nextConfig = {
     unoptimized: true
   },
   
+  // 自訂建置輸出目錄
+  distDir: 'out',
+  
   // 改善開發伺服器的穩定性
   webpack: (config, { dev, isServer }) => {
     if (dev && !isServer) {
