@@ -50,8 +50,8 @@ const nextConfig = {
   // 確保正確的基礎路徑
   basePath: '',
   
-  // 修正靜態匯出的資產路徑問題 - 使用絕對路徑
-  assetPrefix: '',
+  // 修正靜態匯出的資產路徑問題 - 使用相對路徑
+  assetPrefix: './',
   
   // 修正靜態匯出的資產路徑問題
   experimental: {

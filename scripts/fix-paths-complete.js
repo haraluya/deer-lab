@@ -40,43 +40,43 @@ function fixPathsComplete() {
            // 修正 href 屬性中的路徑
            content = content.replace(
              /href="\/_next\/static\//g,
-             'href="/static/'
+             'href="./static/'
            );
 
            // 修正 src 屬性中的路徑
            content = content.replace(
              /src="\/_next\/static\//g,
-             'src="/static/'
+             'src="./static/'
            );
 
            // 修正 JavaScript 字串中的路徑（雙引號）
            content = content.replace(
              /"\/_next\/static\//g,
-             '"/static/'
+             '"./static/'
            );
 
            // 修正 JavaScript 字串中的路徑（單引號）
            content = content.replace(
              /'\/_next\/static\//g,
-             "'/static/"
+             "'./static/"
            );
 
            // 修正 JavaScript 字串中的路徑（模板字串）
            content = content.replace(
              /`\/_next\/static\//g,
-             '`/static/'
+             '`./static/'
            );
 
            // 修正其他可能的 Next.js 路徑
            content = content.replace(
              /\/_next\//g,
-             '/static/'
+             './static/'
            );
 
            // 修正 __NEXT_DATA__ 中的路徑
            content = content.replace(
              /"\/_next\//g,
-             '"/static/'
+             '"./static/'
            );
     
     // 檢查是否有修改
