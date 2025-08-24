@@ -53,6 +53,24 @@ function fixPaths() {
       "'./static/"
     );
     
+    // 修正 JavaScript 中的路徑（在字串中，沒有引號）
+    content = content.replace(
+      /\/_next\/static\//g,
+      './static/'
+    );
+    
+    // 修正 JavaScript 中的路徑（在字串中，使用模板字串）
+    content = content.replace(
+      /`\/_next\/static\//g,
+      '`./static/'
+    );
+    
+    // 修正 JavaScript 中的路徑（在字串中，使用模板字串結尾）
+    content = content.replace(
+      /\/_next\/static\//g,
+      './static/'
+    );
+    
     // 寫回檔案
     fs.writeFileSync(filePath, content);
     console.log(`已修正 ${file} 的路徑`);
