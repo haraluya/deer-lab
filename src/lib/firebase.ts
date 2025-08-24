@@ -5,14 +5,14 @@ import { getFirestore, Firestore } from "firebase/firestore";
 import { getStorage, FirebaseStorage } from "firebase/storage";
 import { getFunctions, Functions } from "firebase/functions";
 
-// 正確的 Firebase 配置
+// Firebase 配置 - 優先使用環境變數，如果沒有則使用硬編碼值
 const firebaseConfig = {
-  apiKey: "AIzaSyCMIAqNPsIyl3fJNllqNCuUJE2Rvcdf6fk",
-  authDomain: "deer-lab.firebaseapp.com",
-  projectId: "deer-lab",
-  storageBucket: "deer-lab.firebasestorage.app",
-  messagingSenderId: "554942047858",
-  appId: "1:554942047858:web:607d3e27bb438c898644eb"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCMIAqNPsIyl3fJNllqNCuUJE2Rvcdf6fk",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "deer-lab.firebaseapp.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "deer-lab",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "deer-lab.firebasestorage.app",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "554942047858",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:554942047858:web:607d3e27bb438c898644eb"
 };
 
 // 初始化 Firebase 實例
@@ -30,7 +30,11 @@ try {
   storage = getStorage(app);
   functions = getFunctions(app);
   
-  console.log('Firebase initialized successfully');
+  console.log('Firebase initialized successfully', {
+    projectId: firebaseConfig.projectId,
+    authDomain: firebaseConfig.authDomain,
+    usingEnvVars: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY
+  });
 } catch (error) {
   console.error('Firebase initialization failed:', error);
   

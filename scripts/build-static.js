@@ -2,9 +2,48 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
+// 載入環境變數
+function loadEnvVars() {
+  const envPath = path.join(__dirname, '..', '.env.local');
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    const envVars = {};
+    
+    envContent.split('\n').forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        const [key, ...valueParts] = trimmed.split('=');
+        if (key && valueParts.length > 0) {
+          let value = valueParts.join('=');
+          // 移除引號
+          if ((value.startsWith('"') && value.endsWith('"')) || 
+              (value.startsWith("'") && value.endsWith("'"))) {
+            value = value.slice(1, -1);
+          }
+          envVars[key] = value;
+        }
+      }
+    });
+    
+    // 設定環境變數
+    Object.keys(envVars).forEach(key => {
+      process.env[key] = envVars[key];
+    });
+    
+    console.log('✅ 環境變數已載入');
+    return envVars;
+  } else {
+    console.log('⚠️  未找到 .env.local 檔案，使用預設配置');
+    return {};
+  }
+}
+
 // 建置靜態檔案
 function buildStatic() {
   console.log('🔨 開始建置靜態檔案...');
+  
+  // 載入環境變數
+  const envVars = loadEnvVars();
   
   // 清理舊的建置
   console.log('🧹 清理舊的建置...');

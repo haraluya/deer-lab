@@ -64,7 +64,15 @@
           }
         ]
       }
-    ]
+    ],
+    "environment": {
+      "NEXT_PUBLIC_FIREBASE_API_KEY": "AIzaSyCMIAqNPsIyl3fJNllqNCuUJE2Rvcdf6fk",
+      "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN": "deer-lab.firebaseapp.com",
+      "NEXT_PUBLIC_FIREBASE_PROJECT_ID": "deer-lab",
+      "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET": "deer-lab.firebasestorage.app",
+      "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "554942047858",
+      "NEXT_PUBLIC_FIREBASE_APP_ID": "1:554942047858:web:607d3e27bb438c898644eb"
+    }
   },
   "functions": {
     "source": "functions"
