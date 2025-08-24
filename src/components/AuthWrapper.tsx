@@ -2,8 +2,8 @@
 
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { navigateTo } from '@/lib/utils';
+import { useEffect, useState, useRef } from 'react';
+import { safeNavigate, isAuthStable, debouncedRedirect } from '@/lib/auth-utils';
 
 interface AuthWrapperProps {
   children: React.ReactNode;
@@ -14,45 +14,73 @@ export function AuthWrapper({ children, requireAuth = true }: AuthWrapperProps) 
   const { user, appUser, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const [hasRedirected, setHasRedirected] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+  const redirectAttemptedRef = useRef(false);
+  const lastAuthStateRef = useRef<string>('');
 
   useEffect(() => {
-    // 防止重複重定向
-    if (hasRedirected) return;
+    // 如果不需要認證，直接標記為已檢查
+    if (!requireAuth) {
+      setAuthChecked(true);
+      return;
+    }
 
-    // 如果不需要認證，直接返回
-    if (!requireAuth) return;
-
-    // 如果還在載入中，等待
-    if (isLoading) return;
+    // 檢查認證狀態是否穩定
+    const authStable = isAuthStable(user, appUser, isLoading);
+    if (!authStable) {
+      console.log('AuthWrapper: 認證狀態不穩定，等待...', { user: !!user, appUser: !!appUser, isLoading });
+      return;
+    }
 
     // 檢查認證狀態
     const isAuthenticated = user && appUser;
     const isLoginPage = pathname === '/';
+    const currentAuthState = `${isAuthenticated}-${isLoginPage}`;
 
-    console.log('AuthWrapper: 檢查認證狀態', {
+    console.log('AuthWrapper: 認證檢查', {
       isAuthenticated,
       isLoginPage,
       pathname,
-      hasRedirected
+      authChecked,
+      redirectAttempted: redirectAttemptedRef.current,
+      currentAuthState,
+      lastAuthState: lastAuthStateRef.current
     });
 
-    if (!isAuthenticated && !isLoginPage) {
-      // 未認證且不在登入頁，重定向到登入頁
-      console.log('AuthWrapper: 重定向到登入頁');
-      setHasRedirected(true);
-      navigateTo('/');
+    // 防止重複處理相同的認證狀態
+    if (currentAuthState === lastAuthStateRef.current && redirectAttemptedRef.current) {
+      console.log('AuthWrapper: 認證狀態未變化，跳過處理');
+      setAuthChecked(true);
       return;
     }
 
-    if (isAuthenticated && isLoginPage) {
-      // 已認證且在登入頁，重定向到 dashboard
-      console.log('AuthWrapper: 重定向到 dashboard');
-      setHasRedirected(true);
-      navigateTo('/dashboard');
+    // 更新最後的認證狀態
+    lastAuthStateRef.current = currentAuthState;
+
+    // 如果未認證且不在登入頁，重定向到登入頁
+    if (!isAuthenticated && !isLoginPage) {
+      console.log('AuthWrapper: 需要重定向到登入頁');
+      redirectAttemptedRef.current = true;
+      
+      // 使用防抖重定向
+      debouncedRedirect('/', 1000);
       return;
     }
-  }, [user, appUser, isLoading, pathname, requireAuth, hasRedirected]);
+
+    // 如果已認證且在登入頁，重定向到 dashboard
+    if (isAuthenticated && isLoginPage) {
+      console.log('AuthWrapper: 需要重定向到 dashboard');
+      redirectAttemptedRef.current = true;
+      
+      // 使用防抖重定向
+      debouncedRedirect('/dashboard', 1000);
+      return;
+    }
+
+    // 其他情況，標記為已檢查
+    console.log('AuthWrapper: 認證狀態正常，允許渲染');
+    setAuthChecked(true);
+  }, [user, appUser, isLoading, pathname, requireAuth]);
 
   // 如果正在載入，顯示載入畫面
   if (isLoading) {
@@ -80,7 +108,7 @@ export function AuthWrapper({ children, requireAuth = true }: AuthWrapperProps) 
   const isLoginPage = pathname === '/';
 
   // 如果未認證且不在登入頁，顯示載入畫面（等待重定向）
-  if (!isAuthenticated && !isLoginPage) {
+  if (!isAuthenticated && !isLoginPage && !authChecked) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="text-center">
@@ -95,7 +123,7 @@ export function AuthWrapper({ children, requireAuth = true }: AuthWrapperProps) 
   }
 
   // 如果已認證且在登入頁，顯示載入畫面（等待重定向）
-  if (isAuthenticated && isLoginPage) {
+  if (isAuthenticated && isLoginPage && !authChecked) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="text-center">
