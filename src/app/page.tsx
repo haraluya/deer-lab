@@ -1,7 +1,7 @@
 // src/app/page.tsx
 'use client';
 
-import { useState, FormEvent, useEffect } from 'react';
+import { useState, FormEvent, useEffect, useCallback } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
@@ -22,15 +22,21 @@ export default function LoginPage() {
   const { user, isLoading: authLoading } = useAuth(); // 從我們的 AuthContext 取得使用者狀態
   const router = useRouter(); // Next.js 的路由工具
 
+  // 使用 useCallback 來穩定化重定向函數
+  const redirectToDashboard = useCallback(() => {
+    console.log('LoginPage: Redirecting to dashboard');
+    router.push('/dashboard');
+  }, [router]);
+
   // 如果使用者已經登入，就直接導向到 dashboard
   useEffect(() => {
     console.log('LoginPage: useEffect triggered', { user: user?.uid, authLoading });
     
     if (user && !authLoading) {
       console.log('LoginPage: User authenticated, redirecting to dashboard');
-      router.push('/dashboard');
+      redirectToDashboard();
     }
-  }, [user, router, authLoading]);
+  }, [user, authLoading, redirectToDashboard]);
 
   // 表單提交處理函式
   const handleLogin = async (e: FormEvent) => {
