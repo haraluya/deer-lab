@@ -1,87 +1,111 @@
 const https = require('https');
-const fs = require('fs');
+const http = require('http');
 
 const BASE_URL = 'https://deer-lab.web.app';
 
-// 測試的檔案清單
-const testFiles = [
-  '/',
-  '/dashboard',
-  '/static/css/ca0a7c8fcb67dc11.css',
-  '/static/chunks/webpack-a6b739e4cdc9fbd7.js',
-  '/manifest.json',
-  '/icon-192x192.png'
-];
-
-// 測試檔案
-function testFile(url) {
-  return new Promise((resolve, reject) => {
-    const fullUrl = `${BASE_URL}${url}`;
+// 測試函數
+async function testUrl(url) {
+  return new Promise((resolve) => {
+    const client = url.startsWith('https') ? https : http;
     
-    https.get(fullUrl, (res) => {
+    const req = client.get(url, (res) => {
       let data = '';
-      
       res.on('data', (chunk) => {
         data += chunk;
       });
       
       res.on('end', () => {
-        if (res.statusCode === 200) {
-          console.log(`✅ ${url} - 狀態碼: ${res.statusCode}`);
-          
-          // 檢查內容類型
-          const contentType = res.headers['content-type'] || '';
-          if (url.endsWith('.js') && !contentType.includes('javascript')) {
-            console.log(`⚠️  警告: ${url} 的 Content-Type 不是 JavaScript`);
-          } else if (url.endsWith('.css') && !contentType.includes('css')) {
-            console.log(`⚠️  警告: ${url} 的 Content-Type 不是 CSS`);
-          } else if (url.endsWith('.html') && !contentType.includes('html')) {
-            console.log(`⚠️  警告: ${url} 的 Content-Type 不是 HTML`);
-          }
-          
-          resolve({ url, status: res.statusCode, contentType });
-        } else {
-          console.log(`❌ ${url} - 狀態碼: ${res.statusCode}`);
-          reject({ url, status: res.statusCode });
-        }
+        resolve({
+          status: res.statusCode,
+          contentType: res.headers['content-type'],
+          data: data.substring(0, 200) // 只取前200字元
+        });
       });
-    }).on('error', (err) => {
-      console.log(`❌ ${url} - 錯誤: ${err.message}`);
-      reject({ url, error: err.message });
+    });
+    
+    req.on('error', (err) => {
+      resolve({
+        status: 0,
+        error: err.message
+      });
+    });
+    
+    req.setTimeout(10000, () => {
+      req.destroy();
+      resolve({
+        status: 0,
+        error: 'Timeout'
+      });
     });
   });
 }
 
-// 主測試函數
+// 主要測試函數
 async function testDeployment() {
-  console.log('🧪 開始測試部署...\n');
+  console.log('🧪 開始測試部署...');
   
-  const results = [];
+  const tests = [
+    {
+      name: '主頁面',
+      url: `${BASE_URL}/`,
+      expectedContentType: 'text/html'
+    },
+    {
+      name: 'Dashboard 頁面',
+      url: `${BASE_URL}/dashboard`,
+      expectedContentType: 'text/html'
+    },
+    {
+      name: 'CSS 檔案',
+      url: `${BASE_URL}/static/css/efda04f91e2683a7.css`,
+      expectedContentType: 'text/css'
+    },
+    {
+      name: 'JavaScript 檔案',
+      url: `${BASE_URL}/static/chunks/webpack-a6b739e4cdc9fbd7.js`,
+      expectedContentType: 'application/javascript'
+    },
+    {
+      name: 'Manifest 檔案',
+      url: `${BASE_URL}/manifest.json`,
+      expectedContentType: 'application/json'
+    }
+  ];
   
-  for (const file of testFiles) {
-    try {
-      const result = await testFile(file);
-      results.push(result);
-    } catch (error) {
-      results.push(error);
+  let passed = 0;
+  let failed = 0;
+  
+  for (const test of tests) {
+    console.log(`\n📋 測試: ${test.name}`);
+    console.log(`🔗 URL: ${test.url}`);
+    
+    const result = await testUrl(test.url);
+    
+    if (result.status === 200) {
+      if (result.contentType && result.contentType.includes(test.expectedContentType.split('/')[1])) {
+        console.log(`✅ 通過 - 狀態碼: ${result.status}, 內容類型: ${result.contentType}`);
+        passed++;
+      } else {
+        console.log(`⚠️  警告 - 狀態碼: ${result.status}, 內容類型: ${result.contentType} (預期: ${test.expectedContentType})`);
+        passed++;
+      }
+    } else {
+      console.log(`❌ 失敗 - 狀態碼: ${result.status}, 錯誤: ${result.error || '未知錯誤'}`);
+      failed++;
     }
   }
   
-  console.log('\n📊 測試結果摘要:');
-  const successCount = results.filter(r => r.status === 200).length;
-  const totalCount = testFiles.length;
+  console.log('\n📊 測試結果總結:');
+  console.log(`✅ 通過: ${passed}`);
+  console.log(`❌ 失敗: ${failed}`);
+  console.log(`📈 成功率: ${((passed / (passed + failed)) * 100).toFixed(1)}%`);
   
-  console.log(`✅ 成功: ${successCount}/${totalCount}`);
-  console.log(`❌ 失敗: ${totalCount - successCount}/${totalCount}`);
-  
-  if (successCount === totalCount) {
+  if (failed === 0) {
     console.log('\n🎉 所有測試通過！部署成功！');
     console.log(`🌍 您的應用程式已成功部署到: ${BASE_URL}`);
   } else {
-    console.log('\n⚠️  部分測試失敗，請檢查部署配置');
+    console.log('\n⚠️  部分測試失敗，請檢查部署配置。');
   }
-  
-  return results;
 }
 
 // 執行測試

@@ -14,7 +14,8 @@
     "deploy": "npm run build-static && firebase deploy --only hosting",
     "deploy-only": "firebase deploy --only hosting",
     "test-deployment": "node scripts/test-deployment.js",
-    "deploy-and-test": "npm run deploy && npm run test-deployment"
+    "deploy-and-test": "npm run deploy && npm run test-deployment",
+    "fix-and-deploy": "npm run build-static && firebase deploy --only hosting && npm run test-deployment"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

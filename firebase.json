@@ -12,6 +12,10 @@
         "destination": "/static/**"
       },
       {
+        "source": "/_next/static/**",
+        "destination": "/static/**"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
@@ -40,6 +44,15 @@
           {
             "key": "X-Content-Type-Options",
             "value": "nosniff"
+          }
+        ]
+      },
+      {
+        "source": "**/*.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
           }
         ]
       }

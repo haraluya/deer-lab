@@ -37,11 +37,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // 添加調試信息
+  useEffect(() => {
+    console.log('AuthContext: 組件已載入');
+    console.log('AuthContext: Firebase auth 狀態:', !!auth);
+    console.log('AuthContext: Firebase db 狀態:', !!db);
+  }, []);
+
   useEffect(() => {
     console.log('AuthContext: Starting auth state listener');
     
     if (!auth || !db) {
       console.error('Firebase not properly initialized');
+      console.error('AuthContext: auth 存在:', !!auth);
+      console.error('AuthContext: db 存在:', !!db);
       setIsLoading(false);
       return;
     }
@@ -66,6 +75,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (!employeeId) {
               console.error('AuthContext: No employeeId found in email');
               setAppUser(null);
+              if (isMounted) {
+                console.log('AuthContext: Setting isLoading to false (no employeeId)');
+                setIsLoading(false);
+              }
               return;
             }
 

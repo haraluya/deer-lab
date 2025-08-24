@@ -22,6 +22,16 @@ export default function LoginPage() {
   const { user, isLoading: authLoading } = useAuth(); // 從我們的 AuthContext 取得使用者狀態
   const router = useRouter(); // Next.js 的路由工具
 
+  // 添加調試信息
+  useEffect(() => {
+    console.log('LoginPage: 組件已載入');
+    console.log('LoginPage: Firebase auth 狀態:', !!auth);
+    console.log('LoginPage: 當前環境變數:', {
+      apiKey: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'deer-lab'
+    });
+  }, []);
+
   // 使用 useCallback 來穩定化重定向函數
   const redirectToDashboard = useCallback(() => {
     console.log('LoginPage: Redirecting to dashboard');
@@ -80,7 +90,7 @@ export default function LoginPage() {
         } else if (firebaseError.code === 'auth/too-many-requests') {
           setError('登入嘗試次數過多，請稍後再試。');
         } else {
-          setError('發生未知錯誤，請稍後再試。');
+          setError(`發生錯誤: ${firebaseError.message}`);
         }
       } else {
         // 如果錯誤不是我們預期的格式，給一個通用的錯誤訊息
@@ -100,6 +110,7 @@ export default function LoginPage() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">正在處理登入...</p>
+          <p className="text-sm text-gray-400 mt-2">authLoading: {authLoading.toString()}, isLoading: {isLoading.toString()}</p>
         </div>
       </main>
     );
@@ -112,6 +123,7 @@ export default function LoginPage() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">正在跳轉到系統...</p>
+          <p className="text-sm text-gray-400 mt-2">用戶ID: {user.uid}</p>
         </div>
       </main>
     );
@@ -142,7 +154,7 @@ export default function LoginPage() {
                 <Input
                   type="text"
                   id="employeeId"
-                  placeholder="例如: admin"
+                  placeholder="例如: 001"
                   value={employeeId}
                   onChange={(e) => setEmployeeId(e.target.value)}
                   required
