@@ -56,6 +56,12 @@ const navLinks: NavItem[] = [
 function SidebarNav() {
   const pathname = usePathname();
   
+  // 添加調試信息
+  useEffect(() => {
+    console.log('SidebarNav: 當前路徑:', pathname);
+    console.log('SidebarNav: 導航連結:', navLinks.map(link => link.href));
+  }, [pathname]);
+  
   const handleNavClick = () => {
     // 在移動版點擊導航項目後關閉側邊欄
     const sidebar = document.getElementById('mobile-sidebar');
@@ -82,6 +88,12 @@ function SidebarNav() {
         }
         const Icon = link.icon;
         const isActive = pathname === link.href;
+        
+        // 添加調試信息
+        if (isActive) {
+          console.log('SidebarNav: 當前活動頁面:', link.href);
+        }
+        
         return (
           <Link
             key={link.href}

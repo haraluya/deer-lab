@@ -43,8 +43,7 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   
-  // 靜態匯出配置
-  trailingSlash: false,
+  // 靜態匯出配置 - 移除 trailingSlash 配置
   skipTrailingSlashRedirect: true,
   
   // 確保正確的基礎路徑

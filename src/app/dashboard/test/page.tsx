@@ -1,160 +1,52 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { collection, addDoc, getDocs } from "firebase/firestore"
-import { db } from "@/lib/firebase"
-import { AuthWrapper } from '@/components/AuthWrapper'
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { TestTube, Database, Loader2 } from "lucide-react"
+import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { AuthWrapper } from '@/components/AuthWrapper';
 
 function TestPageContent() {
-  const [testing, setTesting] = useState(false)
+  const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
 
-  const testWorkOrderCreation = async () => {
-    setTesting(true)
-    try {
-      // 建立測試工單
-      const testWorkOrder = {
-        code: "WO-TEST-001",
-        productSnapshot: {
-          code: "TEST-PROD",
-          name: "測試產品",
-          fragranceName: "測試香精",
-          nicotineMg: 3
-        },
-        billOfMaterials: [
-          {
-            materialId: "test-material-1",
-            materialCode: "MAT-001",
-            materialName: "測試物料1",
-            quantity: 100,
-            unit: "g"
-          }
-        ],
-        targetQuantity: 1000,
-        actualQuantity: 0,
-        status: "未確認",
-        qcStatus: "未檢驗",
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
+  useEffect(() => {
+    setMounted(true);
+    console.log('TestPage: 頁面已載入');
+    console.log('TestPage: 當前路徑:', pathname);
+  }, [pathname]);
 
-      const docRef = await addDoc(collection(db, "workOrders"), testWorkOrder)
-      toast.success(`測試工單建立成功，ID: ${docRef.id}`)
-      
-      // 讀取所有工單
-      const querySnapshot = await getDocs(collection(db, "workOrders"))
-      toast.success(`總共有 ${querySnapshot.size} 個工單`)
-      
-    } catch (error) {
-      console.error("測試失敗:", error)
-      toast.error("測試失敗")
-    } finally {
-      setTesting(false)
-    }
-  }
-
-  const testInventoryAdjustment = async () => {
-    setTesting(true)
-    try {
-      // 建立測試物料
-      const testMaterial = {
-        code: "TEST-MAT",
-        name: "測試物料",
-        currentStock: 100,
-        minStock: 50,
-        maxStock: 200,
-        unit: "g",
-        status: "active"
-      }
-
-      const docRef = await addDoc(collection(db, "materials"), testMaterial)
-      toast.success(`測試物料建立成功，ID: ${docRef.id}`)
-      
-    } catch (error) {
-      console.error("測試失敗:", error)
-      toast.error("測試失敗")
-    } finally {
-      setTesting(false)
-    }
+  if (!mounted) {
+    return (
+      <div className="p-8">
+        <h1 className="text-2xl font-bold mb-4">測試頁面載入中...</h1>
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto py-10">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-            功能測試頁面
-          </h1>
-          <p className="text-gray-600 mt-2">測試系統各項功能是否正常運作</p>
+    <div className="p-8">
+      <h1 className="text-2xl font-bold mb-4">測試頁面</h1>
+      <div className="space-y-4">
+        <div className="p-4 bg-blue-50 rounded-lg">
+          <h2 className="font-semibold mb-2">路由資訊</h2>
+          <p><strong>當前路徑:</strong> {pathname}</p>
+          <p><strong>頁面組件:</strong> TestPageContent</p>
+          <p><strong>載入時間:</strong> {new Date().toLocaleString()}</p>
+        </div>
+        
+        <div className="p-4 bg-green-50 rounded-lg">
+          <h2 className="font-semibold mb-2">測試內容</h2>
+          <p>如果您看到這個內容，說明路由工作正常！</p>
+          <p>這個頁面應該顯示測試內容，而不是 dashboard 內容。</p>
+        </div>
+
+        <div className="p-4 bg-yellow-50 rounded-lg">
+          <h2 className="font-semibold mb-2">導航測試</h2>
+          <p>請嘗試點擊側邊欄的其他分頁，看看是否能正確切換。</p>
         </div>
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-lg font-semibold text-blue-700">工單功能測試</CardTitle>
-            <TestTube className="h-5 w-5 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-blue-600 mb-4">
-              測試工單建立和查詢功能
-            </p>
-            <Button 
-              onClick={testWorkOrderCreation}
-              disabled={testing}
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
-            >
-              {testing ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  測試中...
-                </>
-              ) : (
-                <>
-                  <TestTube className="h-4 w-4 mr-2" />
-                  測試工單建立
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-lg font-semibold text-green-700">庫存功能測試</CardTitle>
-            <Database className="h-5 w-5 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-green-600 mb-4">
-              測試庫存調整和物料管理功能
-            </p>
-            <Button 
-              onClick={testInventoryAdjustment}
-              disabled={testing}
-              className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
-            >
-              {testing ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  測試中...
-                </>
-              ) : (
-                <>
-                  <Database className="h-4 w-4 mr-2" />
-                  測試庫存調整
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
     </div>
-  )
+  );
 }
-
 
 export default function TestPage() {
   return (
