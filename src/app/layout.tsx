@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ClientProvider } from "./client-provider";
-import { AuthGuard } from "@/lib/auth-guard";
+
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -31,9 +31,7 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <ClientProvider>
-          <AuthGuard>
-            {children}
-          </AuthGuard>
+          {children}
         </ClientProvider>
         {/* 暫時停用 Service Worker 註冊來測試 */}
         {/* <script

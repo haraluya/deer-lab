@@ -1,6 +1,0 @@
-* [32mmain[m
-[33m1970675[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m fix: 修正 GitHub Actions 工作流程，添加錯誤處理和 Firebase Functions 建置
-[33mb559fd1[m fix: 修正 CSS 路徑問題並整合 GitHub Actions 自動部署
-[33me24cd2b[m Fix build script to use shell script for cross-platform compatibility
-[33m74efc6e[m Fix build script to use original Next.js application instead of test pages
-[33ma4f7344[m Fix JavaScript loading issues and add diagnostic tools

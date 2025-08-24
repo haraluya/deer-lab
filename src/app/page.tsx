@@ -6,7 +6,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { navigateTo } from '@/lib/utils';
+
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,7 +36,7 @@ export default function LoginPage() {
   // 使用 useCallback 來穩定化重定向函數
   const redirectToDashboard = useCallback(() => {
     console.log('LoginPage: Redirecting to dashboard');
-    navigateTo('/dashboard');
+          window.location.href = '/dashboard';
   }, []);
 
   // 檢查用戶是否已經認證，如果已認證則重定向到 dashboard

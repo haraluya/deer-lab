@@ -7,7 +7,7 @@ import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, DocumentReference, DocumentData, collection, where, query, getDocs } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { navigateTo } from '@/lib/navigation';
+
 
 export interface AppUser extends DocumentData {
   uid: string;
@@ -128,7 +128,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await signOut(auth);
       toast.success("您已成功登出。");
-      navigateTo('/');
+      window.location.href = '/';
     } catch (error) {
       console.error('Logout error:', error);
       toast.error("登出時發生錯誤。");

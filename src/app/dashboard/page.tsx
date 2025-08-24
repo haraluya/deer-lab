@@ -7,7 +7,7 @@ import { useEffect } from 'react';
 import { LowStockNotification } from "@/components/LowStockNotification";
 import { BarChart3, Users, Package, Factory, ShoppingCart, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { navigateTo } from '@/lib/navigation';
+
 
 export default function DashboardPage() {
   const { appUser, isLoading } = useAuth();
@@ -16,7 +16,7 @@ export default function DashboardPage() {
   // 移除重複的認證檢查，讓 AuthGuard 處理
 
   const handleCardClick = (path: string) => {
-    navigateTo(path);
+          window.location.href = path;
   };
 
   // 移除重複的載入檢查，讓 AuthGuard 處理
