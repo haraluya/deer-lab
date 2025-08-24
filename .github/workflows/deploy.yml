@@ -34,18 +34,31 @@ jobs:
         NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
         NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
       run: |
-        # 暫時移動 functions 目錄
-        if [ -d "functions" ]; then
-          mv functions functions_backup
+        echo "🚀 Starting build process..."
+        
+        # 檢查環境變數
+        echo "Checking environment variables..."
+        if [ -z "$NEXT_PUBLIC_FIREBASE_API_KEY" ]; then
+          echo "❌ NEXT_PUBLIC_FIREBASE_API_KEY is not set"
+          exit 1
+        fi
+        echo "✅ Environment variables are set"
+        
+        # 執行建置
+        echo "📦 Running Next.js build..."
+        npm run build
+        
+        # 檢查建置結果
+        if [ ! -d "out" ]; then
+          echo "❌ Build failed: out directory not found"
+          exit 1
         fi
         
-        # 執行修正後的建置流程（包含路徑修正）
-        npm run build-github
+        # 執行路徑修正
+        echo "🔧 Running path fix script..."
+        node scripts/fix-paths.js
         
-        # 恢復 functions 目錄
-        if [ -d "functions_backup" ]; then
-          mv functions_backup functions
-        fi
+        echo "✅ Build process completed successfully"
     
     - name: Verify build output
       run: |
@@ -62,5 +75,17 @@ jobs:
           exit 1
         fi
     
-    - name: Deploy to Firebase Hosting
-      run: firebase deploy --only hosting --token "${{ secrets.FIREBASE_TOKEN }}"
+    - name: Build Firebase Functions
+      run: |
+        if [ -d "functions" ]; then
+          echo "Building Firebase Functions..."
+          cd functions
+          npm ci
+          npm run build
+          cd ..
+        else
+          echo "No functions directory found, skipping functions build"
+        fi
+    
+    - name: Deploy to Firebase
+      run: firebase deploy --token "${{ secrets.FIREBASE_TOKEN }}"
