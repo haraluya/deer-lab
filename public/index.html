@@ -27,6 +27,7 @@
             justify-content: center;
             gap: 20px;
             margin: 30px 0;
+            flex-wrap: wrap;
         }
         .nav a {
             padding: 12px 24px;
@@ -39,6 +40,12 @@
         .nav a:hover {
             background: #0056b3;
         }
+        .nav a.secondary {
+            background: #6c757d;
+        }
+        .nav a.secondary:hover {
+            background: #545b62;
+        }
         .status {
             padding: 15px;
             margin: 20px 0;
@@ -46,6 +53,14 @@
             background-color: #d4edda;
             border: 1px solid #c3e6cb;
             color: #155724;
+        }
+        .info {
+            background-color: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            color: #004085;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
         }
     </style>
 </head>
@@ -55,6 +70,14 @@
         
         <div class="status">
             ✅ 主頁載入成功！Firebase Hosting 正常運作。
+        </div>
+        
+        <div class="info">
+            <h3>📋 系統狀態</h3>
+            <p><strong>部署狀態：</strong> ✅ 成功</p>
+            <p><strong>靜態檔案：</strong> ✅ 正常</p>
+            <p><strong>JavaScript：</strong> ✅ 正常</p>
+            <p><strong>CSS 樣式：</strong> ✅ 正常</p>
         </div>
         
         <h2>歡迎使用 Deer Lab 系統</h2>
@@ -70,11 +93,13 @@
         <div class="nav">
             <a href="/dashboard">進入系統</a>
             <a href="/test.html">測試頁面</a>
+            <a href="/debug.html" class="secondary">🔧 診斷工具</a>
         </div>
         
         <div style="text-align: center; margin-top: 30px; color: #666;">
             <p>如果這個頁面能正常顯示，表示基本部署是成功的。</p>
             <p>點擊「進入系統」來使用完整的應用程式。</p>
+            <p>如果遇到問題，請使用「診斷工具」來檢查系統狀態。</p>
         </div>
     </div>
     
@@ -86,6 +111,12 @@
             const status = document.querySelector('.status');
             status.innerHTML += '<br>✅ JavaScript 執行正常';
         }, 1000);
+        
+        // 添加頁面載入時間戳
+        document.addEventListener('DOMContentLoaded', function() {
+            const now = new Date();
+            console.log('Page loaded at:', now.toLocaleString());
+        });
     </script>
 </body>
 </html>

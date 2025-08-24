@@ -57,6 +57,8 @@ if [ -d ".next" ]; then
     echo "✅ .next/static exists"
     echo "Contents of .next/static:"
     ls -la .next/static/
+    echo "JavaScript files in .next/static:"
+    find .next/static -name "*.js" -type f | head -10
   fi
   
   if [ -d ".next/server" ]; then
@@ -99,11 +101,11 @@ EOF
   exit 0
 fi
 
-# 複製靜態檔案
+# 複製靜態檔案（保持目錄結構）
 echo "Copying static files..."
 if [ -d ".next/static" ]; then
   echo "Copying .next/static files..."
-  cp -r .next/static/* out/
+  cp -r .next/static out/
 fi
 
 # 複製 public 檔案（優先）
@@ -189,3 +191,12 @@ echo "HTML files in out directory:"
 find out -name "*.html" -type f
 echo "JavaScript files in out directory:"
 find out -name "*.js" -type f | head -10
+echo "CSS files in out directory:"
+find out -name "*.css" -type f | head -5
+echo "Static directory structure:"
+if [ -d "out/static" ]; then
+  echo "✅ out/static exists"
+  ls -la out/static/
+else
+  echo "❌ out/static not found"
+fi

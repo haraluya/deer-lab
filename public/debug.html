@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deer Lab - 診斷頁面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .status {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Deer Lab 診斷頁面</h1>
+        
+        <div class="status success">
+            ✅ 診斷頁面載入成功
+        </div>
+        
+        <div class="test-section">
+            <h3>📋 基本檢查</h3>
+            <div id="basic-checks"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📁 靜態檔案檢查</h3>
+            <div id="static-files"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🔗 JavaScript 檔案測試</h3>
+            <div id="js-tests"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📊 控制台日誌</h3>
+            <div id="console-log" class="log"></div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="/" style="padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; margin: 0 10px;">
+                返回主頁
+            </a>
+            <a href="/dashboard" style="padding: 10px 20px; background: #28a745; color: white; text-decoration: none; border-radius: 5px; margin: 0 10px;">
+                前往 Dashboard
+            </a>
+        </div>
+    </div>
+    
+    <script>
+        const log = document.getElementById('console-log');
+        const basicChecks = document.getElementById('basic-checks');
+        const staticFiles = document.getElementById('static-files');
+        const jsTests = document.getElementById('js-tests');
+        
+        function addLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            log.innerHTML += `[${timestamp}] ${message}\n`;
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        function addCheck(element, message, type = 'success') {
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = message;
+            element.appendChild(div);
+        }
+        
+        // 基本檢查
+        addLog('開始診斷...');
+        addCheck(basicChecks, '✅ 頁面載入時間: ' + new Date().toLocaleString());
+        addCheck(basicChecks, '✅ JavaScript 執行環境: ' + navigator.userAgent);
+        addCheck(basicChecks, '✅ 當前網址: ' + window.location.href);
+        
+        // 測試靜態檔案
+        addLog('檢查靜態檔案...');
+        
+        const testFiles = [
+            '/static/css/app.css',
+            '/static/js/main.js',
+            '/next/static/css/app.css',
+            '/next/static/js/main.js'
+        ];
+        
+        testFiles.forEach(file => {
+            fetch(file)
+                .then(response => {
+                    if (response.ok) {
+                        addCheck(staticFiles, `✅ ${file} - 載入成功 (${response.status})`);
+                        addLog(`${file} 載入成功`);
+                    } else {
+                        addCheck(staticFiles, `❌ ${file} - 載入失敗 (${response.status})`, 'error');
+                        addLog(`${file} 載入失敗: ${response.status}`);
+                    }
+                })
+                .catch(error => {
+                    addCheck(staticFiles, `❌ ${file} - 網路錯誤`, 'error');
+                    addLog(`${file} 網路錯誤: ${error.message}`);
+                });
+        });
+        
+        // 測試 JavaScript 執行
+        addLog('測試 JavaScript 執行...');
+        addCheck(jsTests, '✅ 基本 JavaScript 執行正常');
+        
+        // 測試動態載入
+        setTimeout(() => {
+            addCheck(jsTests, '✅ 延遲執行正常');
+            addLog('延遲執行測試完成');
+        }, 1000);
+        
+        // 監聽錯誤
+        window.addEventListener('error', function(e) {
+            addLog(`❌ JavaScript 錯誤: ${e.message} at ${e.filename}:${e.lineno}`);
+            addCheck(jsTests, `❌ JavaScript 錯誤: ${e.message}`, 'error');
+        });
+        
+        // 監聽資源載入錯誤
+        window.addEventListener('load', function() {
+            const resources = performance.getEntriesByType('resource');
+            const failedResources = resources.filter(r => r.name.includes('.js') && r.duration === 0);
+            
+            if (failedResources.length > 0) {
+                addLog(`❌ 發現 ${failedResources.length} 個載入失敗的資源`);
+                failedResources.forEach(r => {
+                    addLog(`❌ 載入失敗: ${r.name}`);
+                });
+            } else {
+                addLog('✅ 所有資源載入正常');
+            }
+        });
+        
+        addLog('診斷完成');
+    </script>
+</body>
+</html>
