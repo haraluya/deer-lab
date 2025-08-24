@@ -23,53 +23,28 @@ function fixPaths() {
     const filePath = path.join(outDir, file);
     let content = fs.readFileSync(filePath, 'utf8');
     
-    // 修正所有 /_next/static/ 路徑為 ./static/
-    content = content.replace(
-      /\/_next\/static\//g,
-      './static/'
-    );
+    // 修正所有可能的 /_next/static/ 路徑為 ./static/
+    const patterns = [
+      // 修正 href 屬性中的路徑
+      { from: /href="\/_next\/static\//g, to: 'href="./static/' },
+      // 修正 src 屬性中的路徑
+      { from: /src="\/_next\/static\//g, to: 'src="./static/' },
+      // 修正 JavaScript 字串中的路徑（雙引號）
+      { from: /"\/_next\/static\//g, to: '"./static/' },
+      // 修正 JavaScript 字串中的路徑（單引號）
+      { from: /'\/_next\/static\//g, to: "'./static/" },
+      // 修正 JavaScript 字串中的路徑（模板字串）
+      { from: /`\/_next\/static\//g, to: '`./static/' },
+      // 修正 JavaScript 字串中的路徑（沒有引號）
+      { from: /\/_next\/static\//g, to: './static/' },
+      // 修正 JavaScript 中的路徑（在字串中）
+      { from: /\/_next\/static\//g, to: './static/' }
+    ];
     
-    // 修正 href 屬性中的路徑
-    content = content.replace(
-      /href="\/_next\/static\//g,
-      'href="./static/'
-    );
-    
-    // 修正 src 屬性中的路徑
-    content = content.replace(
-      /src="\/_next\/static\//g,
-      'src="./static/'
-    );
-    
-    // 修正 JavaScript 中的路徑（在字串中）
-    content = content.replace(
-      /"\/_next\/static\//g,
-      '"./static/'
-    );
-    
-    // 修正 JavaScript 中的路徑（在字串中，單引號）
-    content = content.replace(
-      /'\/_next\/static\//g,
-      "'./static/"
-    );
-    
-    // 修正 JavaScript 中的路徑（在字串中，沒有引號）
-    content = content.replace(
-      /\/_next\/static\//g,
-      './static/'
-    );
-    
-    // 修正 JavaScript 中的路徑（在字串中，使用模板字串）
-    content = content.replace(
-      /`\/_next\/static\//g,
-      '`./static/'
-    );
-    
-    // 修正 JavaScript 中的路徑（在字串中，使用模板字串結尾）
-    content = content.replace(
-      /\/_next\/static\//g,
-      './static/'
-    );
+    // 應用所有修正模式
+    patterns.forEach(pattern => {
+      content = content.replace(pattern.from, pattern.to);
+    });
     
     // 寫回檔案
     fs.writeFileSync(filePath, content);
