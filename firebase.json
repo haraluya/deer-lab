@@ -8,26 +8,6 @@
     ],
     "rewrites": [
       {
-        "source": "/static/**",
-        "destination": "/static/**"
-      },
-      {
-        "source": "/manifest.json",
-        "destination": "/manifest.json"
-      },
-      {
-        "source": "/favicon.ico",
-        "destination": "/favicon.ico"
-      },
-      {
-        "source": "/icon-*.png",
-        "destination": "/icon-*.png"
-      },
-      {
-        "source": "/dashboard/**",
-        "destination": "/dashboard/**"
-      },
-      {
         "source": "**",
         "destination": "/index.html"
       }
@@ -40,7 +20,7 @@
       }
     ],
     "trailingSlash": false,
-    "cleanUrls": true,
+    "cleanUrls": false,
     "headers": [
       {
         "source": "**/*.@(js|css)",
