@@ -7,7 +7,7 @@ import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, DocumentReference, DocumentData, collection, where, query, getDocs } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { navigateTo } from '@/lib/utils';
+import { navigateTo } from '@/lib/navigation';
 
 export interface AppUser extends DocumentData {
   uid: string;

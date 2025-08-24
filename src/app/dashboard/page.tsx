@@ -7,38 +7,19 @@ import { useEffect } from 'react';
 import { LowStockNotification } from "@/components/LowStockNotification";
 import { BarChart3, Users, Package, Factory, ShoppingCart, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { navigateTo } from '@/lib/utils';
+import { navigateTo } from '@/lib/navigation';
 
 export default function DashboardPage() {
   const { appUser, isLoading } = useAuth();
   const router = useRouter();
 
-  // 移除重複的認證檢查，讓 AuthWrapper 處理
-  // useEffect(() => {
-  //   if (!isLoading && !appUser) {
-  //     navigateTo('/');
-  //   }
-  // }, [appUser, isLoading]);
+  // 移除重複的認證檢查，讓 AuthGuard 處理
 
   const handleCardClick = (path: string) => {
     navigateTo(path);
   };
 
-  // 移除重複的載入檢查，讓 AuthWrapper 處理
-  // if (isLoading || !appUser) {
-  //   return (
-  //     <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-  //       <div className="text-center">
-  //         <div className="relative">
-  //           <div className="w-16 h-16 border-4 border-blue-200 rounded-full animate-spin"></div>
-  //           <div className="absolute top-0 left-0 w-16 h-16 border-4 border-transparent border-t-blue-600 rounded-full animate-spin"></div>
-  //         </div>
-  //         <p className="mt-4 text-gray-600 font-medium">正在載入系統...</p>
-  //         <p className="mt-2 text-sm text-gray-500">請稍候</p>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  // 移除重複的載入檢查，讓 AuthGuard 處理
 
   return (
     <div className="container mx-auto py-10">

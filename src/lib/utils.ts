@@ -8,9 +8,9 @@ export function cn(...inputs: ClassValue[]) {
 // 通用的路由導航函數，支援靜態部署環境
 export function navigateTo(path: string) {
   if (typeof window !== 'undefined') {
-    // 使用安全的導航函數
-    import('./auth-utils').then(({ safeNavigate }) => {
-      safeNavigate(path);
+    // 使用新的導航函數
+    import('./navigation').then(({ navigateTo: navTo }) => {
+      navTo(path);
     }).catch(() => {
       // 回退到硬重定向
       window.location.href = path;

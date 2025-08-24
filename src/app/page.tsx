@@ -39,15 +39,7 @@ export default function LoginPage() {
     navigateTo('/dashboard');
   }, []);
 
-  // 移除重複的認證檢查，讓 AuthWrapper 處理
-  // useEffect(() => {
-  //   console.log('LoginPage: useEffect triggered', { user: user?.uid, authLoading });
-  //   
-  //   if (user && !authLoading) {
-  //     console.log('LoginPage: User authenticated, redirecting to dashboard');
-  //     redirectToDashboard();
-  //   }
-  // }, [user, authLoading, redirectToDashboard]);
+  // 移除重複的認證檢查，讓 AuthGuard 處理
 
   // 表單提交處理函式
   const handleLogin = async (e: FormEvent) => {
@@ -104,30 +96,7 @@ export default function LoginPage() {
     }
   };
 
-  // 移除重複的載入檢查，讓 AuthWrapper 處理
-  // if (authLoading || isLoading) {
-  //   return (
-  //     <main className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-  //       <div className="text-center">
-  //         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-  //         <p className="text-gray-600">正在處理登入...</p>
-  //         <p className="text-sm text-gray-400 mt-2">authLoading: {authLoading.toString()}, isLoading: {isLoading.toString()}</p>
-  //       </div>
-  //     </main>
-  //   );
-  // }
-
-  // if (user) {
-  //   return (
-  //     <main className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-  //       <div className="text-center">
-  //         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-  //         <p className="text-gray-600">正在跳轉到系統...</p>
-  //         <p className="text-sm text-gray-400 mt-2">用戶ID: {user.uid}</p>
-  //       </div>
-  //     </main>
-  //   );
-  // }
+  // 移除重複的載入檢查，讓 AuthGuard 處理
 
   return (
     <main className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
