@@ -4,7 +4,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useMemo, useCallback } from 'react';
 import { onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, DocumentReference, DocumentData } from 'firebase/firestore';
+import { doc, getDoc, DocumentReference, DocumentData, collection, where, query, getDocs } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -40,7 +40,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     console.log('AuthContext: Starting auth state listener');
     
-    // 檢查 Firebase 是否正確初始化
     if (!auth || !db) {
       console.error('Firebase not properly initialized');
       setIsLoading(false);
@@ -60,7 +59,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(firebaseUser);
           
           try {
-            // 使用工號作為 document ID
+            // 使用工號作為查詢條件，而不是 document ID
             const employeeId = firebaseUser.email?.split('@')[0]; // 從 email 提取工號
             console.log('AuthContext: Loading user data for employeeId', employeeId);
             
@@ -70,15 +69,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               return;
             }
 
-            const userDocRef = doc(db, 'users', employeeId);
-            const userDocSnap = await getDoc(userDocRef);
+            // 使用 where 查詢來找到對應的用戶資料
+            const usersRef = collection(db, 'users');
+            const q = query(usersRef, where('employeeId', '==', employeeId));
+            const querySnapshot = await getDocs(q);
 
             if (!isMounted) return;
 
-            if (userDocSnap.exists()) {
-              const firestoreData = userDocSnap.data();
+            if (!querySnapshot.empty) {
+              const userDoc = querySnapshot.docs[0]; // 取得第一個符合的檔案
+              const firestoreData = userDoc.data();
               const userData = {
-                uid: userDocSnap.id,
+                uid: userDoc.id,
                 ...firestoreData,
                 hourlyWage: Number(firestoreData.hourlyWage) || 0,
               } as AppUser;
