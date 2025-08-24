@@ -28,7 +28,7 @@ jobs:
     - name: Make build scripts executable
       run: |
         chmod +x build-static.sh
-        chmod +x functions/build-simple.sh
+        chmod +x functions/build-standalone.sh
     
     - name: Build application (excluding functions)
       env:
@@ -77,6 +77,8 @@ jobs:
         npm run build
         echo "Checking lib directory:"
         ls -la lib/ || echo "lib directory not found"
+        echo "Checking node_modules:"
+        ls -la node_modules/ | head -5
         cd ..
     
     - name: Deploy to Firebase

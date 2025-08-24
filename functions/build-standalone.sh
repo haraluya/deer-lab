@@ -1,9 +1,9 @@
 #!/bin/bash
 
-echo "Building Firebase Functions (Simple Method)..."
+echo "Building Firebase Functions (Standalone Method)..."
 
 # 清理舊的建置
-rm -rf lib
+rm -rf lib node_modules package-lock.json
 
 # 安裝依賴項
 echo "Installing dependencies..."
@@ -14,7 +14,7 @@ mkdir -p lib
 
 # 創建一個簡單的 JavaScript 檔案
 cat > lib/index.js << 'EOF'
-// Simple Firebase Functions build
+// Standalone Firebase Functions build
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 
@@ -30,7 +30,16 @@ exports.testFunction = functions.https.onRequest((request, response) => {
   });
 });
 
-// Export placeholder functions to prevent deployment errors
+// Export a health check function
+exports.healthCheck = functions.https.onRequest((request, response) => {
+  response.json({ 
+    status: "healthy",
+    service: "deer-lab-functions",
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Export placeholder function
 exports.placeholder = functions.https.onRequest((request, response) => {
   response.json({ 
     message: 'Functions placeholder - deployment successful',
@@ -39,9 +48,11 @@ exports.placeholder = functions.https.onRequest((request, response) => {
 });
 EOF
 
-echo "✅ Created simple lib/index.js"
+echo "✅ Created standalone lib/index.js"
 echo "Functions build completed successfully"
 echo "Checking lib directory:"
 ls -la lib/
 echo "Checking node_modules:"
 ls -la node_modules/ | head -10
+echo "Checking firebase-functions:"
+ls -la node_modules/firebase-functions/ || echo "firebase-functions not found"
