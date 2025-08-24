@@ -2,7 +2,19 @@
 
 ## 常見錯誤和解決方案
 
-### 1. Firebase Service Account 錯誤
+### 1. Node.js 版本錯誤
+
+**錯誤訊息：**
+```
+Firebase CLI v14.14.0 is incompatible with Node.js v18.20.8
+Please upgrade Node.js to version >=20.0.0 || >=22.0.0
+```
+
+**解決方案：**
+- ✅ 已修正：GitHub Actions 現在使用 Node.js 20
+- 如果仍有問題，可以使用 `deploy-stable.yml` 工作流程
+
+### 2. Firebase Service Account 錯誤
 
 **錯誤訊息：**
 ```
@@ -25,7 +37,25 @@ Error: Could not find Firebase service account credentials
    - 名稱：`FIREBASE_SERVICE_ACCOUNT`
    - 值：將整個 JSON 檔案內容貼上
 
-### 2. 建置失敗錯誤
+### 3. Firebase Token 錯誤（替代方案）
+
+**錯誤訊息：**
+```
+Error: Could not authenticate with Firebase
+```
+
+**解決方案：**
+
+1. **生成 Firebase Token**
+   ```bash
+   firebase login:ci
+   ```
+
+2. **設定 GitHub Secret**
+   - 名稱：`FIREBASE_TOKEN`
+   - 值：從 `firebase login:ci` 獲得的 token
+
+### 4. 建置失敗錯誤
 
 **錯誤訊息：**
 ```
@@ -36,22 +66,17 @@ Error: Could not find Firebase service account credentials
 - 檢查 `package.json` 中的 `build-static` 腳本
 - 確保 `scripts/build-static.js` 存在且可執行
 
-### 3. 權限錯誤
-
-**錯誤訊息：**
-```
-Error: Could not deploy to Firebase
-```
-
-**解決方案：**
-- 確保 Firebase Service Account 有部署權限
-- 檢查 Firebase 專案 ID 是否正確
-
 ## 快速修復步驟
 
-### 步驟 1：檢查 Secrets
-確保以下 Secrets 已設定：
-- `FIREBASE_SERVICE_ACCOUNT` - Firebase 服務帳戶 JSON
+### 步驟 1：選擇部署方式
+
+**方式 A：使用 Firebase Service Account（推薦）**
+- 設定 `FIREBASE_SERVICE_ACCOUNT` secret
+- 使用 `deploy.yml` 或 `deploy-simple.yml`
+
+**方式 B：使用 Firebase Token**
+- 設定 `FIREBASE_TOKEN` secret
+- 使用 `deploy-stable.yml`
 
 ### 步驟 2：測試本地建置
 ```bash
@@ -68,6 +93,23 @@ git push origin main
 ### 步驟 4：檢查 Actions
 - 前往 GitHub 專案的 **Actions** 標籤
 - 查看最新的工作流程執行結果
+
+## 工作流程選擇
+
+### 1. deploy.yml（推薦）
+- 使用 Firebase Service Account
+- 完整的建置驗證
+- 詳細的錯誤報告
+
+### 2. deploy-simple.yml（簡化版）
+- 使用 Firebase Service Account
+- 簡化的建置流程
+- 快速部署
+
+### 3. deploy-stable.yml（穩定版）
+- 使用 Firebase Token
+- 固定版本的 Firebase CLI
+- 最穩定的部署方式
 
 ## 替代方案
 
