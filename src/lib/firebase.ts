@@ -43,7 +43,10 @@ try {
       onAuthStateChanged: () => () => {},
       signInWithEmailAndPassword: () => Promise.resolve({} as any),
       signOut: () => Promise.resolve(),
-      _getRecaptchaConfig: () => ({}), // 添加這個方法避免錯誤
+      _getRecaptchaConfig: () => ({
+        isProviderEnabled: () => false, // 添加這個方法避免錯誤
+        getRecaptchaToken: () => Promise.resolve('dummy-token'),
+      }),
     } as unknown as Auth;
     
     db = {
@@ -87,7 +90,10 @@ try {
   auth = { 
     currentUser: null, 
     onAuthStateChanged: () => () => {},
-    _getRecaptchaConfig: () => ({}) // 添加這個方法避免錯誤
+    _getRecaptchaConfig: () => ({
+      isProviderEnabled: () => false, // 添加這個方法避免錯誤
+      getRecaptchaToken: () => Promise.resolve('dummy-token'),
+    })
   } as unknown as Auth;
   db = { collection: () => ({}) } as unknown as Firestore;
   storage = { ref: () => ({}) } as unknown as FirebaseStorage;

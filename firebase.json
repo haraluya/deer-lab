@@ -8,23 +8,8 @@
     ],
     "rewrites": [
       {
-        "source": "/static/**",
-        "destination": "/static/**"
-      },
-      {
-        "source": "/_next/static/**",
-        "destination": "/static/**"
-      },
-      {
         "source": "**",
         "destination": "/index.html"
-      }
-    ],
-    "redirects": [
-      {
-        "source": "/_next/static/**",
-        "destination": "/static/**",
-        "type": 301
       }
     ],
     "trailingSlash": false,
