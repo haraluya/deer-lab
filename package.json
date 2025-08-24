@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --port 8080",
     "build": "npx next build",
-    "build-static": "build-static.bat",
+    "build-static": "bash build-static.sh",
     "start": "next start",
     "lint": "next lint",
     "export": "next build",
