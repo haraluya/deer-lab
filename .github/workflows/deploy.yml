@@ -28,7 +28,7 @@ jobs:
     - name: Make build scripts executable
       run: |
         chmod +x build-static.sh
-        chmod +x functions/build.sh
+        chmod +x functions/build-simple.sh
     
     - name: Build application (excluding functions)
       env:
@@ -70,7 +70,13 @@ jobs:
     - name: Build Firebase Functions
       run: |
         cd functions
+        echo "Current directory: $(pwd)"
+        echo "Functions package.json:"
+        cat package.json
+        echo "Running functions build..."
         npm run build
+        echo "Checking lib directory:"
+        ls -la lib/ || echo "lib directory not found"
         cd ..
     
     - name: Deploy to Firebase
