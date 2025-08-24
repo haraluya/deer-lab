@@ -3,6 +3,7 @@ import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth, Auth, connectAuthEmulator } from "firebase/auth";
 import { getFirestore, Firestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getStorage, FirebaseStorage } from "firebase/storage";
+import { getFunctions, Functions, connectFunctionsEmulator, httpsCallable } from "firebase/functions";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "dummy-api-key",
@@ -26,6 +27,7 @@ let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
 let storage: FirebaseStorage;
+let functions: Functions;
 
 try {
   if (isStaticExport || !hasValidConfig) {
@@ -68,18 +70,32 @@ try {
         getDownloadURL: () => Promise.resolve('dummy-url'),
       }),
     } as unknown as FirebaseStorage;
+
+    // 創建模擬的 Functions 實例
+    const mockHttpsCallable = (name: string) => {
+      return async (data?: any) => {
+        console.warn(`Mock function called: ${name}`, data);
+        return Promise.resolve({ data: { status: 'success', message: 'Mock function executed' } });
+      };
+    };
+
+    functions = {
+      httpsCallable: mockHttpsCallable,
+    } as unknown as Functions;
   } else {
     // 正常模式：初始化 Firebase
     app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
     auth = getAuth(app);
     db = getFirestore(app);
     storage = getStorage(app);
+    functions = getFunctions(app);
     
     // 在開發環境中連接模擬器（如果需要的話）
     if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
       // 可以選擇性地連接模擬器
       // connectAuthEmulator(auth, 'http://localhost:9099');
       // connectFirestoreEmulator(db, 'localhost', 8080);
+      // connectFunctionsEmulator(functions, 'localhost', 5001);
     }
   }
 } catch (error) {
@@ -97,6 +113,16 @@ try {
   } as unknown as Auth;
   db = { collection: () => ({}) } as unknown as Firestore;
   storage = { ref: () => ({}) } as unknown as FirebaseStorage;
+  
+  // 創建模擬的 Functions 實例
+  const mockHttpsCallable = (name: string) => {
+    return async (data?: any) => {
+      console.warn(`Mock function called: ${name}`, data);
+      return Promise.resolve({ data: { status: 'success', message: 'Mock function executed' } });
+    };
+  };
+
+  functions = { httpsCallable: mockHttpsCallable } as unknown as Functions;
 }
 
-export { app, auth, db, storage };
+export { app, auth, db, storage, functions };
