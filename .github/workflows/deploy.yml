@@ -25,9 +25,6 @@ jobs:
     - name: Install Firebase CLI
       run: npm install -g firebase-tools
     
-    - name: Make build script executable
-      run: chmod +x build-static.sh
-    
     - name: Build application
       env:
         NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
@@ -42,8 +39,8 @@ jobs:
           mv functions functions_backup
         fi
         
-        # 執行建置
-        npm run build-static
+        # 執行修正後的建置流程（包含路徑修正）
+        npm run build-github
         
         # 恢復 functions 目錄
         if [ -d "functions_backup" ]; then

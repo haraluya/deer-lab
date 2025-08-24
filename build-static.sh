@@ -9,6 +9,14 @@ rm -rf .next out
 echo "Running Next.js build..."
 if npx next build; then
   echo "✅ Next.js build completed successfully"
+  
+  # 執行路徑修正腳本
+  echo "Running path fix script..."
+  if node scripts/fix-paths.js; then
+    echo "✅ Path fix completed successfully"
+  else
+    echo "⚠️ Path fix failed, but continuing..."
+  fi
 else
   echo "❌ Next.js build failed"
   echo "Creating basic static files..."

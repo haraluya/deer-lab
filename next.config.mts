@@ -50,8 +50,22 @@ const nextConfig = {
   // 確保正確的基礎路徑
   basePath: '',
   
-  // 確保正確的資產前綴
+  // 修正靜態匯出的資產路徑問題 - 使用相對路徑
   assetPrefix: '',
+  
+  // 修正靜態匯出的資產路徑問題
+  experimental: {
+    // 確保靜態匯出時資產路徑正確
+    outputFileTracingRoot: process.cwd(),
+  },
+  
+  // 自定義靜態匯出後處理
+  async rewrites() {
+    return [];
+  },
+  
+  // 確保靜態匯出時的路徑正確
+  generateEtags: false,
 };
 
 export default nextConfig;

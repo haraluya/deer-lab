@@ -12,6 +12,13 @@
         "destination": "/index.html"
       }
     ],
+    "redirects": [
+      {
+        "source": "/_next/static/**",
+        "destination": "/static/**",
+        "type": 301
+      }
+    ],
     "cleanUrls": true,
     "headers": [
       {
