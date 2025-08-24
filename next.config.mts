@@ -13,12 +13,6 @@ const nextConfig = {
     unoptimized: true
   },
   
-  // 確保正確的靜態資源路徑
-  assetPrefix: process.env.NODE_ENV === 'production' ? undefined : '',
-  
-  // 自訂建置輸出目錄
-  distDir: 'out',
-  
   // 改善開發伺服器的穩定性
   webpack: (config, { dev, isServer }) => {
     if (dev && !isServer) {
@@ -48,6 +42,10 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  
+  // 靜態匯出配置
+  trailingSlash: false,
+  skipTrailingSlashRedirect: true,
 };
 
 export default nextConfig;
