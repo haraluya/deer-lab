@@ -4,8 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 8080",
-    "build": "next build && npm run postbuild",
-    "postbuild": "mkdir -p out && cp -r .next/static/* out/ 2>/dev/null || true && cp -r public/* out/ 2>/dev/null || true",
+    "build": "bash build-static.sh",
     "start": "next start",
     "lint": "next lint",
     "export": "next build",
