@@ -6,21 +6,12 @@ module.exports = {
   },
   extends: [
     "eslint:recommended",
-    "@typescript-eslint/recommended",
   ],
-  parser: "@typescript-eslint/parser",
-  parserOptions: {
-    project: ["tsconfig.json"],
-    sourceType: "module",
-  },
   ignorePatterns: [
     "/lib/**/*", // Ignore built files.
   ],
-  plugins: [
-    "@typescript-eslint",
-  ],
   rules: {
-    "quotes": ["error", "double"],
-    "import/no-unresolved": 0,
+    "no-unused-vars": "warn",
+    "no-console": "off",
   },
 };
