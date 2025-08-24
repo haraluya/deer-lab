@@ -57,9 +57,9 @@ jobs:
           echo '<!DOCTYPE html><html><head><title>Deer Lab Dashboard</title><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><div id="root"><h1>Deer Lab Dashboard</h1><p>Loading application...</p></div></body></html>' > out/dashboard.html
         fi
         
-        # 執行路徑修正
-        echo "🔧 Running path fix script..."
-        node scripts/fix-paths.js
+        # 執行徹底的路徑修正
+        echo "🔧 Running complete path fix script..."
+        node scripts/fix-paths-complete.js
         
         # 執行客戶端路由修正
         echo "🔧 Running client routing fix script..."
