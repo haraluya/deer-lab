@@ -180,28 +180,36 @@ export default function DashboardLayout({
   const { isLoading, appUser } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    // 當載入完成後，如果沒有使用者資料，則導向到登入頁
-    if (!isLoading && !appUser) {
-      router.push('/');
-    }
-  }, [isLoading, appUser, router]);
+  // 移除重複的認證檢查，讓 AuthWrapper 處理
+  // useEffect(() => {
+  //   // 當載入完成後，如果沒有使用者資料，則導向到登入頁
+  //   if (!isLoading && !appUser) {
+  //     // 使用硬重定向避免靜態部署問題
+  //     if (typeof window !== 'undefined') {
+  //       window.location.href = '/';
+  //     } else {
+  //       router.push('/');
+  //     }
+  //   }
+  // }, [isLoading, appUser, router]);
 
-  // 如果正在載入，或者載入完畢但還沒有使用者資料 (即將跳轉)，都顯示載入畫面
-  if (isLoading || !appUser) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="text-center">
-          <div className="relative">
-            <div className="w-16 h-16 border-4 border-blue-200 rounded-full animate-spin"></div>
-            <div className="absolute top-0 left-0 w-16 h-16 border-4 border-transparent border-t-blue-600 rounded-full animate-spin"></div>
-          </div>
-          <p className="mt-4 text-gray-600 font-medium">正在載入系統...</p>
-          <p className="mt-2 text-sm text-gray-500">請稍候</p>
-        </div>
-      </div>
-    );
-  }
+  // // 如果正在載入，或者載入完畢但還沒有使用者資料 (即將跳轉)，都顯示載入畫面
+  // if (isLoading || !appUser) {
+  //   return (
+  //     <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+  //       <div className="text-center">
+  //         <div className="relative">
+  //           <div className="w-16 h-16 border-4 border-blue-200 rounded-full animate-spin"></div>
+  //           <div className="absolute top-0 left-0 w-16 h-16 border-4 border-transparent border-t-blue-600 rounded-full animate-spin"></div>
+  //         </div>
+  //         <p className="mt-4 text-gray-600 font-medium">正在載入系統...</p>
+  //         <p className="mt-2 text-sm text-gray-500">請稍候</p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
+
+  // 只有在載入完成且確認有使用者資料時，才渲染儀表板佈局
 
   // 只有在載入完成且確認有使用者資料時，才渲染儀表板佈局
   return (
