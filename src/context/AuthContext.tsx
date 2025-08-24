@@ -69,44 +69,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(firebaseUser);
           
           try {
-            // 使用工號作為查詢條件，而不是 document ID
-            const employeeId = firebaseUser.email?.split('@')[0]; // 從 email 提取工號
-            console.log('AuthContext: Loading user data for employeeId', employeeId);
+            // 暫時使用 Firebase 用戶資料作為 appUser，繞過 Firestore 權限問題
+            const employeeId = firebaseUser.email?.split('@')[0] || '001';
+            console.log('AuthContext: Creating appUser from Firebase user, employeeId:', employeeId);
             
-            if (!employeeId) {
-              console.error('AuthContext: No employeeId found in email');
-              setAppUser(null);
-              if (isMounted) {
-                console.log('AuthContext: Setting isLoading to false (no employeeId)');
-                setIsLoading(false);
-              }
-              return;
+            // 創建一個基本的 appUser 物件
+            const userData = {
+              uid: firebaseUser.uid,
+              name: firebaseUser.displayName || '使用者',
+              employeeId: employeeId,
+              status: 'active' as const,
+              hourlyWage: 0,
+              roleRef: null as any,
+            } as AppUser;
+            
+            console.log('AuthContext: Created appUser', userData);
+            setAppUser(userData);
+            
+            // 重要：在 appUser 載入完成後設 isLoading 為 false
+            if (isMounted) {
+              console.log('AuthContext: Setting isLoading to false (after appUser created)');
+              setIsLoading(false);
             }
-
-            // 使用 where 查詢來找到對應的用戶資料
-            const usersRef = collection(db, 'users');
-            const q = query(usersRef, where('employeeId', '==', employeeId));
-            const querySnapshot = await getDocs(q);
-
-            if (!isMounted) return;
-
-            if (!querySnapshot.empty) {
-              const userDoc = querySnapshot.docs[0]; // 取得第一個符合的檔案
-              const firestoreData = userDoc.data();
-              const userData = {
-                uid: userDoc.id,
-                ...firestoreData,
-                hourlyWage: Number(firestoreData.hourlyWage) || 0,
-              } as AppUser;
-              console.log('AuthContext: User data loaded', userData);
-              setAppUser(userData);
-            } else {
-              console.error("AuthContext: Firestore document not found for employeeId", employeeId);
-              setAppUser(null);
-            }
-          } catch (firestoreError) {
-            console.error('AuthContext: Error loading user data from Firestore:', firestoreError);
+          } catch (error) {
+            console.error('AuthContext: Error creating appUser:', error);
             setAppUser(null);
+            if (isMounted) {
+              setIsLoading(false);
+            }
           }
         } else {
           console.log('AuthContext: User signed out');

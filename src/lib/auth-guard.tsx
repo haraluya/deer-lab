@@ -40,6 +40,13 @@ export function useAuthGuard() {
   const [redirectPath, setRedirectPath] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('AuthGuard: 狀態更新', { 
+      isLoading, 
+      user: user?.uid, 
+      appUser: appUser?.uid, 
+      pathname 
+    });
+
     // 如果還在載入，等待
     if (isLoading) {
       console.log('AuthGuard: 正在載入，等待認證狀態...');
@@ -63,6 +70,8 @@ export function useAuthGuard() {
       pathname,
       requiresAuth,
       isAuthenticated,
+      user: !!user,
+      appUser: !!appUser,
       redirectTo: currentRoute.redirectTo
     });
 
