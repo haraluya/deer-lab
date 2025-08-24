@@ -44,7 +44,7 @@ const nextConfig = {
   },
   
   // 靜態匯出配置
-  trailingSlash: true,
+  trailingSlash: false,
   skipTrailingSlashRedirect: true,
   
   // 確保正確的基礎路徑

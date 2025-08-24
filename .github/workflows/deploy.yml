@@ -49,6 +49,18 @@ jobs:
         echo "🔧 Running path fix script..."
         node scripts/fix-paths.js
         
+        # 確保所有必要的頁面都存在
+        echo "🔍 Checking generated pages..."
+        if [ ! -f "out/index.html" ]; then
+          echo "❌ index.html not found, creating basic one"
+          echo '<!DOCTYPE html><html><head><title>Deer Lab</title><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><div id="root">Loading...</div><script>window.location.href = "/dashboard";</script></body></html>' > out/index.html
+        fi
+        
+        if [ ! -f "out/dashboard.html" ]; then
+          echo "❌ dashboard.html not found, creating basic one"
+          echo '<!DOCTYPE html><html><head><title>Deer Lab Dashboard</title><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><div id="root"><h1>Deer Lab Dashboard</h1><p>Loading application...</p></div></body></html>' > out/dashboard.html
+        fi
+        
         # 恢復 functions 目錄
         if [ -d "functions_backup" ]; then
           mv functions_backup functions

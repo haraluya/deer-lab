@@ -135,6 +135,18 @@ if [ -d ".next/server" ]; then
     echo "Copying $filename to out/"
     cp "$1" out/
   ' sh {} \;
+  
+  # 確保 dashboard 頁面存在
+  if [ -f ".next/server/dashboard.html" ]; then
+    echo "✅ dashboard.html found in .next/server"
+    cp .next/server/dashboard.html out/
+  else
+    echo "⚠️ dashboard.html not found in .next/server, checking for dashboard/index.html"
+    if [ -f ".next/server/dashboard/index.html" ]; then
+      echo "✅ dashboard/index.html found, copying as dashboard.html"
+      cp .next/server/dashboard/index.html out/dashboard.html
+    fi
+  fi
 fi
 
 # 檢查是否有 index.html
