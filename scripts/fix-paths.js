@@ -23,22 +23,34 @@ function fixPaths() {
     const filePath = path.join(outDir, file);
     let content = fs.readFileSync(filePath, 'utf8');
     
-    // 修正CSS路徑
+    // 修正所有 /_next/static/ 路徑為 ./static/
     content = content.replace(
-      /href="\/_next\/static\/css\//g,
-      'href="./static/css/'
+      /\/_next\/static\//g,
+      './static/'
     );
     
-    // 修正JS路徑
-    content = content.replace(
-      /src="\/_next\/static\/chunks\//g,
-      'src="./static/chunks/'
-    );
-    
-    // 修正其他靜態資源路徑
+    // 修正 href 屬性中的路徑
     content = content.replace(
       /href="\/_next\/static\//g,
       'href="./static/'
+    );
+    
+    // 修正 src 屬性中的路徑
+    content = content.replace(
+      /src="\/_next\/static\//g,
+      'src="./static/'
+    );
+    
+    // 修正 JavaScript 中的路徑（在字串中）
+    content = content.replace(
+      /"\/_next\/static\//g,
+      '"./static/'
+    );
+    
+    // 修正 JavaScript 中的路徑（在字串中，單引號）
+    content = content.replace(
+      /'\/_next\/static\//g,
+      "'./static/"
     );
     
     // 寫回檔案
