@@ -35,6 +35,13 @@ export default function LoginPage() {
     setError('');
     setIsLoading(true);
 
+    // 檢查 Firebase 是否正確初始化
+    if (!auth) {
+      setError('系統初始化中，請稍後再試。');
+      setIsLoading(false);
+      return;
+    }
+
     // PRD 規格：使用「工號」登入
     // Firebase Auth 的標準是 Email，所以我們做一個轉換
     // 將工號 `admin` 轉換成 `admin@deer-lab.local` 這樣的格式
@@ -54,6 +61,10 @@ export default function LoginPage() {
         
         if (firebaseError.code === 'auth/invalid-credential' || firebaseError.code === 'auth/wrong-password' || firebaseError.code === 'auth/user-not-found') {
           setError('工號或密碼錯誤，請重新輸入。');
+        } else if (firebaseError.code === 'auth/network-request-failed') {
+          setError('網路連線失敗，請檢查網路連線後再試。');
+        } else if (firebaseError.code === 'auth/too-many-requests') {
+          setError('登入嘗試次數過多，請稍後再試。');
         } else {
           setError('發生未知錯誤，請稍後再試。');
         }
@@ -67,24 +78,24 @@ export default function LoginPage() {
       setIsLoading(false); // 無論成功或失敗，都結束載入狀態
     }
   };
-  
+
   // 如果正在載入或已經登入，顯示載入中，避免使用者看到登入頁
-  if (isLoading || user) {
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <main className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">正在載入...</p>
+          <p className="text-gray-600">正在處理登入...</p>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
     <main className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       <div className="w-full max-w-md px-4 sm:px-0">
-        <Card className="w-full shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
-          <CardHeader className="text-center pb-6">
+        <Card className="text-card-foreground flex flex-col gap-6 rounded-xl py-6 w-full shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6 text-center pb-6">
             <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
               <Factory className="h-8 w-8 text-white" />
             </div>
@@ -99,57 +110,43 @@ export default function LoginPage() {
             </p>
           </CardHeader>
           <form onSubmit={handleLogin}>
-            <CardContent className="space-y-6">
+            <CardContent className="px-6 space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="employeeId" className="text-sm font-medium text-gray-700">
-                  工號
-                </Label>
+                <Label htmlFor="employeeId">工號</Label>
                 <Input
-                  id="employeeId"
                   type="text"
+                  id="employeeId"
                   placeholder="例如: admin"
-                  required
                   value={employeeId}
                   onChange={(e) => setEmployeeId(e.target.value)}
-                  className="h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                  required
+                  className="h-12"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium text-gray-700">
-                  密碼
-                </Label>
+                <Label htmlFor="password">密碼</Label>
                 <Input
-                  id="password"
                   type="password"
-                  required
+                  id="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                  required
+                  className="h-12"
                 />
               </div>
               {error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-red-600 text-sm flex items-center">
-                    <span className="mr-2">⚠</span>
-                    {error}
-                  </p>
+                <div className="text-red-500 text-sm text-center bg-red-50 p-3 rounded-md">
+                  {error}
                 </div>
               )}
             </CardContent>
-            <CardFooter className="pt-6">
+            <CardFooter className="flex items-center px-6 [.border-t]:pt-6 pt-6">
               <Button 
                 type="submit" 
-                className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium text-lg shadow-lg hover:shadow-xl transition-all duration-200" 
+                className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium text-lg shadow-lg hover:shadow-xl transition-all duration-200"
                 disabled={isLoading}
               >
-                {isLoading ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    登入中...
-                  </div>
-                ) : (
-                  '登入'
-                )}
+                {isLoading ? '登入中...' : '登入'}
               </Button>
             </CardFooter>
           </form>

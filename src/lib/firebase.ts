@@ -1,7 +1,7 @@
 // src/lib/firebase.ts
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { getAuth, Auth } from "firebase/auth";
-import { getFirestore, Firestore } from "firebase/firestore";
+import { getAuth, Auth, connectAuthEmulator } from "firebase/auth";
+import { getFirestore, Firestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getStorage, FirebaseStorage } from "firebase/storage";
 
 const firebaseConfig = {
@@ -14,7 +14,7 @@ const firebaseConfig = {
 };
 
 // 檢查是否在靜態匯出模式
-const isStaticExport = process.env.NODE_ENV === 'production' && typeof window === 'undefined';
+const isStaticExport = typeof window === 'undefined' || process.env.NODE_ENV === 'production';
 
 // 檢查環境變數是否存在
 const hasValidConfig = process.env.NEXT_PUBLIC_FIREBASE_API_KEY && 
@@ -30,6 +30,8 @@ let storage: FirebaseStorage;
 try {
   if (isStaticExport || !hasValidConfig) {
     // 靜態匯出模式或缺少配置：創建模擬實例
+    console.warn('Firebase: Using mock instances for static export or missing config');
+    
     app = {
       name: 'dummy-app',
       options: {},
@@ -41,6 +43,7 @@ try {
       onAuthStateChanged: () => () => {},
       signInWithEmailAndPassword: () => Promise.resolve({} as any),
       signOut: () => Promise.resolve(),
+      _getRecaptchaConfig: () => ({}), // 添加這個方法避免錯誤
     } as unknown as Auth;
     
     db = {
@@ -68,13 +71,24 @@ try {
     auth = getAuth(app);
     db = getFirestore(app);
     storage = getStorage(app);
+    
+    // 在開發環境中連接模擬器（如果需要的話）
+    if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
+      // 可以選擇性地連接模擬器
+      // connectAuthEmulator(auth, 'http://localhost:9099');
+      // connectFirestoreEmulator(db, 'localhost', 8080);
+    }
   }
 } catch (error) {
   console.warn('Firebase initialization failed, using mock instances:', error);
   
   // 如果初始化失敗，使用模擬實例
   app = { name: 'dummy-app', options: {}, automaticDataCollectionEnabled: false } as unknown as FirebaseApp;
-  auth = { currentUser: null, onAuthStateChanged: () => () => {} } as unknown as Auth;
+  auth = { 
+    currentUser: null, 
+    onAuthStateChanged: () => () => {},
+    _getRecaptchaConfig: () => ({}) // 添加這個方法避免錯誤
+  } as unknown as Auth;
   db = { collection: () => ({}) } as unknown as Firestore;
   storage = { ref: () => ({}) } as unknown as FirebaseStorage;
 }

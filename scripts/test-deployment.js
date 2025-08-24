@@ -7,7 +7,7 @@ const BASE_URL = 'https://deer-lab.web.app';
 const testFiles = [
   '/',
   '/dashboard',
-  '/static/css/12582220aac1b9e3.css',
+  '/static/css/ca0a7c8fcb67dc11.css',
   '/static/chunks/webpack-a6b739e4cdc9fbd7.js',
   '/manifest.json',
   '/icon-192x192.png'
