@@ -69,6 +69,10 @@ jobs:
         echo "🔧 Running client routing fix script..."
         node scripts/fix-client-routing.js
         
+        # 測試建置結果
+        echo "🧪 Testing build result..."
+        node scripts/test-build.js
+        
         # 驗證建置結果
         echo "🔍 Verifying build result..."
         node scripts/verify-build.js
