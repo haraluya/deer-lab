@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { LowStockNotification } from "@/components/LowStockNotification";
 import { BarChart3, Users, Package, Factory, ShoppingCart, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { navigateTo } from '@/lib/utils';
 
 export default function DashboardPage() {
   const { appUser, isLoading } = useAuth();
@@ -14,12 +15,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!isLoading && !appUser) {
-      router.push('/');
+      navigateTo('/');
     }
-  }, [appUser, isLoading, router]);
+  }, [appUser, isLoading]);
 
   const handleCardClick = (path: string) => {
-    router.push(path);
+    navigateTo(path);
   };
 
   // 如果正在載入或沒有用戶，顯示載入畫面
