@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deer Lab - Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .status {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🦌 Deer Lab 測試頁面</h1>
+        
+        <div class="status">
+            ✅ 部署成功！Firebase Hosting 正常運作。
+        </div>
+        
+        <h2>系統狀態</h2>
+        <ul>
+            <li>✅ 靜態檔案服務正常</li>
+            <li>✅ HTML 檔案載入正常</li>
+            <li>✅ CSS 樣式正常</li>
+            <li>⏳ JavaScript 功能測試中...</li>
+        </ul>
+        
+        <h2>下一步</h2>
+        <p>如果這個頁面能正常顯示，表示基本部署是成功的。接下來需要檢查：</p>
+        <ul>
+            <li>Next.js 應用程式的 JavaScript 檔案是否正確載入</li>
+            <li>Firebase 配置是否正確</li>
+            <li>環境變數是否設定</li>
+        </ul>
+        
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="/" style="padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px;">
+                前往主頁
+            </a>
+        </div>
+    </div>
+    
+    <script>
+        console.log('Test page loaded successfully');
+        
+        // 測試 JavaScript 是否正常執行
+        setTimeout(() => {
+            const status = document.querySelector('.status');
+            status.innerHTML += '<br>✅ JavaScript 執行正常';
+        }, 1000);
+    </script>
+</body>
+</html>
