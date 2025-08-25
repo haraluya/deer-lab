@@ -15,7 +15,6 @@ export interface AppUser {
   status: 'active' | 'inactive';
   roleRef?: DocumentReference;
   roleName?: string;
-  permissions?: string[];
 }
 
 interface AuthContextType {
@@ -65,7 +64,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (roleDoc.exists()) {
               const roleData = roleDoc.data();
               userData.roleName = roleData.name;
-              userData.permissions = roleData.permissions || [];
               console.log('✅ 角色資料載入成功:', roleData);
             } else {
               console.warn('⚠️ 角色文檔不存在');

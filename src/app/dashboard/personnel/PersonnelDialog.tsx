@@ -7,7 +7,7 @@ import * as z from "zod"
 import { getFunctions, httpsCallable } from "firebase/functions"
 import { collection, getDocs, DocumentReference } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { usePermissions } from "@/hooks/usePermissions"
+
 import { useAuth } from "@/context/AuthContext"
 import { toast } from "sonner"
 import { User, Lock, Shield } from "lucide-react"
@@ -21,9 +21,9 @@ import { Badge } from "@/components/ui/badge"
 
 // 預設角色選項
 const DEFAULT_ROLES = [
-  { id: 'system-admin', name: '系統管理員', permissions: ['all'] },
-  { id: 'production-leader', name: '生產領班', permissions: ['production', 'inventory', 'reports'] },
-  { id: 'hourly-worker', name: '計時人員', permissions: ['basic'] }
+  { id: 'system-admin', name: '系統管理員' },
+  { id: 'production-leader', name: '生產領班' },
+  { id: 'hourly-worker', name: '計時人員' }
 ];
 
 // 表單驗證 Schema
@@ -51,7 +51,6 @@ type FormData = z.infer<typeof formSchema>
 interface Role {
   id: string
   name: string
-  permissions: string[]
 }
 
 interface PersonnelData {
@@ -76,24 +75,14 @@ export function PersonnelDialog({
   onPersonnelUpdate,
   personnelData
 }: PersonnelDialogProps) {
-  const { canManagePersonnel } = usePermissions()
+
   const { appUser, isLoading } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [roles] = useState<Role[]>(DEFAULT_ROLES)
   const [showPasswordFields, setShowPasswordFields] = useState(false)
   const isEditMode = !!personnelData
 
-  // 調試權限狀態
-  useEffect(() => {
-    if (isOpen) {
-      console.log('🔍 PersonnelDialog 權限調試:');
-      console.log('👤 當前用戶:', appUser);
-      console.log('🎭 用戶角色:', appUser?.roleName);
-      console.log('📋 用戶權限:', appUser?.permissions);
-      console.log('⏳ 是否正在載入:', isLoading);
-      console.log('✅ canManagePersonnel():', canManagePersonnel());
-    }
-  }, [isOpen, appUser, isLoading, canManagePersonnel]);
+
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -230,7 +219,7 @@ export function PersonnelDialog({
           <div className="flex items-center justify-center py-8">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p id="loading-dialog-description" className="text-gray-600">正在載入權限資料...</p>
+              <p id="loading-dialog-description" className="text-gray-600">正在載入資料...</p>
             </div>
           </div>
         </DialogContent>
@@ -247,7 +236,7 @@ export function PersonnelDialog({
             {isEditMode ? "編輯人員" : "新增人員"}
           </DialogTitle>
           <DialogDescription id="personnel-dialog-description">
-            {isEditMode ? "修改人員資料和權限設定" : "建立新的人員帳號"}
+            {isEditMode ? "修改人員資料" : "建立新的人員帳號"}
           </DialogDescription>
         </DialogHeader>
 
@@ -322,18 +311,13 @@ export function PersonnelDialog({
                             <SelectValue placeholder="選擇角色" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          {roles.map((role) => (
-                            <SelectItem key={role.id} value={role.id}>
-                              <div className="flex items-center gap-2">
-                                <span>{role.name}</span>
-                                <Badge variant="outline" className="text-xs">
-                                  {role.permissions?.length || 0} 權限
-                                </Badge>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
+                                                 <SelectContent>
+                           {roles.map((role) => (
+                             <SelectItem key={role.id} value={role.id}>
+                               {role.name}
+                             </SelectItem>
+                           ))}
+                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>

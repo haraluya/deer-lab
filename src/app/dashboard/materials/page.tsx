@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { collection, getDocs, DocumentReference, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
-import { usePermissions } from '@/hooks/usePermissions';
+
 import { MaterialDialog, MaterialData } from './MaterialDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { MoreHorizontal, ShoppingCart, ListChecks, Save, X, Loader2, Search, FileSpreadsheet, Eye, Edit, Warehouse, Building, Tag, Package } from 'lucide-react';
@@ -42,7 +42,7 @@ interface MaterialWithSupplier extends MaterialData {
 
 function MaterialsPageContent() {
   const router = useRouter();
-  const { canManageMaterials, canManageInventory } = usePermissions();
+
   const [materials, setMaterials] = useState<MaterialWithSupplier[]>([]);
   const [filteredMaterials, setFilteredMaterials] = useState<MaterialWithSupplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);

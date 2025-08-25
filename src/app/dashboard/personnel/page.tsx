@@ -6,7 +6,7 @@ import { collection, getDocs, doc, getDoc, DocumentReference } from 'firebase/fi
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 import { AppUser } from '@/context/AuthContext';
-import { usePermissions } from '@/hooks/usePermissions';
+
 import { PersonnelDialog } from './PersonnelDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -44,7 +44,7 @@ interface UserWithRole {
 }
 
 function PersonnelPageContent() {
-  const { currentUser } = usePermissions();
+
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -185,7 +185,7 @@ function PersonnelPageContent() {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
             人員管理
           </h1>
-          <p className="text-gray-600 mt-2">管理系統使用者帳號與權限</p>
+                        <p className="text-gray-600 mt-2">管理系統使用者帳號</p>
         </div>
       </div>
 
