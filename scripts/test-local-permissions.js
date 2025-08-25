@@ -1,93 +1,87 @@
+// 測試本地權限
 const { initializeApp } = require('firebase/app');
 const { getAuth, signInWithEmailAndPassword } = require('firebase/auth');
-const { getFunctions, httpsCallable, connectFunctionsEmulator } = require('firebase/functions');
-const { getFirestore, connectFirestoreEmulator } = require('firebase/firestore');
+const { getFirestore, doc, getDoc } = require('firebase/firestore');
 
-// Firebase 配置
+// Firebase 配置 - 使用模擬配置避免金鑰外流
 const firebaseConfig = {
-  apiKey: "AIzaSyCMIAqNPsIyl3fJNllqNCuUJE2Rvcdf6fk",
-  authDomain: "deer-lab.firebaseapp.com",
-  projectId: "deer-lab",
-  storageBucket: "deer-lab.firebasestorage.app",
-  messagingSenderId: "554942047858",
-  appId: "1:554942047858:web:607d3e27bb438c898644eb"
+  apiKey: process.env.FIREBASE_API_KEY || "mock-api-key-for-testing",
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN || "deer-lab.firebaseapp.com",
+  projectId: process.env.FIREBASE_PROJECT_ID || "deer-lab",
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "deer-lab.appspot.com",
+  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || "123456789",
+  appId: process.env.FIREBASE_APP_ID || "1:123456789:web:abcdefghijklmnop"
 };
 
 // 初始化 Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const functions = getFunctions(app);
 const db = getFirestore(app);
 
-// 連接到本地模擬器
-connectFunctionsEmulator(functions, 'localhost', 5001);
-connectFirestoreEmulator(db, 'localhost', 8080);
-
 async function testLocalPermissions() {
+  console.log('🧪 測試本地權限...\n');
+
   try {
-    console.log('🧪 開始本地權限測試...');
+    // 登入測試用戶
+    console.log('🔐 登入測試用戶...');
+    const userCredential = await signInWithEmailAndPassword(auth, '001@deer-lab.local', 'password123');
+    const user = userCredential.user;
+    console.log('✅ 登入成功:', user.uid);
+
+    // 獲取用戶資料
+    const userDocRef = doc(db, 'users', user.uid);
+    const userDoc = await getDoc(userDocRef);
     
-    // 測試登入
-    console.log('\n🔐 測試登入...');
-    const email = '001@deer-lab.local'; // 哈雷雷的帳號
-    const password = '123456'; // 請替換為實際密碼
-    
-    console.log(`嘗試登入: ${email}`);
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    console.log('✅ 登入成功:', userCredential.user.uid);
-    
-    // 測試人員管理權限
-    console.log('\n👥 測試人員管理權限...');
-    const createPersonnel = httpsCallable(functions, 'createPersonnel');
-    
-    const testData = {
-      name: '測試使用者',
-      employeeId: 'test001',
-      phone: '0900000000',
-      roleId: 'test-role-id',
-      password: 'test123456',
-      status: 'active'
-    };
-    
-    console.log('發送測試資料:', testData);
-    
-    try {
-      const result = await createPersonnel(testData);
-      console.log('✅ 權限檢查通過，可以新增人員');
-      console.log('結果:', result.data);
-    } catch (error) {
-      console.log('❌ 權限檢查失敗:', error.message);
-      
-      if (error.code === 'functions/permission-denied') {
-        console.log('💡 權限不足，請檢查角色權限設定');
+    if (!userDoc.exists()) {
+      console.log('❌ 用戶資料不存在');
+      return;
+    }
+
+    const userData = userDoc.data();
+    console.log('👤 用戶資料:', {
+      name: userData.name,
+      employeeId: userData.employeeId,
+      roleRef: userData.roleRef?.path
+    });
+
+    // 獲取角色資料
+    if (userData.roleRef) {
+      const roleDoc = await getDoc(userData.roleRef);
+      if (roleDoc.exists()) {
+        const roleData = roleDoc.data();
+        console.log('🎭 角色資料:', {
+          name: roleData.name,
+          permissions: roleData.permissions
+        });
+
+        // 測試本地權限
+        console.log('\n🔍 本地權限測試結果:');
+        const localPermissions = [
+          'personnel:create', 'personnel:edit', 'personnel:delete', 'personnel:view',
+          'roles:create', 'roles:edit', 'roles:delete', 'roles:view',
+          'materials:create', 'materials:edit', 'materials:delete', 'materials:view',
+          'products:create', 'products:edit', 'products:delete', 'products:view',
+          'workorders:create', 'workorders:edit', 'workorders:delete', 'workorders:view',
+          'suppliers:create', 'suppliers:edit', 'suppliers:delete', 'suppliers:view',
+          'purchase:create', 'purchase:edit', 'purchase:delete', 'purchase:view',
+          'inventory:view', 'inventory:adjust',
+          'reports:view', 'cost:view'
+        ];
+
+        localPermissions.forEach(permission => {
+          const hasPermission = roleData.permissions.includes(permission);
+          console.log(`   ${hasPermission ? '✅' : '❌'} ${permission}`);
+        });
+
+      } else {
+        console.log('❌ 角色資料不存在');
       }
+    } else {
+      console.log('❌ 用戶沒有分配角色');
     }
-    
-    // 測試更新人員權限
-    console.log('\n✏️ 測試更新人員權限...');
-    const updatePersonnel = httpsCallable(functions, 'updatePersonnel');
-    
-    const updateData = {
-      personnelId: 'test001',
-      name: '測試使用者更新',
-      employeeId: 'test001',
-      phone: '0900000000',
-      roleId: 'test-role-id',
-      status: 'active'
-    };
-    
-    console.log('發送更新資料:', updateData);
-    
-    try {
-      const result = await updatePersonnel(updateData);
-      console.log('✅ 更新權限檢查通過');
-      console.log('結果:', result.data);
-    } catch (error) {
-      console.log('❌ 更新權限檢查失敗:', error.message);
-    }
-    
+
   } catch (error) {
-    console.error('❌ 測試失敗:', error);
+    console.error('❌ 測試過程中發生錯誤:', error);
   }
 }
 

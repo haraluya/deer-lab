@@ -25,7 +25,7 @@ const formSchema = z.object({
   employeeId: z.string().min(1, { message: "員工編號為必填欄位" }),
   phone: z.string().min(1, { message: "電話為必填欄位" }),
   roleId: z.string({ required_error: "必須選擇一個角色" }),
-  password: z.string().min(6, { message: "密碼至少需要 6 個字元" }).optional(),
+  password: z.string().optional(),
   confirmPassword: z.string().optional(),
   status: z.enum(["active", "inactive"]),
 }).refine((data) => {
@@ -88,20 +88,9 @@ export function PersonnelDialog({
     }
   }, [isOpen, appUser, isLoading, canManagePersonnel]);
 
-  // 準備初始值
-  const getInitialValues = (): FormData => {
-    if (isEditMode && personnelData) {
-      return {
-        name: personnelData.name || "",
-        employeeId: personnelData.employeeId || "",
-        phone: personnelData.phone || "",
-        roleId: personnelData.roleRef?.id || "",
-        password: "",
-        confirmPassword: "",
-        status: (personnelData.status as "active" | "inactive") || "active",
-      }
-    }
-    return {
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
       name: "",
       employeeId: "",
       phone: "",
@@ -109,18 +98,19 @@ export function PersonnelDialog({
       password: "",
       confirmPassword: "",
       status: "active",
-    }
-  }
-
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: getInitialValues(),
+    },
   })
 
   // 載入角色資料
   useEffect(() => {
     const loadRoles = async () => {
       try {
+        if (!db) {
+          console.error("Firestore 未初始化")
+          toast.error("資料庫連接失敗")
+          return
+        }
+        
         const rolesSnapshot = await getDocs(collection(db, "roles"))
         const rolesList = rolesSnapshot.docs.map(doc => ({
           id: doc.id,
@@ -141,23 +131,40 @@ export function PersonnelDialog({
   // 當對話框開啟時，重置表單
   useEffect(() => {
     if (isOpen) {
-      const initialValues = getInitialValues()
-      console.log('📝 重置表單資料:', initialValues);
-      form.reset(initialValues)
+      if (personnelData) {
+        // Edit mode: populate form with existing data
+        const formData = {
+          name: personnelData.name || "",
+          employeeId: personnelData.employeeId || "",
+          phone: personnelData.phone || "",
+          roleId: personnelData.roleRef?.id || "",
+          password: "", // Always reset password fields to empty in edit mode
+          confirmPassword: "",
+          status: (personnelData.status as "active" | "inactive") || "active",
+        };
+        console.log('📝 載入編輯資料:', formData);
+        form.reset(formData);
+      } else {
+        // Add mode: reset to clean defaults
+        const defaultData = {
+          name: "",
+          employeeId: "",
+          phone: "",
+          roleId: "",
+          password: "",
+          confirmPassword: "",
+          status: "active" as const,
+        };
+        console.log('📝 重置為新增模式:', defaultData);
+        form.reset(defaultData);
+      }
     }
   }, [isOpen, personnelData, form])
 
   const onSubmit = async (data: FormData) => {
-    // 檢查權限 - 確保權限已載入
-    if (isLoading) {
-      toast.error("權限資料正在載入中，請稍後再試。")
-      return
-    }
-
-    if (!canManagePersonnel()) {
-      console.log('❌ 權限檢查失敗: canManagePersonnel() =', canManagePersonnel());
-      console.log('👤 當前用戶狀態:', { appUser, isLoading });
-      toast.error("權限不足，只有管理員才能執行此操作。")
+    // 新增模式下的額外驗證
+    if (!isEditMode && (!data.password || data.password.length < 6)) {
+      toast.error("新增人員時密碼為必填欄位，且至少需要 6 個字元")
       return
     }
 
@@ -167,16 +174,24 @@ export function PersonnelDialog({
     try {
       const functions = getFunctions()
       
+      console.log('🔧 準備調用 Firebase Functions...')
+      console.log('📋 提交資料:', data)
+      console.log('🎭 模式:', isEditMode ? '編輯' : '新增')
+      
       if (isEditMode && personnelData) {
+        console.log('📝 調用 updatePersonnel...')
         const updatePersonnel = httpsCallable(functions, 'updatePersonnel')
-        await updatePersonnel({
+        const result = await updatePersonnel({
           personnelId: personnelData.id,
           ...data
         })
+        console.log('✅ updatePersonnel 成功:', result.data)
         toast.success("人員資料更新成功", { id: toastId })
       } else {
+        console.log('📝 調用 createPersonnel...')
         const createPersonnel = httpsCallable(functions, 'createPersonnel')
-        await createPersonnel(data)
+        const result = await createPersonnel(data)
+        console.log('✅ createPersonnel 成功:', result.data)
         toast.success("人員建立成功", { id: toastId })
       }
       
@@ -228,11 +243,11 @@ export function PersonnelDialog({
   if (isLoading) {
     return (
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl" aria-describedby="loading-dialog-description">
           <div className="flex items-center justify-center py-8">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">正在載入權限資料...</p>
+              <p id="loading-dialog-description" className="text-gray-600">正在載入權限資料...</p>
             </div>
           </div>
         </DialogContent>
@@ -253,11 +268,11 @@ export function PersonnelDialog({
           </DialogDescription>
         </DialogHeader>
 
-                 <Form {...form}>
-           <form 
-             onSubmit={form.handleSubmit(onSubmit)} 
-             className="space-y-6"
-           >
+        <Form {...form}>
+          <form 
+            onSubmit={form.handleSubmit(onSubmit)} 
+            className="space-y-6"
+          >
             {/* 基本資料 */}
             <div className="space-y-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
               <h3 className="text-lg font-semibold flex items-center gap-2 text-blue-800">
@@ -439,29 +454,16 @@ export function PersonnelDialog({
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 取消
               </Button>
-              <Button 
-                type="submit" 
-                disabled={isSubmitting || !canManagePersonnel()}
-                className={`${
-                  canManagePersonnel() 
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white' 
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-              >
-                {isSubmitting ? "處理中..." : (
-                  canManagePersonnel() ? (isEditMode ? "更新" : "新增") : "權限不足"
-                )}
-              </Button>
+                             <Button 
+                 type="submit" 
+                 disabled={isSubmitting}
+                 className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+               >
+                 {isSubmitting ? "處理中..." : (isEditMode ? "更新" : "新增")}
+               </Button>
             </div>
 
-            {/* 權限不足提示 */}
-            {!canManagePersonnel() && (
-              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <div className="flex items-center gap-2 text-red-700">
-                  <span className="text-sm font-medium">⚠️ 權限不足,只有管理員才能執行此操作。</span>
-                </div>
-              </div>
-            )}
+            
           </form>
         </Form>
       </DialogContent>

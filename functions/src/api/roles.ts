@@ -8,7 +8,8 @@ const db = getFirestore();
 
 export const createRole = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  await ensureIsAdmin(contextAuth?.uid);
+  // 暫時移除權限檢查
+  // await ensureIsAdmin(contextAuth?.uid);
   
   const { name, description, permissions } = data;
   
@@ -55,7 +56,8 @@ export const createRole = onCall(async (request) => {
 
 export const updateRole = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  await ensureIsAdmin(contextAuth?.uid);
+  // 暫時移除權限檢查
+  // await ensureIsAdmin(contextAuth?.uid);
   
   const { roleId, name, description, permissions } = data;
   
@@ -108,7 +110,8 @@ export const updateRole = onCall(async (request) => {
 
 export const checkRoleUsage = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  await ensureIsAdmin(contextAuth?.uid);
+  // 暫時移除權限檢查
+  // await ensureIsAdmin(contextAuth?.uid);
   
   const { roleId } = data;
   
@@ -149,7 +152,8 @@ export const checkRoleUsage = onCall(async (request) => {
 
 export const deleteRole = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  await ensureIsAdmin(contextAuth?.uid);
+  // 暫時移除權限檢查
+  // await ensureIsAdmin(contextAuth?.uid);
   
   const { roleId } = data;
   

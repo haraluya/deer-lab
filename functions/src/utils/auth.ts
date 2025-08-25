@@ -47,6 +47,43 @@ export const checkPermission = async (uid: string | undefined, requiredPermissio
  * @param {string | undefined} uid 使用者ID
  */
 export const ensureCanManagePersonnel = async (uid: string | undefined) => {
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "請求未經驗證，必須登入才能執行此操作。");
+  }
+  
+  console.log(`🔍 開始檢查使用者 ${uid} 的人員管理權限`);
+  
+  const userDoc = await db.collection("users").doc(uid).get();
+  if (!userDoc.exists) {
+    console.log(`❌ 找不到使用者 ${uid} 的資料`);
+    throw new HttpsError("not-found", "找不到發出請求的使用者資料。");
+  }
+  
+  const userData = userDoc.data();
+  console.log(`📋 使用者資料:`, userData);
+  
+  const roleRef = userData?.roleRef;
+  if (!roleRef) {
+    console.log(`❌ 使用者 ${uid} 沒有角色引用`);
+    throw new HttpsError("permission-denied", "使用者沒有指派角色，權限不足。");
+  }
+  
+  console.log(`🔍 角色引用:`, roleRef.path);
+  
+  const roleDoc = await roleRef.get();
+  if (!roleDoc.exists) {
+    console.log(`❌ 找不到角色資料:`, roleRef.path);
+    throw new HttpsError("permission-denied", "找不到使用者角色資料。");
+  }
+  
+  const roleData = roleDoc.data();
+  const permissions = roleData?.permissions || [];
+  
+  console.log(`🔍 檢查使用者 ${uid} 的人員管理權限`);
+  console.log(`📋 用戶擁有權限:`, permissions);
+  console.log(`📋 權限數量:`, permissions.length);
+  console.log(`📋 角色名稱:`, roleData?.name);
+  
   // 檢查是否具有任何人員管理權限（支援中文和英文格式）
   const personnelPermissions = [
     // 中文格式
@@ -55,17 +92,25 @@ export const ensureCanManagePersonnel = async (uid: string | undefined) => {
     "personnel:create", "personnel:edit", "personnel:delete", "personnel:view"
   ];
   
+  console.log(`🎯 需要的人員管理權限:`, personnelPermissions);
+  
+  // 詳細檢查每個權限
   for (const permission of personnelPermissions) {
-    try {
-      await checkPermission(uid, permission);
-      console.log(`✅ 使用者 ${uid} 具有人員管理權限: ${permission}`);
-      return true;
-    } catch (error) {
-      console.log(`❌ 使用者 ${uid} 沒有權限: ${permission}`);
-    }
+    const hasThisPermission = permissions.includes(permission);
+    console.log(`🔍 檢查權限 "${permission}": ${hasThisPermission ? '✅ 有' : '❌ 無'}`);
   }
   
-  throw new HttpsError("permission-denied", "權限不足，需要人員管理權限（新增人員、編輯人員、刪除人員或查看人員管理）");
+  const hasPermission = personnelPermissions.some(permission => permissions.includes(permission));
+  
+  console.log(`🎯 最終權限檢查結果: ${hasPermission ? '✅ 通過' : '❌ 失敗'}`);
+  
+  if (hasPermission) {
+    console.log(`✅ 使用者 ${uid} 具有人員管理權限`);
+    return true;
+  } else {
+    console.log(`❌ 使用者 ${uid} 沒有人員管理權限，需要權限:`, personnelPermissions);
+    throw new HttpsError("permission-denied", `權限不足，需要權限: 新增人員`);
+  }
 };
 
 /**

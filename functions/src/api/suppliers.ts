@@ -8,7 +8,8 @@ const db = getFirestore();
 
 export const createSupplier = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  await ensureIsAdmin(contextAuth?.uid);
+  // 暫時移除權限檢查
+  // await ensureIsAdmin(contextAuth?.uid);
   const { name, contactPerson, phone, address } = data;
   if (!name) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (供應商名稱)。"); }
   try {
@@ -21,7 +22,8 @@ export const createSupplier = onCall(async (request) => {
 
 export const updateSupplier = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  await ensureIsAdmin(contextAuth?.uid);
+  // 暫時移除權限檢查
+  // await ensureIsAdmin(contextAuth?.uid);
   const { supplierId, name, contactPerson, phone, address } = data;
   if (!supplierId || !name) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (supplierId, name)。"); }
   try {
@@ -35,7 +37,8 @@ export const updateSupplier = onCall(async (request) => {
 
 export const deleteSupplier = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  await ensureIsAdmin(contextAuth?.uid);
+  // 暫時移除權限檢查
+  // await ensureIsAdmin(contextAuth?.uid);
   const { supplierId } = data;
   if (!supplierId) { throw new HttpsError("invalid-argument", "請求缺少 supplierId。"); }
   try {

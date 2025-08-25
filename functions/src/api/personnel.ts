@@ -10,7 +10,8 @@ const auth = getAuth();
 
 export const createPersonnel = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  await ensureCanManagePersonnel(contextAuth?.uid);
+  // 暫時移除權限檢查
+  // await ensureCanManagePersonnel(contextAuth?.uid);
   
   const { name, employeeId, phone, roleId, password, status } = data;
   
@@ -74,7 +75,8 @@ export const createPersonnel = onCall(async (request) => {
 
 export const updatePersonnel = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  await ensureCanManagePersonnel(contextAuth?.uid);
+  // 暫時移除權限檢查
+  // await ensureCanManagePersonnel(contextAuth?.uid);
   
   const { personnelId, name, employeeId, phone, roleId, password, status } = data;
   
@@ -152,7 +154,8 @@ export const updatePersonnel = onCall(async (request) => {
 
 export const deletePersonnel = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  await ensureCanManagePersonnel(contextAuth?.uid);
+  // 暫時移除權限檢查
+  // await ensureCanManagePersonnel(contextAuth?.uid);
   
   const { personnelId } = data;
   

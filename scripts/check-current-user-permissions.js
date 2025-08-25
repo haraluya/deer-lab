@@ -1,15 +1,16 @@
+// 檢查當前用戶權限
 const { initializeApp } = require('firebase/app');
 const { getAuth, signInWithEmailAndPassword } = require('firebase/auth');
 const { getFirestore, doc, getDoc } = require('firebase/firestore');
 
-// Firebase 配置
+// Firebase 配置 - 使用模擬配置避免金鑰外流
 const firebaseConfig = {
-  apiKey: "AIzaSyCMIAqNPsIyl3fJNllqNCuUJE2Rvcdf6fk",
-  authDomain: "deer-lab.firebaseapp.com",
-  projectId: "deer-lab",
-  storageBucket: "deer-lab.firebasestorage.app",
-  messagingSenderId: "554942047858",
-  appId: "1:554942047858:web:607d3e27bb438c898644eb"
+  apiKey: process.env.FIREBASE_API_KEY || "mock-api-key-for-testing",
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN || "deer-lab.firebaseapp.com",
+  projectId: process.env.FIREBASE_PROJECT_ID || "deer-lab",
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "deer-lab.appspot.com",
+  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || "123456789",
+  appId: process.env.FIREBASE_APP_ID || "1:123456789:web:abcdefghijklmnop"
 };
 
 // 初始化 Firebase
@@ -18,86 +19,69 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 async function checkCurrentUserPermissions() {
+  console.log('🔍 檢查當前用戶權限...\n');
+
   try {
-    console.log('🔍 檢查當前使用者權限...');
-    
-    // 測試登入
-    console.log('\n🔐 測試登入...');
-    const email = '001@deer-lab.local'; // 哈雷雷的帳號
-    const password = '123456'; // 請替換為實際密碼
-    
-    console.log(`嘗試登入: ${email}`);
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    console.log('✅ 登入成功:', userCredential.user.uid);
-    
-    // 獲取使用者資料
-    console.log('\n👤 獲取使用者資料...');
-    const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+    // 登入測試用戶
+    console.log('🔐 登入測試用戶...');
+    const userCredential = await signInWithEmailAndPassword(auth, '001@deer-lab.local', 'password123');
+    const user = userCredential.user;
+    console.log('✅ 登入成功:', user.uid);
+
+    // 獲取用戶資料
+    const userDocRef = doc(db, 'users', user.uid);
+    const userDoc = await getDoc(userDocRef);
     
     if (!userDoc.exists()) {
-      console.log('❌ 找不到使用者資料');
+      console.log('❌ 用戶資料不存在');
       return;
     }
-    
+
     const userData = userDoc.data();
-    console.log('📋 使用者資料:', {
+    console.log('👤 用戶資料:', {
       name: userData.name,
       employeeId: userData.employeeId,
-      phone: userData.phone,
-      status: userData.status,
       roleRef: userData.roleRef?.path
     });
-    
+
     // 獲取角色資料
     if (userData.roleRef) {
-      console.log('\n🎭 獲取角色資料...');
       const roleDoc = await getDoc(userData.roleRef);
-      
       if (roleDoc.exists()) {
         const roleData = roleDoc.data();
-        console.log('📋 角色資料:', {
+        console.log('🎭 角色資料:', {
           name: roleData.name,
-          description: roleData.description,
           permissions: roleData.permissions
         });
-        
-        // 檢查人員管理相關權限
-        console.log('\n🔍 檢查人員管理權限...');
-        const personnelPermissions = [
-          '新增人員',
-          '編輯人員', 
-          '刪除人員',
-          '查看人員管理'
+
+        // 檢查各種權限
+        const allPermissions = [
+          'personnel:create', 'personnel:edit', 'personnel:delete', 'personnel:view',
+          'roles:create', 'roles:edit', 'roles:delete', 'roles:view',
+          'materials:create', 'materials:edit', 'materials:delete', 'materials:view',
+          'products:create', 'products:edit', 'products:delete', 'products:view',
+          'workorders:create', 'workorders:edit', 'workorders:delete', 'workorders:view',
+          'suppliers:create', 'suppliers:edit', 'suppliers:delete', 'suppliers:view',
+          'purchase:create', 'purchase:edit', 'purchase:delete', 'purchase:view',
+          'inventory:view', 'inventory:adjust',
+          'reports:view', 'cost:view'
         ];
-        
-        personnelPermissions.forEach(permission => {
-          const hasPermission = roleData.permissions?.includes(permission);
-          console.log(`${hasPermission ? '✅' : '❌'} ${permission}: ${hasPermission ? '有權限' : '無權限'}`);
+
+        console.log('\n🔍 權限檢查結果:');
+        allPermissions.forEach(permission => {
+          const hasPermission = roleData.permissions.includes(permission);
+          console.log(`   ${hasPermission ? '✅' : '❌'} ${permission}`);
         });
-        
-        // 檢查是否有任何人員管理權限
-        const hasAnyPersonnelPermission = personnelPermissions.some(permission => 
-          roleData.permissions?.includes(permission)
-        );
-        
-        console.log(`\n🎯 人員管理權限總結: ${hasAnyPersonnelPermission ? '✅ 有權限' : '❌ 無權限'}`);
-        
-        if (!hasAnyPersonnelPermission) {
-          console.log('\n💡 建議: 請在角色管理中為「計時人員」角色添加以下權限之一:');
-          personnelPermissions.forEach(permission => {
-            console.log(`   - ${permission}`);
-          });
-        }
-        
+
       } else {
-        console.log('❌ 找不到角色資料');
+        console.log('❌ 角色資料不存在');
       }
     } else {
-      console.log('❌ 使用者沒有指派角色');
+      console.log('❌ 用戶沒有分配角色');
     }
-    
+
   } catch (error) {
-    console.error('❌ 檢查失敗:', error);
+    console.error('❌ 檢查過程中發生錯誤:', error);
   }
 }
 

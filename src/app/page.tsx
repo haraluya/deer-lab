@@ -1,170 +1,97 @@
-// src/app/page.tsx
 'use client';
 
-import { useState, FormEvent, useEffect, useCallback } from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
-
-
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Factory } from "lucide-react";
+import { toast } from 'sonner';
 
 export default function LoginPage() {
-  const [employeeId, setEmployeeId] = useState(''); // 員工工號
-  const [password, setPassword] = useState('');     // 密碼
-  const [error, setError] = useState('');           // 錯誤訊息
-  const [isLoading, setIsLoading] = useState(false);  // 載入狀態
+  const { login, isLoading } = useAuth();
+  const [employeeId, setEmployeeId] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  const { user, isLoading: authLoading } = useAuth(); // 從我們的 AuthContext 取得使用者狀態
-  const router = useRouter(); // Next.js 的路由工具
-
-  // 添加調試信息
-  useEffect(() => {
-    console.log('LoginPage: 組件已載入');
-    console.log('LoginPage: Firebase auth 狀態:', !!auth);
-    console.log('LoginPage: 當前環境變數:', {
-      apiKey: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'deer-lab'
-    });
-  }, []);
-
-  // 使用 useCallback 來穩定化重定向函數
-  const redirectToDashboard = useCallback(() => {
-    console.log('LoginPage: Redirecting to dashboard');
-          window.location.href = '/dashboard';
-  }, []);
-
-  // 檢查用戶是否已經認證，如果已認證則重定向到 dashboard
-  useEffect(() => {
-    if (user && !authLoading) {
-      console.log('LoginPage: User already authenticated, redirecting to dashboard');
-      redirectToDashboard();
-    }
-  }, [user, authLoading, redirectToDashboard]);
-
-  // 表單提交處理函式
-  const handleLogin = async (e: FormEvent) => {
-    e.preventDefault(); // 防止表單預設的重新整理行為
-    setError('');
-    setIsLoading(true);
-
-    console.log('LoginPage: Starting login process', { employeeId });
-
-    // 檢查 Firebase 是否正確初始化
-    if (!auth) {
-      console.error('LoginPage: Firebase auth not initialized');
-      setError('系統初始化中，請稍後再試。');
-      setIsLoading(false);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!employeeId || !password) {
+      toast.error('請輸入員工編號和密碼');
       return;
     }
 
-    // PRD 規格：使用「工號」登入
-    // Firebase Auth 的標準是 Email，所以我們做一個轉換
-    // 將工號 `admin` 轉換成 `admin@deer-lab.local` 這樣的格式
-    // 這個 `@deer-lab.local` 是一個虛構的域名，僅用於滿足 Firebase 格式要求
-    const email = `${employeeId}@deer-lab.local`;
-
+    setIsLoggingIn(true);
+    
     try {
-      console.log('LoginPage: Attempting sign in with email', email);
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      console.log('LoginPage: Sign in successful', result.user.uid);
-      // 登入成功後，上面的 useEffect 會偵測到 user 狀態變化，並自動跳轉
-    } catch (e) { // *** 修改點 1: 將 (error: any) 改為 (e)，讓 TypeScript 自動推斷為 'unknown' 型別，更安全。
+      // 構建 email
+      const email = employeeId.includes('@') ? employeeId : `${employeeId}@deer-lab.local`;
       
-      // *** 修改點 2: 增加型別檢查，確保 'e' 是我們預期的 Firebase 錯誤物件格式。
-      // 這樣做可以避免執行時錯誤，並解決 ESLint 的警告。
-      if (e instanceof Error && 'code' in e && typeof e.code === 'string') {
-        const firebaseError = e as { code: string; message: string }; // 進行型別斷言，方便後續使用
-        console.error('LoginPage: Firebase error', firebaseError.code, firebaseError.message);
-        
-        if (firebaseError.code === 'auth/invalid-credential' || firebaseError.code === 'auth/wrong-password' || firebaseError.code === 'auth/user-not-found') {
-          setError('工號或密碼錯誤，請重新輸入。');
-        } else if (firebaseError.code === 'auth/network-request-failed') {
-          setError('網路連線失敗，請檢查網路連線後再試。');
-        } else if (firebaseError.code === 'auth/too-many-requests') {
-          setError('登入嘗試次數過多，請稍後再試。');
-        } else {
-          setError(`發生錯誤: ${firebaseError.message}`);
-        }
-      } else {
-        // 如果錯誤不是我們預期的格式，給一個通用的錯誤訊息
-        setError('發生一個非預期的錯誤。');
-        console.error("LoginPage: An unexpected error occurred:", e);
+      const success = await login(email, password);
+      
+      if (success) {
+        // 登入成功後跳轉到儀表板
+        window.location.href = '/dashboard';
       }
-
+    } catch (error) {
+      console.error('登入錯誤:', error);
+      toast.error('登入失敗，請檢查您的憑證');
     } finally {
-      setIsLoading(false); // 無論成功或失敗，都結束載入狀態
+      setIsLoggingIn(false);
     }
   };
 
-  // 移除重複的載入檢查，讓 AuthGuard 處理
-
   return (
-    <main className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-      <div className="w-full max-w-md px-4 sm:px-0">
-        <Card className="text-card-foreground flex flex-col gap-6 rounded-xl py-6 w-full shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
-          <CardHeader className="@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6 text-center pb-6">
-            <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
-              <Factory className="h-8 w-8 text-white" />
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold">🦌 Deer Lab</CardTitle>
+          <CardDescription>生產管理系統</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="employeeId">員工編號</Label>
+              <Input
+                id="employeeId"
+                type="text"
+                placeholder="請輸入員工編號"
+                value={employeeId}
+                onChange={(e) => setEmployeeId(e.target.value)}
+                disabled={isLoggingIn || isLoading}
+                required
+              />
             </div>
-            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              Deer Lab
-            </CardTitle>
-            <CardDescription className="text-lg text-gray-600 mt-2">
-              生產管理系統
-            </CardDescription>
-            <p className="text-sm text-gray-500 mt-2">
-              請輸入您的工號與密碼以登入系統
-            </p>
-          </CardHeader>
-          <form onSubmit={handleLogin}>
-            <CardContent className="px-6 space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="employeeId">工號</Label>
-                <Input
-                  type="text"
-                  id="employeeId"
-                  placeholder="例如: 001"
-                  value={employeeId}
-                  onChange={(e) => setEmployeeId(e.target.value)}
-                  required
-                  className="h-12"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">密碼</Label>
-                <Input
-                  type="password"
-                  id="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="h-12"
-                />
-              </div>
-              {error && (
-                <div className="text-red-500 text-sm text-center bg-red-50 p-3 rounded-md">
-                  {error}
-                </div>
-              )}
-            </CardContent>
-            <CardFooter className="flex items-center px-6 [.border-t]:pt-6 pt-6">
-              <Button 
-                type="submit" 
-                className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium text-lg shadow-lg hover:shadow-xl transition-all duration-200"
-                disabled={isLoading}
-              >
-                {isLoading ? '登入中...' : '登入'}
-              </Button>
-            </CardFooter>
+            
+            <div className="space-y-2">
+              <Label htmlFor="password">密碼</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="請輸入密碼"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoggingIn || isLoading}
+                required
+              />
+            </div>
+            
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isLoggingIn || isLoading}
+            >
+              {isLoggingIn ? '登入中...' : '登入'}
+            </Button>
           </form>
-        </Card>
-      </div>
-    </main>
+          
+          <div className="mt-4 text-center text-sm text-gray-500">
+            <p>測試帳號：test@deer-lab.local</p>
+            <p>測試密碼：123456</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

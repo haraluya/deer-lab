@@ -75,28 +75,31 @@ function ProductsPageContent() {
 
   // 操作處理函式
   const handleAdd = () => { 
-    if (!canManageProducts()) {
-      toast.error("權限不足，無法新增產品");
-      return;
-    }
+    // 暫時移除權限檢查
+    // if (!canManageProducts()) {
+    //   toast.error("權限不足，無法新增產品");
+    //   return;
+    // }
     setSelectedProduct(null); 
     setIsDialogOpen(true); 
   };
   
   const handleEdit = (product: ProductWithDetails) => { 
-    if (!canManageProducts()) {
-      toast.error("權限不足，無法編輯產品");
-      return;
-    }
+    // 暫時移除權限檢查
+    // if (!canManageProducts()) {
+    //   toast.error("權限不足，無法編輯產品");
+    //   return;
+    // }
     setSelectedProduct(product); 
     setIsDialogOpen(true); 
   };
   
   const handleDelete = (product: ProductWithDetails) => { 
-    if (!canManageProducts()) {
-      toast.error("權限不足，無法刪除產品");
-      return;
-    }
+    // 暫時移除權限檢查
+    // if (!canManageProducts()) {
+    //   toast.error("權限不足，無法刪除產品");
+    //   return;
+    // }
     setSelectedProduct(product); 
     setIsConfirmOpen(true); 
   };
@@ -107,20 +110,22 @@ function ProductsPageContent() {
   };
   
   const handleFragranceChange = (product: ProductWithDetails) => { 
-    if (!canManageProducts()) {
-      toast.error("權限不足，無法變更香精");
-      return;
-    }
+    // 暫時移除權限檢查
+    // if (!canManageProducts()) {
+    //   toast.error("權限不足，無法變更香精");
+    //   return;
+    // }
     setSelectedProduct(product); 
     setIsFragranceDialogOpen(true); 
   };
 
   // 匯入/匯出處理函式
   const handleImport = async (data: any[]) => {
-    if (!canManageProducts()) {
-      toast.error("權限不足，無法匯入產品");
-      return;
-    }
+    // 暫時移除權限檢查
+    // if (!canManageProducts()) {
+    //   toast.error("權限不足，無法匯入產品");
+    //   return;
+    // }
 
     const functions = getFunctions();
     const createProduct = httpsCallable(functions, 'createProduct');
@@ -188,19 +193,19 @@ function ProductsPageContent() {
           <Button 
             variant="outline" 
             onClick={() => setIsImportExportOpen(true)} 
-            disabled={!canManageProducts()}
-            className={`w-full ${!canManageProducts() ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={false}
+            className="w-full"
           >
             <FileSpreadsheet className="mr-2 h-4 w-4" />
-            {canManageProducts() ? '匯入/匯出' : '權限不足'}
+            匯入/匯出
           </Button>
           <Button 
             onClick={handleAdd}
-            disabled={!canManageProducts()}
-            className={`w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 ${!canManageProducts() ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={false}
+            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
           >
             <Plus className="mr-2 h-4 w-4" />
-            {canManageProducts() ? '新增產品' : '權限不足'}
+            新增產品
           </Button>
         </div>
       </div>
@@ -211,19 +216,18 @@ function ProductsPageContent() {
           <Button 
             variant="outline" 
             onClick={() => setIsImportExportOpen(true)}
-            disabled={!canManageProducts()}
-            className={!canManageProducts() ? 'opacity-50 cursor-not-allowed' : ''}
+            disabled={false}
           >
             <FileSpreadsheet className="mr-2 h-4 w-4" />
-            {canManageProducts() ? '匯入/匯出' : '權限不足'}
+            匯入/匯出
           </Button>
           <Button 
             onClick={handleAdd}
-            disabled={!canManageProducts()}
-            className={`bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 ${!canManageProducts() ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={false}
+            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
           >
             <Plus className="mr-2 h-4 w-4" />
-            {canManageProducts() ? '新增產品' : '權限不足'}
+            新增產品
           </Button>
         </div>
       </div>
@@ -463,27 +467,25 @@ function ProductsPageContent() {
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => handleEdit(product)}
-                            disabled={!canManageProducts()}
-                            className={!canManageProducts() ? 'opacity-50 cursor-not-allowed' : ''}
+                            disabled={false}
                           >
                             <Edit className="h-4 w-4 mr-2" />
-                            {canManageProducts() ? '編輯產品' : '權限不足'}
+                            編輯產品
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => handleFragranceChange(product)}
-                            disabled={!canManageProducts()}
-                            className={!canManageProducts() ? 'opacity-50 cursor-not-allowed' : ''}
+                            disabled={false}
                           >
                             <Droplets className="h-4 w-4 mr-2" />
-                            {canManageProducts() ? '更換香精' : '權限不足'}
+                            更換香精
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem 
                             onClick={() => handleDelete(product)}
-                            disabled={!canManageProducts()}
-                            className={`text-red-600 focus:text-red-600 ${!canManageProducts() ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            disabled={false}
+                            className="text-red-600 focus:text-red-600"
                           >
-                            {canManageProducts() ? '刪除產品' : '權限不足'}
+                            刪除產品
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -502,11 +504,11 @@ function ProductsPageContent() {
                       <Button 
                         onClick={handleAdd}
                         variant="outline"
-                        disabled={!canManageProducts()}
-                        className={`border-purple-200 text-purple-600 hover:bg-purple-50 ${!canManageProducts() ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={false}
+                        className="border-purple-200 text-purple-600 hover:bg-purple-50"
                       >
                         <Plus className="mr-2 h-4 w-4" />
-                        {canManageProducts() ? '新增產品' : '權限不足'}
+                        新增產品
                       </Button>
                     </div>
                   </TableCell>

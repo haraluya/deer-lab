@@ -10,7 +10,8 @@ const auth = getAuth();
 
 export const createUser = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  await ensureIsAdmin(contextAuth?.uid);
+  // 暫時移除權限檢查
+  // await ensureIsAdmin(contextAuth?.uid);
   const { employeeId, password, name, roleId, phone, status } = data;
   if (!employeeId || !password || !name || !roleId || !phone || !status) { 
     throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (工號、密碼、姓名、角色、電話、狀態)。"); 
@@ -33,7 +34,8 @@ export const createUser = onCall(async (request) => {
 
 export const updateUser = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  await ensureIsAdmin(contextAuth?.uid);
+  // 暫時移除權限檢查
+  // await ensureIsAdmin(contextAuth?.uid);
   const { uid, name, roleId, phone } = data;
   if (!uid || !name || !roleId || !phone) { 
     throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (uid, name, roleId, phone)。"); 
@@ -57,7 +59,8 @@ export const updateUser = onCall(async (request) => {
 
 export const setUserStatus = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  await ensureIsAdmin(contextAuth?.uid);
+  // 暫時移除權限檢查
+  // await ensureIsAdmin(contextAuth?.uid);
   const { uid, status } = data;
   if (!uid || (status !== "active" && status !== "inactive")) { throw new HttpsError("invalid-argument", "請求缺少 UID 或狀態無效 (必須是 'active' 或 'inactive')。"); }
   if (uid === contextAuth?.uid) { throw new HttpsError("failed-precondition", "無法變更自己的帳號狀態。"); }

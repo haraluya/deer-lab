@@ -3,14 +3,14 @@ const { initializeApp } = require('firebase/app');
 const { getAuth, signInWithEmailAndPassword } = require('firebase/auth');
 const { getFirestore, doc, getDoc } = require('firebase/firestore');
 
-// Firebase 配置
+// Firebase 配置 - 使用模擬配置避免金鑰外流
 const firebaseConfig = {
-  apiKey: "AIzaSyBxGQqQqQqQqQqQqQqQqQqQqQqQqQqQqQ",
-  authDomain: "deer-lab.firebaseapp.com",
-  projectId: "deer-lab",
-  storageBucket: "deer-lab.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdefghijklmnop"
+  apiKey: process.env.FIREBASE_API_KEY || "mock-api-key-for-testing",
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN || "deer-lab.firebaseapp.com",
+  projectId: process.env.FIREBASE_PROJECT_ID || "deer-lab",
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "deer-lab.appspot.com",
+  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || "123456789",
+  appId: process.env.FIREBASE_APP_ID || "1:123456789:web:abcdefghijklmnop"
 };
 
 // 初始化 Firebase
