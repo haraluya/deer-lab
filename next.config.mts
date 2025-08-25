@@ -71,7 +71,7 @@ const nextConfig = {
   generateEtags: false,
   
   // 改善靜態匯出的路徑處理
-  distDir: 'out',
+  // distDir: 'out', // 移除這個配置，讓 Next.js 使用默認的 .next 目錄
   
   // 確保正確的靜態檔案路徑
   async headers() {

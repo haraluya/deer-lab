@@ -2,29 +2,49 @@ const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
-console.log(" ï¿½}ï¿½lï¿½cï¿½ï¿½ï¿½Rï¿½Aï¿½ï¿½ï¿½ï¿½...");
+console.log(" ¶}©lºc«ØÀRºAºô¯¸...");
 
 try {
-  // ï¿½Mï¿½zï¿½ï¿½ï¿½eï¿½ï¿½ï¿½cï¿½ï¿½
+  // ²M²z¤§«eªººc«Ø
   if (fs.existsSync("out")) {
-    console.log(" ï¿½Mï¿½zï¿½ï¿½ï¿½eï¿½ï¿½ï¿½cï¿½Ø¤ï¿½ï¿½...");
+    console.log(" ²M²z¤§«eªººc«Ø¤å¥ó...");
     fs.rmSync("out", { recursive: true, force: true });
   }
 
-  // ï¿½]ï¿½mï¿½ï¿½ï¿½ï¿½ï¿½Ü¼ï¿½
+  // ³]¸mÀô¹ÒÅÜ¼Æ
   process.env.NODE_ENV = "production";
   
-  // ï¿½ï¿½ï¿½ï¿½ Next.js ï¿½cï¿½Ø¡]ï¿½wï¿½]ï¿½tï¿½Rï¿½Aï¿½É¥Xï¿½^
-  console.log(" ï¿½ï¿½ï¿½ï¿½ Next.js ï¿½cï¿½ï¿½...");
+  // °õ¦æ Next.js ºc«Ø
+  console.log(" °õ¦æ Next.js ºc«Ø...");
   execSync("npx next build", { stdio: "inherit" });
   
-  // Next.js ï¿½cï¿½Ø¤wï¿½gï¿½]ï¿½tï¿½Rï¿½Aï¿½É¥Xï¿½]output: export ï¿½tï¿½mï¿½^
-  console.log(" ï¿½Rï¿½Aï¿½É¥Xï¿½wï¿½ï¿½ï¿½ï¿½ï¿½]ï¿½qï¿½L next.config.mts ï¿½tï¿½mï¿½^");
+  // ¤â°Ê³Ð«Ø out ¥Ø¿ý¨Ã½Æ»sÀRºA¤å¥ó
+  console.log(" ½Æ»sÀRºA¤å¥ó¨ì out ¥Ø¿ý...");
   
-  console.log(" ï¿½Rï¿½Aï¿½ï¿½ï¿½ï¿½ï¿½cï¿½Ø§ï¿½ï¿½ï¿½ï¿½I");
-  console.log(" ï¿½ï¿½Xï¿½Ø¿ï¿½: out/");
+  // ³Ð«Ø out ¥Ø¿ý
+  if (!fs.existsSync("out")) {
+    fs.mkdirSync("out", { recursive: true });
+  }
+  
+  // ½Æ»s .next/static ¨ì out/static
+  if (fs.existsSync(".next/static")) {
+    execSync("xcopy \".next\\static\" \"out\\static\" /E /I /Y", { stdio: "inherit" });
+  }
+  
+  // ½Æ»s public ¥Ø¿ý¨ì out
+  if (fs.existsSync("public")) {
+    execSync("xcopy \"public\" \"out\" /E /I /Y", { stdio: "inherit" });
+  }
+  
+  // ½Æ»s HTML ¤å¥ó
+  if (fs.existsSync(".next/server/app")) {
+    execSync("xcopy \".next\\server\\app\" \"out\" /E /I /Y", { stdio: "inherit" });
+  }
+  
+  console.log(" ÀRºAºô¯¸ºc«Ø§¹¦¨¡I");
+  console.log(" ¿é¥X¥Ø¿ý: out/");
   
 } catch (error) {
-  console.error(" ï¿½cï¿½Ø¥ï¿½ï¿½ï¿½:", error.message);
+  console.error(" ºc«Ø¥¢±Ñ:", error.message);
   process.exit(1);
 }
