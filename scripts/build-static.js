@@ -2,49 +2,72 @@ const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
-console.log(" 開始構建靜態網站...");
+console.log("Starting static site build...");
 
 try {
-  // 清理之前的構建
+  // Clean previous build
   if (fs.existsSync("out")) {
-    console.log(" 清理之前的構建文件...");
+    console.log("Cleaning previous build files...");
     fs.rmSync("out", { recursive: true, force: true });
   }
 
-  // 設置環境變數
+  // Set environment variables
   process.env.NODE_ENV = "production";
   
-  // 執行 Next.js 構建
-  console.log(" 執行 Next.js 構建...");
+  // Run Next.js build
+  console.log("Running Next.js build...");
   execSync("npx next build", { stdio: "inherit" });
   
-  // 手動創建 out 目錄並複製靜態文件
-  console.log(" 複製靜態文件到 out 目錄...");
+  // Manually create out directory and copy static files
+  console.log("Copying static files to out directory...");
   
-  // 創建 out 目錄
+  // Create out directory
   if (!fs.existsSync("out")) {
     fs.mkdirSync("out", { recursive: true });
   }
   
-  // 複製 .next/static 到 out/static
+  // Copy .next/static to out/static using Node.js fs
   if (fs.existsSync(".next/static")) {
-    execSync("xcopy \".next\\static\" \"out\\static\" /E /I /Y", { stdio: "inherit" });
+    console.log("Copying static assets...");
+    copyDir(".next/static", "out/static");
   }
   
-  // 複製 public 目錄到 out
+  // Copy public directory to out
   if (fs.existsSync("public")) {
-    execSync("xcopy \"public\" \"out\" /E /I /Y", { stdio: "inherit" });
+    console.log("Copying public files...");
+    copyDir("public", "out");
   }
   
-  // 複製 HTML 文件
+  // Copy HTML files from .next/server/app to out
   if (fs.existsSync(".next/server/app")) {
-    execSync("xcopy \".next\\server\\app\" \"out\" /E /I /Y", { stdio: "inherit" });
+    console.log("Copying HTML files...");
+    copyDir(".next/server/app", "out");
   }
   
-  console.log(" 靜態網站構建完成！");
-  console.log(" 輸出目錄: out/");
+  console.log("Static site build completed!");
+  console.log("Output directory: out/");
   
 } catch (error) {
-  console.error(" 構建失敗:", error.message);
+  console.error("Build failed:", error.message);
   process.exit(1);
+}
+
+// Helper function to copy directory recursively
+function copyDir(src, dest) {
+  if (!fs.existsSync(dest)) {
+    fs.mkdirSync(dest, { recursive: true });
+  }
+  
+  const entries = fs.readdirSync(src, { withFileTypes: true });
+  
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+    
+    if (entry.isDirectory()) {
+      copyDir(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
 }
