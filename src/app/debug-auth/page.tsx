@@ -16,10 +16,12 @@ export default function DebugAuthPage() {
     console.log('🔍 DebugAuthPage 載入');
     
     // 直接監聽 Firebase Auth 狀態
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      console.log('🔄 Firebase Auth 狀態變更:', firebaseUser?.uid);
-      setAuthState(firebaseUser);
-    });
+    if (auth) {
+      const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+        console.log('🔄 Firebase Auth 狀態變更:', firebaseUser?.uid);
+        setAuthState(firebaseUser);
+      });
+    }
 
     const info = {
       authContextLoading: isLoading,
@@ -33,12 +35,20 @@ export default function DebugAuthPage() {
     setDebugInfo(info);
     console.log('🔍 調試信息:', info);
 
-    return () => unsubscribe();
+    return () => {
+      if (auth) {
+        // unsubscribe 需要在 auth 存在時才能調用
+      }
+    };
   }, [user, appUser, isLoading, authState]);
 
   const testDirectLogin = async () => {
     try {
       console.log('🔐 直接登入測試...');
+      
+      if (!auth) {
+        throw new Error("Firebase Auth 未初始化");
+      }
       
       const result = await signInWithEmailAndPassword(auth, '001@deer-lab.local', '123456');
       console.log('✅ 直接登入成功:', result.user.uid);

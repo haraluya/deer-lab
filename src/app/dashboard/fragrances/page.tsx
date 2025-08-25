@@ -44,6 +44,10 @@ function FragrancesPageContent() {
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
+      if (!db) {
+        throw new Error("Firebase 未初始化")
+      }
+      
       const suppliersMap = new Map<string, string>();
       const supplierSnapshot = await getDocs(collection(db, "suppliers"));
       supplierSnapshot.forEach(doc => suppliersMap.set(doc.id, doc.data().name));

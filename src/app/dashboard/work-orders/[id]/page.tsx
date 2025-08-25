@@ -75,6 +75,9 @@ export default function WorkOrderDetailPage() {
   useEffect(() => {
     const fetchWorkOrder = async () => {
       try {
+        if (!db) {
+          throw new Error("Firebase 未初始化")
+        }
         const docRef = doc(db, "workOrders", workOrderId)
         const docSnap = await getDoc(docRef)
         
@@ -106,6 +109,9 @@ export default function WorkOrderDetailPage() {
 
     setIsSaving(true)
     try {
+      if (!db) {
+        throw new Error("Firebase 未初始化")
+      }
       const docRef = doc(db, "workOrders", workOrderId)
       await updateDoc(docRef, {
         status: editData.status,

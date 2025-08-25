@@ -53,6 +53,10 @@ function InventoryPageContent() {
   const loadMaterials = useCallback(async () => {
     setLoading(true)
     try {
+      if (!db) {
+        throw new Error("Firebase 未初始化")
+      }
+      
       const querySnapshot = await getDocs(collection(db, "materials"))
       const materialsList = querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -109,14 +113,14 @@ function InventoryPageContent() {
       }
 
       // 更新物料庫存
-      const materialRef = doc(db, "materials", selectedMaterial.id)
+      const materialRef = doc(db!, "materials", selectedMaterial.id)
       await updateDoc(materialRef, {
         currentStock: newStock,
         lastUpdated: new Date()
       })
 
       // 記錄調整歷史
-      await addDoc(collection(db, "stockAdjustments"), {
+      await addDoc(collection(db!, "stockAdjustments"), {
         materialId: selectedMaterial.id,
         materialName: selectedMaterial.name,
         adjustmentType: adjustmentData.adjustmentType,

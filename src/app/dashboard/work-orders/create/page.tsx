@@ -51,6 +51,10 @@ export default function CreateWorkOrderPage() {
     const loadData = async () => {
       setLoading(true)
       try {
+        if (!db) {
+          throw new Error("Firebase 未初始化")
+        }
+        
         // 載入產品資料
         const productsSnapshot = await getDocs(collection(db, "products"))
         const productsList = productsSnapshot.docs.map(doc => ({
@@ -137,7 +141,7 @@ export default function CreateWorkOrderPage() {
       
       const workOrderData = {
         code: workOrderCode,
-        productRef: doc(db, "products", selectedProduct.id),
+        productRef: doc(db!, "products", selectedProduct.id),
         productSnapshot: {
           code: selectedProduct.code,
           name: selectedProduct.name,
@@ -160,7 +164,7 @@ export default function CreateWorkOrderPage() {
         updatedAt: new Date()
       }
 
-      const docRef = await addDoc(collection(db, "workOrders"), workOrderData)
+      const docRef = await addDoc(collection(db!, "workOrders"), workOrderData)
       
       toast.success(`工單 ${workOrderCode} 建立成功`)
       router.push(`/dashboard/work-orders/${docRef.id}`)

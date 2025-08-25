@@ -49,6 +49,9 @@ export default function PurchaseOrderDetailPage() {
   const loadData = useCallback(async (poId: string) => {
     setIsLoading(true);
     try {
+      if (!db) {
+        throw new Error("Firebase 未初始化")
+      }
       const poRef = doc(db, 'purchaseOrders', poId);
       const poSnap = await getDoc(poRef);
 

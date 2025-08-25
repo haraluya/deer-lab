@@ -64,6 +64,9 @@ function MaterialsPageContent() {
   const fetchSuppliers = useCallback(async () => {
     const suppliersMap = new Map<string, string>();
     try {
+      if (!db) {
+        throw new Error("Firebase 未初始化")
+      }
       const querySnapshot = await getDocs(collection(db, "suppliers"));
       querySnapshot.forEach((doc) => {
         suppliersMap.set(doc.id, doc.data().name);
@@ -77,6 +80,9 @@ function MaterialsPageContent() {
   const fetchMaterials = useCallback(async (suppliersMap: Map<string, string>) => {
     setIsLoading(true);
     try {
+      if (!db) {
+        throw new Error("Firebase 未初始化")
+      }
       const materialsCollectionRef = collection(db, 'materials');
       const materialsSnapshot = await getDocs(materialsCollectionRef);
       
@@ -341,10 +347,10 @@ function MaterialsPageContent() {
                 variant="outline" 
                 onClick={() => setIsImportExportOpen(true)} 
                 disabled={false}
-                className={w-full }
+                className="w-full"
               >
                 <FileSpreadsheet className="mr-2 h-4 w-4" />
-                '匯入/匯出'
+                匯入/匯出
               </Button>
               <Button onClick={handleCreatePurchaseOrder} disabled={purchaseCart.size === 0} variant="outline" className="w-full">
                 <ShoppingCart className="mr-2 h-4 w-4" />
@@ -354,17 +360,17 @@ function MaterialsPageContent() {
                 variant="outline" 
                 onClick={() => setIsStocktakeMode(true)} 
                 disabled={false}
-                className={w-full }
+                className="w-full"
               >
                 <ListChecks className="mr-2 h-4 w-4" />
-                '盤點模式'
+                盤點模式
               </Button>
               <Button 
                 onClick={handleAdd} 
                 disabled={false}
-                className={w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 }
+                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
               >
-                '新增物料'
+                新增物料
               </Button>
             </>
           )}
@@ -378,7 +384,7 @@ function MaterialsPageContent() {
             <>
               <Button onClick={handleSaveStocktake} disabled={isSubmitting}>
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                '儲存盤點'
+                儲存盤點
               </Button>
               <Button variant="outline" onClick={handleCancelStocktake} disabled={isSubmitting}>
                 <X className="mr-2 h-4 w-4" />
@@ -720,9 +726,9 @@ function MaterialsPageContent() {
                               <DropdownMenuItem 
                                 onClick={() => handleDelete(material)} 
                                 disabled={false}
-                                className={text-red-600 }
+                                className="text-red-600"
                               >
-                                '刪除'
+                                刪除
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -743,9 +749,9 @@ function MaterialsPageContent() {
                           onClick={handleAdd}
                           variant="outline"
                           disabled={false}
-                          className={border-green-200 text-green-600 hover:bg-green-50 }
+                          className="border-green-200 text-green-600 hover:bg-green-50"
                         >
-                          '新增物料'
+                          新增物料
                         </Button>
                       </div>
                     </TableCell>

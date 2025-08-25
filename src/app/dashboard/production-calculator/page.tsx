@@ -58,6 +58,9 @@ function ProductionCalculatorPageContent() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
+        if (!db) {
+          throw new Error("Firebase 未初始化")
+        }
         const querySnapshot = await getDocs(collection(db, 'products'));
         const productsList = querySnapshot.docs.map(doc => ({
           id: doc.id,
@@ -83,7 +86,7 @@ function ProductionCalculatorPageContent() {
     try {
         // This is a simplified frontend calculation for display purposes.
         // The backend will perform the definitive calculation when creating the work order.
-        const productRef = doc(db, 'products', selectedProductId);
+        const productRef = doc(db!, 'products', selectedProductId);
         const productSnap = await getDoc(productRef);
         if (!productSnap.exists()) {
             throw new Error('找不到產品資料');

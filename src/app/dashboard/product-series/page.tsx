@@ -32,6 +32,10 @@ function ProductSeriesPageContent() {
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
+      if (!db) {
+        throw new Error("Firebase 未初始化")
+      }
+      
       const materialsMap = new Map<string, string>();
       const materialSnapshot = await getDocs(collection(db, "materials"));
       materialSnapshot.forEach(doc => materialsMap.set(doc.id, doc.data().name));

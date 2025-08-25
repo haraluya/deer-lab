@@ -62,6 +62,10 @@ function CostManagementPageContent() {
   const loadCostData = async () => {
     setIsLoading(true)
     try {
+      if (!db) {
+        throw new Error("Firebase 未初始化")
+      }
+      
       // 載入庫存成本
       const materialsSnapshot = await getDocs(collection(db, "materials"))
       const fragrancesSnapshot = await getDocs(collection(db, "fragrances"))

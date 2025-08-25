@@ -61,6 +61,9 @@ function PersonnelPageContent() {
     // ... (fetchUsers 函式內容保持不變)
     setIsLoading(true);
     try {
+      if (!db) {
+        throw new Error("Firebase 未初始化")
+      }
       const usersCollectionRef = collection(db, 'users');
       const usersSnapshot = await getDocs(usersCollectionRef);
       const usersData = await Promise.all(

@@ -58,6 +58,10 @@ function ReportsPageContent() {
     const loadData = async () => {
       setLoading(true)
       try {
+        if (!db) {
+          throw new Error("Firebase 未初始化")
+        }
+        
         // 載入工單資料
         const workOrdersQuery = query(
           collection(db, "workOrders"),

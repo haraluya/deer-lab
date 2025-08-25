@@ -49,6 +49,9 @@ function RolesPageContent() {
   const fetchRoles = useCallback(async () => {
     setIsLoading(true);
     try {
+      if (!db) {
+        throw new Error("Firebase 未初始化")
+      }
       const rolesCollectionRef = collection(db, 'roles');
       const rolesSnapshot = await getDocs(rolesCollectionRef);
       const rolesData = rolesSnapshot.docs.map(doc => ({
@@ -107,7 +110,7 @@ function RolesPageContent() {
       }
 
       // 刪除角色
-      await deleteDoc(doc(db, 'roles', selectedRole.id));
+      await deleteDoc(doc(db!, 'roles', selectedRole.id));
       
       toast.success("角色已成功刪除。", { id: toastId });
       fetchRoles(); // 重新整理列表

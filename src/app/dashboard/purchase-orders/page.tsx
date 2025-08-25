@@ -32,6 +32,10 @@ function PurchaseOrdersPageContent() {
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
+      if (!db) {
+        throw new Error("Firebase 未初始化")
+      }
+      
       // 1. 預先載入所有供應商和使用者資料，存入 Map 以便快速查找
       const suppliersMap = new Map<string, string>();
       const usersMap = new Map<string, string>();

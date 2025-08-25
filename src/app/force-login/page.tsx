@@ -24,6 +24,10 @@ export default function ForceLoginPage() {
     setStatus('正在強制登入...');
 
     try {
+      if (!auth) {
+        throw new Error("Firebase Auth 未初始化");
+      }
+      
       // 嘗試登入
       const email = '001@deer-lab.local';
       const password = '123456';
@@ -36,7 +40,7 @@ export default function ForceLoginPage() {
       
       // 等待 AuthContext 更新
       await new Promise((resolve) => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
+        const unsubscribe = onAuthStateChanged(auth!, (user) => {
           if (user) {
             console.log('✅ AuthContext 已更新:', user.uid);
             setAuthState(user);

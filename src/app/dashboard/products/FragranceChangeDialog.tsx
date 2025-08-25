@@ -48,6 +48,9 @@ export function FragranceChangeDialog({ isOpen, onOpenChange, onUpdate, productD
     if (isOpen) {
       const fetchFragrances = async () => {
         try {
+          if (!db) {
+            throw new Error("Firebase 未初始化")
+          }
           const q = query(collection(db, 'fragrances'), where('status', '==', 'active'));
           const querySnapshot = await getDocs(q);
           const options = querySnapshot.docs

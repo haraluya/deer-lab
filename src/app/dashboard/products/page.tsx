@@ -41,6 +41,10 @@ function ProductsPageContent() {
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
+      if (!db) {
+        throw new Error("Firebase 未初始化")
+      }
+      
       const seriesMap = new Map<string, string>();
       const fragrancesMap = new Map<string, string>();
       

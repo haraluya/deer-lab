@@ -53,6 +53,9 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
     if (isOpen) {
       const fetchMaterials = async () => {
         try {
+          if (!db) {
+            throw new Error("Firebase 未初始化")
+          }
           const querySnapshot = await getDocs(collection(db, 'materials'));
           const options = querySnapshot.docs.map(doc => ({
             value: doc.id,

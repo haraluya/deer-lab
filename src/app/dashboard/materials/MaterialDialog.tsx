@@ -108,6 +108,10 @@ export function MaterialDialog({
     if (isOpen) {
       const fetchData = async () => {
         try {
+          if (!db) {
+            throw new Error("Firebase 未初始化")
+          }
+          
           // Fetch suppliers
           const suppliersCollectionRef = collection(db, 'suppliers');
           const suppliersSnapshot = await getDocs(suppliersCollectionRef);

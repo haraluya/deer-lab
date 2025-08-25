@@ -77,6 +77,9 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
     if (isOpen) {
       const fetchOptions = async () => {
         try {
+          if (!db) {
+            throw new Error("Firebase 未初始化")
+          }
           // 查詢所有系列、啟用中的香精、啟用中的物料
           const seriesQuery = getDocs(collection(db, 'productSeries'));
           const fragrancesQuery = getDocs(query(collection(db, 'fragrances'), where('status', '==', 'active')));

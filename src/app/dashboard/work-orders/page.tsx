@@ -21,6 +21,10 @@ function WorkOrdersPageContent() {
     const loadWorkOrders = async () => {
       setLoading(true)
       try {
+        if (!db) {
+          throw new Error("Firebase 未初始化")
+        }
+        
         const workOrdersQuery = query(
           collection(db, "workOrders"),
           orderBy("createdAt", "desc")

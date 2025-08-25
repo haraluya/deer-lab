@@ -58,6 +58,9 @@ function CreatePurchaseOrderPage() {
   const loadItems = useCallback(async (type: string, ids: string[]) => {
     setIsLoading(true);
     try {
+      if (!db) {
+        throw new Error("Firebase 未初始化")
+      }
       const collectionName = type === 'material' ? 'materials' : 'fragrances';
       const q = query(collection(db, collectionName), where(documentId(), 'in', ids));
       const itemsSnapshot = await getDocs(q);

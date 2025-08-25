@@ -85,6 +85,9 @@ export function FragranceDialog({
     if (isOpen) {
       const fetchSuppliers = async () => {
         try {
+          if (!db) {
+            throw new Error("Firebase 未初始化")
+          }
           const querySnapshot = await getDocs(collection(db, 'suppliers'));
           const suppliersList = querySnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name })) as Supplier[];
           setSuppliers(suppliersList);

@@ -42,6 +42,9 @@ function SuppliersPageContent() {
   const fetchSuppliers = useCallback(async () => {
     setIsLoading(true);
     try {
+      if (!db) {
+        throw new Error("Firebase 未初始化")
+      }
       const suppliersCollectionRef = collection(db, 'suppliers');
       const suppliersSnapshot = await getDocs(suppliersCollectionRef);
       const suppliersList = suppliersSnapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => ({

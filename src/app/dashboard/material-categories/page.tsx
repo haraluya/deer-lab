@@ -64,6 +64,10 @@ function MaterialCategoriesPageContent() {
   const loadCategories = async () => {
     setIsLoading(true)
     try {
+      if (!db) {
+        throw new Error("Firebase 未初始化")
+      }
+      
       // 從物料資料中提取分類和細分分類
       const materialsSnapshot = await getDocs(collection(db, "materials"))
       const categoryMap = new Map<string, number>()

@@ -64,6 +64,10 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId }: TimeTr
   const loadData = async () => {
     setLoading(true)
     try {
+      if (!db) {
+        throw new Error("Firebase 未初始化")
+      }
+      
       // 載入人員資料
       const personnelSnapshot = await getDocs(collection(db, "personnel"))
       const personnelList = personnelSnapshot.docs.map(doc => ({
@@ -134,7 +138,7 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId }: TimeTr
         createdAt: new Date()
       }
 
-      await addDoc(collection(db, "timeEntries"), timeEntryData)
+      await addDoc(collection(db!, "timeEntries"), timeEntryData)
       
       toast.success("工時記錄已新增")
       setNewEntry({

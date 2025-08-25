@@ -29,6 +29,10 @@ export function LowStockNotification() {
   const checkLowStock = async () => {
     setIsLoading(true)
     try {
+      if (!db) {
+        throw new Error("Firebase 未初始化")
+      }
+      
       const lowStockList: LowStockItem[] = []
 
       // 檢查物料庫存
