@@ -19,12 +19,19 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 
+// 預設角色選項
+const DEFAULT_ROLES = [
+  { id: 'system-admin', name: '系統管理員', permissions: ['all'] },
+  { id: 'production-leader', name: '生產領班', permissions: ['production', 'inventory', 'reports'] },
+  { id: 'hourly-worker', name: '計時人員', permissions: ['basic'] }
+];
+
 // 表單驗證 Schema
 const formSchema = z.object({
   name: z.string().min(2, { message: "姓名至少需要 2 個字元" }),
   employeeId: z.string().min(1, { message: "員工編號為必填欄位" }),
   phone: z.string().min(1, { message: "電話為必填欄位" }),
-  roleId: z.string({ required_error: "必須選擇一個角色" }),
+  role: z.string({ required_error: "必須選擇一個角色" }),
   password: z.string().optional(),
   confirmPassword: z.string().optional(),
   status: z.enum(["active", "inactive"]),
@@ -72,7 +79,7 @@ export function PersonnelDialog({
   const { canManagePersonnel } = usePermissions()
   const { appUser, isLoading } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [roles, setRoles] = useState<Role[]>([])
+  const [roles] = useState<Role[]>(DEFAULT_ROLES)
   const [showPasswordFields, setShowPasswordFields] = useState(false)
   const isEditMode = !!personnelData
 
@@ -94,39 +101,14 @@ export function PersonnelDialog({
       name: "",
       employeeId: "",
       phone: "",
-      roleId: "",
+      role: "",
       password: "",
       confirmPassword: "",
       status: "active",
     },
   })
 
-  // 載入角色資料
-  useEffect(() => {
-    const loadRoles = async () => {
-      try {
-        if (!db) {
-          console.error("Firestore 未初始化")
-          toast.error("資料庫連接失敗")
-          return
-        }
-        
-        const rolesSnapshot = await getDocs(collection(db, "roles"))
-        const rolesList = rolesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Role[]
-        setRoles(rolesList)
-      } catch (error) {
-        console.error("載入角色資料失敗:", error)
-        toast.error("載入角色資料失敗")
-      }
-    }
-
-    if (isOpen) {
-      loadRoles()
-    }
-  }, [isOpen])
+  // 移除載入角色資料的 useEffect，因為現在使用預設角色
 
   // 當對話框開啟時，重置表單
   useEffect(() => {
@@ -137,7 +119,7 @@ export function PersonnelDialog({
           name: personnelData.name || "",
           employeeId: personnelData.employeeId || "",
           phone: personnelData.phone || "",
-          roleId: personnelData.roleRef?.id || "",
+          role: personnelData.roleRef?.id || "",
           password: "", // Always reset password fields to empty in edit mode
           confirmPassword: "",
           status: (personnelData.status as "active" | "inactive") || "active",
@@ -150,7 +132,7 @@ export function PersonnelDialog({
           name: "",
           employeeId: "",
           phone: "",
-          roleId: "",
+          role: "",
           password: "",
           confirmPassword: "",
           status: "active" as const,
@@ -330,6 +312,36 @@ export function PersonnelDialog({
 
                 <FormField
                   control={form.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>角色 *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="選擇角色" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {roles.map((role) => (
+                            <SelectItem key={role.id} value={role.id}>
+                              <div className="flex items-center gap-2">
+                                <span>{role.name}</span>
+                                <Badge variant="outline" className="text-xs">
+                                  {role.permissions?.length || 0} 權限
+                                </Badge>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="status"
                   render={({ field }) => (
                     <FormItem>
@@ -352,43 +364,7 @@ export function PersonnelDialog({
               </div>
             </div>
 
-            {/* 權限設定 */}
-            <div className="space-y-4 p-4 bg-gradient-to-r from-purple-50 to-violet-50 rounded-lg border border-purple-200">
-              <h3 className="text-lg font-semibold flex items-center gap-2 text-purple-800">
-                <Shield className="h-4 w-4" />
-                權限設定
-              </h3>
-              
-              <FormField
-                control={form.control}
-                name="roleId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>角色 *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="選擇角色" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {roles.map((role) => (
-                          <SelectItem key={role.id} value={role.id}>
-                            <div className="flex items-center gap-2">
-                              <span>{role.name}</span>
-                              <Badge variant="outline" className="text-xs">
-                                {role.permissions?.length || 0} 權限
-                              </Badge>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+
 
             {/* 密碼設定 */}
             <div className="space-y-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">

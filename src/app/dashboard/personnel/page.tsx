@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { AppUser } from '@/context/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { PersonnelDialog } from './PersonnelDialog';
-import { DetailViewDialog } from '@/components/DetailViewDialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { MoreHorizontal, Trash2, Eye, Edit, User, Shield, Calendar } from 'lucide-react';
 
@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -512,45 +513,82 @@ function PersonnelPageContent() {
 
       {/* 詳細資料對話框 */}
       {selectedDetailUser && (
-        <DetailViewDialog
-          isOpen={isDetailViewOpen}
-          onOpenChange={setIsDetailViewOpen}
-          title={selectedDetailUser.name || '未命名'}
-          subtitle={`工號: ${selectedDetailUser.employeeId}`}
-          sections={[
-            {
-              title: "基本資訊",
-              icon: <User className="h-4 w-4" />,
-              fields: [
-                { label: "姓名", value: selectedDetailUser.name },
-                { label: "工號", value: selectedDetailUser.employeeId },
-                { label: "電話", value: selectedDetailUser.phone },
-                { label: "狀態", value: selectedDetailUser.status, type: "badge" },
-              ]
-            },
-            {
-              title: "權限資訊",
-              icon: <Shield className="h-4 w-4" />,
-              fields: [
-                { label: "角色", value: selectedDetailUser.roleName || '未設定' },
-              ]
-            }
-          ]}
-          actions={
-            <>
+        <Dialog open={isDetailViewOpen} onOpenChange={setIsDetailViewOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-xl flex items-center gap-2">
+                {selectedDetailUser.name || '未命名'}
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground">工號: {selectedDetailUser.employeeId}</p>
+            </DialogHeader>
+
+            <div className="space-y-6">
+              {/* 基本資訊 */}
+              <div className="space-y-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                <h3 className="text-lg font-semibold flex items-center gap-2 text-blue-800">
+                  <User className="h-4 w-4" />
+                  基本資訊
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-600">姓名</label>
+                    <div className="text-sm text-gray-900">{selectedDetailUser.name || '-'}</div>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-600">工號</label>
+                    <div className="text-sm text-gray-900">{selectedDetailUser.employeeId || '-'}</div>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-600">電話</label>
+                    <div className="text-sm text-gray-900">{selectedDetailUser.phone || '-'}</div>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-600">狀態</label>
+                    <div className="text-sm">
+                      <Badge variant={selectedDetailUser.status === 'active' ? 'default' : 'secondary'}>
+                        {selectedDetailUser.status === 'active' ? '啟用' : '停用'}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 權限資訊 */}
+              <div className="space-y-4 p-4 bg-gradient-to-r from-purple-50 to-violet-50 rounded-lg border border-purple-200">
+                <h3 className="text-lg font-semibold flex items-center gap-2 text-purple-800">
+                  <Shield className="h-4 w-4" />
+                  權限資訊
+                </h3>
+                
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-600">角色</label>
+                  <div className="text-sm text-gray-900">{selectedDetailUser.roleName || '未設定'}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* 操作按鈕 */}
+            <div className="flex justify-end gap-2 pt-4 border-t">
               <Button variant="outline" onClick={() => setIsDetailViewOpen(false)}>
                 關閉
               </Button>
-              <Button onClick={() => {
-                setIsDetailViewOpen(false);
-                handleEdit(selectedDetailUser);
-              }}>
+              <Button 
+                onClick={() => {
+                  setIsDetailViewOpen(false);
+                  handleEdit(selectedDetailUser);
+                }}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+              >
                 <Edit className="mr-2 h-4 w-4" />
                 編輯
               </Button>
-            </>
-          }
-        />
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
