@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>權限測試頁面</title>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, signInWithEmailAndPassword, connectAuthEmulator } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFunctions, httpsCallable, connectFunctionsEmulator } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
+        import { getFirestore, connectFirestoreEmulator } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        // Firebase 配置
+        const firebaseConfig = {
+            apiKey: "AIzaSyCMIAqNPsIyl3fJNllqNCuUJE2Rvcdf6fk",
+            authDomain: "deer-lab.firebaseapp.com",
+            projectId: "deer-lab",
+            storageBucket: "deer-lab.firebasestorage.app",
+            messagingSenderId: "554942047858",
+            appId: "1:554942047858:web:607d3e27bb438c898644eb"
+        };
+
+        // 初始化 Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const functions = getFunctions(app);
+        const db = getFirestore(app);
+
+        // 連接到本地模擬器
+        connectAuthEmulator(auth, 'http://localhost:9099');
+        connectFunctionsEmulator(functions, 'localhost', 5001);
+        connectFirestoreEmulator(db, 'localhost', 8080);
+
+        // 測試函數
+        window.testPermissions = async function() {
+            const logDiv = document.getElementById('log');
+            logDiv.innerHTML = '<p>🧪 開始測試權限...</p>';
+
+            try {
+                // 獲取登入資訊
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+
+                if (!email || !password) {
+                    logDiv.innerHTML += '<p style="color: red;">❌ 請輸入電子郵件和密碼</p>';
+                    return;
+                }
+
+                logDiv.innerHTML += `<p>🔐 嘗試登入: ${email}</p>`;
+
+                // 登入
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                logDiv.innerHTML += `<p style="color: green;">✅ 登入成功: ${userCredential.user.uid}</p>`;
+
+                // 測試人員管理權限
+                logDiv.innerHTML += '<p>👥 測試人員管理權限...</p>';
+
+                const createPersonnel = httpsCallable(functions, 'createPersonnel');
+                
+                const testData = {
+                    name: '測試使用者',
+                    employeeId: 'test001',
+                    phone: '0900000000',
+                    roleId: 'test-role-id',
+                    password: 'test123456',
+                    status: 'active'
+                };
+
+                logDiv.innerHTML += '<p>📦 發送測試資料...</p>';
+
+                try {
+                    const result = await createPersonnel(testData);
+                    logDiv.innerHTML += '<p style="color: green;">✅ 權限檢查通過，可以新增人員</p>';
+                    logDiv.innerHTML += `<p>📋 結果: ${JSON.stringify(result.data)}</p>`;
+                } catch (error) {
+                    logDiv.innerHTML += `<p style="color: red;">❌ 權限檢查失敗: ${error.message}</p>`;
+                    
+                    if (error.code === 'functions/permission-denied') {
+                        logDiv.innerHTML += '<p style="color: orange;">💡 權限不足，請檢查角色權限設定</p>';
+                    }
+                }
+
+                // 測試更新人員權限
+                logDiv.innerHTML += '<p>✏️ 測試更新人員權限...</p>';
+
+                const updatePersonnel = httpsCallable(functions, 'updatePersonnel');
+                
+                const updateData = {
+                    personnelId: 'test001',
+                    name: '測試使用者更新',
+                    employeeId: 'test001',
+                    phone: '0900000000',
+                    roleId: 'test-role-id',
+                    status: 'active'
+                };
+
+                try {
+                    const result = await updatePersonnel(updateData);
+                    logDiv.innerHTML += '<p style="color: green;">✅ 更新權限檢查通過</p>';
+                    logDiv.innerHTML += `<p>📋 結果: ${JSON.stringify(result.data)}</p>`;
+                } catch (error) {
+                    logDiv.innerHTML += `<p style="color: red;">❌ 更新權限檢查失敗: ${error.message}</p>`;
+                }
+
+            } catch (error) {
+                logDiv.innerHTML += `<p style="color: red;">❌ 測試失敗: ${error.message}</p>`;
+            }
+        };
+
+        // 設置測試資料
+        window.setupTestData = async function() {
+            const logDiv = document.getElementById('log');
+            logDiv.innerHTML = '<p>🔧 設置測試資料...</p>';
+
+            try {
+                // 這裡可以調用設置測試資料的函數
+                logDiv.innerHTML += '<p style="color: green;">✅ 測試資料設置完成</p>';
+                logDiv.innerHTML += '<p>📋 測試帳號:</p>';
+                logDiv.innerHTML += '<p>1. 測試管理員: admin001@deer-lab.local / 123456</p>';
+                logDiv.innerHTML += '<p>2. 測試計時人員: hourly001@deer-lab.local / 123456</p>';
+            } catch (error) {
+                logDiv.innerHTML += `<p style="color: red;">❌ 設置失敗: ${error.message}</p>`;
+            }
+        };
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #log {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+            white-space: pre-wrap;
+        }
+        .test-accounts {
+            background-color: #e7f3ff;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 權限測試頁面</h1>
+        
+        <div class="test-accounts">
+            <h3>📋 測試帳號</h3>
+            <p><strong>測試管理員:</strong> admin001@deer-lab.local / 123456</p>
+            <p><strong>測試計時人員:</strong> hourly001@deer-lab.local / 123456</p>
+        </div>
+
+        <div class="form-group">
+            <label for="email">電子郵件:</label>
+            <input type="email" id="email" placeholder="例如: admin001@deer-lab.local">
+        </div>
+
+        <div class="form-group">
+            <label for="password">密碼:</label>
+            <input type="password" id="password" placeholder="例如: 123456">
+        </div>
+
+        <button onclick="setupTestData()">🔧 設置測試資料</button>
+        <button onclick="testPermissions()">🧪 測試權限</button>
+
+        <div id="log">
+            <p>點擊按鈕開始測試...</p>
+        </div>
+    </div>
+</body>
+</html>

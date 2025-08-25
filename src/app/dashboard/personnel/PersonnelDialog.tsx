@@ -7,6 +7,8 @@ import * as z from "zod"
 import { getFunctions, httpsCallable } from "firebase/functions"
 import { collection, getDocs, DocumentReference } from "firebase/firestore"
 import { db } from "@/lib/firebase"
+import { usePermissions } from "@/hooks/usePermissions"
+import { useAuth } from "@/context/AuthContext"
 import { toast } from "sonner"
 import { User, Lock, Shield } from "lucide-react"
 
@@ -67,14 +69,39 @@ export function PersonnelDialog({
   onPersonnelUpdate,
   personnelData
 }: PersonnelDialogProps) {
+  const { canManagePersonnel } = usePermissions()
+  const { appUser, isLoading } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [roles, setRoles] = useState<Role[]>([])
   const [showPasswordFields, setShowPasswordFields] = useState(false)
   const isEditMode = !!personnelData
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
+  // 調試權限狀態
+  useEffect(() => {
+    if (isOpen) {
+      console.log('🔍 PersonnelDialog 權限調試:');
+      console.log('👤 當前用戶:', appUser);
+      console.log('🎭 用戶角色:', appUser?.roleName);
+      console.log('📋 用戶權限:', appUser?.permissions);
+      console.log('⏳ 是否正在載入:', isLoading);
+      console.log('✅ canManagePersonnel():', canManagePersonnel());
+    }
+  }, [isOpen, appUser, isLoading, canManagePersonnel]);
+
+  // 準備初始值
+  const getInitialValues = (): FormData => {
+    if (isEditMode && personnelData) {
+      return {
+        name: personnelData.name || "",
+        employeeId: personnelData.employeeId || "",
+        phone: personnelData.phone || "",
+        roleId: personnelData.roleRef?.id || "",
+        password: "",
+        confirmPassword: "",
+        status: (personnelData.status as "active" | "inactive") || "active",
+      }
+    }
+    return {
       name: "",
       employeeId: "",
       phone: "",
@@ -82,7 +109,12 @@ export function PersonnelDialog({
       password: "",
       confirmPassword: "",
       status: "active",
-    },
+    }
+  }
+
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: getInitialValues(),
   })
 
   // 載入角色資料
@@ -106,64 +138,106 @@ export function PersonnelDialog({
     }
   }, [isOpen])
 
-  // 當處於編輯模式時，用傳入的 personnelData 填充表單
+  // 當對話框開啟時，重置表單
   useEffect(() => {
-    if (isOpen && personnelData) {
-      form.reset({
-        name: personnelData.name || "",
-        employeeId: personnelData.employeeId || "",
-        phone: personnelData.phone || "",
-        roleId: personnelData.roleRef?.id || "",
-        password: "",
-        confirmPassword: "",
-        status: (personnelData.status as "active" | "inactive") || "active",
-      })
-      setShowPasswordFields(false)
-    } else if (isOpen && !personnelData) {
-      form.reset({
-        name: "",
-        employeeId: "",
-        phone: "",
-        roleId: "",
-        password: "",
-        confirmPassword: "",
-        status: "active",
-      })
-      setShowPasswordFields(true)
+    if (isOpen) {
+      const initialValues = getInitialValues()
+      console.log('📝 重置表單資料:', initialValues);
+      form.reset(initialValues)
     }
   }, [isOpen, personnelData, form])
 
-  // 表單提交處理
-  async function onSubmit(values: FormData) {
+  const onSubmit = async (data: FormData) => {
+    // 檢查權限 - 確保權限已載入
+    if (isLoading) {
+      toast.error("權限資料正在載入中，請稍後再試。")
+      return
+    }
+
+    if (!canManagePersonnel()) {
+      console.log('❌ 權限檢查失敗: canManagePersonnel() =', canManagePersonnel());
+      console.log('👤 當前用戶狀態:', { appUser, isLoading });
+      toast.error("權限不足，只有管理員才能執行此操作。")
+      return
+    }
+
     setIsSubmitting(true)
-    const toastId = toast.loading(isEditMode ? "正在更新人員..." : "正在新增人員...")
-    
+    const toastId = toast.loading(isEditMode ? "正在更新人員資料..." : "正在建立新人員...")
+
     try {
       const functions = getFunctions()
-      const payload = {
-        ...values,
-        password: values.password || undefined, // 編輯時如果沒有輸入密碼就不更新
-      }
-
+      
       if (isEditMode && personnelData) {
-        const updatePersonnel = httpsCallable(functions, "updatePersonnel")
-        await updatePersonnel({ personnelId: personnelData.id, ...payload })
-        toast.success(`人員 ${values.name} 已更新。`, { id: toastId })
+        const updatePersonnel = httpsCallable(functions, 'updatePersonnel')
+        await updatePersonnel({
+          personnelId: personnelData.id,
+          ...data
+        })
+        toast.success("人員資料更新成功", { id: toastId })
       } else {
-        const createPersonnel = httpsCallable(functions, "createPersonnel")
-        await createPersonnel(payload)
-        toast.success(`人員 ${values.name} 已建立。`, { id: toastId })
+        const createPersonnel = httpsCallable(functions, 'createPersonnel')
+        await createPersonnel(data)
+        toast.success("人員建立成功", { id: toastId })
       }
       
       onPersonnelUpdate()
       onOpenChange(false)
-    } catch (error) {
-      console.error("Cloud Function 調用失敗:", error)
-      const errorMessage = error instanceof Error ? error.message : "發生未知錯誤。"
+    } catch (error: any) {
+      console.error("操作失敗:", error)
+      
+      let errorMessage = "操作失敗，請稍後再試。"
+      if (error?.code === 'functions/unavailable') {
+        errorMessage = "服務暫時不可用，請稍後再試。"
+      } else if (error?.code === 'functions/permission-denied') {
+        errorMessage = "權限不足，無法執行此操作。"
+      } else if (error?.code === 'functions/unauthenticated') {
+        errorMessage = "請重新登入後再試。"
+      } else if (error?.code === 'functions/invalid-argument') {
+        errorMessage = "輸入資料有誤，請檢查後再試。"
+      } else if (error?.code === 'functions/not-found') {
+        errorMessage = "找不到指定的資料。"
+      } else if (error?.code === 'functions/already-exists') {
+        errorMessage = "資料已存在，請使用其他資料。"
+      } else if (error?.code === 'functions/resource-exhausted') {
+        errorMessage = "系統資源不足，請稍後再試。"
+      } else if (error?.code === 'functions/failed-precondition') {
+        errorMessage = "操作條件不滿足，請檢查資料後再試。"
+      } else if (error?.code === 'functions/aborted') {
+        errorMessage = "操作被中止，請稍後再試。"
+      } else if (error?.code === 'functions/out-of-range') {
+        errorMessage = "輸入資料超出範圍，請檢查後再試。"
+      } else if (error?.code === 'functions/unimplemented') {
+        errorMessage = "此功能尚未實作。"
+      } else if (error?.code === 'functions/internal') {
+        errorMessage = "系統內部錯誤，請稍後再試。"
+      } else if (error?.code === 'functions/data-loss') {
+        errorMessage = "資料遺失，請重新輸入。"
+      } else if (error?.code === 'functions/unknown') {
+        errorMessage = "發生未知錯誤，請稍後再試。"
+      } else if (error?.message) {
+        errorMessage = error.message
+      }
+      
       toast.error(errorMessage, { id: toastId })
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  // 如果正在載入，顯示載入狀態
+  if (isLoading) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl">
+          <div className="flex items-center justify-center py-8">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">正在載入權限資料...</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )
   }
 
   return (
@@ -244,7 +318,7 @@ export function PersonnelDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>狀態</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="選擇狀態" />
@@ -275,7 +349,7 @@ export function PersonnelDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>角色 *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="選擇角色" />
@@ -361,17 +435,33 @@ export function PersonnelDialog({
             </div>
 
             {/* 操作按鈕 */}
-                         <div className="flex justify-end gap-2">
-               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                 取消
-               </Button>
-                               <Button 
-                  type="submit" 
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "處理中..." : (isEditMode ? "更新" : "新增")}
-                </Button>
-             </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                取消
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting || !canManagePersonnel()}
+                className={`${
+                  canManagePersonnel() 
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white' 
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                {isSubmitting ? "處理中..." : (
+                  canManagePersonnel() ? (isEditMode ? "更新" : "新增") : "權限不足"
+                )}
+              </Button>
+            </div>
+
+            {/* 權限不足提示 */}
+            {!canManagePersonnel() && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center gap-2 text-red-700">
+                  <span className="text-sm font-medium">⚠️ 權限不足,只有管理員才能執行此操作。</span>
+                </div>
+              </div>
+            )}
           </form>
         </Form>
       </DialogContent>

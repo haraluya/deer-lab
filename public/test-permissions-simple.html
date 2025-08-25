@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>權限測試</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 權限系統測試</h1>
+        
+        <div id="status" class="status info">正在初始化...</div>
+        
+        <div>
+            <button onclick="testLogin()">🔐 測試登入</button>
+            <button onclick="testPermissions()">🔍 測試權限</button>
+            <button onclick="testPersonnelFunctions()">👥 測試人員管理</button>
+            <button onclick="clearLog()">🧹 清除日誌</button>
+        </div>
+        
+        <div class="log" id="log"></div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
+
+        // Firebase 配置
+        const firebaseConfig = {
+            apiKey: "AIzaSyCMIAqNPsIyl3fJNllqNCuUJE2Rvcdf6fk",
+            authDomain: "deer-lab.firebaseapp.com",
+            projectId: "deer-lab",
+            storageBucket: "deer-lab.firebasestorage.app",
+            messagingSenderId: "554942047858",
+            appId: "1:554942047858:web:607d3e27bb438c898644eb"
+        };
+
+        // 初始化 Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const functions = getFunctions(app);
+
+        let currentUser = null;
+        let appUser = null;
+
+        // 日誌函數
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<span style="color: #666;">[${timestamp}]</span> ${message}`;
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        // 更新狀態
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+
+        // 測試登入
+        window.testLogin = async function() {
+            try {
+                log('🔐 開始測試登入...');
+                updateStatus('正在登入...', 'info');
+
+                const email = '001@deer-lab.local';
+                const password = '123456';
+
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                currentUser = userCredential.user;
+                
+                log(`✅ 登入成功: ${currentUser.uid}`);
+                updateStatus('登入成功', 'success');
+
+                // 載入用戶資料
+                await loadUserData();
+                
+            } catch (error) {
+                log(`❌ 登入失敗: ${error.message}`, 'error');
+                updateStatus('登入失敗', 'error');
+            }
+        };
+
+        // 載入用戶資料
+        async function loadUserData() {
+            try {
+                log('🔍 載入用戶資料...');
+                
+                const userDocRef = doc(db, 'users', currentUser.uid);
+                const userDoc = await getDoc(userDocRef);
+                
+                if (!userDoc.exists()) {
+                    log('❌ 找不到用戶資料');
+                    return;
+                }
+                
+                const userData = userDoc.data();
+                log(`📋 用戶資料: ${userData.name} (${userData.employeeId})`);
+                
+                // 載入角色資料
+                if (userData.roleRef) {
+                    const roleDoc = await getDoc(userData.roleRef);
+                    if (roleDoc.exists()) {
+                        const roleData = roleDoc.data();
+                        appUser = {
+                            ...userData,
+                            roleName: roleData.name,
+                            permissions: roleData.permissions || []
+                        };
+                        
+                        log(`🎭 角色: ${appUser.roleName}`);
+                        log(`📋 權限數量: ${appUser.permissions.length}`);
+                        log(`✅ 用戶資料載入完成`);
+                    }
+                }
+                
+            } catch (error) {
+                log(`❌ 載入用戶資料失敗: ${error.message}`);
+            }
+        }
+
+        // 測試權限
+        window.testPermissions = function() {
+            if (!appUser) {
+                log('❌ 請先登入並載入用戶資料');
+                return;
+            }
+
+            log('🔍 開始權限測試...');
+            
+            const personnelPermissions = [
+                'personnel:create', 'personnel:edit', 'personnel:delete', 'personnel:view',
+                '新增人員', '編輯人員', '刪除人員', '查看人員管理'
+            ];
+            
+            const hasPersonnelPermission = personnelPermissions.some(permission => 
+                appUser.permissions.includes(permission)
+            );
+            
+            log(`✅ 人員管理權限檢查: ${hasPersonnelPermission ? '通過' : '失敗'}`);
+            
+            if (hasPersonnelPermission) {
+                const foundPermissions = personnelPermissions.filter(permission => 
+                    appUser.permissions.includes(permission)
+                );
+                log(`✅ 找到的權限: ${foundPermissions.join(', ')}`);
+            }
+            
+            // 檢查具體權限
+            ['personnel:create', 'personnel:edit', 'personnel:delete', 'personnel:view'].forEach(permission => {
+                const hasPermission = appUser.permissions.includes(permission);
+                log(`${hasPermission ? '✅' : '❌'} ${permission}: ${hasPermission ? '有權限' : '無權限'}`);
+            });
+        };
+
+        // 測試人員管理功能
+        window.testPersonnelFunctions = async function() {
+            if (!currentUser) {
+                log('❌ 請先登入');
+                return;
+            }
+
+            log('👥 開始測試人員管理功能...');
+            
+            try {
+                // 測試 createPersonnel
+                log('📡 測試 createPersonnel...');
+                const createPersonnel = httpsCallable(functions, 'createPersonnel');
+                
+                const testData = {
+                    name: '測試用戶',
+                    employeeId: 'TEST001',
+                    phone: '0900000000',
+                    roleId: 'test-role-id',
+                    password: '123456',
+                    status: 'active'
+                };
+                
+                const result = await createPersonnel(testData);
+                log('✅ createPersonnel 調用成功');
+                log(`📋 結果: ${JSON.stringify(result.data)}`);
+                
+            } catch (error) {
+                log(`❌ createPersonnel 失敗: ${error.message}`);
+                if (error.code) {
+                    log(`🔍 錯誤代碼: ${error.code}`);
+                }
+                if (error.details) {
+                    log(`🔍 錯誤詳情: ${JSON.stringify(error.details)}`);
+                }
+            }
+        };
+
+        // 清除日誌
+        window.clearLog = function() {
+            document.getElementById('log').innerHTML = '';
+        };
+
+        // 初始化
+        log('🚀 權限測試頁面已載入');
+        updateStatus('準備就緒', 'info');
+    </script>
+</body>
+</html>

@@ -6,6 +6,7 @@ import { collection, getDocs, doc, getDoc, DocumentReference } from 'firebase/fi
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 import { AppUser } from '@/context/AuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { PersonnelDialog } from './PersonnelDialog';
 import { DetailViewDialog } from '@/components/DetailViewDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -42,6 +43,7 @@ interface UserWithRole {
 }
 
 function PersonnelPageContent() {
+  const { canManagePersonnel } = usePermissions();
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPersonnelDialogOpen, setIsPersonnelDialogOpen] = useState(false);
@@ -184,10 +186,15 @@ function PersonnelPageContent() {
       <div className="lg:hidden mb-6">
         <Button 
           onClick={handleAdd}
-          className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+          disabled={!canManagePersonnel()}
+          className={`w-full shadow-lg hover:shadow-xl transition-all duration-200 ${
+            canManagePersonnel() 
+              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white' 
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          }`}
         >
           <User className="mr-2 h-4 w-4" />
-          新增人員
+          {canManagePersonnel() ? '新增人員' : '權限不足'}
         </Button>
       </div>
 
@@ -196,10 +203,15 @@ function PersonnelPageContent() {
         <div className="flex justify-end">
           <Button 
             onClick={handleAdd}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+            disabled={!canManagePersonnel()}
+            className={`shadow-lg hover:shadow-xl transition-all duration-200 ${
+              canManagePersonnel() 
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white' 
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
           >
             <User className="mr-2 h-4 w-4" />
-            新增人員
+            {canManagePersonnel() ? '新增人員' : '權限不足'}
           </Button>
         </div>
       </div>
@@ -260,17 +272,29 @@ function PersonnelPageContent() {
                               <Eye className="mr-2 h-4 w-4" />
                               查看詳細
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(user)}>
+                            <DropdownMenuItem 
+                              onClick={() => handleEdit(user)}
+                              disabled={!canManagePersonnel()}
+                              className={!canManagePersonnel() ? 'text-gray-400 cursor-not-allowed' : ''}
+                            >
                               <Edit className="mr-2 h-4 w-4" />
-                              編輯資料
+                              {canManagePersonnel() ? '編輯資料' : '權限不足'}
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleChangeStatus(user)}>
-                              {user.status === 'active' ? '停用帳號' : '啟用帳號'}
+                            <DropdownMenuItem 
+                              onClick={() => handleChangeStatus(user)}
+                              disabled={!canManagePersonnel()}
+                              className={!canManagePersonnel() ? 'text-gray-400 cursor-not-allowed' : ''}
+                            >
+                              {canManagePersonnel() ? (user.status === 'active' ? '停用帳號' : '啟用帳號') : '權限不足'}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleDelete(user)} className="text-red-600">
+                            <DropdownMenuItem 
+                              onClick={() => handleDelete(user)} 
+                              disabled={!canManagePersonnel()}
+                              className={`${!canManagePersonnel() ? 'text-gray-400 cursor-not-allowed' : 'text-red-600'}`}
+                            >
                               <Trash2 className="h-4 w-4 mr-2" />
-                              刪除員工
+                              {canManagePersonnel() ? '刪除員工' : '權限不足'}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { collection, getDocs, DocumentReference, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
+import { usePermissions } from '@/hooks/usePermissions';
 import { MaterialDialog, MaterialData } from './MaterialDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { MoreHorizontal, ShoppingCart, ListChecks, Save, X, Loader2, Search, FileSpreadsheet, Eye, Edit, Warehouse, Building, Tag, Package } from 'lucide-react';
@@ -41,6 +42,7 @@ interface MaterialWithSupplier extends MaterialData {
 
 function MaterialsPageContent() {
   const router = useRouter();
+  const { canManageMaterials, canManageInventory } = usePermissions();
   const [materials, setMaterials] = useState<MaterialWithSupplier[]>([]);
   const [filteredMaterials, setFilteredMaterials] = useState<MaterialWithSupplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -135,16 +137,28 @@ function MaterialsPageContent() {
   }, [materials, searchTerm]);
 
   const handleAdd = () => {
+    if (!canManageMaterials()) {
+      toast.error("權限不足，無法新增物料");
+      return;
+    }
     setSelectedMaterial(null);
     setIsDialogOpen(true);
   };
 
   const handleEdit = (material: MaterialWithSupplier) => {
+    if (!canManageMaterials()) {
+      toast.error("權限不足，無法編輯物料");
+      return;
+    }
     setSelectedMaterial(material);
     setIsDialogOpen(true);
   };
 
   const handleDelete = (material: MaterialWithSupplier) => {
+    if (!canManageMaterials()) {
+      toast.error("權限不足，無法刪除物料");
+      return;
+    }
     setSelectedMaterial(material);
     setIsConfirmOpen(true);
   };
@@ -206,10 +220,19 @@ function MaterialsPageContent() {
 
   // --- 盤點功能相關函式 ---
   const handleStockChange = (id: string, value: number) => {
+    if (!canManageInventory()) {
+      toast.error("權限不足，無法調整庫存");
+      return;
+    }
     setUpdatedStocks(prev => ({ ...prev, [id]: value }));
   };
 
   const handleSaveStocktake = async () => {
+    if (!canManageInventory()) {
+      toast.error("權限不足，無法進行盤點");
+      return;
+    }
+
     const changedItems = materials
       .filter(m => updatedStocks[m.id] !== undefined && updatedStocks[m.id] !== m.currentStock)
       .map(m => ({
@@ -251,6 +274,11 @@ function MaterialsPageContent() {
 
   // 匯入/匯出處理函式
   const handleImport = async (data: any[]) => {
+    if (!canManageMaterials()) {
+      toast.error("權限不足，無法匯入物料");
+      return;
+    }
+
     const functions = getFunctions();
     const createMaterial = httpsCallable(functions, 'createMaterial');
     
@@ -297,9 +325,9 @@ function MaterialsPageContent() {
         <div className="grid grid-cols-2 gap-3">
           {isStocktakeMode ? (
             <>
-              <Button onClick={handleSaveStocktake} disabled={isSubmitting} className="w-full">
+              <Button onClick={handleSaveStocktake} disabled={isSubmitting || !canManageInventory()} className="w-full">
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                儲存盤點
+                {canManageInventory() ? '儲存盤點' : '權限不足'}
               </Button>
               <Button variant="outline" onClick={handleCancelStocktake} disabled={isSubmitting} className="w-full">
                 <X className="mr-2 h-4 w-4" />
@@ -308,20 +336,34 @@ function MaterialsPageContent() {
             </>
           ) : (
             <>
-              <Button variant="outline" onClick={() => setIsImportExportOpen(true)} className="w-full">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsImportExportOpen(true)} 
+                disabled={!canManageMaterials()}
+                className={`w-full ${!canManageMaterials() ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
                 <FileSpreadsheet className="mr-2 h-4 w-4" />
-                匯入/匯出
+                {canManageMaterials() ? '匯入/匯出' : '權限不足'}
               </Button>
               <Button onClick={handleCreatePurchaseOrder} disabled={purchaseCart.size === 0} variant="outline" className="w-full">
                 <ShoppingCart className="mr-2 h-4 w-4" />
                 採購單 ({purchaseCart.size})
               </Button>
-              <Button variant="outline" onClick={() => setIsStocktakeMode(true)} className="w-full">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsStocktakeMode(true)} 
+                disabled={!canManageInventory()}
+                className={`w-full ${!canManageInventory() ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
                 <ListChecks className="mr-2 h-4 w-4" />
-                盤點模式
+                {canManageInventory() ? '盤點模式' : '權限不足'}
               </Button>
-              <Button onClick={handleAdd} className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700">
-                新增物料
+              <Button 
+                onClick={handleAdd} 
+                disabled={!canManageMaterials()}
+                className={`w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 ${!canManageMaterials() ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {canManageMaterials() ? '新增物料' : '權限不足'}
               </Button>
             </>
           )}
@@ -333,9 +375,9 @@ function MaterialsPageContent() {
         <div className="flex flex-wrap items-center gap-2">
           {isStocktakeMode ? (
             <>
-              <Button onClick={handleSaveStocktake} disabled={isSubmitting}>
+              <Button onClick={handleSaveStocktake} disabled={isSubmitting || !canManageInventory()}>
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                儲存盤點
+                {canManageInventory() ? '儲存盤點' : '權限不足'}
               </Button>
               <Button variant="outline" onClick={handleCancelStocktake} disabled={isSubmitting}>
                 <X className="mr-2 h-4 w-4" />
@@ -344,19 +386,35 @@ function MaterialsPageContent() {
             </>
           ) : (
             <>
-              <Button variant="outline" onClick={() => setIsImportExportOpen(true)}>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsImportExportOpen(true)}
+                disabled={!canManageMaterials()}
+                className={!canManageMaterials() ? 'opacity-50 cursor-not-allowed' : ''}
+              >
                 <FileSpreadsheet className="mr-2 h-4 w-4" />
-                匯入/匯出
+                {canManageMaterials() ? '匯入/匯出' : '權限不足'}
               </Button>
               <Button onClick={handleCreatePurchaseOrder} disabled={purchaseCart.size === 0} variant="outline">
                 <ShoppingCart className="mr-2 h-4 w-4" />
                 建立採購單 ({purchaseCart.size})
               </Button>
-              <Button variant="outline" onClick={() => setIsStocktakeMode(true)}>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsStocktakeMode(true)}
+                disabled={!canManageInventory()}
+                className={!canManageInventory() ? 'opacity-50 cursor-not-allowed' : ''}
+              >
                 <ListChecks className="mr-2 h-4 w-4" />
-                盤點模式
+                {canManageInventory() ? '盤點模式' : '權限不足'}
               </Button>
-              <Button onClick={handleAdd}>新增物料</Button>
+              <Button 
+                onClick={handleAdd}
+                disabled={!canManageMaterials()}
+                className={!canManageMaterials() ? 'opacity-50 cursor-not-allowed' : ''}
+              >
+                {canManageMaterials() ? '新增物料' : '權限不足'}
+              </Button>
             </>
           )}
         </div>
@@ -658,11 +716,21 @@ function MaterialsPageContent() {
                                 <Eye className="mr-2 h-4 w-4" />
                                 查看詳細
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleEdit(material)}>
+                              <DropdownMenuItem 
+                                onClick={() => handleEdit(material)}
+                                disabled={!canManageMaterials()}
+                                className={!canManageMaterials() ? 'opacity-50 cursor-not-allowed' : ''}
+                              >
                                 <Edit className="mr-2 h-4 w-4" />
-                                編輯
+                                {canManageMaterials() ? '編輯' : '權限不足'}
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleDelete(material)} className="text-red-600">刪除</DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleDelete(material)} 
+                                disabled={!canManageMaterials()}
+                                className={`text-red-600 ${!canManageMaterials() ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              >
+                                {canManageMaterials() ? '刪除' : '權限不足'}
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -681,9 +749,10 @@ function MaterialsPageContent() {
                         <Button 
                           onClick={handleAdd}
                           variant="outline"
-                          className="border-green-200 text-green-600 hover:bg-green-50"
+                          disabled={!canManageMaterials()}
+                          className={`border-green-200 text-green-600 hover:bg-green-50 ${!canManageMaterials() ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                          新增物料
+                          {canManageMaterials() ? '新增物料' : '權限不足'}
                         </Button>
                       </div>
                     </TableCell>

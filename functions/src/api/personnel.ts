@@ -3,14 +3,14 @@ import { logger } from "firebase-functions";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import { ensureIsAdmin } from "../utils/auth";
+import { ensureCanManagePersonnel } from "../utils/auth";
 
 const db = getFirestore();
 const auth = getAuth();
 
 export const createPersonnel = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  await ensureIsAdmin(contextAuth?.uid);
+  await ensureCanManagePersonnel(contextAuth?.uid);
   
   const { name, employeeId, phone, roleId, password, status } = data;
   
@@ -74,7 +74,7 @@ export const createPersonnel = onCall(async (request) => {
 
 export const updatePersonnel = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  await ensureIsAdmin(contextAuth?.uid);
+  await ensureCanManagePersonnel(contextAuth?.uid);
   
   const { personnelId, name, employeeId, phone, roleId, password, status } = data;
   
@@ -152,7 +152,7 @@ export const updatePersonnel = onCall(async (request) => {
 
 export const deletePersonnel = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  await ensureIsAdmin(contextAuth?.uid);
+  await ensureCanManagePersonnel(contextAuth?.uid);
   
   const { personnelId } = data;
   

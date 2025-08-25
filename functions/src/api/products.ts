@@ -2,13 +2,13 @@
 import { logger } from "firebase-functions";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import { ensureIsAdmin } from "../utils/auth";
+import { ensureCanManageProducts } from "../utils/auth";
 
 const db = getFirestore();
 
 export const createProduct = onCall(async (request) => {
   const { auth: contextAuth, data } = request;
-  await ensureIsAdmin(contextAuth?.uid);
+  await ensureCanManageProducts(contextAuth?.uid);
   const { name, seriesId, fragranceId, nicotineMg, specificMaterialIds, status } = data;
   if (!name || !seriesId || !fragranceId || !status) { throw new HttpsError("invalid-argument", "請求缺少產品名稱、系列、香精或狀態。"); }
   const seriesRef = db.doc(`productSeries/${seriesId}`);
@@ -32,7 +32,7 @@ export const createProduct = onCall(async (request) => {
 
 export const updateProduct = onCall(async (request) => {
   const { auth: contextAuth, data } = request;
-  await ensureIsAdmin(contextAuth?.uid);
+  await ensureCanManageProducts(contextAuth?.uid);
   const { productId, name, fragranceId, nicotineMg, specificMaterialIds, status } = data;
   if (!productId) { throw new HttpsError("invalid-argument", "缺少 productId"); }
   const productRef = db.doc(`products/${productId}`);
@@ -44,7 +44,7 @@ export const updateProduct = onCall(async (request) => {
 
 export const deleteProduct = onCall(async (request) => {
   const { auth: contextAuth, data } = request;
-  await ensureIsAdmin(contextAuth?.uid);
+  await ensureCanManageProducts(contextAuth?.uid);
   const { productId } = data;
   if (!productId) { throw new HttpsError("invalid-argument", "缺少 productId"); }
   await db.doc(`products/${productId}`).delete();
@@ -53,7 +53,7 @@ export const deleteProduct = onCall(async (request) => {
 
 export const changeProductFragrance = onCall(async (request) => {
     const { auth: contextAuth, data } = request;
-    await ensureIsAdmin(contextAuth?.uid);
+    await ensureCanManageProducts(contextAuth?.uid);
     const { productId, newFragranceId, reason } = data;
     if (!productId || !newFragranceId || !reason) { throw new HttpsError("invalid-argument", "請求缺少 productId, newFragranceId, 或 reason。"); }
     const productRef = db.doc(`products/${productId}`);

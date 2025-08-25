@@ -45,9 +45,7 @@ export const loginWithEmployeeId = onCall(async (request) => {
         uid: employeeId,
         name: userData?.name,
         employeeId: userData?.employeeId,
-        email: userData?.email,
-        department: userData?.department,
-        position: userData?.position,
+        phone: userData?.phone,
         status: userData?.status
       }
     };

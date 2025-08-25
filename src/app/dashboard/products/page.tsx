@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { collection, getDocs, DocumentReference } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
+import { usePermissions } from '@/hooks/usePermissions';
 import { MoreHorizontal, Droplets, FileSpreadsheet, Eye, Edit, Package, Factory, Calendar, Plus, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -26,6 +27,7 @@ interface ProductWithDetails extends ProductData {
 }
 
 function ProductsPageContent() {
+  const { canManageProducts } = usePermissions();
   const [products, setProducts] = useState<ProductWithDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -72,19 +74,54 @@ function ProductsPageContent() {
   useEffect(() => { loadData(); }, [loadData]);
 
   // 操作處理函式
-  const handleAdd = () => { setSelectedProduct(null); setIsDialogOpen(true); };
-  const handleEdit = (product: ProductWithDetails) => { setSelectedProduct(product); setIsDialogOpen(true); };
-  const handleDelete = (product: ProductWithDetails) => { setSelectedProduct(product); setIsConfirmOpen(true); };
+  const handleAdd = () => { 
+    if (!canManageProducts()) {
+      toast.error("權限不足，無法新增產品");
+      return;
+    }
+    setSelectedProduct(null); 
+    setIsDialogOpen(true); 
+  };
+  
+  const handleEdit = (product: ProductWithDetails) => { 
+    if (!canManageProducts()) {
+      toast.error("權限不足，無法編輯產品");
+      return;
+    }
+    setSelectedProduct(product); 
+    setIsDialogOpen(true); 
+  };
+  
+  const handleDelete = (product: ProductWithDetails) => { 
+    if (!canManageProducts()) {
+      toast.error("權限不足，無法刪除產品");
+      return;
+    }
+    setSelectedProduct(product); 
+    setIsConfirmOpen(true); 
+  };
 
   const handleViewDetail = (product: ProductWithDetails) => {
     setSelectedDetailProduct(product);
     setIsDetailViewOpen(true);
   };
   
-  const handleFragranceChange = (product: ProductWithDetails) => { setSelectedProduct(product); setIsFragranceDialogOpen(true); };
+  const handleFragranceChange = (product: ProductWithDetails) => { 
+    if (!canManageProducts()) {
+      toast.error("權限不足，無法變更香精");
+      return;
+    }
+    setSelectedProduct(product); 
+    setIsFragranceDialogOpen(true); 
+  };
 
   // 匯入/匯出處理函式
   const handleImport = async (data: any[]) => {
+    if (!canManageProducts()) {
+      toast.error("權限不足，無法匯入產品");
+      return;
+    }
+
     const functions = getFunctions();
     const createProduct = httpsCallable(functions, 'createProduct');
     
@@ -148,16 +185,22 @@ function ProductsPageContent() {
       {/* 手機版功能按鈕區域 */}
       <div className="lg:hidden mb-6">
         <div className="grid grid-cols-2 gap-3">
-          <Button variant="outline" onClick={() => setIsImportExportOpen(true)} className="w-full">
+          <Button 
+            variant="outline" 
+            onClick={() => setIsImportExportOpen(true)} 
+            disabled={!canManageProducts()}
+            className={`w-full ${!canManageProducts() ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
             <FileSpreadsheet className="mr-2 h-4 w-4" />
-            匯入/匯出
+            {canManageProducts() ? '匯入/匯出' : '權限不足'}
           </Button>
           <Button 
             onClick={handleAdd}
-            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+            disabled={!canManageProducts()}
+            className={`w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 ${!canManageProducts() ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <Plus className="mr-2 h-4 w-4" />
-            新增產品
+            {canManageProducts() ? '新增產品' : '權限不足'}
           </Button>
         </div>
       </div>
@@ -165,16 +208,22 @@ function ProductsPageContent() {
       {/* 桌面版功能按鈕區域 */}
       <div className="hidden lg:block mb-6">
         <div className="flex flex-wrap items-center gap-2 justify-end">
-          <Button variant="outline" onClick={() => setIsImportExportOpen(true)}>
+          <Button 
+            variant="outline" 
+            onClick={() => setIsImportExportOpen(true)}
+            disabled={!canManageProducts()}
+            className={!canManageProducts() ? 'opacity-50 cursor-not-allowed' : ''}
+          >
             <FileSpreadsheet className="mr-2 h-4 w-4" />
-            匯入/匯出
+            {canManageProducts() ? '匯入/匯出' : '權限不足'}
           </Button>
           <Button 
             onClick={handleAdd}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+            disabled={!canManageProducts()}
+            className={`bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 ${!canManageProducts() ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <Plus className="mr-2 h-4 w-4" />
-            新增產品
+            {canManageProducts() ? '新增產品' : '權限不足'}
           </Button>
         </div>
       </div>
@@ -412,20 +461,29 @@ function ProductsPageContent() {
                             <Eye className="h-4 w-4 mr-2" />
                             查看詳細
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEdit(product)}>
+                          <DropdownMenuItem 
+                            onClick={() => handleEdit(product)}
+                            disabled={!canManageProducts()}
+                            className={!canManageProducts() ? 'opacity-50 cursor-not-allowed' : ''}
+                          >
                             <Edit className="h-4 w-4 mr-2" />
-                            編輯產品
+                            {canManageProducts() ? '編輯產品' : '權限不足'}
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleFragranceChange(product)}>
+                          <DropdownMenuItem 
+                            onClick={() => handleFragranceChange(product)}
+                            disabled={!canManageProducts()}
+                            className={!canManageProducts() ? 'opacity-50 cursor-not-allowed' : ''}
+                          >
                             <Droplets className="h-4 w-4 mr-2" />
-                            更換香精
+                            {canManageProducts() ? '更換香精' : '權限不足'}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem 
                             onClick={() => handleDelete(product)}
-                            className="text-red-600 focus:text-red-600"
+                            disabled={!canManageProducts()}
+                            className={`text-red-600 focus:text-red-600 ${!canManageProducts() ? 'opacity-50 cursor-not-allowed' : ''}`}
                           >
-                            刪除產品
+                            {canManageProducts() ? '刪除產品' : '權限不足'}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -444,10 +502,11 @@ function ProductsPageContent() {
                       <Button 
                         onClick={handleAdd}
                         variant="outline"
-                        className="border-purple-200 text-purple-600 hover:bg-purple-50"
+                        disabled={!canManageProducts()}
+                        className={`border-purple-200 text-purple-600 hover:bg-purple-50 ${!canManageProducts() ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         <Plus className="mr-2 h-4 w-4" />
-                        新增產品
+                        {canManageProducts() ? '新增產品' : '權限不足'}
                       </Button>
                     </div>
                   </TableCell>

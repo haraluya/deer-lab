@@ -4,10 +4,9 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useMemo, useCallback } from 'react';
 import { onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, DocumentReference, DocumentData, collection, where, query, getDocs } from 'firebase/firestore';
+import { doc, getDoc, DocumentReference, DocumentData } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-
 
 export interface AppUser extends DocumentData {
   uid: string;
@@ -15,7 +14,9 @@ export interface AppUser extends DocumentData {
   employeeId: string;
   phone: string;
   status: 'active' | 'inactive';
-  roleRef: DocumentReference; 
+  roleRef: DocumentReference;
+  roleName?: string;
+  permissions?: string[];
 }
 
 interface AuthContextType {
@@ -23,6 +24,7 @@ interface AuthContextType {
   appUser: AppUser | null;
   isLoading: boolean;
   logout: () => void;
+  refreshUserData: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -30,6 +32,7 @@ const AuthContext = createContext<AuthContextType>({
   appUser: null,
   isLoading: true,
   logout: () => {},
+  refreshUserData: async () => {},
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -38,20 +41,61 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 添加調試信息
-  useEffect(() => {
-    console.log('AuthContext: 組件已載入');
-    console.log('AuthContext: Firebase auth 狀態:', !!auth);
-    console.log('AuthContext: Firebase db 狀態:', !!db);
+  // 載入用戶資料的函數
+  const loadUserData = useCallback(async (firebaseUser: FirebaseUser) => {
+    try {
+      console.log('🔍 開始載入用戶資料:', firebaseUser.uid);
+      
+      // 從 Firestore 獲取用戶資料
+      const userDocRef = doc(db, 'users', firebaseUser.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data() as AppUser;
+        console.log('✅ 找到用戶資料:', userData);
+        
+        // 如果有角色引用，獲取角色資料
+        if (userData.roleRef) {
+          try {
+            const roleDoc = await getDoc(userData.roleRef);
+            if (roleDoc.exists()) {
+              const roleData = roleDoc.data();
+              userData.roleName = roleData.name;
+              userData.permissions = roleData.permissions || [];
+              console.log('✅ 載入角色資料:', {
+                roleName: userData.roleName,
+                permissions: userData.permissions
+              });
+            }
+          } catch (roleError) {
+            console.error('❌ 載入角色資料失敗:', roleError);
+          }
+        }
+        
+        setAppUser(userData);
+        console.log('✅ 用戶資料已設置到狀態');
+      } else {
+        console.log('❌ 用戶資料不存在於 Firestore');
+        setAppUser(null);
+      }
+    } catch (error) {
+      console.error('❌ 載入用戶資料失敗:', error);
+      setAppUser(null);
+    }
   }, []);
 
+  // 刷新用戶資料
+  const refreshUserData = useCallback(async () => {
+    if (user) {
+      await loadUserData(user);
+    }
+  }, [user, loadUserData]);
+
   useEffect(() => {
-    console.log('AuthContext: Starting auth state listener');
+    console.log('🚀 AuthContext 初始化');
     
     if (!auth || !db) {
-      console.error('Firebase not properly initialized');
-      console.error('AuthContext: auth 存在:', !!auth);
-      console.error('AuthContext: db 存在:', !!db);
+      console.error('❌ Firebase 未正確初始化');
       setIsLoading(false);
       return;
     }
@@ -59,70 +103,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let isMounted = true;
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log('AuthContext: Auth state changed', { firebaseUser: firebaseUser?.uid });
+      console.log('🔄 認證狀態變更:', firebaseUser?.uid);
       
-      try {
-        if (!isMounted) return;
+      if (!isMounted) return;
 
-        if (firebaseUser) {
-          console.log('AuthContext: User authenticated', firebaseUser.uid);
-          setUser(firebaseUser);
-          
-          try {
-            // 暫時使用 Firebase 用戶資料作為 appUser，繞過 Firestore 權限問題
-            const employeeId = firebaseUser.email?.split('@')[0] || '001';
-            console.log('AuthContext: Creating appUser from Firebase user, employeeId:', employeeId);
-            
-            // 創建一個基本的 appUser 物件
-            const userData = {
-              uid: firebaseUser.uid,
-              name: firebaseUser.displayName || '使用者',
-              employeeId: employeeId,
-              phone: '0900000000', // 預設電話
-              status: 'active' as const,
-              roleRef: null as any,
-            } as AppUser;
-            
-            console.log('AuthContext: Created appUser', userData);
-            setAppUser(userData);
-            
-            // 重要：在 appUser 載入完成後設 isLoading 為 false
-            if (isMounted) {
-              console.log('AuthContext: Setting isLoading to false (after appUser created)');
-              setIsLoading(false);
-            }
-          } catch (error) {
-            console.error('AuthContext: Error creating appUser:', error);
-            setAppUser(null);
-            if (isMounted) {
-              setIsLoading(false);
-            }
-          }
-        } else {
-          console.log('AuthContext: User signed out');
-          setUser(null);
-          setAppUser(null);
-        }
-      } catch (error) {
-        console.error('AuthContext: Error in auth state change:', error);
-        if (isMounted) {
-          setUser(null);
-          setAppUser(null);
-        }
-      } finally {
-        if (isMounted) {
-          console.log('AuthContext: Setting isLoading to false');
-          setIsLoading(false);
-        }
+      if (firebaseUser) {
+        console.log('✅ 用戶已認證:', firebaseUser.uid);
+        setUser(firebaseUser);
+        
+        // 載入用戶資料
+        await loadUserData(firebaseUser);
+      } else {
+        console.log('🚪 用戶已登出');
+        setUser(null);
+        setAppUser(null);
+      }
+      
+      if (isMounted) {
+        setIsLoading(false);
       }
     });
 
     return () => {
-      console.log('AuthContext: Cleaning up auth listener');
+      console.log('🧹 清理 AuthContext');
       isMounted = false;
       unsubscribe();
     };
-  }, []);
+  }, [loadUserData]);
 
   const logout = useCallback(async () => {
     try {
@@ -130,7 +137,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast.success("您已成功登出。");
       window.location.href = '/';
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('❌ 登出失敗:', error);
       toast.error("登出時發生錯誤。");
     }
   }, []);
@@ -140,9 +147,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     appUser,
     isLoading,
     logout,
-  }), [user, appUser, isLoading, logout]);
+    refreshUserData,
+  }), [user, appUser, isLoading, logout, refreshUserData]);
 
-  console.log('AuthContext: Rendering with state', { user: user?.uid, appUser: appUser?.uid, isLoading });
+  console.log('📊 AuthContext 狀態:', {
+    user: user?.uid,
+    appUser: appUser?.uid,
+    appUserName: appUser?.name,
+    roleName: appUser?.roleName,
+    permissions: appUser?.permissions?.length,
+    isLoading
+  });
 
   return (
     <AuthContext.Provider value={value}>

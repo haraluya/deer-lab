@@ -2,7 +2,7 @@
 import { logger } from "firebase-functions";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue, DocumentReference } from "firebase-admin/firestore";
-import { ensureIsAdmin } from "../utils/auth";
+import { ensureCanManageMaterials } from "../utils/auth";
 
 const db = getFirestore();
 
@@ -12,7 +12,7 @@ interface MaterialData {
 
 export const createMaterial = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  await ensureIsAdmin(contextAuth?.uid);
+  await ensureCanManageMaterials(contextAuth?.uid);
   const { code, name, category, subCategory, supplierId, safetyStockLevel, costPerUnit, unit } = data;
   if (!code || !name) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (物料代號、物料名稱)。"); }
   try {
@@ -26,7 +26,7 @@ export const createMaterial = onCall(async (request) => {
 
 export const updateMaterial = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  await ensureIsAdmin(contextAuth?.uid);
+  await ensureCanManageMaterials(contextAuth?.uid);
   const { materialId, code, name, category, subCategory, supplierId, safetyStockLevel, costPerUnit, unit } = data;
   if (!materialId || !code || !name) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (materialId, code, name)。"); }
   try {
@@ -41,7 +41,7 @@ export const updateMaterial = onCall(async (request) => {
 
 export const deleteMaterial = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  await ensureIsAdmin(contextAuth?.uid);
+  await ensureCanManageMaterials(contextAuth?.uid);
   const { materialId } = data;
   if (!materialId) { throw new HttpsError("invalid-argument", "請求缺少 materialId。"); }
   try {
