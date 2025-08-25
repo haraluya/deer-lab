@@ -133,7 +133,6 @@ export function PersonnelDialog({
   }, [isOpen, personnelData, form])
 
   const onSubmit = async (data: FormData) => {
-
     // 新增模式下的額外驗證
     if (!isEditMode && (!data.password || data.password.length < 6)) {
       toast.error("新增人員時密碼為必填欄位，且至少需要 6 個字元")
@@ -153,16 +152,38 @@ export function PersonnelDialog({
       if (isEditMode && personnelData) {
         console.log('📝 調用 updatePersonnel...')
         const updatePersonnel = httpsCallable(functions, 'updatePersonnel')
-        const result = await updatePersonnel({
-          personnelId: personnelData.id,
-          ...data
-        })
+        
+        // 準備更新資料，確保欄位名稱正確
+        const updateData = {
+          personnelId: personnelData.id, // 確保傳遞人員 ID
+          name: data.name,
+          employeeId: data.employeeId,
+          phone: data.phone,
+          roleId: data.role, // 將 role 映射為 roleId
+          password: data.password || "", // 如果沒有密碼則傳空字串
+          status: data.status,
+        };
+        
+        console.log('📤 更新資料:', updateData);
+        const result = await updatePersonnel(updateData)
         console.log('✅ updatePersonnel 成功:', result.data)
         toast.success("人員資料更新成功", { id: toastId })
       } else {
         console.log('📝 調用 createPersonnel...')
         const createPersonnel = httpsCallable(functions, 'createPersonnel')
-        const result = await createPersonnel(data)
+        
+        // 準備建立資料，確保欄位名稱正確
+        const createData = {
+          name: data.name,
+          employeeId: data.employeeId,
+          phone: data.phone,
+          roleId: data.role, // 將 role 映射為 roleId
+          password: data.password,
+          status: data.status,
+        };
+        
+        console.log('📤 建立資料:', createData);
+        const result = await createPersonnel(createData)
         console.log('✅ createPersonnel 成功:', result.data)
         toast.success("人員建立成功", { id: toastId })
       }
