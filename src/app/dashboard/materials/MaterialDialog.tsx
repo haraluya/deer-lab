@@ -9,7 +9,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { collection, getDocs, DocumentReference, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
-import { generateUniqueMaterialCode, getCategoryIcon, generateRandomBgColor } from '@/lib/utils';
+import { generateUniqueMaterialCode, getCategoryIcon, getCategoryColor } from '@/lib/utils';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -44,7 +44,7 @@ const formSchema = z.object({
   category: z.string().min(1, { message: '請選擇主分類' }),
   subCategory: z.string().min(1, { message: '請選擇細分分類' }),
   supplierId: z.string().optional(),
-  safetyStockLevel: z.coerce.number().min(0, { message: '安全庫存不能為負數' }).optional(),
+  safetyStockLevel: z.coerce.number({ message: '安全庫存必須為數字' }).optional(),
   costPerUnit: z.coerce.number().min(0, { message: '單位成本不能為負數' }).optional(),
   unit: z.string().optional(),
   notes: z.string().optional(),
@@ -134,7 +134,7 @@ export function MaterialDialog({
   useEffect(() => {
     if (watchCategory) {
       setCategoryIcon(getCategoryIcon(watchCategory));
-      setBgColor(generateRandomBgColor());
+      setBgColor(getCategoryColor(watchCategory));
     }
   }, [watchCategory]);
 
@@ -194,7 +194,7 @@ export function MaterialDialog({
       form.reset(formData);
       setGeneratedCode(materialData.code || '');
       setCategoryIcon(getCategoryIcon(materialData.category || ''));
-      setBgColor(generateRandomBgColor());
+      setBgColor(getCategoryColor(materialData.category || ''));
     } else if (isOpen && !materialData) {
       form.reset();
       setGeneratedCode('');

@@ -113,12 +113,30 @@ export const categoryIcons = {
   'default': '📦'
 };
 
+// 分類顏色映射 - 同一個主分類使用相同顏色
+export const categoryColors = {
+  '原料': 'bg-green-100',
+  '包材': 'bg-blue-100',
+  '香精': 'bg-pink-100',
+  '添加劑': 'bg-purple-100',
+  '設備': 'bg-gray-100',
+  '工具': 'bg-orange-100',
+  '耗材': 'bg-yellow-100',
+  '其他': 'bg-indigo-100',
+  'default': 'bg-gray-100'
+};
+
 // 獲取分類圖示
 export function getCategoryIcon(category: string): string {
   return categoryIcons[category as keyof typeof categoryIcons] || categoryIcons.default;
 }
 
-// 生成隨機背景顏色
+// 獲取分類顏色 - 同一個主分類使用相同顏色
+export function getCategoryColor(category: string): string {
+  return categoryColors[category as keyof typeof categoryColors] || categoryColors.default;
+}
+
+// 生成隨機背景顏色（已棄用，改用固定分類顏色）
 export function generateRandomBgColor(): string {
   const colors = [
     'bg-red-100', 'bg-orange-100', 'bg-yellow-100', 'bg-green-100',
@@ -127,4 +145,36 @@ export function generateRandomBgColor(): string {
     'bg-emerald-100', 'bg-cyan-100', 'bg-sky-100', 'bg-violet-100'
   ];
   return colors[Math.floor(Math.random() * colors.length)];
+}
+
+// 自動生成分類和子分類
+export async function autoGenerateCategories(materialData: any, db: any) {
+  const { collection: firestoreCollection, addDoc, getDocs, query, where } = await import('firebase/firestore');
+  
+  // 如果沒有分類，自動生成
+  if (!materialData.category) {
+    const categoryName = '自動分類_' + Math.floor(Math.random() * 1000);
+    const categoryDoc = await addDoc(firestoreCollection(db, 'materialCategories'), {
+      name: categoryName,
+      type: 'category',
+      createdAt: new Date()
+    });
+    materialData.category = categoryName;
+    console.log('自動生成主分類:', categoryName);
+  }
+  
+  // 如果沒有子分類，自動生成
+  if (!materialData.subCategory) {
+    const subCategoryName = '自動子分類_' + Math.floor(Math.random() * 1000);
+    const subCategoryDoc = await addDoc(firestoreCollection(db, 'materialSubCategories'), {
+      name: subCategoryName,
+      type: 'subCategory',
+      parentCategory: materialData.category,
+      createdAt: new Date()
+    });
+    materialData.subCategory = subCategoryName;
+    console.log('自動生成子分類:', subCategoryName);
+  }
+  
+  return materialData;
 }

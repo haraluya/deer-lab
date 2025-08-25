@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { collection, getDocs, DocumentReference, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
-import { getCategoryIcon, generateRandomBgColor } from '@/lib/utils';
+import { getCategoryIcon, getCategoryColor } from '@/lib/utils';
 
 import { MaterialDialog, MaterialData } from './MaterialDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -32,7 +32,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 interface MaterialWithSupplier extends MaterialData {
   supplierName: string;
   refPath: string; // 確保文檔路徑存在
-  bgColor: string; // 添加背景顏色
 }
 
 function MaterialsPageContent() {
@@ -46,6 +45,8 @@ function MaterialsPageContent() {
   const [selectedMaterial, setSelectedMaterial] = useState<MaterialData | null>(null);
   const [purchaseCart, setPurchaseCart] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string>("");
 
   // --- 盤點功能相關狀態 ---
   const [isStocktakeMode, setIsStocktakeMode] = useState(false);
@@ -100,7 +101,6 @@ function MaterialsPageContent() {
           unit: data.unit,
           currentStock: data.currentStock || 0,
           notes: data.notes,
-          bgColor: generateRandomBgColor(), // 為每個物料生成隨機背景顏色
         };
       }) as MaterialWithSupplier[];
       
@@ -125,6 +125,22 @@ function MaterialsPageContent() {
       return 'bg-pink-50 border-pink-200 hover:bg-pink-100';
     }
     return 'bg-white border-gray-200 hover:bg-gray-50';
+  };
+
+  // 獲取所有分類和子分類
+  const getAllCategories = () => {
+    const categorySet = new Set<string>();
+    const subCategorySet = new Set<string>();
+    
+    materials.forEach(material => {
+      if (material.category) categorySet.add(material.category);
+      if (material.subCategory) subCategorySet.add(material.subCategory);
+    });
+    
+    return {
+      categories: Array.from(categorySet).sort(),
+      subCategories: Array.from(subCategorySet).sort()
+    };
   };
 
   // 處理查看詳情
@@ -166,21 +182,50 @@ function MaterialsPageContent() {
     }
   };
 
+  // 處理搜尋和篩選
+  const handleSearchAndFilter = () => {
+    let filtered = materials;
+
+    // 搜尋篩選
+    if (searchTerm.trim()) {
+      filtered = filtered.filter(material =>
+        material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        material.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        material.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        material.subCategory?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        material.supplierName.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // 主分類篩選
+    if (selectedCategory) {
+      filtered = filtered.filter(material => material.category === selectedCategory);
+    }
+
+    // 子分類篩選
+    if (selectedSubCategory) {
+      filtered = filtered.filter(material => material.subCategory === selectedSubCategory);
+    }
+
+    setFilteredMaterials(filtered);
+  };
+
   // 處理搜尋
   const handleSearch = (term: string) => {
     setSearchTerm(term);
-    if (!term.trim()) {
-      setFilteredMaterials(materials);
-    } else {
-      const filtered = materials.filter(material =>
-        material.name.toLowerCase().includes(term.toLowerCase()) ||
-        material.code.toLowerCase().includes(term.toLowerCase()) ||
-        material.category?.toLowerCase().includes(term.toLowerCase()) ||
-        material.subCategory?.toLowerCase().includes(term.toLowerCase()) ||
-        material.supplierName.toLowerCase().includes(term.toLowerCase())
-      );
-      setFilteredMaterials(filtered);
-    }
+    setTimeout(handleSearchAndFilter, 100);
+  };
+
+  // 處理分類篩選
+  const handleCategoryFilter = (category: string) => {
+    setSelectedCategory(selectedCategory === category ? "" : category);
+    setTimeout(handleSearchAndFilter, 100);
+  };
+
+  // 處理子分類篩選
+  const handleSubCategoryFilter = (subCategory: string) => {
+    setSelectedSubCategory(selectedSubCategory === subCategory ? "" : subCategory);
+    setTimeout(handleSearchAndFilter, 100);
   };
 
   // 處理新增物料
@@ -202,6 +247,10 @@ function MaterialsPageContent() {
     };
     loadData();
   }, [fetchMaterials, fetchSuppliers]);
+
+  useEffect(() => {
+    handleSearchAndFilter();
+  }, [selectedCategory, selectedSubCategory]);
 
   // 載入骨架屏
   const LoadingSkeleton = () => (
@@ -228,6 +277,8 @@ function MaterialsPageContent() {
       ))}
     </div>
   );
+
+  const { categories, subCategories } = getAllCategories();
 
   return (
     <div className="space-y-6">
@@ -269,6 +320,52 @@ function MaterialsPageContent() {
         />
       </div>
 
+      {/* 分類篩選標籤 */}
+      <div className="space-y-4">
+        {/* 主分類篩選 */}
+        <div>
+          <h3 className="text-sm font-medium text-gray-700 mb-2">主分類篩選</h3>
+          <div className="flex flex-wrap gap-2">
+            {categories.map((category) => (
+              <Badge
+                key={category}
+                variant={selectedCategory === category ? "default" : "secondary"}
+                className={`cursor-pointer transition-colors ${
+                  selectedCategory === category 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+                onClick={() => handleCategoryFilter(category)}
+              >
+                <span className="mr-1">{getCategoryIcon(category)}</span>
+                {category}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        {/* 子分類篩選 */}
+        <div>
+          <h3 className="text-sm font-medium text-gray-700 mb-2">細分分類篩選</h3>
+          <div className="flex flex-wrap gap-2">
+            {subCategories.map((subCategory) => (
+              <Badge
+                key={subCategory}
+                variant={selectedSubCategory === subCategory ? "default" : "outline"}
+                className={`cursor-pointer transition-colors ${
+                  selectedSubCategory === subCategory 
+                    ? 'bg-green-600 text-white border-green-600' 
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
+                onClick={() => handleSubCategoryFilter(subCategory)}
+              >
+                {subCategory}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* 物料卡片網格 */}
       {isLoading ? (
         <LoadingSkeleton />
@@ -283,7 +380,7 @@ function MaterialsPageContent() {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 ${material.bgColor} rounded-lg flex items-center justify-center text-2xl`}>
+                    <div className={`w-12 h-12 ${getCategoryColor(material.category || '')} rounded-lg flex items-center justify-center text-2xl`}>
                       {getCategoryIcon(material.category || '')}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -327,9 +424,16 @@ function MaterialsPageContent() {
               
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">分類</span>
+                  <span className="text-sm text-gray-600">主分類</span>
                   <Badge variant="secondary" className="text-xs">
-                    {material.category} / {material.subCategory}
+                    {material.category}
+                  </Badge>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">細分分類</span>
+                  <Badge variant="outline" className="text-xs">
+                    {material.subCategory}
                   </Badge>
                 </div>
                 
@@ -518,17 +622,17 @@ function MaterialsPageContent() {
         onOpenChange={setIsImportExportOpen}
         onImport={async (data: any[]) => {
           const functions = getFunctions();
-          const createMaterial = httpsCallable(functions, 'createMaterial');
+          const importMaterials = httpsCallable(functions, 'importMaterials');
           
-          for (const item of data) {
-            try {
-              await createMaterial(item);
-            } catch (error) {
-              console.error('匯入物料失敗:', error);
-              throw error;
-            }
+          try {
+            const result = await importMaterials({ materials: data });
+            console.log('匯入結果:', result);
+            toast.success('物料匯入完成');
+            handleMaterialUpdate();
+          } catch (error) {
+            console.error('匯入物料失敗:', error);
+            throw error;
           }
-          handleMaterialUpdate();
         }}
         onExport={async () => {
           return materials.map(material => ({
@@ -545,7 +649,7 @@ function MaterialsPageContent() {
           }));
         }}
         title="物料資料"
-        description="匯入或匯出物料資料，支援 Excel 和 CSV 格式"
+        description="匯入或匯出物料資料，支援 Excel 和 CSV 格式。匯入時會自動生成缺失的分類和代號。"
         sampleData={[
           {
             code: "MAT001",
@@ -561,10 +665,10 @@ function MaterialsPageContent() {
           }
         ]}
         fields={[
-          { key: "code", label: "物料代號", required: true, type: "string" },
+          { key: "code", label: "物料代號", required: false, type: "string" },
           { key: "name", label: "物料名稱", required: true, type: "string" },
-          { key: "category", label: "分類", required: false, type: "string" },
-          { key: "subCategory", label: "子分類", required: false, type: "string" },
+          { key: "category", label: "主分類", required: false, type: "string" },
+          { key: "subCategory", label: "細分分類", required: false, type: "string" },
           { key: "supplierName", label: "供應商", required: false, type: "string" },
           { key: "safetyStockLevel", label: "安全庫存", required: false, type: "number" },
           { key: "costPerUnit", label: "單位成本", required: false, type: "number" },
