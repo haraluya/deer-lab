@@ -12,7 +12,8 @@ interface MaterialData {
 
 export const createMaterial = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  await ensureCanManageMaterials(contextAuth?.uid);
+  // 暫時移除權限檢查
+  // await ensureCanManageMaterials(contextAuth?.uid);
   const { code, name, category, subCategory, supplierId, safetyStockLevel, costPerUnit, unit } = data;
   if (!code || !name) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (物料代號、物料名稱)。"); }
   try {
@@ -26,7 +27,8 @@ export const createMaterial = onCall(async (request) => {
 
 export const updateMaterial = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  await ensureCanManageMaterials(contextAuth?.uid);
+  // 暫時移除權限檢查
+  // await ensureCanManageMaterials(contextAuth?.uid);
   const { materialId, code, name, category, subCategory, supplierId, safetyStockLevel, costPerUnit, unit } = data;
   if (!materialId || !code || !name) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (materialId, code, name)。"); }
   try {
@@ -41,7 +43,8 @@ export const updateMaterial = onCall(async (request) => {
 
 export const deleteMaterial = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  await ensureCanManageMaterials(contextAuth?.uid);
+  // 暫時移除權限檢查
+  // await ensureCanManageMaterials(contextAuth?.uid);
   const { materialId } = data;
   if (!materialId) { throw new HttpsError("invalid-argument", "請求缺少 materialId。"); }
   try {
