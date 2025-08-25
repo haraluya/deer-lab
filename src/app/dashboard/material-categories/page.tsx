@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react"
 import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
+import { generateUniqueCategoryId, generateUniqueSubCategoryId } from "@/lib/utils"
 
 import { toast } from "sonner"
-import { Plus, Edit, Trash2, Tag, Calendar, MoreHorizontal, Eye } from "lucide-react"
+import { Plus, Edit, Trash2, Tag, Calendar, MoreHorizontal, Eye, Package } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,14 +18,6 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -32,6 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { CategoryDetailDialog } from './CategoryDetailDialog'
 
 const categorySchema = z.object({
   name: z.string().min(1, "分類名稱不能為空"),
@@ -45,13 +39,16 @@ interface Category {
   name: string
   type: "category" | "subCategory"
   usageCount: number
+  generatedId?: string // 新增生成的 ID 欄位
 }
 
 function MaterialCategoriesPageContent() {
   const [categories, setCategories] = useState<Category[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null)
 
   const form = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
@@ -92,6 +89,7 @@ function MaterialCategoriesPageContent() {
           name,
           type: "category",
           usageCount: count,
+          generatedId: generateCategoryId(), // 為現有分類生成 ID
         })
       })
 
@@ -102,6 +100,7 @@ function MaterialCategoriesPageContent() {
           name,
           type: "subCategory",
           usageCount: count,
+          generatedId: generateSubCategoryId(), // 為現有細分分類生成 ID
         })
       })
 
@@ -133,6 +132,11 @@ function MaterialCategoriesPageContent() {
     setIsDialogOpen(true)
   }
 
+  const handleViewDetail = (category: Category) => {
+    setSelectedCategory(category)
+    setIsDetailDialogOpen(true)
+  }
+
   const handleDelete = async (category: Category) => {
     if (category.usageCount > 0) {
       toast.error(`無法刪除「${category.name}」，因為還有 ${category.usageCount} 個物料正在使用此分類`)
@@ -155,8 +159,16 @@ function MaterialCategoriesPageContent() {
         // 更新現有分類
         toast.success(`分類「${data.name}」已更新`)
       } else {
-        // 新增分類
-        toast.success(`分類「${data.name}」已新增`)
+        // 新增分類 - 生成唯一 ID
+        let generatedId = '';
+        if (data.type === 'category') {
+          generatedId = await generateUniqueCategoryId(db);
+        } else {
+          generatedId = await generateUniqueSubCategoryId(db);
+        }
+        
+        console.log(`新增${data.type === 'category' ? '主分類' : '細分分類'}，ID: ${generatedId}`);
+        toast.success(`分類「${data.name}」已新增，ID: ${generatedId}`)
       }
       setIsDialogOpen(false)
       loadCategories()
@@ -164,6 +176,25 @@ function MaterialCategoriesPageContent() {
       console.error("儲存分類失敗:", error)
       toast.error("儲存分類失敗")
     }
+  }
+
+  // 生成隨機 2 位大寫英文字母 ID
+  function generateCategoryId(): string {
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    let result = '';
+    for (let i = 0; i < 2; i++) {
+      result += letters.charAt(Math.floor(Math.random() * letters.length));
+    }
+    return result;
+  }
+
+  // 生成隨機 3 位數字 ID
+  function generateSubCategoryId(): string {
+    let result = '';
+    for (let i = 0; i < 3; i++) {
+      result += Math.floor(Math.random() * 10);
+    }
+    return result;
   }
 
   return (
@@ -202,231 +233,123 @@ function MaterialCategoriesPageContent() {
         </Button>
       </div>
 
-      {/* 分類表格 - 桌面版 */}
-      <div className="hidden lg:block bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-teal-50 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Tag className="h-5 w-5 text-teal-600" />
-              <h2 className="text-lg font-semibold text-gray-800">分類清單</h2>
-            </div>
-            <div className="text-sm text-gray-600">
-              共 {categories.length} 個分類
-            </div>
-          </div>
-        </div>
-        
-        <div className="table-responsive">
-          <Table className="table-enhanced">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-left">分類資訊</TableHead>
-                <TableHead className="text-left">類型</TableHead>
-                <TableHead className="text-left">使用數量</TableHead>
-                <TableHead className="text-right">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-16">
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="relative">
-                        <div className="w-12 h-12 border-4 border-teal-200 rounded-full animate-spin"></div>
-                        <div className="absolute top-0 left-0 w-12 h-12 border-4 border-transparent border-t-teal-600 rounded-full animate-spin"></div>
-                      </div>
-                      <span className="mt-4 text-gray-600 font-medium">載入分類資料中...</span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : categories.length > 0 ? (
-                categories.map((category) => (
-                  <TableRow key={category.id} className="hover:bg-teal-50/50 transition-colors duration-200">
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-lg flex items-center justify-center">
-                          <Tag className="h-5 w-5 text-white" />
-                        </div>
-                        <div>
-                          <div className="font-semibold text-gray-900">{category.name}</div>
-                          <div className="text-xs text-gray-500">分類 ID: {category.id}</div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={`${category.type === 'category' ? 'bg-teal-100 text-teal-800 border-teal-200' : 'bg-cyan-100 text-cyan-800 border-cyan-200'}`}>
-                        {category.type === 'category' ? '主分類' : '細分分類'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="number-display number-positive">
-                          {category.usageCount} 個物料
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">開啟選單</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>操作</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleEdit(category)}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            編輯分類
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            onClick={() => handleDelete(category)}
-                            className="text-red-600 focus:text-red-600"
-                            disabled={category.usageCount > 0}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            刪除分類
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-16">
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                        <Tag className="h-8 w-8 text-gray-400" />
-                      </div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">沒有分類資料</h3>
-                      <p className="text-gray-500 mb-4">開始建立第一個分類來管理物料</p>
-                      <Button 
-                        onClick={handleAdd}
-                        variant="outline"
-                        className="border-teal-200 text-teal-600 hover:bg-teal-50"
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        新增分類
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-
-      {/* 分類表格 - 手機版 */}
-      <div className="lg:hidden">
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="px-4 py-3 bg-gradient-to-r from-gray-50 to-teal-50 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Tag className="h-4 w-4 text-teal-600" />
-                <h2 className="text-base font-semibold text-gray-800">分類清單</h2>
-              </div>
-              <div className="text-xs text-gray-600">
-                共 {categories.length} 個分類
-              </div>
-            </div>
-          </div>
-          
-          <div className="p-4">
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <div className="relative">
-                  <div className="w-10 h-10 border-4 border-teal-200 rounded-full animate-spin"></div>
-                  <div className="absolute top-0 left-0 w-10 h-10 border-4 border-transparent border-t-teal-600 rounded-full animate-spin"></div>
+      {/* 分類卡片容器 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        {isLoading ? (
+          Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 animate-pulse">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
+                <div className="flex-1">
+                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-2/3"></div>
                 </div>
-                <span className="mt-3 text-sm text-gray-600 font-medium">載入分類資料中...</span>
               </div>
-            ) : categories.length > 0 ? (
               <div className="space-y-3">
-                {categories.map((category) => (
-                  <div key={category.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:bg-teal-50/50 transition-colors duration-200">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-lg flex items-center justify-center">
-                          <Tag className="h-4 w-4 text-white" />
-                        </div>
-                        <div>
-                          <div className="font-semibold text-gray-900 text-sm">{category.name}</div>
-                          <div className="text-xs text-gray-500">分類 ID: {category.id}</div>
-                        </div>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-6 w-6 p-0">
-                            <span className="sr-only">開啟選單</span>
-                            <MoreHorizontal className="h-3 w-3" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>操作</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleEdit(category)}>
-                            <Edit className="h-3 w-3 mr-2" />
-                            編輯分類
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            onClick={() => handleDelete(category)}
-                            className="text-red-600 focus:text-red-600"
-                            disabled={category.usageCount > 0}
-                          >
-                            <Trash2 className="h-3 w-3 mr-2" />
-                            刪除分類
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <div className="flex items-center gap-1 mb-1">
-                          <span className="text-gray-500">類型</span>
-                        </div>
-                        <Badge className={`text-xs ${category.type === 'category' ? 'bg-teal-100 text-teal-800 border-teal-200' : 'bg-cyan-100 text-cyan-800 border-cyan-200'}`}>
-                          {category.type === 'category' ? '主分類' : '細分分類'}
-                        </Badge>
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1 mb-1">
-                          <span className="text-gray-500">使用數量</span>
-                        </div>
-                        <span className="number-display number-positive text-sm">
-                          {category.usageCount} 個物料
-                        </span>
-                      </div>
-                    </div>
+                <div className="h-3 bg-gray-200 rounded"></div>
+                <div className="h-3 bg-gray-200 rounded w-4/5"></div>
+                <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+              </div>
+            </div>
+          ))
+        ) : categories.length > 0 ? (
+          categories.map((category) => (
+            <div 
+              key={category.id}
+              className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all duration-200 cursor-pointer group"
+              onClick={() => handleViewDetail(category)}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <Tag className="h-5 w-5 text-white" />
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12">
-                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                  <Tag className="h-6 w-6 text-gray-400" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900 text-lg group-hover:text-teal-600 transition-colors duration-200">
+                      {category.name}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      ID: {category.generatedId || '待生成'}
+                    </p>
+                  </div>
                 </div>
-                <h3 className="text-base font-medium text-gray-900 mb-1">沒有分類資料</h3>
-                <p className="text-sm text-gray-500 text-center mb-3">開始建立第一個分類來管理物料</p>
-                <Button 
-                  onClick={handleAdd}
-                  variant="outline"
-                  className="border-teal-200 text-teal-600 hover:bg-teal-50 text-sm"
-                >
-                  <Plus className="mr-2 h-3 w-3" />
-                  新增分類
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>操作</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleViewDetail(category)}>
+                      <Eye className="h-4 w-4 mr-2" />
+                      查看詳情
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleEdit(category)}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      編輯分類
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={() => handleDelete(category)}
+                      className="text-red-600 focus:text-red-600"
+                      disabled={category.usageCount > 0}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      刪除分類
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-            )}
+              
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Tag className="h-4 w-4 text-teal-600" />
+                  <div>
+                    <p className="text-xs text-gray-500">分類類型</p>
+                    <Badge className={`text-xs ${category.type === 'category' ? 'bg-teal-100 text-teal-800 border-teal-200' : 'bg-cyan-100 text-cyan-800 border-cyan-200'}`}>
+                      {category.type === 'category' ? '主分類' : '細分分類'}
+                    </Badge>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-purple-600" />
+                  <div>
+                    <p className="text-xs text-gray-500">使用數量</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {category.usageCount} 個物料
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                  <span className="text-xs text-gray-400">點擊查看詳情</span>
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="col-span-full flex flex-col items-center justify-center py-16">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <Tag className="h-8 w-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">沒有分類資料</h3>
+            <p className="text-gray-500 mb-4">開始建立第一個分類來管理物料</p>
+            <Button 
+              onClick={handleAdd}
+              variant="outline"
+              className="border-teal-200 text-teal-600 hover:bg-teal-50"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              新增分類
+            </Button>
           </div>
-        </div>
+        )}
       </div>
 
+      {/* 新增/編輯分類對話框 */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent aria-describedby="material-category-dialog-description">
           <DialogHeader>
@@ -463,8 +386,8 @@ function MaterialCategoriesPageContent() {
                         {...field}
                         className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                       >
-                        <option value="category">主分類</option>
-                        <option value="subCategory">細分分類</option>
+                        <option value="category">主分類 (2位大寫英文)</option>
+                        <option value="subCategory">細分分類 (3位數字)</option>
                       </select>
                     </FormControl>
                     <FormMessage />
@@ -483,10 +406,16 @@ function MaterialCategoriesPageContent() {
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* 分類詳情對話框 */}
+      <CategoryDetailDialog
+        isOpen={isDetailDialogOpen}
+        onOpenChange={setIsDetailDialogOpen}
+        category={selectedCategory}
+      />
     </div>
   )
 }
-
 
 export default function MaterialCategoriesPage() {
   return (
