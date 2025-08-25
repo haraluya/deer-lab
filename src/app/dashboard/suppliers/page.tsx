@@ -21,19 +21,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 
-// 供應商資料介面（包含聯絡人資訊）
-interface SupplierWithContact extends SupplierData {
-  contactPersonName?: string;
-  contactPersonPhone?: string;
+// 供應商資料介面（包含對接人員資訊）
+interface SupplierWithLiaison extends SupplierData {
+  liaisonPersonName?: string;
+  liaisonPersonPhone?: string;
 }
 
 function SuppliersPageContent() {
-  const [suppliers, setSuppliers] = useState<SupplierWithContact[]>([]);
+  const [suppliers, setSuppliers] = useState<SupplierWithLiaison[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [selectedDetailSupplier, setSelectedDetailSupplier] = useState<SupplierWithContact | null>(null);
+  const [selectedDetailSupplier, setSelectedDetailSupplier] = useState<SupplierWithLiaison | null>(null);
   const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<SupplierData | null>(null);
 
@@ -46,33 +47,33 @@ function SuppliersPageContent() {
       const suppliersCollectionRef = collection(db, 'suppliers');
       const suppliersSnapshot = await getDocs(suppliersCollectionRef);
       
-      // 獲取供應商資料並包含聯絡人資訊
+      // 獲取供應商資料並包含對接人員資訊
       const suppliersList = await Promise.all(
         suppliersSnapshot.docs.map(async (doc: QueryDocumentSnapshot<DocumentData>) => {
           const supplierData = doc.data() as SupplierData;
-          let contactPersonName = '';
-          let contactPersonPhone = '';
+          let liaisonPersonName = '';
+          let liaisonPersonPhone = '';
           
-          // 如果有聯絡人ID，獲取聯絡人資訊
-          if (supplierData.contactPersonId && db) {
+          // 如果有對接人員ID，獲取對接人員資訊
+          if (supplierData.liaisonPersonId && db) {
             try {
-              const contactDoc = await getDoc(firestoreDoc(db, 'users', supplierData.contactPersonId));
-              if (contactDoc.exists()) {
-                const contactData = contactDoc.data();
-                contactPersonName = contactData.name || '';
-                contactPersonPhone = contactData.phone || '';
+              const liaisonDoc = await getDoc(firestoreDoc(db, 'users', supplierData.liaisonPersonId));
+              if (liaisonDoc.exists()) {
+                const liaisonData = liaisonDoc.data();
+                liaisonPersonName = liaisonData.name || '';
+                liaisonPersonPhone = liaisonData.phone || '';
               }
             } catch (error) {
-              console.error('獲取聯絡人資訊失敗:', error);
+              console.error('獲取對接人員資訊失敗:', error);
             }
           }
           
           return {
             ...supplierData,
             id: doc.id,
-            contactPersonName,
-            contactPersonPhone,
-          } as SupplierWithContact;
+            liaisonPersonName,
+            liaisonPersonPhone,
+          } as SupplierWithLiaison;
         })
       );
       
@@ -104,7 +105,7 @@ function SuppliersPageContent() {
     setIsConfirmOpen(true);
   };
 
-  const handleViewDetail = (supplier: SupplierWithContact) => {
+  const handleViewDetail = (supplier: SupplierWithLiaison) => {
     setSelectedDetailSupplier(supplier);
     setIsDetailViewOpen(true);
   };
@@ -208,7 +209,7 @@ function SuppliersPageContent() {
                           </div>
                           <div>
                             <div className="font-medium text-gray-900 text-sm">{supplier.name}</div>
-                            <div className="text-xs text-gray-500">供應商品</div>
+                            <div className="text-xs text-gray-500">供應商</div>
                           </div>
                         </div>
                         <DropdownMenu>
@@ -246,34 +247,29 @@ function SuppliersPageContent() {
                         <div>
                           <div className="flex items-center gap-1 mb-1">
                             <User className="h-3 w-3 text-green-600" />
-                            <span className="text-gray-500">聯絡人</span>
+                            <span className="text-gray-500">聯絡窗口</span>
                           </div>
                           <span className="font-medium text-gray-700">
-                            {supplier.contactPersonName || '未指定'}
+                            {supplier.contactWindow || '未指定'}
                           </span>
                         </div>
                         
                         <div>
                           <div className="flex items-center gap-1 mb-1">
                             <Phone className="h-3 w-3 text-purple-600" />
-                            <span className="text-gray-500">聯絡電話</span>
+                            <span className="text-gray-500">聯絡方式</span>
                           </div>
-                          <span className="font-medium text-gray-700">{supplier.phone || '未提供'}</span>
+                          <span className="font-medium text-gray-700">{supplier.contactMethod || '未提供'}</span>
                         </div>
                         
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="flex items-center gap-1 mb-1">
-                              <span className="text-gray-500">狀態</span>
-                            </div>
-                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                              supplier.status === 'active' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {supplier.status === 'active' ? '活躍' : '非活躍'}
-                            </span>
+                        <div>
+                          <div className="flex items-center gap-1 mb-1">
+                            <User className="h-3 w-3 text-orange-600" />
+                            <span className="text-gray-500">對接人員</span>
                           </div>
+                          <span className="font-medium text-gray-700">
+                            {supplier.liaisonPersonName || '未指定'}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -381,9 +377,9 @@ function SuppliersPageContent() {
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-green-600" />
                     <div>
-                      <p className="text-xs text-gray-500">聯絡人</p>
+                      <p className="text-xs text-gray-500">聯絡窗口</p>
                       <p className="text-sm font-medium text-gray-900">
-                        {supplier.contactPersonName || '未指定'}
+                        {supplier.contactWindow || '未指定'}
                       </p>
                     </div>
                   </div>
@@ -391,15 +387,22 @@ function SuppliersPageContent() {
                   <div className="flex items-center gap-2">
                     <Phone className="h-4 w-4 text-purple-600" />
                     <div>
-                      <p className="text-xs text-gray-500">聯絡電話</p>
-                      <p className="text-sm font-medium text-gray-900">{supplier.phone || '未提供'}</p>
+                      <p className="text-xs text-gray-500">聯絡方式</p>
+                      <p className="text-sm font-medium text-gray-900">{supplier.contactMethod || '未提供'}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-orange-600" />
+                    <div>
+                      <p className="text-xs text-gray-500">對接人員</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {supplier.liaisonPersonName || '未指定'}
+                      </p>
                     </div>
                   </div>
                   
                   <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                    <Badge className={`${supplier.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                      {supplier.status === 'active' ? '活躍' : '非活躍'}
-                    </Badge>
                     <span className="text-xs text-gray-400">點擊查看詳情</span>
                   </div>
                 </div>
@@ -445,7 +448,7 @@ function SuppliersPageContent() {
       {/* 供應商詳細資料對話框 */}
       {selectedDetailSupplier && (
         <Dialog open={isDetailViewOpen} onOpenChange={setIsDetailViewOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-3xl">
             <DialogHeader>
               <DialogTitle className="text-xl flex items-center gap-2">
                 {selectedDetailSupplier.name}
@@ -471,15 +474,6 @@ function SuppliersPageContent() {
                     <label className="text-sm font-medium text-gray-600">供應商品</label>
                     <div className="text-sm text-gray-900">{selectedDetailSupplier.products || '-'}</div>
                   </div>
-                  
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-600">狀態</label>
-                    <div className="text-sm">
-                      <Badge variant={selectedDetailSupplier.status === 'active' ? 'default' : 'secondary'}>
-                        {selectedDetailSupplier.status === 'active' ? '活躍' : '非活躍'}
-                      </Badge>
-                    </div>
-                  </div>
                 </div>
               </div>
 
@@ -492,13 +486,18 @@ function SuppliersPageContent() {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-600">聯絡人</label>
-                    <div className="text-sm text-gray-900">{selectedDetailSupplier.contactPersonName || '未指定'}</div>
+                    <label className="text-sm font-medium text-gray-600">聯絡窗口</label>
+                    <div className="text-sm text-gray-900">{selectedDetailSupplier.contactWindow || '未指定'}</div>
                   </div>
                   
                   <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-600">聯絡電話</label>
-                    <div className="text-sm text-gray-900">{selectedDetailSupplier.phone || '-'}</div>
+                    <label className="text-sm font-medium text-gray-600">聯絡方式</label>
+                    <div className="text-sm text-gray-900">{selectedDetailSupplier.contactMethod || '-'}</div>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-600">對接人員</label>
+                    <div className="text-sm text-gray-900">{selectedDetailSupplier.liaisonPersonName || '未指定'}</div>
                   </div>
                 </div>
               </div>
@@ -519,6 +518,23 @@ function SuppliersPageContent() {
                   </div>
                 </div>
               )}
+
+              {/* 備註框 */}
+              <div className="space-y-4 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
+                <h3 className="text-lg font-semibold flex items-center gap-2 text-yellow-800">
+                  <Package className="h-4 w-4" />
+                  備註
+                </h3>
+                
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-600">新增備註</label>
+                  <Textarea 
+                    placeholder="請輸入額外的備註資訊..." 
+                    className="min-h-[100px] resize-none"
+                    readOnly
+                  />
+                </div>
+              </div>
             </div>
 
             {/* 操作按鈕 */}

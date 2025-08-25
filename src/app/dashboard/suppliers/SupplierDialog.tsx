@@ -34,9 +34,10 @@ import { Textarea } from '@/components/ui/textarea';
 // Zod schema for form validation
 const formSchema = z.object({
   name: z.string().min(2, { message: '供應商名稱至少需要 2 個字元' }),
-  products: z.string().min(1, { message: '供應商品為必填欄位' }),
-  contactPersonId: z.string({ required_error: '必須選擇聯絡人' }),
-  phone: z.string().min(1, { message: '聯絡電話為必填欄位' }),
+  products: z.string().optional(),
+  contactWindow: z.string().optional(),
+  contactMethod: z.string().optional(),
+  liaisonPersonId: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -55,12 +56,12 @@ interface PersonnelData {
 export interface SupplierData {
   id: string;
   name: string;
-  products: string;
-  contactPersonId?: string;
-  contactPersonName?: string;
-  phone?: string;
+  products?: string;
+  contactWindow?: string;
+  contactMethod?: string;
+  liaisonPersonId?: string;
+  liaisonPersonName?: string;
   notes?: string;
-  status?: string;
   createdAt?: any;
 }
 
@@ -86,8 +87,9 @@ export function SupplierDialog({
     defaultValues: {
       name: '',
       products: '',
-      contactPersonId: '',
-      phone: '',
+      contactWindow: '',
+      contactMethod: '',
+      liaisonPersonId: '',
       notes: '',
     },
   });
@@ -134,8 +136,9 @@ export function SupplierDialog({
       form.reset({
         name: supplierData.name || '',
         products: supplierData.products || '',
-        contactPersonId: supplierData.contactPersonId || '',
-        phone: supplierData.phone || '',
+        contactWindow: supplierData.contactWindow || '',
+        contactMethod: supplierData.contactMethod || '',
+        liaisonPersonId: supplierData.liaisonPersonId || '',
         notes: supplierData.notes || '',
       });
     } else if (isOpen && !supplierData) {
@@ -177,7 +180,7 @@ export function SupplierDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby="supplier-dialog-description">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" aria-describedby="supplier-dialog-description">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building className="h-5 w-5" />
@@ -217,7 +220,7 @@ export function SupplierDialog({
                   name="products"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>供應商品 *</FormLabel>
+                      <FormLabel>供應商品</FormLabel>
                       <FormControl>
                         <Input placeholder="例如：香精、原料、包材" {...field} />
                       </FormControl>
@@ -238,14 +241,46 @@ export function SupplierDialog({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="contactPersonId"
+                  name="contactWindow"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>聯絡人 *</FormLabel>
+                      <FormLabel>聯絡窗口</FormLabel>
+                      <FormControl>
+                        <Input placeholder="例如：王經理" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="contactMethod"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>聯絡方式</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="例如：02-12345678 或 Line ID" 
+                          {...field} 
+                          className="border-green-300 focus:border-green-500 focus:ring-green-500"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="liaisonPersonId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>對接人員</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="選擇聯絡人" />
+                            <SelectValue placeholder="選擇對接人員" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -259,24 +294,6 @@ export function SupplierDialog({
                           ))}
                         </SelectContent>
                       </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-red-600 font-semibold">聯絡電話 *</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="例如：02-12345678" 
-                          {...field} 
-                          className="border-green-300 focus:border-green-500 focus:ring-green-500"
-                        />
-                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -300,7 +317,7 @@ export function SupplierDialog({
                     <FormControl>
                       <Textarea 
                         placeholder="請輸入供應商相關的詳細備註資料..." 
-                        className="min-h-[100px] resize-none"
+                        className="min-h-[120px] resize-none"
                         {...field} 
                       />
                     </FormControl>
