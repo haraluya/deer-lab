@@ -152,15 +152,19 @@ export function SupplierDialog({
 
     try {
       const functions = getFunctions();
+      console.log('提交的資料:', values); // 調試日誌
+      
       if (isEditMode) {
         // Call updateSupplier Cloud Function
         const updateSupplier = httpsCallable(functions, 'updateSupplier');
-        await updateSupplier({ supplierId: supplierData.id, ...values });
+        const result = await updateSupplier({ supplierId: supplierData.id, ...values });
+        console.log('更新結果:', result); // 調試日誌
         toast.success(`供應商 ${values.name} 的資料已成功更新。`, { id: toastId });
       } else {
         // Call createSupplier Cloud Function
         const createSupplier = httpsCallable(functions, 'createSupplier');
-        await createSupplier(values);
+        const result = await createSupplier(values);
+        console.log('建立結果:', result); // 調試日誌
         toast.success(`供應商 ${values.name} 已成功建立。`, { id: toastId });
       }
       

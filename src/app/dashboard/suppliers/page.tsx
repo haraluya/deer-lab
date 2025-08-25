@@ -47,6 +47,8 @@ function SuppliersPageContent() {
       const suppliersCollectionRef = collection(db, 'suppliers');
       const suppliersSnapshot = await getDocs(suppliersCollectionRef);
       
+      console.log('原始供應商資料:', suppliersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); // 調試日誌
+      
       // 獲取供應商資料並包含對接人員資訊
       const suppliersList = await Promise.all(
         suppliersSnapshot.docs.map(async (doc: QueryDocumentSnapshot<DocumentData>) => {
@@ -68,15 +70,19 @@ function SuppliersPageContent() {
             }
           }
           
-          return {
+          const result = {
             ...supplierData,
             id: doc.id,
             liaisonPersonName,
             liaisonPersonPhone,
           } as SupplierWithLiaison;
+          
+          console.log('處理後的供應商資料:', result); // 調試日誌
+          return result;
         })
       );
       
+      console.log('最終供應商列表:', suppliersList); // 調試日誌
       setSuppliers(suppliersList);
     } catch (error) {
       console.error("讀取供應商資料失敗:", error);
