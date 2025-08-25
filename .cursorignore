@@ -17,7 +17,6 @@ functions/node_modules/
 
 # 日誌文件
 *.log
-mcp/
 logs/
 
 # 快取文件
