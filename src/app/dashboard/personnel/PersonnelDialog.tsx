@@ -162,6 +162,7 @@ export function PersonnelDialog({
   }, [isOpen, personnelData, form])
 
   const onSubmit = async (data: FormData) => {
+
     // 新增模式下的額外驗證
     if (!isEditMode && (!data.password || data.password.length < 6)) {
       toast.error("新增人員時密碼為必填欄位，且至少需要 6 個字元")

@@ -279,10 +279,6 @@ function MaterialsPageContent() {
 
   // 匯入/匯出處理函式
   const handleImport = async (data: any[]) => {
-    if (!canManageMaterials()) {
-      toast.error("權限不足，無法匯入物料");
-      return;
-    }
 
     const functions = getFunctions();
     const createMaterial = httpsCallable(functions, 'createMaterial');
@@ -394,11 +390,9 @@ function MaterialsPageContent() {
               <Button 
                 variant="outline" 
                 onClick={() => setIsImportExportOpen(true)}
-                disabled={false}
-                className={!canManageMaterials() ? 'opacity-50 cursor-not-allowed' : ''}
               >
                 <FileSpreadsheet className="mr-2 h-4 w-4" />
-                '匯入/匯出'
+                匯入/匯出
               </Button>
               <Button onClick={handleCreatePurchaseOrder} disabled={purchaseCart.size === 0} variant="outline">
                 <ShoppingCart className="mr-2 h-4 w-4" />
@@ -407,18 +401,14 @@ function MaterialsPageContent() {
               <Button 
                 variant="outline" 
                 onClick={() => setIsStocktakeMode(true)}
-                disabled={false}
-                className={!canManageInventory() ? 'opacity-50 cursor-not-allowed' : ''}
               >
                 <ListChecks className="mr-2 h-4 w-4" />
-                '盤點模式'
+                盤點模式
               </Button>
               <Button 
                 onClick={handleAdd}
-                disabled={false}
-                className={!canManageMaterials() ? 'opacity-50 cursor-not-allowed' : ''}
               >
-                '新增物料'
+                新增物料
               </Button>
             </>
           )}
@@ -723,11 +713,9 @@ function MaterialsPageContent() {
                               </DropdownMenuItem>
                               <DropdownMenuItem 
                                 onClick={() => handleEdit(material)}
-                                disabled={false}
-                                className={!canManageMaterials() ? 'opacity-50 cursor-not-allowed' : ''}
                               >
                                 <Edit className="mr-2 h-4 w-4" />
-                                '編輯'
+                                編輯
                               </DropdownMenuItem>
                               <DropdownMenuItem 
                                 onClick={() => handleDelete(material)} 

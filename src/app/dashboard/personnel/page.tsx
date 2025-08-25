@@ -189,15 +189,10 @@ function PersonnelPageContent() {
       <div className="lg:hidden mb-6">
         <Button 
           onClick={handleAdd}
-          disabled={!hasPermission}
-          className={`w-full shadow-lg hover:shadow-xl transition-all duration-200 ${
-            hasPermission 
-              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white' 
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-          }`}
+          className="w-full shadow-lg hover:shadow-xl transition-all duration-200 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
         >
           <User className="mr-2 h-4 w-4" />
-          {hasPermission ? '新增人員' : '權限不足'}
+          新增人員
         </Button>
       </div>
 
@@ -206,15 +201,10 @@ function PersonnelPageContent() {
         <div className="flex justify-end">
           <Button 
             onClick={handleAdd}
-            disabled={!hasPermission}
-            className={`shadow-lg hover:shadow-xl transition-all duration-200 ${
-              hasPermission 
-                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white' 
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
+            className="shadow-lg hover:shadow-xl transition-all duration-200 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
           >
             <User className="mr-2 h-4 w-4" />
-            {hasPermission ? '新增人員' : '權限不足'}
+            新增人員
           </Button>
         </div>
       </div>
@@ -277,27 +267,22 @@ function PersonnelPageContent() {
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               onClick={() => handleEdit(user)}
-                              disabled={!hasPermission}
-                              className={!hasPermission ? 'text-gray-400 cursor-not-allowed' : ''}
                             >
                               <Edit className="mr-2 h-4 w-4" />
-                              {hasPermission ? '編輯資料' : '權限不足'}
+                              編輯資料
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               onClick={() => handleChangeStatus(user)}
-                              disabled={!hasPermission}
-                              className={!hasPermission ? 'text-gray-400 cursor-not-allowed' : ''}
                             >
-                              {hasPermission ? (user.status === 'active' ? '停用帳號' : '啟用帳號') : '權限不足'}
+                              {user.status === 'active' ? '停用帳號' : '啟用帳號'}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               onClick={() => handleDelete(user)} 
-                              disabled={!hasPermission}
-                              className={`${!hasPermission ? 'text-gray-400 cursor-not-allowed' : 'text-red-600'}`}
+                              className="text-red-600"
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
-                              {hasPermission ? '刪除員工' : '權限不足'}
+                              刪除員工
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
