@@ -7,7 +7,7 @@ import { doc, getDoc, Timestamp, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, CheckCircle, Truck } from 'lucide-react';
+import { ArrowLeft, Loader2, CheckCircle, Truck, ShoppingCart, Building, User, Calendar, Package } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -127,23 +127,44 @@ export default function PurchaseOrderDetailPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" onClick={() => router.back()}><ArrowLeft className="h-4 w-4" /></Button>
-        <div className="flex-grow">
-          <h1 className="text-3xl font-bold">採購單詳情</h1>
-          <p className="text-muted-foreground font-mono">{po.code}</p>
+    <div className="container mx-auto py-10">
+      {/* 頁面標題區域 */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={() => router.back()}
+            className="hover:bg-amber-50 border-amber-200"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold text-amber-600">
+              採購單詳情
+            </h1>
+            <p className="text-muted-foreground mt-2">查看採購單的詳細資訊</p>
+          </div>
         </div>
-        {/* --- ** 新增：操作按鈕區塊 ** --- */}
+        
+        {/* 操作按鈕區域 */}
         <div className="flex gap-2">
           {po.status === '預報單' && (
-            <Button onClick={() => handleUpdateStatus('已訂購')} disabled={isUpdating}>
+            <Button 
+              onClick={() => handleUpdateStatus('已訂購')} 
+              disabled={isUpdating}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
               {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
               標示為已訂購
             </Button>
           )}
           {po.status === '已訂購' && (
-            <Button onClick={() => setIsReceiveDialogOpen(true)} disabled={isUpdating}>
+            <Button 
+              onClick={() => setIsReceiveDialogOpen(true)} 
+              disabled={isUpdating}
+              className="bg-green-600 hover:bg-green-700"
+            >
               <Truck className="mr-2 h-4 w-4" />
               收貨入庫
             </Button>
@@ -151,34 +172,142 @@ export default function PurchaseOrderDetailPage() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader><CardTitle>採購資訊</CardTitle></CardHeader>
-        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div><p className="text-muted-foreground">狀態</p><p><Badge variant={getStatusVariant(po.status)}>{po.status}</Badge></p></div>
-          <div><p className="text-muted-foreground">供應商</p><p className="font-medium">{po.supplierName}</p></div>
-          <div><p className="text-muted-foreground">建立人員</p><p>{po.createdByName}</p></div>
-          <div><p className="text-muted-foreground">建立時間</p><p>{po.createdAt}</p></div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader><CardTitle>採購項目</CardTitle><CardDescription>此採購單中包含的所有項目列表。</CardDescription></CardHeader>
+      {/* 採購單基本資訊卡片 */}
+      <Card className="mb-6 border-0 shadow-lg bg-gradient-to-r from-background to-amber-10">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-amber-600">
+            <ShoppingCart className="h-5 w-5" />
+            採購單資訊
+          </CardTitle>
+        </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader><TableRow><TableHead>品項代號</TableHead><TableHead>品項名稱</TableHead><TableHead className="text-right">採購數量</TableHead></TableRow></TableHeader>
-            <TableBody>
-              {po.items.map((item, index) => (
-                <TableRow key={index}>
-                  <TableCell className="font-mono">{item.code}</TableCell>
-                  <TableCell className="font-medium">{item.name}</TableCell>
-                  <TableCell className="text-right">{item.quantity} {item.unit}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
+                  <ShoppingCart className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">採購單編號</p>
+                  <p className="text-lg font-bold text-gray-900">{po.code}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg flex items-center justify-center">
+                  <Building className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">供應商</p>
+                  <p className="text-lg font-semibold text-gray-900">{po.supplierName}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                  <User className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">建立人員</p>
+                  <p className="text-lg font-semibold text-gray-900">{po.createdByName}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
+                  <Calendar className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">建立時間</p>
+                  <p className="text-lg font-semibold text-gray-900">{po.createdAt}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* 狀態顯示 */}
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-gray-600">當前狀態：</span>
+              <Badge 
+                variant={getStatusVariant(po.status)}
+                className={`text-sm font-medium px-3 py-1 ${
+                  po.status === '已收貨' ? 'bg-green-100 text-green-800 border-green-200' :
+                  po.status === '已訂購' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                  po.status === '已取消' ? 'bg-red-100 text-red-800 border-red-200' :
+                  'bg-gray-100 text-gray-800 border-gray-200'
+                }`}
+              >
+                {po.status}
+              </Badge>
+            </div>
+          </div>
         </CardContent>
       </Card>
       
+      {/* 採購項目列表卡片 */}
+      <Card className="border-0 shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5 text-amber-600" />
+            採購項目清單
+          </CardTitle>
+          <CardDescription>此採購單中包含的所有項目列表</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {po.items.length > 0 ? (
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50">
+                    <TableHead className="font-semibold text-gray-700">品項代號</TableHead>
+                    <TableHead className="font-semibold text-gray-700">品項名稱</TableHead>
+                    <TableHead className="text-right font-semibold text-gray-700">採購數量</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {po.items.map((item, index) => (
+                    <TableRow key={index} className="hover:bg-amber-50/30 transition-colors duration-200">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
+                            <Package className="h-4 w-4 text-white" />
+                          </div>
+                          <span className="font-mono font-medium text-gray-900">{item.code}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium text-gray-900">{item.name}</TableCell>
+                      <TableCell className="text-right">
+                        <span className="font-semibold text-amber-600">
+                          {item.quantity} {item.unit}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 bg-gray-50 rounded-lg">
+              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                <Package className="h-6 w-6 text-gray-400" />
+              </div>
+              <h3 className="text-base font-medium text-gray-900 mb-1">沒有採購項目</h3>
+              <p className="text-sm text-gray-500 text-center">
+                此採購單目前沒有包含任何項目
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      {/* 收貨對話框 */}
       {po && <ReceiveDialog isOpen={isReceiveDialogOpen} onOpenChange={setIsReceiveDialogOpen} onSuccess={() => loadData(po.id)} purchaseOrder={po} />}
     </div>
   );

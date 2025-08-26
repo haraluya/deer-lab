@@ -50,6 +50,17 @@ function MaterialCategoriesPageContent() {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null)
 
+  // 處理從詳情對話框編輯分類
+  const handleEditFromDetail = (category: any) => {
+    setEditingCategory({
+      id: category.id,
+      name: category.name,
+      type: category.type,
+      usageCount: category.usageCount,
+    });
+    setIsDialogOpen(true);
+  };
+
   const form = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
     defaultValues: {
@@ -412,6 +423,7 @@ function MaterialCategoriesPageContent() {
         isOpen={isDetailDialogOpen}
         onOpenChange={setIsDetailDialogOpen}
         category={selectedCategory}
+        onEdit={handleEditFromDetail}
       />
     </div>
   )

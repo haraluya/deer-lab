@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { collection, getDocs, DocumentReference, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
-
 
 import { MaterialDialog, MaterialData } from './MaterialDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -39,6 +38,7 @@ interface MaterialWithSupplier extends MaterialData {
 
 function MaterialsPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [materials, setMaterials] = useState<MaterialWithSupplier[]>([]);
   const [filteredMaterials, setFilteredMaterials] = useState<MaterialWithSupplier[]>([]);
@@ -307,11 +307,25 @@ function MaterialsPageContent() {
     loadData();
   }, [fetchMaterials, fetchSuppliers]);
 
+  // 處理 URL 查詢參數
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    if (editId && materials.length > 0) {
+      const materialToEdit = materials.find(m => m.id === editId);
+      if (materialToEdit) {
+        setSelectedMaterial(materialToEdit);
+        setIsDialogOpen(true);
+        // 清除 URL 中的 edit 參數
+        router.replace('/dashboard/materials');
+      }
+    }
+  }, [searchParams, materials, router]);
+
   useEffect(() => {
     handleSearchAndFilter();
   }, [selectedCategory, selectedSubCategory, searchTerm]);
 
-  const { categories, subCategories } = getAllCategories();
+  const { categories, subCategories } = useMemo(() => getAllCategories(), [materials]);
 
   return (
     <div className="container mx-auto py-10">
@@ -416,426 +430,319 @@ function MaterialsPageContent() {
         </CardContent>
       </Card>
 
-      {/* 分類篩選標籤 */}
-      <div className="mb-6">
-        <h3 className="text-sm font-medium text-muted-foreground mb-3">分類篩選</h3>
-        <div className="flex flex-wrap gap-2">
-          {/* 主分類標籤 - 藍色系 */}
-          {categories.map((category) => (
-            <Badge
-              key={`category-${category}`}
-              variant={selectedCategory === category ? "default" : "secondary"}
-              className={`cursor-pointer transition-all duration-200 ${
-                selectedCategory === category 
-                  ? 'shadow-md' 
-                  : 'hover:bg-primary/10 hover:border-primary/20'
-              }`}}
-              onClick={() => handleCategoryFilter(category)}
-            >
-              <span className="mr-1">
-                <MaterialIcon category={category} size="sm" />
-              </span>
-              {category}
-            </Badge>
-          ))}
-          
-          {/* 細分分類標籤 - 綠色系 */}
-          {subCategories.map((subCategory) => (
-            <Badge
-              key={`subcategory-${subCategory}`}
-              variant={selectedSubCategory === subCategory ? "success" : "secondary"}
-              className={`cursor-pointer transition-all duration-200 ${
-                selectedSubCategory === subCategory 
-                  ? 'shadow-md' 
-                  : 'hover:bg-success/10 hover:border-success/20'
-              }`}}
-              onClick={() => handleSubCategoryFilter(subCategory)}
-            >
-              {subCategory}
-            </Badge>
-          ))}
-        </div>
-      </div>
+             {/* 分類標籤 */}
+       {(categories.length > 0 || subCategories.length > 0) && (
+         <div className="mb-6">
+           <div className="flex flex-wrap gap-2">
+             {/* 主分類 */}
+             {categories.length > 0 && categories.map((category) => (
+               <Badge
+                 key={category}
+                 variant={selectedCategory === category ? "default" : "secondary"}
+                 className={`cursor-pointer transition-colors ${
+                   selectedCategory === category 
+                     ? "bg-blue-600 hover:bg-blue-700 text-white" 
+                     : "bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300"
+                 }`}
+                 onClick={() => handleCategoryFilter(category)}
+               >
+                 {category}
+               </Badge>
+             ))}
 
-      {/* 手機版表格容器 */}
-      <div className="lg:hidden">
-        <div className="bg-card rounded-xl shadow-lg border border-border overflow-hidden mb-6">
-          <div className="px-4 py-3 bg-gradient-to-r from-background to-primary/10 border-b border-border">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Package className="h-4 w-4 text-primary" />
-                <h2 className="text-base font-semibold text-foreground">物料清單</h2>
-              </div>
-              <div className="text-xs text-muted-foreground">
-                共 {filteredMaterials.length} 項
-              服務
-            </div>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <div className="min-w-full">
-              {isLoading ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <div className="relative">
-                    <div className="w-10 h-10 border-4 border-border rounded-full animate-spin"></div>
-                    <div className="absolute top-0 left-0 w-10 h-10 border-4 border-transparent border-t-primary rounded-full animate-spin"></div>
-                  </div>
-                  <span className="mt-3 text-sm text-muted-foreground font-medium">載入中...</span>
-                </div>
-              ) : filteredMaterials.length > 0 ? (
-                <div className="divide-y divide-gray-200">
-                  {filteredMaterials.map((material) => {
-                    const isLowStockItem = isLowStock(material);
-                    return (
-                      <div 
-                        key={material.id} 
-                        className={`p-4 ${isLowStockItem && !isStocktakeMode ? 'bg-destructive/10' : ''} hover:bg-primary/5 transition-colors duration-200`}}
-                        onClick={() => handleViewDetail(material)}
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center">
-                              <MaterialIcon category={material.category || 'default'} size="sm" />
-                            </div>
-                            <div>
-                              <div className="font-medium text-foreground text-sm">{material.name}</div>
-                              <div className="text-xs text-muted-foreground">代號: {material.code}</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Checkbox
-                              checked={purchaseCart.has(material.id)}
-                              onCheckedChange={() => handleCartToggle(material.id)}
-                              aria-label={`選擇 ${material.name}`}
-                              disabled={isStocktakeMode}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                <Button variant="ghost" className="h-8 w-8 p-0" disabled={isStocktakeMode}>
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleViewDetail(material)}>
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  查看詳細
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleEdit(material)}>
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  編輯
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleDelete(material)} className="text-red-600">刪除</DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <div className="flex items-center gap-1 mb-1">
-                              <Tag className="h-3 w-3 text-primary" />
-                              <span className="text-muted-foreground">主分類</span>
-                            </div>
-                            <span className="font-medium text-foreground">{material.category}</span>
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-1 mb-1">
-                              <span className="text-muted-foreground">細分分類</span>
-                            </div>
-                            <span className="font-medium text-foreground">{material.subCategory}</span>
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-1 mb-1">
-                              <Building className="h-3 w-3 text-muted-foreground" />
-                              <span className="text-muted-foreground">供應商</span>
-                            </div>
-                            <span className="font-medium text-foreground">{material.supplierName}</span>
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-1 mb-1">
-                              <Warehouse className="h-3 w-3 text-muted-foreground" />
-                              <span className="text-muted-foreground">目前庫存</span>
-                            </div>
-                            {isStocktakeMode ? (
-                              <div className="flex items-center gap-2">
-                                <Input
-                                  type="number"
-                                  className="w-20 h-7 text-sm border-input focus:border-primary focus:ring-primary"
-                                  value={updatedStocks[material.id] ?? material.currentStock}
-                                  onChange={(e) => handleStockChange(material.id, Number(e.target.value))}
-                                />
-                                <span className="text-xs text-muted-foreground">{material.unit}</span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1">
-                                <span className={`font-medium ${isLowStockItem ? 'text-destructive' : 'text-success'}`}>
-                                  {material.currentStock} {material.unit}
-                                </span>
-                                {isLowStockItem && (
-                                  <span className="text-xs text-destructive font-medium">低庫存</span>
-                                )}}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-3">
-                    <Package className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-base font-medium text-foreground mb-1">沒有物料資料</h3>
-                  <p className="text-sm text-muted-foreground mb-4 text-center">開始新增第一個物料來管理您的庫存</p>
-                  <Button 
-                    onClick={handleAdd}
-                    variant="outline"
-                    size="sm"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    新增物料
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+             {/* 子分類 */}
+             {subCategories.length > 0 && subCategories.map((subCategory) => (
+               <Badge
+                 key={subCategory}
+                 variant={selectedSubCategory === subCategory ? "default" : "secondary"}
+                 className={`cursor-pointer transition-colors ${
+                   selectedSubCategory === subCategory 
+                     ? "bg-green-600 hover:bg-green-700 text-white" 
+                     : "bg-green-100 hover:bg-green-200 text-green-800 border-green-300"
+                 }`}
+                 onClick={() => handleSubCategoryFilter(subCategory)}
+               >
+                 {subCategory}
+               </Badge>
+             ))}
+           </div>
+         </div>
+       )}
 
-      {/* 桌面版表格容器 */}
-      <div className="hidden lg:block">
-        <div className="bg-card rounded-xl shadow-lg border border-border overflow-hidden">
-        <div className="px-6 py-4 bg-gradient-to-r from-background to-primary/10 border-b border-border">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-semibold text-foreground">物料清單</h2>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              共 {filteredMaterials.length} 項物料
-            </div>
+      {/* 載入中 */}
+      {isLoading && (
+        <div className="flex justify-center items-center py-20">
+          <div className="text-center">
+            <div className="w-10 h-10 border-4 border-border rounded-full animate-spin border-t-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">載入中...</p>
           </div>
         </div>
-        
-        <div className="table-responsive">
-          <Table className="table-enhanced">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[60px] text-center">選取</TableHead>
-                <TableHead className="text-left">物料資訊</TableHead>
-                <TableHead className="text-left">主分類</TableHead>
-                <TableHead className="text-left">細分分類</TableHead>
-                <TableHead className="text-left">供應商</TableHead>
-                <TableHead className="text-right">目前庫存</TableHead>
-                <TableHead className="text-right">安全庫存</TableHead>
-                <TableHead className="text-right">成本</TableHead>
-                <TableHead className="text-right">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center py-16">
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="relative">
-                        <div className="w-12 h-12 border-4 border-border rounded-full animate-spin"></div>
-                        <div className="absolute top-0 left-0 w-12 h-12 border-4 border-transparent border-t-primary rounded-full animate-spin"></div>
-                      </div>
-                      <span className="mt-4 text-muted-foreground font-medium">載入物料資料中...</span>
+      )}
+
+      {/* 物料列表 */}
+      {!isLoading && (
+        <>
+          {/* 手機版列表 */}
+          <div className="lg:hidden space-y-4">
+            {filteredMaterials.map((material) => (
+              <Card key={material.id} className="relative">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="font-medium text-foreground text-sm">{material.name}</div>
+                      <div className="text-xs text-muted-foreground">代號: {material.code}</div>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ) : filteredMaterials.length > 0 ? (
-                filteredMaterials.map((material) => {
-                  const isLowStockItem = isLowStock(material);
-                  return (
-                    <TableRow 
-                      key={material.id} 
-                      className={`${isLowStockItem && !isStocktakeMode ? 'bg-destructive/10' : ''} cursor-pointer hover:bg-primary/5 transition-colors duration-200`} 
-                      data-state={purchaseCart.has(material.id) ? "selected" : ""}
-                      onClick={() => handleViewDetail(material)}
-                    >
-                      <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={purchaseCart.has(material.id)}
-                          onCheckedChange={() => handleCartToggle(material.id)}
-                          aria-label={`選擇 ${material.name}`}
-                          disabled={isStocktakeMode}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>操作</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => handleViewDetail(material)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          查看詳情
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEdit(material)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          編輯
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleDelete(material)} className="text-red-600">
+                          <X className="mr-2 h-4 w-4" />
+                          刪除
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">分類:</span>
+                      <span>{material.category || '未分類'}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">供應商:</span>
+                      <span>{material.supplierName}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">目前庫存:</span>
+                      <div className="flex items-center gap-2">
+                        <span className={isLowStock(material) ? "text-red-600 font-medium" : ""}>
+                          {material.currentStock || 0} {material.unit}
+                        </span>
+                        {isLowStock(material) && (
+                          <AlertTriangle className="h-3 w-3 text-red-600" />
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">安全庫存:</span>
+                      <span>{material.safetyStockLevel || 0} {material.unit}</span>
+                    </div>
+                  </div>
+
+                  {/* 盤點模式下的庫存輸入 */}
+                  {isStocktakeMode && (
+                    <div className="mt-3 pt-3 border-t">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">盤點數量:</span>
+                        <Input
+                          type="number"
+                          value={updatedStocks[material.id] ?? material.currentStock ?? 0}
+                          onChange={(e) => handleStockChange(material.id, Number(e.target.value))}
+                          className="w-20 h-8 text-sm"
                         />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center">
-                            <MaterialIcon category={material.category || 'default'} size="sm" />
-                          </div>
-                          <div>
-                            <div className="font-medium text-foreground">{material.name}</div>
-                            <div className="text-xs text-muted-foreground">代號: {material.code}</div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="text-xs">
-                          {material.category}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {material.subCategory}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
+                        <span className="text-sm text-muted-foreground">{material.unit}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 購物車功能 */}
+                  {!isStocktakeMode && (
+                    <div className="mt-3 pt-3 border-t">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Building className="h-4 w-4 text-primary" />
-                          <span className="text-sm font-medium text-foreground">{material.supplierName}</span>
+                          <Checkbox
+                            checked={purchaseCart.has(material.id)}
+                            onCheckedChange={() => handleCartToggle(material.id)}
+                          />
+                          <span className="text-sm">加入採購單</span>
                         </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {isStocktakeMode ? (
-                          <div className="flex justify-end items-center gap-2">
-                            <Input
-                              type="number"
-                              className="w-24 h-8 text-right border-input focus:border-primary focus:ring-primary"
-                              value={updatedStocks[material.id] ?? material.currentStock}
-                              onChange={(e) => handleStockChange(material.id, Number(e.target.value))}
-                            />
-                            <span className="text-sm text-muted-foreground">{material.unit}</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-end gap-2">
-                            <Warehouse className="h-4 w-4 text-muted-foreground" />
-                            <span className={`font-medium ${isLowStockItem ? 'text-destructive' : 'text-success'}`}>
-                              {material.currentStock} {material.unit}
-                            </span>
-                            {isLowStockItem && (
-                              <span className="text-xs text-destructive font-medium">低庫存</span>
-                            )}
-                          </div>
+                        <div className="text-sm text-muted-foreground">
+                          ${material.costPerUnit || 0}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* 桌面版表格 */}
+          <div className="hidden lg:block">
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">
+                      {!isStocktakeMode && (
+                        <Checkbox
+                          checked={purchaseCart.size === filteredMaterials.length && filteredMaterials.length > 0}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setPurchaseCart(new Set(filteredMaterials.map(m => m.id)));
+                            } else {
+                              setPurchaseCart(new Set());
+                            }
+                          }}
+                        />
+                      )}
+                    </TableHead>
+                    <TableHead>物料資訊</TableHead>
+                    <TableHead>分類</TableHead>
+                    <TableHead>供應商</TableHead>
+                    <TableHead>庫存</TableHead>
+                    <TableHead>成本</TableHead>
+                    <TableHead className="w-12">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredMaterials.map((material) => (
+                    <TableRow 
+                      key={material.id}
+                      className="hover:bg-primary/5 transition-colors duration-200 cursor-pointer"
+                      onClick={() => router.push(`/dashboard/materials/${material.id}`)}
+                    >
+                      <TableCell>
+                        {!isStocktakeMode && (
+                          <Checkbox
+                            checked={purchaseCart.has(material.id)}
+                            onCheckedChange={() => handleCartToggle(material.id)}
+                          />
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <span className="number-display number-neutral">
-                            {material.safetyStockLevel} {material.unit}
-                          </span>
+                      <TableCell>
+                        <div className="font-medium text-foreground">{material.name}</div>
+                        <div className="text-xs text-muted-foreground">代號: {material.code}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          {material.category && (
+                            <Badge variant="outline" className="text-xs">
+                              {material.category}
+                            </Badge>
+                          )}
+                          {material.subCategory && (
+                            <Badge variant="outline" className="text-xs">
+                              {material.subCategory}
+                            </Badge>
+                          )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <span className="number-display number-neutral">
-                          ${Math.floor(material.costPerUnit || 0)}
-                        </span>
+                      <TableCell>{material.supplierName}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className={isLowStock(material) ? "text-red-600 font-medium" : ""}>
+                            {material.currentStock || 0} {material.unit}
+                          </span>
+                          {isLowStock(material) && (
+                            <AlertTriangle className="h-3 w-3 text-red-600" />
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          安全庫存: {material.safetyStockLevel || 0} {material.unit}
+                        </div>
                       </TableCell>
-                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                      <TableCell>${material.costPerUnit || 0}</TableCell>
+                      <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={isStocktakeMode}>
-                              <span className="sr-only">開啟選單</span>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 w-8 p-0"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>操作</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => handleViewDetail(material)}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              查看詳細
+                              <Eye className="mr-2 h-4 w-4" />
+                              查看詳情
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleEdit(material)}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              編輯物料
+                              <Edit className="mr-2 h-4 w-4" />
+                              編輯
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              onClick={() => handleDelete(material)}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              刪除物料
+                            <DropdownMenuItem onClick={() => handleDelete(material)} className="text-red-600">
+                              <X className="mr-2 h-4 w-4" />
+                              刪除
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  );
-                })
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center py-16">
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-                        <Package className="h-8 w-8 text-muted-foreground" />
-                      </div>
-                      <h3 className="text-lg font-medium text-foreground mb-2">沒有物料資料</h3>
-                      <p className="text-muted-foreground mb-4">開始新增第一個物料來管理您的庫存</p>
-                      <Button 
-                        onClick={handleAdd}
-                        variant="outline"
-                        className="border-input text-primary hover:bg-primary/5"
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        新增物料
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-            </Table>
-        </div>
-      </div>
-      </div>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          </div>
 
-      {/* 物料對話框 */}
+          {/* 無資料顯示 */}
+          {filteredMaterials.length === 0 && !isLoading && (
+            <div className="text-center py-20">
+              <div className="w-12 h-12 border-4 border-border rounded-full animate-spin border-t-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">沒有找到符合條件的物料</p>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* 新增/編輯物料對話框 */}
       <MaterialDialog
         isOpen={isDialogOpen}
         onOpenChange={setIsDialogOpen}
-        onMaterialUpdate={handleMaterialUpdate}
         materialData={selectedMaterial}
+        onMaterialUpdate={handleMaterialUpdate}
       />
 
-      {/* 詳情對話框 */}
+      {/* 詳情查看對話框 */}
       {selectedDetailMaterial && (
         <DetailViewDialog
           isOpen={isDetailViewOpen}
           onOpenChange={setIsDetailViewOpen}
           title={selectedDetailMaterial.name}
-          subtitle={`代號: ${selectedDetailMaterial.code}`}
+          subtitle={`物料代號: ${selectedDetailMaterial.code}`}
           sections={[
             {
               title: "基本資訊",
-              icon: <Package className="h-4 w-4" />,
               color: "blue" as const,
               fields: [
                 { label: "物料代號", value: selectedDetailMaterial.code },
                 { label: "物料名稱", value: selectedDetailMaterial.name },
-                { label: "主分類", value: selectedDetailMaterial.category },
-                { label: "細分分類", value: selectedDetailMaterial.subCategory },
+                { label: "主分類", value: selectedDetailMaterial.category || "未分類" },
+                { label: "細分分類", value: selectedDetailMaterial.subCategory || "未分類" },
+                { label: "供應商", value: selectedDetailMaterial.supplierName },
+                { label: "單位", value: selectedDetailMaterial.unit || "未指定" },
               ]
             },
             {
-              title: "供應商資訊",
-              icon: <Building className="h-4 w-4" />,
+              title: "庫存資訊",
               color: "green" as const,
               fields: [
-                { label: "供應商", value: selectedDetailMaterial.supplierName },
-              ]
-            },
-            {
-              title: "庫存與成本",
-              icon: <Warehouse className="h-4 w-4" />,
-              color: "purple" as const,
-              fields: [
-                { label: "目前庫存", value: selectedDetailMaterial.currentStock, type: "number" },
-                { label: "安全庫存", value: selectedDetailMaterial.safetyStockLevel, type: "number" },
-                { label: "單位成本", value: selectedDetailMaterial.costPerUnit, type: "currency" },
-                { label: "單位", value: selectedDetailMaterial.unit },
+                { label: "目前庫存", value: `${selectedDetailMaterial.currentStock || 0} ${selectedDetailMaterial.unit || ""}` },
+                { label: "安全庫存", value: `${selectedDetailMaterial.safetyStockLevel || 0} ${selectedDetailMaterial.unit || ""}` },
+                { label: "單位成本", value: `$${selectedDetailMaterial.costPerUnit || 0}` },
               ]
             },
             ...(selectedDetailMaterial.notes ? [{
               title: "備註",
-              icon: <Tag className="h-4 w-4" />,
               color: "yellow" as const,
               fields: [
                 { label: "備註", value: selectedDetailMaterial.notes },
@@ -934,4 +841,10 @@ function MaterialsPageContent() {
   );
 }
 
-export default MaterialsPageContent;
+export default function MaterialsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <MaterialsPageContent />
+    </Suspense>
+  );
+}

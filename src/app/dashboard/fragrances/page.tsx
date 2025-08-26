@@ -1,8 +1,8 @@
 // src/app/dashboard/fragrances/page.tsx
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { collection, getDocs, DocumentReference, QueryDocumentSnapshot, DocumentData, doc, updateDoc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
@@ -27,6 +27,7 @@ interface FragranceWithSupplier extends FragranceData {
 
 function FragrancesPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [fragrances, setFragrances] = useState<FragranceWithSupplier[]>([]);
   const [filteredFragrances, setFilteredFragrances] = useState<FragranceWithSupplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -88,6 +89,20 @@ function FragrancesPageContent() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // 處理 URL 查詢參數
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    if (editId && fragrances.length > 0) {
+      const fragranceToEdit = fragrances.find(f => f.id === editId);
+      if (fragranceToEdit) {
+        setSelectedFragrance(fragranceToEdit);
+        setIsDialogOpen(true);
+        // 清除 URL 中的 edit 參數
+        router.replace('/dashboard/fragrances');
+      }
+    }
+  }, [searchParams, fragrances, router]);
 
   // 搜尋過濾功能
   useEffect(() => {
@@ -559,7 +574,7 @@ function FragrancesPageContent() {
                       key={fragrance.id} 
                       className={`${isLowStock && !isStocktakeMode ? 'bg-destructive/10' : ''} cursor-pointer hover:bg-accent/5 transition-colors duration-200`} 
                       data-state={purchaseCart.has(fragrance.id) ? "selected" : ""}
-                      onClick={() => handleViewDetail(fragrance)}
+                      onClick={() => router.push(`/dashboard/fragrances/${fragrance.id}`)}
                     >
                       <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
@@ -791,6 +806,8 @@ function FragrancesPageContent() {
 
 export default function FragrancesPage() {
   return (
-    <FragrancesPageContent />
+    <Suspense fallback={<div>Loading...</div>}>
+      <FragrancesPageContent />
+    </Suspense>
   );
 }

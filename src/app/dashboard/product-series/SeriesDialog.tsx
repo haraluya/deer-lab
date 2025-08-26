@@ -14,7 +14,8 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { MultiSelect, OptionType } from '@/components/ui/multi-select'; 
+import { MultiSelect, OptionType } from '@/components/ui/multi-select';
+import { Package, Tag } from 'lucide-react'; 
 
 // ... (SeriesDialog 的其餘程式碼保持不變) ...
 const formSchema = z.object({
@@ -108,34 +109,120 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg bg-white dark:bg-slate-900" aria-describedby="series-dialog-description">
-        <DialogHeader>
-          <DialogTitle>{isEditMode ? '編輯產品系列' : '新增產品系列'}</DialogTitle>
-          <DialogDescription id="series-dialog-description">設定系列的名稱、代號並綁定通用材料。</DialogDescription>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white">
+        <DialogHeader className="pb-4 border-b border-gray-200">
+          <DialogTitle className="flex items-center gap-3 text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+            <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-600 rounded-lg flex items-center justify-center">
+              <Package className="h-5 w-5 text-white" />
+            </div>
+            {isEditMode ? '編輯產品系列' : '新增產品系列'}
+          </DialogTitle>
+          <DialogDescription className="text-gray-600 mt-2">
+            {isEditMode ? '修改產品系列詳細資訊' : '建立新的產品系列資料'}
+          </DialogDescription>
         </DialogHeader>
+        
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
-            <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><FormLabel>系列名稱</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-            <FormField control={form.control} name="code" render={({ field }) => ( <FormItem><FormLabel>系列代號</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-            <FormField
-              control={form.control}
-              name="commonMaterialIds"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>通用材料</FormLabel>
-                  <MultiSelect
-                    options={materialOptions}
-                    selected={field.value || []}
-                    onChange={field.onChange}
-                    placeholder="選擇通用材料..."
-                  />
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="submit" disabled={isSubmitting} className="w-full mt-4">
-              {isSubmitting ? '處理中...' : (isEditMode ? '儲存更新' : '確認新增')}
-            </Button>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* 基本資料 */}
+            <div className="space-y-6 p-6 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl border border-orange-200 shadow-sm">
+              <h3 className="text-xl font-bold flex items-center gap-3 text-orange-800">
+                <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                  <Tag className="h-4 w-4 text-orange-600" />
+                </div>
+                基本資料
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold text-gray-700">系列名稱 *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="例如：經典系列" 
+                          className="border-gray-300 focus:border-orange-500 focus:ring-orange-500"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold text-gray-700">系列代號 *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="例如：CLASSIC" 
+                          className="border-gray-300 focus:border-orange-500 focus:ring-orange-500"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* 通用材料 */}
+            <div className="space-y-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm">
+              <h3 className="text-xl font-bold flex items-center gap-3 text-blue-800">
+                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Package className="h-4 w-4 text-blue-600" />
+                </div>
+                通用材料
+              </h3>
+              
+              <FormField
+                control={form.control}
+                name="commonMaterialIds"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-semibold text-gray-700">選擇通用材料</FormLabel>
+                    <MultiSelect
+                      options={materialOptions}
+                      selected={field.value || []}
+                      onChange={field.onChange}
+                      placeholder="選擇通用材料..."
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                取消
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    處理中...
+                  </>
+                ) : (
+                  isEditMode ? '儲存更新' : '確認新增'
+                )}
+              </Button>
+            </div>
           </form>
         </Form>
       </DialogContent>

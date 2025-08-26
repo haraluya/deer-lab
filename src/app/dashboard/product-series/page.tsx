@@ -1,7 +1,8 @@
 // src/app/dashboard/product-series/page.tsx
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { collection, getDocs, DocumentReference } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
@@ -22,6 +23,8 @@ interface SeriesWithMaterials extends SeriesData {
 }
 
 function ProductSeriesPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [series, setSeries] = useState<SeriesWithMaterials[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -66,6 +69,20 @@ function ProductSeriesPageContent() {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // 處理 URL 查詢參數
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    if (editId && series.length > 0) {
+      const seriesToEdit = series.find(s => s.id === editId);
+      if (seriesToEdit) {
+        setSelectedSeries(seriesToEdit);
+        setIsDialogOpen(true);
+        // 清除 URL 中的 edit 參數
+        router.replace('/dashboard/product-series');
+      }
+    }
+  }, [searchParams, series, router]);
 
   const handleAdd = () => { setSelectedSeries(null); setIsDialogOpen(true); };
   const handleEdit = (data: SeriesData) => { setSelectedSeries(data); setIsDialogOpen(true); };
@@ -334,7 +351,11 @@ function ProductSeriesPageContent() {
                 </TableRow>
               ) : series.length > 0 ? (
                 series.map((seriesItem) => (
-                  <TableRow key={seriesItem.id} className="hover:bg-primary/5 transition-colors duration-200">
+                  <TableRow 
+                    key={seriesItem.id} 
+                    className="hover:bg-primary/5 transition-colors duration-200 cursor-pointer"
+                    onClick={() => router.push(`/dashboard/product-series/${seriesItem.id}`)}
+                  >
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
@@ -378,7 +399,11 @@ function ProductSeriesPageContent() {
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
+                          <Button 
+                            variant="ghost" 
+                            className="h-8 w-8 p-0"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <span className="sr-only">開啟選單</span>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
@@ -473,6 +498,8 @@ function ProductSeriesPageContent() {
 
 export default function ProductSeriesPage() {
   return (
-    <ProductSeriesPageContent />
+    <Suspense fallback={<div>Loading...</div>}>
+      <ProductSeriesPageContent />
+    </Suspense>
   );
 }

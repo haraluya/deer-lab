@@ -1,7 +1,8 @@
 // src/app/dashboard/products/page.tsx
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { collection, getDocs, DocumentReference } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
@@ -27,6 +28,8 @@ interface ProductWithDetails extends ProductData {
 }
 
 function ProductsPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [products, setProducts] = useState<ProductWithDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -76,6 +79,20 @@ function ProductsPageContent() {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // 處理 URL 查詢參數
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    if (editId && products.length > 0) {
+      const productToEdit = products.find(product => product.id === editId);
+      if (productToEdit) {
+        setSelectedProduct(productToEdit);
+        setIsDialogOpen(true);
+        // 清除 URL 中的 edit 參數
+        router.replace('/dashboard/products');
+      }
+    }
+  }, [searchParams, products, router]);
 
   // 操作處理函式
   const handleAdd = () => { 
@@ -256,7 +273,7 @@ function ProductsPageContent() {
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-12">
                   <div className="relative">
-                    <div className="w-10 h-10 border-4 border-border rounded-full animate-spin">
+                    <div className="w-10 h-10 border-4 border-border rounded-full animate-spin"></div>
                     <div className="absolute top-0 left-0 w-10 h-10 border-4 border-transparent border-t-primary rounded-full animate-spin"></div>
                   </div>
                   <span className="mt-3 text-sm text-muted-foreground font-medium">載入中...</span>
@@ -405,7 +422,7 @@ function ProductsPageContent() {
                   <TableCell colSpan={6} className="text-center py-16">
                     <div className="flex flex-col items-center justify-center">
                       <div className="relative">
-                        <div className="w-12 h-12 border-4 border-border rounded-full animate-spin">
+                        <div className="w-12 h-12 border-4 border-border rounded-full animate-spin"></div>
                         <div className="absolute top-0 left-0 w-12 h-12 border-4 border-transparent border-t-primary rounded-full animate-spin"></div>
                       </div>
                       <span className="mt-4 text-muted-foreground font-medium">載入產品資料中...</span>
@@ -414,7 +431,11 @@ function ProductsPageContent() {
                 </TableRow>
               ) : products.length > 0 ? (
                 products.map((product) => (
-                  <TableRow key={product.id} className="hover:bg-primary/5 transition-colors duration-200">
+                  <TableRow 
+                    key={product.id} 
+                    className="hover:bg-primary/5 transition-colors duration-200 cursor-pointer"
+                    onClick={() => router.push(`/dashboard/products/${product.id}`)}
+                  >
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
@@ -457,7 +478,11 @@ function ProductsPageContent() {
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
+                          <Button 
+                            variant="ghost" 
+                            className="h-8 w-8 p-0"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <span className="sr-only">開啟選單</span>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
@@ -622,9 +647,10 @@ function ProductsPageContent() {
   );
 }
 
-
 export default function ProductsPage() {
   return (
-    <ProductsPageContent />
+    <Suspense fallback={<div>Loading...</div>}>
+      <ProductsPageContent />
+    </Suspense>
   );
 }

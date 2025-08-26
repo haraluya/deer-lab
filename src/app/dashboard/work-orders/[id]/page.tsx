@@ -165,63 +165,109 @@ export default function WorkOrderDetailPage() {
 
   return (
     <div className="container mx-auto py-10">
-      <div className="flex items-center gap-4 mb-6">
-        <Button variant="outline" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          返回
+      {/* 頁面標題區域 */}
+      <div className="flex items-center gap-4 mb-8">
+        <Button 
+          variant="outline" 
+          size="icon" 
+          onClick={() => router.back()}
+          className="hover:bg-primary/10 hover:border-primary/20"
+        >
+          <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-3xl font-bold">工單詳細資訊</h1>
+        <div className="flex-grow">
+          <h1 className="text-3xl font-bold text-primary">
+            工單詳情
+          </h1>
+          <p className="text-muted-foreground font-mono">{workOrder.code}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsTimeTrackingOpen(true)}
+            className="border-gray-300 text-gray-700 hover:bg-gray-50"
+          >
+            <Users className="h-4 w-4 mr-2" />
+            工時追蹤
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setIsEditing(!isEditing)}
+            className="border-gray-300 text-gray-700 hover:bg-gray-50"
+          >
+            <Edit className="h-4 w-4 mr-2" />
+            {isEditing ? "取消編輯" : "編輯"}
+          </Button>
+        </div>
       </div>
 
+      {/* 工單基本資訊卡片 */}
+      <Card className="mb-6 border-0 shadow-lg bg-gradient-to-r from-background to-primary/10">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-primary">
+            <div className="w-8 h-8 bg-gradient-to-r from-primary to-primary/80 rounded-lg flex items-center justify-center">
+              <Package className="h-4 w-4 text-white" />
+            </div>
+            工單基本資訊
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* 產品名稱 */}
+            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <Package className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-blue-600 font-medium">產品名稱</p>
+                <p className="text-lg font-semibold text-blue-800">{workOrder.productSnapshot.name}</p>
+              </div>
+            </div>
+
+            {/* 產品代號 */}
+            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg">
+              <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                <Package className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-green-600 font-medium">產品代號</p>
+                <p className="text-lg font-semibold text-green-800">{workOrder.productSnapshot.code}</p>
+              </div>
+            </div>
+
+            {/* 香精 */}
+            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg">
+              <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <Package className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-purple-600 font-medium">香精</p>
+                <p className="text-lg font-semibold text-purple-800">{workOrder.productSnapshot.fragranceName}</p>
+              </div>
+            </div>
+
+            {/* 尼古丁濃度 */}
+            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg">
+              <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                <Package className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-orange-600 font-medium">尼古丁濃度</p>
+                <p className="text-lg font-semibold text-orange-800">{workOrder.productSnapshot.nicotineMg} mg/ml</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* 工單基本資訊 */}
+        {/* 工單詳細資訊 */}
         <div className="lg:col-span-2 space-y-6">
-          <Card>
+          <Card className="border-0 shadow-lg">
             <CardHeader>
-                      <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-2xl">{workOrder.code}</CardTitle>
-            <CardDescription>工單基本資訊</CardDescription>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsTimeTrackingOpen(true)}
-            >
-              <Users className="h-4 w-4 mr-2" />
-              工時追蹤
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsEditing(!isEditing)}
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              {isEditing ? "取消編輯" : "編輯"}
-            </Button>
-          </div>
-        </div>
+              <CardTitle className="text-lg text-primary">工單狀態</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">產品名稱</Label>
-                  <p className="text-lg font-semibold">{workOrder.productSnapshot.name}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">產品代號</Label>
-                  <p className="text-lg font-semibold">{workOrder.productSnapshot.code}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">香精</Label>
-                  <p className="text-lg">{workOrder.productSnapshot.fragranceName}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">尼古丁濃度</Label>
-                  <p className="text-lg">{workOrder.productSnapshot.nicotineMg} mg/ml</p>
-                </div>
-              </div>
 
               {isEditing ? (
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t">

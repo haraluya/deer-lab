@@ -514,41 +514,46 @@ function PersonnelPageContent() {
       {/* 詳細資料對話框 */}
       {selectedDetailUser && (
         <Dialog open={isDetailViewOpen} onOpenChange={setIsDetailViewOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle className="text-xl flex items-center gap-2">
-                {selectedDetailUser.name || '未命名'}
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white">
+            <DialogHeader className="pb-4 border-b border-gray-200">
+              <DialogTitle className="flex items-center gap-3 text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                  <User className="h-5 w-5 text-white" />
+                </div>
+                員工詳情
               </DialogTitle>
-              <p className="text-sm text-muted-foreground">工號: {selectedDetailUser.employeeId}</p>
+              <p className="text-gray-600 mt-2">工號: {selectedDetailUser.employeeId}</p>
             </DialogHeader>
 
             <div className="space-y-6">
               {/* 基本資訊 */}
-              <div className="space-y-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-                <h3 className="text-lg font-semibold flex items-center gap-2 text-blue-800">
-                  <User className="h-4 w-4" />
+              <div className="space-y-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm">
+                <h3 className="text-xl font-bold flex items-center gap-3 text-blue-800">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <User className="h-4 w-4 text-blue-600" />
+                  </div>
                   基本資訊
                 </h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-600">姓名</label>
-                    <div className="text-sm text-gray-900">{selectedDetailUser.name || '-'}</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-700">姓名</label>
+                    <div className="text-lg font-medium text-gray-900">{selectedDetailUser.name || '-'}</div>
                   </div>
                   
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-600">工號</label>
-                    <div className="text-sm text-gray-900">{selectedDetailUser.employeeId || '-'}</div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-700">工號</label>
+                    <div className="text-lg font-medium text-gray-900">{selectedDetailUser.employeeId || '-'}</div>
                   </div>
                   
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-600">電話</label>
-                    <div className="text-sm text-gray-900">{selectedDetailUser.phone || '-'}</div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-700">電話</label>
+                    <div className="text-lg font-medium text-gray-900">{selectedDetailUser.phone || '-'}</div>
                   </div>
                   
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-600">狀態</label>
-                    <div className="text-sm">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-700">狀態</label>
+                    <div className="text-lg">
                       <Badge variant={selectedDetailUser.status === 'active' ? 'default' : 'secondary'}>
                         {selectedDetailUser.status === 'active' ? '啟用' : '停用'}
                       </Badge>
@@ -558,22 +563,28 @@ function PersonnelPageContent() {
               </div>
 
               {/* 權限資訊 */}
-              <div className="space-y-4 p-4 bg-gradient-to-r from-purple-50 to-violet-50 rounded-lg border border-purple-200">
-                <h3 className="text-lg font-semibold flex items-center gap-2 text-purple-800">
-                  <Shield className="h-4 w-4" />
+              <div className="space-y-6 p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200 shadow-sm">
+                <h3 className="text-xl font-bold flex items-center gap-3 text-purple-800">
+                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Shield className="h-4 w-4 text-purple-600" />
+                  </div>
                   權限資訊
                 </h3>
                 
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-600">角色</label>
-                  <div className="text-sm text-gray-900">{selectedDetailUser.roleName || '未設定'}</div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-700">角色</label>
+                  <div className="text-lg font-medium text-gray-900">{selectedDetailUser.roleName || '未設定'}</div>
                 </div>
               </div>
             </div>
 
             {/* 操作按鈕 */}
-            <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button variant="outline" onClick={() => setIsDetailViewOpen(false)}>
+            <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsDetailViewOpen(false)}
+                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
                 關閉
               </Button>
               <Button 
@@ -581,7 +592,7 @@ function PersonnelPageContent() {
                   setIsDetailViewOpen(false);
                   handleEdit(selectedDetailUser);
                 }}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
               >
                 <Edit className="mr-2 h-4 w-4" />
                 編輯

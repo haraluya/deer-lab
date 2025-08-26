@@ -318,7 +318,11 @@ function PurchaseOrdersPageContent() {
                 </TableRow>
               ) : purchaseOrders.length > 0 ? (
                 purchaseOrders.map((order) => (
-                  <TableRow key={order.id} className="hover:bg-amber-50/50 transition-colors duration-200">
+                  <TableRow 
+                    key={order.id} 
+                    className="hover:bg-amber-50/50 transition-colors duration-200 cursor-pointer"
+                    onClick={() => handleViewDetails(order.id)}
+                  >
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
@@ -361,14 +365,21 @@ function PurchaseOrdersPageContent() {
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
+                          <Button 
+                            variant="ghost" 
+                            className="h-8 w-8 p-0"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <span className="sr-only">開啟選單</span>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>操作</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleViewDetails(order.id)}>
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewDetails(order.id);
+                          }}>
                             <Eye className="h-4 w-4 mr-2" />
                             查看詳細
                           </DropdownMenuItem>

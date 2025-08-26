@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
-import { Tag, Package, Building, Calendar } from 'lucide-react';
+import { Tag, Package, Building, Calendar, Edit } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -48,12 +48,19 @@ interface CategoryDetailDialogProps {
     type: "category" | "subCategory";
     usageCount: number;
   } | null;
+  onEdit?: (category: {
+    id: string;
+    name: string;
+    type: "category" | "subCategory";
+    usageCount: number;
+  }) => void;
 }
 
 export function CategoryDetailDialog({
   isOpen,
   onOpenChange,
   category,
+  onEdit,
 }: CategoryDetailDialogProps) {
   const [materials, setMaterials] = useState<MaterialData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -116,43 +123,47 @@ export function CategoryDetailDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Tag className="h-5 w-5" />
-            {category.name} - 分類詳情
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white">
+        <DialogHeader className="pb-4 border-b border-gray-200">
+          <DialogTitle className="flex items-center gap-3 text-2xl font-bold bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">
+            <div className="w-10 h-10 bg-gradient-to-r from-teal-500 to-cyan-600 rounded-lg flex items-center justify-center">
+              <Tag className="h-5 w-5 text-white" />
+            </div>
+            分類詳情
           </DialogTitle>
-          <DialogDescription>
+          <p className="text-gray-600 mt-2">
             {category.type === 'category' ? '主分類' : '細分分類'}，共 {category.usageCount} 個物料使用此分類
-          </DialogDescription>
+          </p>
         </DialogHeader>
 
         <div className="space-y-6">
           {/* 分類資訊 */}
-          <div className="space-y-4 p-4 bg-gradient-to-r from-teal-50 to-cyan-50 rounded-lg border border-teal-200">
-            <h3 className="text-lg font-semibold flex items-center gap-2 text-teal-800">
-              <Tag className="h-4 w-4" />
+          <div className="space-y-6 p-6 bg-gradient-to-r from-teal-50 to-cyan-50 rounded-xl border border-teal-200 shadow-sm">
+            <h3 className="text-xl font-bold flex items-center gap-3 text-teal-800">
+              <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center">
+                <Tag className="h-4 w-4 text-teal-600" />
+              </div>
               分類資訊
             </h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-600">分類名稱</label>
-                <div className="text-sm text-gray-900">{category.name}</div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">分類名稱</label>
+                <div className="text-lg font-medium text-gray-900">{category.name}</div>
               </div>
               
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-600">分類類型</label>
-                <div className="text-sm">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">分類類型</label>
+                <div className="text-lg">
                   <Badge className={`${category.type === 'category' ? 'bg-teal-100 text-teal-800 border-teal-200' : 'bg-cyan-100 text-cyan-800 border-cyan-200'}`}>
                     {category.type === 'category' ? '主分類' : '細分分類'}
                   </Badge>
                 </div>
               </div>
               
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-600">使用數量</label>
-                <div className="text-sm text-gray-900">{category.usageCount} 個物料</div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">使用數量</label>
+                <div className="text-lg font-medium text-gray-900">{category.usageCount} 個物料</div>
               </div>
             </div>
           </div>
@@ -256,6 +267,18 @@ export function CategoryDetailDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             關閉
           </Button>
+          {onEdit && category && (
+            <Button 
+              onClick={() => {
+                onEdit(category);
+                onOpenChange(false);
+              }}
+              className="bg-teal-600 hover:bg-teal-700 text-white"
+            >
+              <Edit className="mr-2 h-4 w-4" />
+              編輯分類
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>

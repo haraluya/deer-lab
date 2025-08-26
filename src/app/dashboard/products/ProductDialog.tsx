@@ -16,6 +16,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MultiSelect, OptionType } from '@/components/ui/multi-select';
+import { Package, Tag, FlaskConical } from 'lucide-react';
 
 // 表單的 Zod 驗證 Schema
 const formSchema = z.object({
@@ -153,67 +154,189 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl bg-white dark:bg-slate-900" aria-describedby="product-dialog-description">
-        <DialogHeader>
-          <DialogTitle>{isEditMode ? `編輯產品 - ${productData?.code}` : '新增產品'}</DialogTitle>
-          <DialogDescription id="product-dialog-description">設定產品的規格、配方與狀態。</DialogDescription>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white">
+        <DialogHeader className="pb-4 border-b border-gray-200">
+          <DialogTitle className="flex items-center gap-3 text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+              <Package className="h-5 w-5 text-white" />
+            </div>
+            {isEditMode ? '編輯產品' : '新增產品'}
+          </DialogTitle>
+          <DialogDescription className="text-gray-600 mt-2">
+            {isEditMode ? '修改產品詳細資訊' : '建立新的產品資料'}
+          </DialogDescription>
         </DialogHeader>
+        
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-            <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><FormLabel>產品名稱</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-            <FormField control={form.control} name="nicotineMg" render={({ field }) => ( <FormItem><FormLabel>尼古丁濃度 (mg)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
-            <FormField control={form.control} name="seriesId" render={({ field }) => (
-              <FormItem>
-                <FormLabel>所屬系列</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isEditMode}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="選擇一個產品系列" /></SelectTrigger></FormControl>
-                  <SelectContent>
-                    {options.series.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )} />
-            <FormField control={form.control} name="fragranceId" render={({ field }) => (
-              <FormItem>
-                <FormLabel>專屬香精</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="選擇一個香精" /></SelectTrigger></FormControl>
-                  <SelectContent>
-                    {options.fragrances.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )} />
-            <FormField control={form.control} name="specificMaterialIds" render={({ field }) => (
-              <FormItem className="md:col-span-2">
-                <FormLabel>專屬材料</FormLabel>
-                <MultiSelect
-                  options={options.materials}
-                  selected={field.value || []}
-                  onChange={field.onChange}
-                  placeholder="選擇專屬材料..."
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* 基本資料 */}
+            <div className="space-y-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm">
+              <h3 className="text-xl font-bold flex items-center gap-3 text-blue-800">
+                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Tag className="h-4 w-4 text-blue-600" />
+                </div>
+                基本資料
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold text-gray-700">產品名稱 *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="例如：茉莉綠茶香精" 
+                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-                <FormMessage />
-              </FormItem>
-            )} />
-            <FormField control={form.control} name="status" render={({ field }) => (
-              <FormItem>
-                <FormLabel>狀態</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="設定狀態" /></SelectTrigger></FormControl>
-                  <SelectContent>
-                    <SelectItem value="active">啟用中</SelectItem>
-                    <SelectItem value="inactive">已停用</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )} />
-            <div className="md:col-span-2 flex justify-end">
-              <Button type="submit" disabled={isSubmitting} className="w-full md:w-auto mt-4">
-                {isSubmitting ? '處理中...' : (isEditMode ? '儲存更新' : '確認新增')}
+
+                <FormField
+                  control={form.control}
+                  name="nicotineMg"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold text-gray-700">尼古丁濃度 (mg)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="0"
+                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="seriesId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold text-gray-700">所屬系列 *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isEditMode}>
+                        <FormControl>
+                          <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                            <SelectValue placeholder="選擇一個產品系列" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {options.series.map(option => (
+                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold text-gray-700">狀態 *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                            <SelectValue placeholder="設定狀態" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="active">啟用中</SelectItem>
+                          <SelectItem value="inactive">已停用</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* 配方設定 */}
+            <div className="space-y-6 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200 shadow-sm">
+              <h3 className="text-xl font-bold flex items-center gap-3 text-green-800">
+                <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                  <FlaskConical className="h-4 w-4 text-green-600" />
+                </div>
+                配方設定
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="fragranceId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold text-gray-700">專屬香精 *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="border-gray-300 focus:border-green-500 focus:ring-green-500">
+                            <SelectValue placeholder="選擇一個香精" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {options.fragrances.map(option => (
+                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="specificMaterialIds"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold text-gray-700">專屬材料</FormLabel>
+                      <MultiSelect
+                        options={options.materials}
+                        selected={field.value || []}
+                        onChange={field.onChange}
+                        placeholder="選擇專屬材料..."
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                取消
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    處理中...
+                  </>
+                ) : (
+                  isEditMode ? '儲存更新' : '確認新增'
+                )}
               </Button>
             </div>
           </form>
