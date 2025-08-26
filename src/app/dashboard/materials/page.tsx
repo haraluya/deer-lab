@@ -9,9 +9,10 @@ import { getCategoryIcon, getCategoryColor } from '@/lib/utils';
 
 import { MaterialDialog, MaterialData } from './MaterialDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { MoreHorizontal, ShoppingCart, ListChecks, Save, X, Loader2, Search, FileSpreadsheet, Eye, Edit, Warehouse, Building, Tag, Package, AlertTriangle, Shield } from 'lucide-react';
+import { MoreHorizontal, ShoppingCart, ListChecks, Save, X, Loader2, Search, FileSpreadsheet, Eye, Edit, Warehouse, Building, Tag, Package, AlertTriangle, Shield, Plus, Calculator } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -27,6 +28,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ImportExportDialog } from '@/components/ImportExportDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DetailViewDialog } from '@/components/DetailViewDialog';
 
 // 擴展 MaterialData 以包含解析後的供應商名稱
 interface MaterialWithSupplier extends MaterialData {
@@ -117,14 +119,6 @@ function MaterialsPageContent() {
   // 檢查是否低於安全庫存
   const isLowStock = (material: MaterialWithSupplier) => {
     return (material.currentStock || 0) < (material.safetyStockLevel || 0);
-  };
-
-  // 獲取卡片背景顏色（低庫存時顯示淡粉色）
-  const getCardBgColor = (material: MaterialWithSupplier) => {
-    if (isLowStock(material)) {
-      return 'bg-pink-50 border-pink-200 hover:bg-pink-100';
-    }
-    return 'bg-white border-gray-200 hover:bg-gray-50';
   };
 
   // 獲取所有分類和子分類
@@ -219,13 +213,11 @@ function MaterialsPageContent() {
   // 處理分類篩選
   const handleCategoryFilter = (category: string) => {
     setSelectedCategory(selectedCategory === category ? "" : category);
-    setTimeout(handleSearchAndFilter, 100);
   };
 
   // 處理子分類篩選
   const handleSubCategoryFilter = (subCategory: string) => {
     setSelectedSubCategory(selectedSubCategory === subCategory ? "" : subCategory);
-    setTimeout(handleSearchAndFilter, 100);
   };
 
   // 處理新增物料
@@ -240,6 +232,72 @@ function MaterialsPageContent() {
     await fetchMaterials(suppliersMap);
   };
 
+  // 購物車相關功能
+  const handleCartToggle = (materialId: string) => {
+    setPurchaseCart(prevCart => {
+      const newCart = new Set(prevCart);
+      if (newCart.has(materialId)) {
+        newCart.delete(materialId);
+      } else {
+        newCart.add(materialId);
+      }
+      return newCart;
+    });
+  };
+  
+  const handleCreatePurchaseOrder = () => {
+    if (purchaseCart.size === 0) {
+      toast.info("請至少選擇一個物料加入採購單。");
+      return;
+    }
+    const itemIds = Array.from(purchaseCart).join(',');
+    const itemType = 'material';
+    router.push(`/dashboard/purchase-orders/create?type=${itemType}&ids=${itemIds}`);
+  };
+
+  // 盤點功能相關函式
+  const handleStockChange = (id: string, value: number) => {
+    setUpdatedStocks(prev => ({ ...prev, [id]: value }));
+  };
+
+  const handleSaveStocktake = async () => {
+    const changedItems = materials
+      .filter(m => updatedStocks[m.id] !== undefined && updatedStocks[m.id] !== m.currentStock)
+      .map(m => ({
+        itemRefPath: `materials/${m.id}`,
+        currentStock: m.currentStock,
+        newStock: updatedStocks[m.id],
+      }));
+
+    if (changedItems.length === 0) {
+      toast.info("庫存數量沒有變更，無需儲存。");
+      setIsStocktakeMode(false);
+      setUpdatedStocks({});
+      return;
+    }
+
+    const toastId = toast.loading("正在儲存盤點結果...");
+    try {
+      const functions = getFunctions();
+      const performStocktake = httpsCallable(functions, 'performStocktake');
+      await performStocktake({ items: changedItems });
+      
+      toast.success("盤點結果儲存成功，庫存已更新。", { id: toastId });
+      setUpdatedStocks({});
+      setIsStocktakeMode(false);
+      const suppliersMap = await fetchSuppliers();
+      await fetchMaterials(suppliersMap);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "儲存盤點失敗";
+      toast.error(errorMessage, { id: toastId });
+    }
+  };
+
+  const handleCancelStocktake = () => {
+    setUpdatedStocks({});
+    setIsStocktakeMode(false);
+  };
+
   useEffect(() => {
     const loadData = async () => {
       const suppliersMap = await fetchSuppliers();
@@ -250,235 +308,483 @@ function MaterialsPageContent() {
 
   useEffect(() => {
     handleSearchAndFilter();
-  }, [selectedCategory, selectedSubCategory]);
-
-  // 載入骨架屏
-  const LoadingSkeleton = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      {Array.from({ length: 8 }).map((_, index) => (
-        <Card key={index} className="animate-pulse">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
-              <div className="flex-1">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="h-3 bg-gray-200 rounded"></div>
-              <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
+  }, [selectedCategory, selectedSubCategory, searchTerm]);
 
   const { categories, subCategories } = getAllCategories();
 
   return (
-    <div className="space-y-6">
-      {/* 頁面標題和操作按鈕 */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="container mx-auto py-10">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">物料管理</h1>
-          <p className="text-gray-600 mt-1">管理系統中的所有物料資料</p>
-        </div>
-        
-        <div className="flex flex-wrap gap-2">
-          <Button
-            onClick={() => setIsImportExportOpen(true)}
-            variant="outline"
-            className="border-green-200 text-green-600 hover:bg-green-50"
-          >
-            <FileSpreadsheet className="mr-2 h-4 w-4" />
-            匯入/匯出
-          </Button>
-          
-          <Button
-            onClick={handleAdd}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
-          >
-            <Package className="mr-2 h-4 w-4" />
-            新增物料
-          </Button>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            物料管理
+          </h1>
+          <p className="text-gray-600 mt-2">管理系統中的所有物料資料</p>
         </div>
       </div>
 
-      {/* 搜尋欄 */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-        <Input
-          placeholder="搜尋物料名稱、代號、分類或供應商..."
-          value={searchTerm}
-          onChange={(e) => handleSearch(e.target.value)}
-          className="pl-10"
-        />
+      {/* 手機版功能按鈕區域 */}
+      <div className="lg:hidden mb-6">
+        <div className="grid grid-cols-2 gap-3">
+          {isStocktakeMode ? (
+            <>
+              <Button onClick={handleSaveStocktake} className="w-full">
+                <Package className="mr-2 h-4 w-4" />
+                儲存盤點
+              </Button>
+              <Button variant="outline" onClick={handleCancelStocktake} className="w-full">
+                取消
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => setIsImportExportOpen(true)} className="w-full">
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                匯入/匯出
+              </Button>
+              <Button onClick={handleCreatePurchaseOrder} disabled={purchaseCart.size === 0} variant="outline" className="w-full">
+                <ShoppingCart className="mr-2 h-4 w-4" />
+                採購單 ({purchaseCart.size})
+              </Button>
+              <Button variant="outline" onClick={() => setIsStocktakeMode(true)} className="w-full">
+                <Calculator className="mr-2 h-4 w-4" />
+                盤點模式
+              </Button>
+              <Button 
+                onClick={handleAdd}
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                新增物料
+              </Button>
+            </>
+          )}
+        </div>
       </div>
+
+      {/* 桌面版功能按鈕區域 */}
+      <div className="hidden lg:block mb-6">
+        <div className="flex flex-wrap items-center gap-2 justify-end">
+          {isStocktakeMode ? (
+            <>
+              <Button onClick={handleSaveStocktake}>
+                <Package className="mr-2 h-4 w-4" />
+                儲存盤點
+              </Button>
+              <Button variant="outline" onClick={handleCancelStocktake}>
+                取消
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => setIsImportExportOpen(true)}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                匯入/匯出
+              </Button>
+              <Button onClick={handleCreatePurchaseOrder} disabled={purchaseCart.size === 0} variant="outline">
+                <ShoppingCart className="mr-2 h-4 w-4" />
+                建立採購單 ({purchaseCart.size})
+              </Button>
+              <Button variant="outline" onClick={() => setIsStocktakeMode(true)}>
+                <Calculator className="mr-2 h-4 w-4" />
+                盤點模式
+              </Button>
+              <Button 
+                onClick={handleAdd}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                新增物料
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* 搜尋框 */}
+      <Card className="mb-6 border-0 shadow-lg bg-gradient-to-r from-gray-50 to-blue-50">
+        <CardContent className="pt-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-blue-600" />
+            <Input
+              placeholder="搜尋物料名稱、代號、分類或供應商..."
+              value={searchTerm}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="pl-10 border-blue-200 focus:border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* 分類篩選標籤 */}
-      <div className="space-y-4">
-        {/* 主分類篩選 */}
-        <div>
-          <h3 className="text-sm font-medium text-gray-700 mb-2">主分類篩選</h3>
-          <div className="flex flex-wrap gap-2">
-            {categories.map((category) => (
-              <Badge
-                key={category}
-                variant={selectedCategory === category ? "default" : "secondary"}
-                className={`cursor-pointer transition-colors ${
-                  selectedCategory === category 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-                onClick={() => handleCategoryFilter(category)}
-              >
-                <span className="mr-1">{getCategoryIcon(category)}</span>
-                {category}
-              </Badge>
-            ))}
-          </div>
+      <div className="mb-6">
+        <h3 className="text-sm font-medium text-gray-700 mb-3">分類篩選</h3>
+        <div className="flex flex-wrap gap-2">
+          {/* 主分類標籤 - 藍色系 */}
+          {categories.map((category) => (
+            <Badge
+              key={`category-${category}`}
+              variant="outline"
+              className={`cursor-pointer transition-all duration-200 ${
+                selectedCategory === category 
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
+                  : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300'
+              }`}
+              onClick={() => handleCategoryFilter(category)}
+            >
+              <span className="mr-1">{getCategoryIcon(category)}</span>
+              {category}
+            </Badge>
+          ))}
+          
+          {/* 細分分類標籤 - 綠色系 */}
+          {subCategories.map((subCategory) => (
+            <Badge
+              key={`subcategory-${subCategory}`}
+              variant="outline"
+              className={`cursor-pointer transition-all duration-200 ${
+                selectedSubCategory === subCategory 
+                  ? 'bg-green-600 text-white border-green-600 shadow-md' 
+                  : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300'
+              }`}
+              onClick={() => handleSubCategoryFilter(subCategory)}
+            >
+              {subCategory}
+            </Badge>
+          ))}
         </div>
+      </div>
 
-        {/* 子分類篩選 */}
-        <div>
-          <h3 className="text-sm font-medium text-gray-700 mb-2">細分分類篩選</h3>
-          <div className="flex flex-wrap gap-2">
-            {subCategories.map((subCategory) => (
-              <Badge
-                key={subCategory}
-                variant={selectedSubCategory === subCategory ? "default" : "outline"}
-                className={`cursor-pointer transition-colors ${
-                  selectedSubCategory === subCategory 
-                    ? 'bg-green-600 text-white border-green-600' 
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                }`}
-                onClick={() => handleSubCategoryFilter(subCategory)}
-              >
-                {subCategory}
-              </Badge>
-            ))}
+      {/* 手機版表格容器 */}
+      <div className="lg:hidden">
+        <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden mb-6">
+          <div className="px-4 py-3 bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Package className="h-4 w-4 text-blue-600" />
+                <h2 className="text-base font-semibold text-gray-800">物料清單</h2>
+              </div>
+              <div className="text-xs text-gray-600">
+                共 {filteredMaterials.length} 項
+              </div>
+            </div>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <div className="min-w-full">
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="relative">
+                    <div className="w-10 h-10 border-4 border-blue-200 rounded-full animate-spin"></div>
+                    <div className="absolute top-0 left-0 w-10 h-10 border-4 border-transparent border-t-blue-600 rounded-full animate-spin"></div>
+                  </div>
+                  <span className="mt-3 text-sm text-gray-600 font-medium">載入中...</span>
+                </div>
+              ) : filteredMaterials.length > 0 ? (
+                <div className="divide-y divide-gray-200">
+                  {filteredMaterials.map((material) => {
+                    const isLowStockItem = isLowStock(material);
+                    return (
+                      <div 
+                        key={material.id} 
+                        className={`p-4 ${isLowStockItem && !isStocktakeMode ? 'bg-red-50/50' : ''} hover:bg-blue-50/50 transition-colors duration-200`}
+                        onClick={() => handleViewDetail(material)}
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 ${getCategoryColor(material.category || '')} rounded-lg flex items-center justify-center`}>
+                              {getCategoryIcon(material.category || '')}
+                            </div>
+                            <div>
+                              <div className="font-medium text-gray-900 text-sm">{material.name}</div>
+                              <div className="text-xs text-gray-500">代號: {material.code}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              checked={purchaseCart.has(material.id)}
+                              onCheckedChange={() => handleCartToggle(material.id)}
+                              aria-label={`選擇 ${material.name}`}
+                              disabled={isStocktakeMode}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                <Button variant="ghost" className="h-8 w-8 p-0" disabled={isStocktakeMode}>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleViewDetail(material)}>
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  查看詳細
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleEdit(material)}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  編輯
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleDelete(material)} className="text-red-600">刪除</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <div className="flex items-center gap-1 mb-1">
+                              <Tag className="h-3 w-3 text-blue-600" />
+                              <span className="text-gray-500">主分類</span>
+                            </div>
+                            <span className="font-medium text-gray-700">{material.category}</span>
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1 mb-1">
+                              <span className="text-gray-500">細分分類</span>
+                            </div>
+                            <span className="font-medium text-gray-700">{material.subCategory}</span>
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1 mb-1">
+                              <Building className="h-3 w-3 text-gray-400" />
+                              <span className="text-gray-500">供應商</span>
+                            </div>
+                            <span className="font-medium text-gray-700">{material.supplierName}</span>
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1 mb-1">
+                              <Warehouse className="h-3 w-3 text-gray-400" />
+                              <span className="text-gray-500">目前庫存</span>
+                            </div>
+                            {isStocktakeMode ? (
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="number"
+                                  className="w-20 h-7 text-sm border-blue-200 focus:border-blue-500 focus:ring-blue-500"
+                                  value={updatedStocks[material.id] ?? material.currentStock}
+                                  onChange={(e) => handleStockChange(material.id, Number(e.target.value))}
+                                />
+                                <span className="text-xs text-gray-600">{material.unit}</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1">
+                                <span className={`font-medium ${isLowStockItem ? 'text-red-600' : 'text-green-600'}`}>
+                                  {material.currentStock} {material.unit}
+                                </span>
+                                {isLowStockItem && (
+                                  <span className="text-xs text-red-600 font-medium">低庫存</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                    <Package className="h-6 w-6 text-gray-400" />
+                  </div>
+                  <h3 className="text-base font-medium text-gray-900 mb-1">沒有物料資料</h3>
+                  <p className="text-sm text-gray-500 mb-4 text-center">開始新增第一個物料來管理您的庫存</p>
+                  <Button 
+                    onClick={handleAdd}
+                    variant="outline"
+                    size="sm"
+                    className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    新增物料
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 物料卡片網格 */}
-      {isLoading ? (
-        <LoadingSkeleton />
-      ) : filteredMaterials.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredMaterials.map((material) => (
-            <Card 
-              key={material.id} 
-              className={`cursor-pointer transition-all duration-200 ${getCardBgColor(material)}`}
-              onClick={() => handleViewDetail(material)}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 ${getCategoryColor(material.category || '')} rounded-lg flex items-center justify-center text-2xl`}>
-                      {getCategoryIcon(material.category || '')}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg font-semibold truncate">
-                        {material.name}
-                      </CardTitle>
-                      <CardDescription className="text-sm font-mono text-gray-600">
-                        {material.code}
-                      </CardDescription>
-                    </div>
-                  </div>
-                  
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>操作</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleViewDetail(material); }}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        查看詳情
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(material); }}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        編輯
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem 
-                        onClick={(e) => { e.stopPropagation(); handleDelete(material); }}
-                        className="text-red-600"
-                      >
-                        <X className="mr-2 h-4 w-4" />
-                        刪除
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">主分類</span>
-                  <Badge variant="secondary" className="text-xs">
-                    {material.category}
-                  </Badge>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">細分分類</span>
-                  <Badge variant="outline" className="text-xs">
-                    {material.subCategory}
-                  </Badge>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">供應商</span>
-                  <span className="text-sm font-medium truncate max-w-[120px]">
-                    {material.supplierName}
-                  </span>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">庫存</span>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm font-medium ${isLowStock(material) ? 'text-red-600' : 'text-green-600'}`}>
-                      {material.currentStock} {material.unit}
-                    </span>
-                    {isLowStock(material) && (
-                      <AlertTriangle className="h-3 w-3 text-red-500" />
-                    )}
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">成本</span>
-                  <span className="text-sm font-medium">
-                    ${material.costPerUnit?.toFixed(2) || '0.00'}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-16">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Package className="h-8 w-8 text-gray-400" />
+      {/* 桌面版表格容器 */}
+      <div className="hidden lg:block">
+        <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+        <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-blue-600" />
+              <h2 className="text-lg font-semibold text-gray-800">物料清單</h2>
+            </div>
+            <div className="text-sm text-gray-600">
+              共 {filteredMaterials.length} 項物料
+            </div>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">沒有物料資料</h3>
-          <p className="text-gray-500 mb-4">開始新增第一個物料來管理您的庫存</p>
-          <Button onClick={handleAdd} variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50">
-            <Package className="mr-2 h-4 w-4" />
-            新增物料
-          </Button>
         </div>
-      )}
+        
+        <div className="table-responsive">
+          <Table className="table-enhanced">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[60px] text-center">選取</TableHead>
+                <TableHead className="text-left">物料資訊</TableHead>
+                <TableHead className="text-left">主分類</TableHead>
+                <TableHead className="text-left">細分分類</TableHead>
+                <TableHead className="text-left">供應商</TableHead>
+                <TableHead className="text-right">目前庫存</TableHead>
+                <TableHead className="text-right">安全庫存</TableHead>
+                <TableHead className="text-right">成本</TableHead>
+                <TableHead className="text-right">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-16">
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="relative">
+                        <div className="w-12 h-12 border-4 border-blue-200 rounded-full animate-spin"></div>
+                        <div className="absolute top-0 left-0 w-12 h-12 border-4 border-transparent border-t-blue-600 rounded-full animate-spin"></div>
+                      </div>
+                      <span className="mt-4 text-gray-600 font-medium">載入物料資料中...</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : filteredMaterials.length > 0 ? (
+                filteredMaterials.map((material) => {
+                  const isLowStockItem = isLowStock(material);
+                  return (
+                    <TableRow 
+                      key={material.id} 
+                      className={`${isLowStockItem && !isStocktakeMode ? 'bg-red-50/50' : ''} cursor-pointer hover:bg-blue-50/50 transition-colors duration-200`} 
+                      data-state={purchaseCart.has(material.id) ? "selected" : ""}
+                      onClick={() => handleViewDetail(material)}
+                    >
+                      <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={purchaseCart.has(material.id)}
+                          onCheckedChange={() => handleCartToggle(material.id)}
+                          aria-label={`選擇 ${material.name}`}
+                          disabled={isStocktakeMode}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 ${getCategoryColor(material.category || '')} rounded-lg flex items-center justify-center`}>
+                            {getCategoryIcon(material.category || '')}
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-900">{material.name}</div>
+                            <div className="text-xs text-gray-500">代號: {material.code}</div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="text-xs">
+                          {material.category}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {material.subCategory}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Building className="h-4 w-4 text-blue-600" />
+                          <span className="text-sm font-medium text-gray-700">{material.supplierName}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {isStocktakeMode ? (
+                          <div className="flex justify-end items-center gap-2">
+                            <Input
+                              type="number"
+                              className="w-24 h-8 text-right border-blue-200 focus:border-blue-500 focus:ring-blue-500"
+                              value={updatedStocks[material.id] ?? material.currentStock}
+                              onChange={(e) => handleStockChange(material.id, Number(e.target.value))}
+                            />
+                            <span className="text-sm text-gray-600">{material.unit}</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-end gap-2">
+                            <Warehouse className="h-4 w-4 text-gray-400" />
+                            <span className={`font-medium ${isLowStockItem ? 'text-red-600' : 'text-green-600'}`}>
+                              {material.currentStock} {material.unit}
+                            </span>
+                            {isLowStockItem && (
+                              <span className="text-xs text-red-600 font-medium">低庫存</span>
+                            )}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="number-display number-neutral">
+                            {material.safetyStockLevel} {material.unit}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className="number-display number-neutral">
+                          ${material.costPerUnit?.toFixed(2) || '0.00'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={isStocktakeMode}>
+                              <span className="sr-only">開啟選單</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>操作</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleViewDetail(material)}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              查看詳細
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEdit(material)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              編輯物料
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => handleDelete(material)}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              刪除物料
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-16">
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <Package className="h-8 w-8 text-gray-400" />
+                      </div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">沒有物料資料</h3>
+                      <p className="text-gray-500 mb-4">開始新增第一個物料來管理您的庫存</p>
+                      <Button 
+                        onClick={handleAdd}
+                        variant="outline"
+                        className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        新增物料
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+            </Table>
+        </div>
+      </div>
+      </div>
 
       {/* 物料對話框 */}
       <MaterialDialog
@@ -489,123 +795,68 @@ function MaterialsPageContent() {
       />
 
       {/* 詳情對話框 */}
-      <Dialog open={isDetailViewOpen} onOpenChange={setIsDetailViewOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              物料詳情
-            </DialogTitle>
-          </DialogHeader>
-          
-          {selectedDetailMaterial && (
-            <div className="space-y-6">
-              {/* 基本資訊 */}
-              <div className="space-y-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-                <h3 className="text-lg font-semibold flex items-center gap-2 text-blue-800">
-                  <Tag className="h-4 w-4" />
-                  基本資訊
-                </h3>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">物料名稱</label>
-                    <p className="text-sm font-semibold">{selectedDetailMaterial.name}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">物料代號</label>
-                    <p className="text-sm font-mono">{selectedDetailMaterial.code}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">主分類</label>
-                    <p className="text-sm">{selectedDetailMaterial.category}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">細分分類</label>
-                    <p className="text-sm">{selectedDetailMaterial.subCategory}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* 供應商資訊 */}
-              <div className="space-y-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
-                <h3 className="text-lg font-semibold flex items-center gap-2 text-green-800">
-                  <Building className="h-4 w-4" />
-                  供應商資訊
-                </h3>
-                
-                <div>
-                  <label className="text-sm font-medium text-gray-600">供應商</label>
-                  <p className="text-sm">{selectedDetailMaterial.supplierName}</p>
-                </div>
-              </div>
-
-              {/* 庫存與成本 */}
-              <div className="space-y-4 p-4 bg-gradient-to-r from-purple-50 to-violet-50 rounded-lg border border-purple-200">
-                <h3 className="text-lg font-semibold flex items-center gap-2 text-purple-800">
-                  <Shield className="h-4 w-4" />
-                  庫存與成本
-                </h3>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">當前庫存</label>
-                    <p className={`text-sm font-semibold ${isLowStock(selectedDetailMaterial) ? 'text-red-600' : 'text-green-600'}`}>
-                      {selectedDetailMaterial.currentStock} {selectedDetailMaterial.unit}
-                      {isLowStock(selectedDetailMaterial) && (
-                        <AlertTriangle className="inline h-3 w-3 ml-1" />
-                      )}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">安全庫存</label>
-                    <p className="text-sm">{selectedDetailMaterial.safetyStockLevel} {selectedDetailMaterial.unit}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">單位成本</label>
-                    <p className="text-sm">${selectedDetailMaterial.costPerUnit?.toFixed(2) || '0.00'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">單位</label>
-                    <p className="text-sm">{selectedDetailMaterial.unit}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* 備註 */}
-              {selectedDetailMaterial.notes && (
-                <div className="space-y-4 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
-                  <h3 className="text-lg font-semibold flex items-center gap-2 text-yellow-800">
-                    <Package className="h-4 w-4" />
-                    備註
-                  </h3>
-                  <p className="text-sm whitespace-pre-wrap">{selectedDetailMaterial.notes}</p>
-                </div>
-              )}
-
-              {/* 操作按鈕 */}
-              <div className="flex justify-end gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsDetailViewOpen(false)}
-                >
-                  關閉
-                </Button>
-                <Button 
-                  onClick={() => {
-                    setIsDetailViewOpen(false);
-                    handleEdit(selectedDetailMaterial);
-                  }}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
-                >
-                  <Edit className="mr-2 h-4 w-4" />
-                  編輯
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {selectedDetailMaterial && (
+        <DetailViewDialog
+          isOpen={isDetailViewOpen}
+          onOpenChange={setIsDetailViewOpen}
+          title={selectedDetailMaterial.name}
+          subtitle={`代號: ${selectedDetailMaterial.code}`}
+          sections={[
+            {
+              title: "基本資訊",
+              icon: <Package className="h-4 w-4" />,
+              color: "blue" as const,
+              fields: [
+                { label: "物料代號", value: selectedDetailMaterial.code },
+                { label: "物料名稱", value: selectedDetailMaterial.name },
+                { label: "主分類", value: selectedDetailMaterial.category },
+                { label: "細分分類", value: selectedDetailMaterial.subCategory },
+              ]
+            },
+            {
+              title: "供應商資訊",
+              icon: <Building className="h-4 w-4" />,
+              color: "green" as const,
+              fields: [
+                { label: "供應商", value: selectedDetailMaterial.supplierName },
+              ]
+            },
+            {
+              title: "庫存與成本",
+              icon: <Warehouse className="h-4 w-4" />,
+              color: "purple" as const,
+              fields: [
+                { label: "目前庫存", value: selectedDetailMaterial.currentStock, type: "number" },
+                { label: "安全庫存", value: selectedDetailMaterial.safetyStockLevel, type: "number" },
+                { label: "單位成本", value: selectedDetailMaterial.costPerUnit, type: "currency" },
+                { label: "單位", value: selectedDetailMaterial.unit },
+              ]
+            },
+            ...(selectedDetailMaterial.notes ? [{
+              title: "備註",
+              icon: <Tag className="h-4 w-4" />,
+              color: "yellow" as const,
+              fields: [
+                { label: "備註", value: selectedDetailMaterial.notes },
+              ]
+            }] : [])
+          ]}
+          actions={
+            <>
+              <Button variant="outline" onClick={() => setIsDetailViewOpen(false)}>
+                關閉
+              </Button>
+              <Button onClick={() => {
+                setIsDetailViewOpen(false);
+                handleEdit(selectedDetailMaterial);
+              }}>
+                <Edit className="mr-2 h-4 w-4" />
+                編輯
+              </Button>
+            </>
+          }
+        />
+      )}
 
       {/* 確認刪除對話框 */}
       <ConfirmDialog
@@ -650,6 +901,7 @@ function MaterialsPageContent() {
         }}
         title="物料資料"
         description="匯入或匯出物料資料，支援 Excel 和 CSV 格式。匯入時會自動生成缺失的分類和代號。"
+        color="blue"
         sampleData={[
           {
             code: "MAT001",

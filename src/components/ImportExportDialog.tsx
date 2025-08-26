@@ -26,6 +26,7 @@ interface ImportExportDialogProps {
     type?: "string" | "number" | "boolean"
     format?: "percentage" // 新增百分比格式
   }>
+  color?: "blue" | "green" | "purple" | "yellow" | "red" | "gray"
 }
 
 export function ImportExportDialog({
@@ -36,7 +37,8 @@ export function ImportExportDialog({
   title,
   description,
   sampleData,
-  fields
+  fields,
+  color = "blue"
 }: ImportExportDialogProps) {
   const [isImporting, setIsImporting] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
@@ -199,26 +201,86 @@ export function ImportExportDialog({
     }
   }
 
+  const getColorClasses = (color: string) => {
+    switch (color) {
+      case "blue":
+        return {
+          header: "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200",
+          title: "text-blue-800",
+          icon: "text-blue-600",
+          button: "bg-blue-600 hover:bg-blue-700 text-white"
+        }
+      case "green":
+        return {
+          header: "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200",
+          title: "text-green-800",
+          icon: "text-green-600",
+          button: "bg-green-600 hover:bg-green-700 text-white"
+        }
+      case "purple":
+        return {
+          header: "bg-gradient-to-r from-purple-50 to-violet-50 border-purple-200",
+          title: "text-purple-800",
+          icon: "text-purple-600",
+          button: "bg-purple-600 hover:bg-purple-700 text-white"
+        }
+      case "yellow":
+        return {
+          header: "bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200",
+          title: "text-yellow-800",
+          icon: "text-yellow-600",
+          button: "bg-yellow-600 hover:bg-yellow-700 text-white"
+        }
+      case "red":
+        return {
+          header: "bg-gradient-to-r from-red-50 to-pink-50 border-red-200",
+          title: "text-red-800",
+          icon: "text-red-600",
+          button: "bg-red-600 hover:bg-red-700 text-white"
+        }
+      case "gray":
+        return {
+          header: "bg-gradient-to-r from-gray-50 to-slate-50 border-gray-200",
+          title: "text-gray-800",
+          icon: "text-gray-600",
+          button: "bg-gray-600 hover:bg-gray-700 text-white"
+        }
+      default:
+        return {
+          header: "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200",
+          title: "text-blue-800",
+          icon: "text-blue-600",
+          button: "bg-blue-600 hover:bg-blue-700 text-white"
+        }
+    }
+  }
+
+  const colorClasses = getColorClasses(color)
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" aria-describedby="import-export-dialog-description">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileSpreadsheet className="h-5 w-5" />
-              {title} - 匯入/匯出
-            </DialogTitle>
-            <DialogDescription id="import-export-dialog-description">{description}</DialogDescription>
-          </DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white" aria-describedby="import-export-dialog-description">
+        <DialogHeader className={`pb-4 border-b ${colorClasses.header}`}>
+          <DialogTitle className={`flex items-center gap-3 text-2xl font-bold ${colorClasses.title}`}>
+            <div className={`w-10 h-10 ${colorClasses.header} rounded-lg flex items-center justify-center`}>
+              <FileSpreadsheet className={`h-5 w-5 ${colorClasses.icon}`} />
+            </div>
+            {title} - 匯入/匯出
+          </DialogTitle>
+          <DialogDescription className="text-gray-600 mt-2" id="import-export-dialog-description">{description}</DialogDescription>
+        </DialogHeader>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* 匯入區塊 */}
-          <Card>
+          <Card className={`${colorClasses.header} border-2`}>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="h-4 w-4" />
+              <CardTitle className={`flex items-center gap-3 text-lg font-bold ${colorClasses.title}`}>
+                <div className={`w-8 h-8 ${colorClasses.header} rounded-lg flex items-center justify-center`}>
+                  <Upload className={`h-4 w-4 ${colorClasses.icon}`} />
+                </div>
                 資料匯入
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-gray-600">
                 上傳 Excel (.xlsx) 或 CSV 檔案來匯入資料
               </CardDescription>
             </CardHeader>
@@ -289,7 +351,7 @@ export function ImportExportDialog({
                   <Button 
                     onClick={handleImport} 
                     disabled={isImporting || validationErrors.length > 0}
-                    className="w-full"
+                    className={`w-full ${colorClasses.button}`}
                   >
                     {isImporting ? "匯入中..." : "確認匯入"}
                   </Button>
@@ -299,13 +361,15 @@ export function ImportExportDialog({
           </Card>
 
           {/* 匯出區塊 */}
-          <Card>
+          <Card className={`${colorClasses.header} border-2`}>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Download className="h-4 w-4" />
+              <CardTitle className={`flex items-center gap-3 text-lg font-bold ${colorClasses.title}`}>
+                <div className={`w-8 h-8 ${colorClasses.header} rounded-lg flex items-center justify-center`}>
+                  <Download className={`h-4 w-4 ${colorClasses.icon}`} />
+                </div>
                 資料匯出
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-gray-600">
                 將現有資料匯出為 CSV 格式
               </CardDescription>
             </CardHeader>
@@ -325,7 +389,7 @@ export function ImportExportDialog({
               <Button 
                 onClick={handleExport} 
                 disabled={isExporting}
-                className="w-full"
+                className={`w-full ${colorClasses.button}`}
               >
                 {isExporting ? "匯出中..." : "匯出 CSV"}
               </Button>

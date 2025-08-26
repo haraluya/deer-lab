@@ -101,7 +101,7 @@ export function MaterialDialog({
       name: '',
       category: '',
       subCategory: '',
-      supplierId: '',
+      supplierId: 'none',
       safetyStockLevel: 0,
       costPerUnit: 0,
       unit: '',
@@ -185,7 +185,7 @@ export function MaterialDialog({
         name: materialData.name || '',
         category: materialData.category || '',
         subCategory: materialData.subCategory || '',
-        supplierId: materialData.supplierRef?.id || '',
+        supplierId: materialData.supplierRef?.id || 'none',
         safetyStockLevel: materialData.safetyStockLevel || 0,
         costPerUnit: materialData.costPerUnit || 0,
         unit: materialData.unit || '',
@@ -218,15 +218,17 @@ export function MaterialDialog({
         await updateMaterial({
           materialId: materialData.id,
           code: finalCode,
-          ...data
+          ...data,
+          supplierId: data.supplierId === 'none' ? undefined : data.supplierId
         });
         toast.success(`物料 ${data.name} 已成功更新。`, { id: toastId });
       } else {
-        const createMaterial = httpsCallable(functions, 'createMaterial');
-        await createMaterial({
-          code: finalCode,
-          ...data
-        });
+              const createMaterial = httpsCallable(functions, 'createMaterial');
+      await createMaterial({
+        code: finalCode,
+        ...data,
+        supplierId: data.supplierId === 'none' ? undefined : data.supplierId
+      });
         toast.success(`物料 ${data.name} 已成功建立。`, { id: toastId });
       }
       
@@ -246,13 +248,15 @@ export function MaterialDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white">
+        <DialogHeader className="pb-4 border-b border-gray-200">
+          <DialogTitle className="flex items-center gap-3 text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+              <Package className="h-5 w-5 text-white" />
+            </div>
             {isEditMode ? '編輯物料' : '新增物料'}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-gray-600 mt-2">
             {isEditMode ? '修改物料詳細資訊' : '建立新的物料資料'}
           </DialogDescription>
         </DialogHeader>
@@ -260,21 +264,27 @@ export function MaterialDialog({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* 基本資料 */}
-            <div className="space-y-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-              <h3 className="text-lg font-semibold flex items-center gap-2 text-blue-800">
-                <Tag className="h-4 w-4" />
+            <div className="space-y-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm">
+              <h3 className="text-xl font-bold flex items-center gap-3 text-blue-800">
+                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Tag className="h-4 w-4 text-blue-600" />
+                </div>
                 基本資料
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>物料名稱 *</FormLabel>
+                      <FormLabel className="text-sm font-semibold text-gray-700">物料名稱 *</FormLabel>
                       <FormControl>
-                        <Input placeholder="例如：高級香精 A" {...field} />
+                        <Input 
+                          placeholder="例如：高級香精 A" 
+                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -291,10 +301,10 @@ export function MaterialDialog({
                       name="category"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>主分類 *</FormLabel>
+                          <FormLabel className="text-sm font-semibold text-gray-700">主分類 *</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
-                              <SelectTrigger>
+                              <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
                                 <SelectValue placeholder="選擇主分類" />
                               </SelectTrigger>
                             </FormControl>
@@ -321,12 +331,12 @@ export function MaterialDialog({
                   name="subCategory"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>細分分類 *</FormLabel>
+                      <FormLabel className="text-sm font-semibold text-gray-700">細分分類 *</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="選擇細分分類" />
-                          </SelectTrigger>
+                                                        <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                                <SelectValue placeholder="選擇細分分類" />
+                              </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {subCategories.map((subCategory) => (
@@ -344,7 +354,7 @@ export function MaterialDialog({
                 <div className="flex items-center gap-2">
                   <Hash className="h-4 w-4 text-gray-500" />
                   <div className="flex-1">
-                    <label className="text-sm font-medium text-gray-700">物料代號</label>
+                    <label className="text-sm font-semibold text-gray-700">物料代號</label>
                     <div className="mt-1 p-2 bg-gray-50 border border-gray-200 rounded-md text-sm font-mono">
                       {generatedCode || '選擇分類後自動生成'}
                     </div>
@@ -354,9 +364,11 @@ export function MaterialDialog({
             </div>
 
             {/* 供應商資訊 */}
-            <div className="space-y-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
-              <h3 className="text-lg font-semibold flex items-center gap-2 text-green-800">
-                <Building className="h-4 w-4" />
+            <div className="space-y-6 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200 shadow-sm">
+              <h3 className="text-xl font-bold flex items-center gap-3 text-green-800">
+                <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Building className="h-4 w-4 text-green-600" />
+                </div>
                 供應商資訊
               </h3>
               
@@ -365,21 +377,21 @@ export function MaterialDialog({
                 name="supplierId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>供應商</FormLabel>
+                    <FormLabel className="text-sm font-semibold text-gray-700">供應商</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="border-gray-300 focus:border-green-500 focus:ring-green-500">
                           <SelectValue placeholder="選擇供應商" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="">無供應商</SelectItem>
-                        {suppliers.map((supplier) => (
-                          <SelectItem key={supplier.id} value={supplier.id}>
-                            {supplier.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                                              <SelectContent>
+                          <SelectItem value="none">無供應商</SelectItem>
+                          {suppliers.map((supplier) => (
+                            <SelectItem key={supplier.id} value={supplier.id}>
+                              {supplier.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
@@ -388,21 +400,28 @@ export function MaterialDialog({
             </div>
 
             {/* 庫存與成本 */}
-            <div className="space-y-4 p-4 bg-gradient-to-r from-purple-50 to-violet-50 rounded-lg border border-purple-200">
-              <h3 className="text-lg font-semibold flex items-center gap-2 text-purple-800">
-                <Shield className="h-4 w-4" />
+            <div className="space-y-6 p-6 bg-gradient-to-r from-purple-50 to-violet-50 rounded-xl border border-purple-200 shadow-sm">
+              <h3 className="text-xl font-bold flex items-center gap-3 text-purple-800">
+                <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Shield className="h-4 w-4 text-purple-600" />
+                </div>
                 庫存與成本
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <FormField
                   control={form.control}
                   name="safetyStockLevel"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>安全庫存</FormLabel>
+                      <FormLabel className="text-sm font-semibold text-gray-700">安全庫存</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="0" {...field} />
+                                                  <Input 
+                            type="number" 
+                            placeholder="0" 
+                            className="border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                            {...field} 
+                          />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -414,9 +433,15 @@ export function MaterialDialog({
                   name="costPerUnit"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>單位成本</FormLabel>
+                      <FormLabel className="text-sm font-semibold text-gray-700">單位成本</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                                                  <Input 
+                            type="number" 
+                            step="0.01" 
+                            placeholder="0.00" 
+                            className="border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                            {...field} 
+                          />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -428,9 +453,13 @@ export function MaterialDialog({
                   name="unit"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>單位</FormLabel>
+                      <FormLabel className="text-sm font-semibold text-gray-700">單位</FormLabel>
                       <FormControl>
-                        <Input placeholder="例如：kg, 個, 包" {...field} />
+                                                  <Input 
+                            placeholder="例如：kg, 個, 包" 
+                            className="border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                            {...field} 
+                          />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -440,9 +469,11 @@ export function MaterialDialog({
             </div>
 
             {/* 備註 */}
-            <div className="space-y-4 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
-              <h3 className="text-lg font-semibold flex items-center gap-2 text-yellow-800">
-                <Package className="h-4 w-4" />
+            <div className="space-y-6 p-6 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl border border-yellow-200 shadow-sm">
+              <h3 className="text-xl font-bold flex items-center gap-3 text-yellow-800">
+                <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                  <Package className="h-4 w-4 text-yellow-600" />
+                </div>
                 備註資訊
               </h3>
               
@@ -451,11 +482,11 @@ export function MaterialDialog({
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>備註</FormLabel>
+                    <FormLabel className="text-sm font-semibold text-gray-700">備註</FormLabel>
                     <FormControl>
                       <Textarea 
                         placeholder="請輸入物料相關的備註資訊..." 
-                        className="min-h-[100px] resize-none"
+                        className="min-h-[100px] resize-none border-gray-300 focus:border-yellow-500 focus:ring-yellow-500"
                         {...field} 
                       />
                     </FormControl>
@@ -466,16 +497,28 @@ export function MaterialDialog({
             </div>
 
             {/* 操作按鈕 */}
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => onOpenChange(false)}
+                className="px-6 py-2 border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
                 取消
               </Button>
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+                className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
               >
-                {isSubmitting ? "處理中..." : (isEditMode ? "更新" : "新增")}
+                {isSubmitting ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    處理中...
+                  </div>
+                ) : (
+                  isEditMode ? "更新物料" : "新增物料"
+                )}
               </Button>
             </div>
           </form>
