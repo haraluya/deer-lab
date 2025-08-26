@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "public": "out",
+    "public": ".next",
     "ignore": [
       "firebase.json",
       "**/.*",
@@ -8,117 +8,8 @@
     ],
     "rewrites": [
       {
-        "source": "/dashboard/suppliers",
-        "destination": "/dashboard/suppliers.html"
-      },
-      {
-        "source": "/dashboard/personnel",
-        "destination": "/dashboard/personnel.html"
-      },
-      {
-        "source": "/dashboard/roles",
-        "destination": "/dashboard/roles.html"
-      },
-      {
-        "source": "/dashboard/material-categories",
-        "destination": "/dashboard/material-categories.html"
-      },
-      {
-        "source": "/dashboard/materials",
-        "destination": "/dashboard/materials.html"
-      },
-      {
-        "source": "/dashboard/fragrances",
-        "destination": "/dashboard/fragrances.html"
-      },
-      {
-        "source": "/dashboard/product-series",
-        "destination": "/dashboard/product-series.html"
-      },
-      {
-        "source": "/dashboard/products",
-        "destination": "/dashboard/products.html"
-      },
-      {
-        "source": "/dashboard/purchase-orders",
-        "destination": "/dashboard/purchase-orders.html"
-      },
-      {
-        "source": "/dashboard/production-calculator",
-        "destination": "/dashboard/production-calculator.html"
-      },
-      {
-        "source": "/dashboard/work-orders",
-        "destination": "/dashboard/work-orders.html"
-      },
-      {
-        "source": "/dashboard/inventory",
-        "destination": "/dashboard/inventory.html"
-      },
-      {
-        "source": "/dashboard/reports",
-        "destination": "/dashboard/reports.html"
-      },
-      {
-        "source": "/dashboard/cost-management",
-        "destination": "/dashboard/cost-management.html"
-      },
-      {
-        "source": "/dashboard/test",
-        "destination": "/dashboard/test.html"
-      },
-      {
-        "source": "/dashboard/purchase-orders/create",
-        "destination": "/dashboard/purchase-orders/create.html"
-      },
-      {
-        "source": "/dashboard/work-orders/create",
-        "destination": "/dashboard/work-orders/create.html"
-      },
-      {
-        "source": "/dashboard",
-        "destination": "/dashboard.html"
-      },
-      {
         "source": "**",
-        "destination": "/index.html"
-      }
-    ],
-    "headers": [
-      {
-        "source": "**/*.js",
-        "headers": [
-          {
-            "key": "Content-Type",
-            "value": "application/javascript"
-          },
-          {
-            "key": "X-Content-Type-Options",
-            "value": "nosniff"
-          }
-        ]
-      },
-      {
-        "source": "**/*.css",
-        "headers": [
-          {
-            "key": "Content-Type",
-            "value": "text/css"
-          },
-          {
-            "key": "X-Content-Type-Options",
-            "value": "nosniff"
-          }
-        ]
-      },
-      {
-        "source": "**/*.html",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
-          }
-        ]
+        "function": "nextServer"
       }
     ]
   },
