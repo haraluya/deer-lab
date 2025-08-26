@@ -16,6 +16,8 @@ interface Material {
   name: string;
   category?: string;
   subCategory?: string;
+  mainCategoryId?: string; // 新增：主分類ID
+  subCategoryId?: string;  // 新增：細分分類ID
   supplierRef?: any;
   supplierName?: string;
   safetyStockLevel?: number;
@@ -35,6 +37,38 @@ export default function MaterialDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  // 解析並顯示代碼結構
+  const renderCodeStructure = (code: string) => {
+    if (code.length !== 9) {
+      return (
+        <div className="text-sm text-muted-foreground">
+          <div>舊格式代碼</div>
+          <div className="font-mono">{code}</div>
+        </div>
+      );
+    }
+    
+    const mainCategoryId = code.substring(0, 2);
+    const subCategoryId = code.substring(2, 5);
+    const randomCode = code.substring(5, 9);
+    
+    return (
+      <div className="space-y-2">
+        <div className="text-sm text-muted-foreground">代碼結構</div>
+        <div className="flex items-center gap-1 text-sm font-mono">
+          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">{mainCategoryId}</span>
+          <span className="text-muted-foreground">+</span>
+          <span className="bg-green-100 text-green-800 px-2 py-1 rounded">{subCategoryId}</span>
+          <span className="text-muted-foreground">+</span>
+          <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">{randomCode}</span>
+        </div>
+        <div className="text-xs text-muted-foreground">
+          主分類ID + 細分分類ID + 隨機碼
+        </div>
+      </div>
+    );
+  };
 
   useEffect(() => {
     const fetchMaterial = async () => {
@@ -91,6 +125,8 @@ export default function MaterialDetailPage() {
           name: data.name,
           category: data.category,
           subCategory: data.subCategory,
+          mainCategoryId: data.mainCategoryId,
+          subCategoryId: data.subCategoryId,
           supplierRef: data.supplierRef,
           supplierName,
           safetyStockLevel: data.safetyStockLevel || 0,
@@ -172,7 +208,14 @@ export default function MaterialDetailPage() {
           <h1 className="text-3xl font-bold text-primary">
             物料詳情
           </h1>
-          <p className="text-muted-foreground font-mono">{material.code}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-muted-foreground font-mono text-lg">{material.code}</p>
+            {material.code.length === 9 && (
+              <Badge variant="secondary" className="text-xs">
+                新格式
+              </Badge>
+            )}
+          </div>
         </div>
         <Button onClick={handleEdit} className="bg-primary hover:bg-primary/90">
           <Edit className="mr-2 h-4 w-4" />
@@ -197,9 +240,10 @@ export default function MaterialDetailPage() {
               <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
                 <Tag className="h-5 w-5 text-white" />
               </div>
-              <div>
+              <div className="flex-1">
                 <p className="text-sm text-blue-600 font-medium">物料編號</p>
                 <p className="text-lg font-semibold text-blue-800">{material.code}</p>
+                {renderCodeStructure(material.code)}
               </div>
             </div>
 
@@ -256,11 +300,25 @@ export default function MaterialDetailPage() {
               </div>
               <div className="flex justify-between items-center py-2 border-b">
                 <span className="text-muted-foreground">主分類</span>
-                <span className="font-medium">{material.category || '未分類'}</span>
+                <div className="text-right">
+                  <span className="font-medium">{material.category || '未分類'}</span>
+                  {material.mainCategoryId && (
+                    <div className="text-xs text-muted-foreground">
+                      ID: {material.mainCategoryId}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="flex justify-between items-center py-2 border-b">
                 <span className="text-muted-foreground">細分分類</span>
-                <span className="font-medium">{material.subCategory || '未分類'}</span>
+                <div className="text-right">
+                  <span className="font-medium">{material.subCategory || '未分類'}</span>
+                  {material.subCategoryId && (
+                    <div className="text-xs text-muted-foreground">
+                      ID: {material.subCategoryId}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="flex justify-between items-center py-2 border-b">
                 <span className="text-muted-foreground">單位</span>
