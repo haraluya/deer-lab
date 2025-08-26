@@ -14,8 +14,14 @@ const nextApp = next({
 const nextHandle = nextApp.getRequestHandler();
 
 // 建立 nextServer 雲端函數
-export const nextServer = onRequest({ maxInstances: 10 }, (req, res) => {
-  return nextApp.prepare().then(() => nextHandle(req, res));
+export const nextServer = onRequest({ maxInstances: 10 }, async (req, res) => {
+  try {
+    await nextApp.prepare();
+    return nextHandle(req, res);
+  } catch (error) {
+    console.error('Next.js app preparation failed:', error);
+    res.status(500).send('Internal Server Error');
+  }
 });
 
 // 創建一個簡單的測試函數

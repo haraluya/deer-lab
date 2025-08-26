@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "deploy": "npm run build && firebase deploy --only hosting",
+    "deploy": "npm run build && Copy-Item -Path \"public\\*\" -Destination \".next\\\" -Recurse -Force && firebase deploy --only hosting",
     "deploy-only": "firebase deploy --only hosting"
   },
   "dependencies": {
