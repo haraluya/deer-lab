@@ -136,6 +136,10 @@ export function MaterialDialog({
   // 獲取主分類ID
   const getCategoryId = async (categoryName: string): Promise<string> => {
     try {
+      if (!db) {
+        throw new Error('Firebase 未初始化');
+      }
+      
       const { collection, getDocs, query, where } = await import('firebase/firestore');
       const categoryQuery = query(collection(db, 'materialCategories'), where('name', '==', categoryName));
       const categorySnapshot = await getDocs(categoryQuery);
@@ -156,6 +160,10 @@ export function MaterialDialog({
   // 獲取細分分類ID
   const getSubCategoryId = async (subCategoryName: string): Promise<string> => {
     try {
+      if (!db) {
+        throw new Error('Firebase 未初始化');
+      }
+      
       const { collection, getDocs, query, where } = await import('firebase/firestore');
       const subCategoryQuery = query(collection(db, 'materialSubCategories'), where('name', '==', subCategoryName));
       const subCategorySnapshot = await getDocs(subCategoryQuery);
