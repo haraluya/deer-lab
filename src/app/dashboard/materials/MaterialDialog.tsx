@@ -103,7 +103,7 @@ export function MaterialDialog({
       supplierId: 'none',
       safetyStockLevel: 0,
       costPerUnit: 0,
-      unit: '',
+      unit: '個',
       notes: '',
     },
   });
@@ -523,13 +523,18 @@ export function MaterialDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-sm font-semibold text-gray-700">單位</FormLabel>
-                      <FormControl>
-                                                  <Input 
-                            placeholder="例如：kg, 個, 包" 
-                            className="border-gray-300 focus:border-purple-500 focus:ring-purple-500"
-                            {...field} 
-                          />
-                      </FormControl>
+                      <Select onValueChange={field.onChange} value={field.value || "個"}>
+                        <FormControl>
+                          <SelectTrigger className="border-gray-300 focus:border-purple-500 focus:ring-purple-500">
+                            <SelectValue placeholder="選擇單位" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="個">個</SelectItem>
+                          <SelectItem value="KG">KG</SelectItem>
+                          <SelectItem value="張">張</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

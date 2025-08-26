@@ -45,6 +45,7 @@ function MaterialsPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isBatchDeleteOpen, setIsBatchDeleteOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<MaterialData | null>(null);
   const [purchaseCart, setPurchaseCart] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
@@ -174,6 +175,36 @@ function MaterialsPageContent() {
     } finally {
       setIsConfirmOpen(false);
       setSelectedMaterial(null);
+    }
+  };
+
+  // 處理批量刪除
+  const handleBatchDelete = async () => {
+    if (purchaseCart.size === 0) {
+      toast.info("請至少選擇一個物料進行刪除。");
+      return;
+    }
+
+    try {
+      const functions = getFunctions();
+      const deleteMaterial = httpsCallable(functions, 'deleteMaterial');
+      
+      const selectedMaterials = materials.filter(m => purchaseCart.has(m.id));
+      const toastId = toast.loading(`正在刪除 ${selectedMaterials.length} 個物料...`);
+      
+      for (const material of selectedMaterials) {
+        await deleteMaterial({ materialId: material.id });
+      }
+      
+      toast.success(`成功刪除 ${selectedMaterials.length} 個物料。`, { id: toastId });
+      setPurchaseCart(new Set());
+      const suppliersMap = await fetchSuppliers();
+      await fetchMaterials(suppliersMap);
+    } catch (error) {
+      console.error('Error batch deleting materials:', error);
+      toast.error('批量刪除物料時發生錯誤。');
+    } finally {
+      setIsBatchDeleteOpen(false);
     }
   };
 
@@ -340,7 +371,7 @@ function MaterialsPageContent() {
 
       {/* 手機版功能按鈕區域 */}
       <div className="lg:hidden mb-6">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 mb-3">
           {isStocktakeMode ? (
             <>
               <Button onClick={handleSaveStocktake} className="w-full">
@@ -360,6 +391,15 @@ function MaterialsPageContent() {
               <Button onClick={handleCreatePurchaseOrder} disabled={purchaseCart.size === 0} variant="outline" className="w-full">
                 <ShoppingCart className="mr-2 h-4 w-4" />
                 採購單 ({purchaseCart.size})
+              </Button>
+              <Button 
+                onClick={() => setIsBatchDeleteOpen(true)} 
+                disabled={purchaseCart.size === 0} 
+                variant="destructive" 
+                className="w-full"
+              >
+                <X className="mr-2 h-4 w-4" />
+                批量刪除 ({purchaseCart.size})
               </Button>
               <Button variant="outline" onClick={() => setIsStocktakeMode(true)} className="w-full">
                 <Calculator className="mr-2 h-4 w-4" />
@@ -399,6 +439,14 @@ function MaterialsPageContent() {
               <Button onClick={handleCreatePurchaseOrder} disabled={purchaseCart.size === 0} variant="outline">
                 <ShoppingCart className="mr-2 h-4 w-4" />
                 建立採購單 ({purchaseCart.size})
+              </Button>
+              <Button 
+                onClick={() => setIsBatchDeleteOpen(true)} 
+                disabled={purchaseCart.size === 0} 
+                variant="destructive"
+              >
+                <X className="mr-2 h-4 w-4" />
+                批量刪除 ({purchaseCart.size})
               </Button>
               <Button variant="outline" onClick={() => setIsStocktakeMode(true)}>
                 <Calculator className="mr-2 h-4 w-4" />
@@ -488,7 +536,7 @@ function MaterialsPageContent() {
               <Card key={material.id} className="relative">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
-                    <div className="flex-1">
+                    <div className="flex-1 cursor-pointer" onClick={() => router.push(`/dashboard/materials/${material.id}`)}>
                       <div className="font-medium text-foreground text-sm">{material.name}</div>
                       <div className="text-xs text-muted-foreground">代號: {material.code}</div>
                     </div>
@@ -559,23 +607,22 @@ function MaterialsPageContent() {
                     </div>
                   )}
 
-                  {/* 購物車功能 */}
-                  {!isStocktakeMode && (
-                    <div className="mt-3 pt-3 border-t">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            checked={purchaseCart.has(material.id)}
-                            onCheckedChange={() => handleCartToggle(material.id)}
-                          />
-                          <span className="text-sm">加入採購單</span>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          ${material.costPerUnit || 0}
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                                     {/* 購物車功能 */}
+                   {!isStocktakeMode && (
+                     <div className="mt-3 pt-3 border-t">
+                       <div className="flex items-center justify-between">
+                         <div className="flex items-center gap-2">
+                           <Checkbox
+                             checked={purchaseCart.has(material.id)}
+                             onCheckedChange={() => handleCartToggle(material.id)}
+                           />
+                         </div>
+                         <div className="text-sm text-muted-foreground">
+                           ${material.costPerUnit || 0}
+                         </div>
+                       </div>
+                     </div>
+                   )}
                 </CardContent>
               </Card>
             ))}
@@ -589,16 +636,19 @@ function MaterialsPageContent() {
                   <TableRow>
                     <TableHead className="w-12">
                       {!isStocktakeMode && (
-                        <Checkbox
-                          checked={purchaseCart.size === filteredMaterials.length && filteredMaterials.length > 0}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setPurchaseCart(new Set(filteredMaterials.map(m => m.id)));
-                            } else {
-                              setPurchaseCart(new Set());
-                            }
-                          }}
-                        />
+                        <div className="flex items-center gap-2" title="全選所有物料">
+                          <Checkbox
+                            checked={purchaseCart.size === filteredMaterials.length && filteredMaterials.length > 0}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setPurchaseCart(new Set(filteredMaterials.map(m => m.id)));
+                              } else {
+                                setPurchaseCart(new Set());
+                              }
+                            }}
+                          />
+                          <span className="text-xs text-muted-foreground">全選</span>
+                        </div>
                       )}
                     </TableHead>
                     <TableHead>物料資訊</TableHead>
@@ -613,22 +663,27 @@ function MaterialsPageContent() {
                   {filteredMaterials.map((material) => (
                     <TableRow 
                       key={material.id}
-                      className="hover:bg-primary/5 transition-colors duration-200 cursor-pointer"
-                      onClick={() => router.push(`/dashboard/materials/${material.id}`)}
+                      className="hover:bg-primary/5 transition-colors duration-200"
                     >
-                      <TableCell>
-                        {!isStocktakeMode && (
-                          <Checkbox
-                            checked={purchaseCart.has(material.id)}
-                            onCheckedChange={() => handleCartToggle(material.id)}
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell>
+                                             <TableCell onClick={(e) => e.stopPropagation()}>
+                         {!isStocktakeMode && (
+                           <Checkbox
+                             checked={purchaseCart.has(material.id)}
+                             onCheckedChange={() => handleCartToggle(material.id)}
+                           />
+                         )}
+                       </TableCell>
+                      <TableCell 
+                        className="cursor-pointer"
+                        onClick={() => router.push(`/dashboard/materials/${material.id}`)}
+                      >
                         <div className="font-medium text-foreground">{material.name}</div>
                         <div className="text-xs text-muted-foreground">代號: {material.code}</div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell 
+                        className="cursor-pointer"
+                        onClick={() => router.push(`/dashboard/materials/${material.id}`)}
+                      >
                         <div className="space-y-1">
                           {material.category && (
                             <Badge variant="outline" className="text-xs">
@@ -642,8 +697,16 @@ function MaterialsPageContent() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>{material.supplierName}</TableCell>
-                      <TableCell>
+                      <TableCell 
+                        className="cursor-pointer"
+                        onClick={() => router.push(`/dashboard/materials/${material.id}`)}
+                      >
+                        {material.supplierName}
+                      </TableCell>
+                      <TableCell 
+                        className="cursor-pointer"
+                        onClick={() => router.push(`/dashboard/materials/${material.id}`)}
+                      >
                         <div className="flex items-center gap-2">
                           <span className={isLowStock(material) ? "text-red-600 font-medium" : ""}>
                             {material.currentStock || 0} {material.unit}
@@ -656,7 +719,12 @@ function MaterialsPageContent() {
                           安全庫存: {material.safetyStockLevel || 0} {material.unit}
                         </div>
                       </TableCell>
-                      <TableCell>${material.costPerUnit || 0}</TableCell>
+                      <TableCell 
+                        className="cursor-pointer"
+                        onClick={() => router.push(`/dashboard/materials/${material.id}`)}
+                      >
+                        ${material.costPerUnit || 0}
+                      </TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -773,6 +841,15 @@ function MaterialsPageContent() {
         onConfirm={handleConfirmDelete}
         title="確認刪除"
         description={`您確定要刪除物料「${selectedMaterial?.name}」嗎？此操作無法復原。`}
+      />
+
+      {/* 批量刪除確認對話框 */}
+      <ConfirmDialog
+        isOpen={isBatchDeleteOpen}
+        onOpenChange={setIsBatchDeleteOpen}
+        onConfirm={handleBatchDelete}
+        title="確認批量刪除"
+        description={`您確定要刪除選取的 ${purchaseCart.size} 個物料嗎？此操作無法復原。`}
       />
 
       {/* 匯入匯出對話框 */}
