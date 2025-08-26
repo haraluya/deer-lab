@@ -34,27 +34,47 @@ export const createUser = onCall(async (request) => {
 
 export const updateUser = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  // 暫時移除權限檢查
-  // await ensureIsAdmin(contextAuth?.uid);
   const { uid, name, roleId, phone } = data;
-  if (!uid || !name || !roleId || !phone) { 
-    throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (uid, name, roleId, phone)。"); 
+  
+  // 檢查是否為用戶更新自己的資料
+  const isSelfUpdate = contextAuth?.uid === uid;
+  
+  if (!uid || !name || !phone) { 
+    throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (uid, name, phone)。"); 
   }
+  
+  // 如果是自我更新，不需要 roleId；如果是管理員更新，需要 roleId
+  if (!isSelfUpdate && !roleId) {
+    throw new HttpsError("invalid-argument", "管理員更新用戶資料時需要提供 roleId。"); 
+  }
+  
   try {
     const userDocRef = db.collection("users").doc(uid);
-    const roleRef = db.collection("roles").doc(roleId);
-    const updateData = { 
+    const updateData: any = { 
       name: name, 
       phone: phone,
-      roleRef: roleRef, 
       updatedAt: FieldValue.serverTimestamp(), 
     };
+    
+    // 只有管理員可以更新角色
+    if (!isSelfUpdate && roleId) {
+      const roleRef = db.collection("roles").doc(roleId);
+      updateData.roleRef = roleRef;
+    }
+    
     await userDocRef.update(updateData);
     const userRecord = await auth.getUser(uid);
-    if (userRecord.displayName !== name) { await auth.updateUser(uid, { displayName: name }); }
-    logger.info(`管理員 ${contextAuth?.uid} 成功更新使用者資料: ${uid}`);
+    if (userRecord.displayName !== name) { 
+      await auth.updateUser(uid, { displayName: name }); 
+    }
+    
+    const action = isSelfUpdate ? "用戶" : "管理員";
+    logger.info(`${action} ${contextAuth?.uid} 成功更新使用者資料: ${uid}`);
     return { status: "success", message: `使用者 ${name} 的資料已成功更新。` };
-  } catch (error) { logger.error(`更新使用者 ${uid} 時發生錯誤:`, error); throw new HttpsError("internal", "更新使用者資料時發生未知錯誤。"); }
+  } catch (error) { 
+    logger.error(`更新使用者 ${uid} 時發生錯誤:`, error); 
+    throw new HttpsError("internal", "更新使用者資料時發生未知錯誤。"); 
+  }
 });
 
 export const setUserStatus = onCall(async (request) => {

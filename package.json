@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "deploy": "npm run build && Copy-Item -Path \"public\\*\" -Destination \".next\\\" -Recurse -Force && firebase deploy --only hosting",
+    "deploy-full": "npm run build && Copy-Item -Path \"public\\*\" -Destination \".next\\\" -Recurse -Force && Copy-Item -Path \".next\" -Destination \"functions\\\" -Recurse -Force && Copy-Item -Path \"public\\*\" -Destination \"functions\\\" -Recurse -Force && firebase deploy",
     "deploy-only": "firebase deploy --only hosting"
   },
   "dependencies": {

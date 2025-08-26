@@ -12,7 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 import {
   Home, Users, Building, Package, FlaskConical, Library, Box,
   ShoppingCart, Factory, Calculator, ClipboardList, LogOut, ChevronDown,
-  LucideIcon, Loader2, BarChart3, Warehouse, Shield, Tag
+  LucideIcon, Loader2, BarChart3, Warehouse, Shield, Tag, User
 } from 'lucide-react';
 
 // ... (SidebarNav 和 UserNav 元件保持不變) ...
@@ -34,6 +34,7 @@ type NavItem = NavLink | NavSeparator;
 
 const navLinks: NavItem[] = [
   { href: '/dashboard', label: '系統總覽', icon: Home },
+  { href: '/dashboard/profile', label: '個人資料', icon: User },
   { href: '/dashboard/personnel', label: '人員管理', icon: Users },
   // { href: '/dashboard/roles', label: '角色管理', icon: Shield }, // 已移除角色管理
   { href: '/dashboard/material-categories', label: '物料分類管理', icon: Tag },
@@ -180,7 +181,30 @@ export default function DashboardLayout({
   const { isLoading, appUser } = useAuth();
   const router = useRouter();
 
-  // 移除重複的認證檢查，讓 AuthGuard 處理
+  // 認證檢查
+  useEffect(() => {
+    if (!isLoading && !appUser) {
+      console.log('❌ 未認證用戶嘗試訪問 dashboard，重定向到登入頁面');
+      router.push('/');
+    }
+  }, [isLoading, appUser, router]);
+
+  // 載入中顯示載入畫面
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <p className="text-muted-foreground">載入中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 未認證用戶不顯示內容
+  if (!appUser) {
+    return null;
+  }
 
   // 只有在載入完成且確認有使用者資料時，才渲染儀表板佈局
   return (

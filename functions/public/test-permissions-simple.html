@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>權限測試 - 簡化版</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>權限測試 - 簡化版</h1>
+        <p>這個頁面用於測試權限系統的基本功能。</p>
+        
+        <div class="form-group">
+            <label for="email">電子郵件:</label>
+            <input type="email" id="email" value="001@deer-lab.local">
+        </div>
+        
+        <div class="form-group">
+            <label for="password">密碼:</label>
+            <input type="password" id="password" value="password123">
+        </div>
+        
+        <button onclick="testLogin()">測試登入</button>
+        <button onclick="testPermissions()">測試權限</button>
+        <button onclick="clearResults()">清除結果</button>
+        
+        <div id="result" class="result" style="display: none;"></div>
+    </div>
+
+    <script type="module">
+        // Firebase 配置 - 使用模擬配置避免金鑰外流
+        const firebaseConfig = {
+            apiKey: "mock-api-key-for-testing",
+            authDomain: "deer-lab.firebaseapp.com",
+            projectId: "deer-lab",
+            storageBucket: "deer-lab.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdefghijklmnop"
+        };
+
+        // 模擬 Firebase 功能
+        const mockFirebase = {
+            auth: {
+                signInWithEmailAndPassword: async (email, password) => {
+                    console.log('模擬登入:', email, password);
+                    return { user: { uid: 'mock-user-id' } };
+                }
+            },
+            firestore: {
+                doc: () => ({ get: async () => ({ exists: () => true, data: () => ({ name: '測試用戶', roleRef: { path: 'roles/test-role' } }) }) }),
+                getDoc: async () => ({ exists: () => true, data: () => ({ name: '測試角色', permissions: ['personnel:create', 'personnel:edit'] }) })
+            }
+        };
+
+        window.testLogin = async function() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            showResult('info', `正在測試登入...\n電子郵件: ${email}\n密碼: ${password}`);
+            
+            try {
+                const result = await mockFirebase.auth.signInWithEmailAndPassword(email, password);
+                showResult('success', `登入成功！\n用戶 ID: ${result.user.uid}`);
+            } catch (error) {
+                showResult('error', `登入失敗: ${error.message}`);
+            }
+        };
+
+        window.testPermissions = async function() {
+            showResult('info', '正在測試權限...');
+            
+            try {
+                // 模擬權限檢查
+                const userDoc = await mockFirebase.firestore.getDoc();
+                const roleDoc = await mockFirebase.firestore.getDoc();
+                
+                const userData = userDoc.data();
+                const roleData = roleDoc.data();
+                
+                showResult('success', `權限測試成功！\n用戶: ${userData.name}\n角色: ${roleData.name}\n權限: ${roleData.permissions.join(', ')}`);
+            } catch (error) {
+                showResult('error', `權限測試失敗: ${error.message}`);
+            }
+        };
+
+        window.clearResults = function() {
+            document.getElementById('result').style.display = 'none';
+        };
+
+        function showResult(type, message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${type}`;
+            resultDiv.textContent = message;
+            resultDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

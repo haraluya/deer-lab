@@ -21,7 +21,7 @@ interface AuthContextType {
   user: FirebaseUser | null;
   appUser: AppUser | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (employeeId: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
 }
 
@@ -88,7 +88,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // 登入函數
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (employeeId: string, password: string): Promise<boolean> => {
     try {
       const auth = getAuthInstance();
       if (!auth) {
@@ -96,6 +96,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return false;
       }
 
+      // 構建 email 格式
+      const email = employeeId.includes('@') ? employeeId : `${employeeId}@deer-lab.local`;
+      
       const result = await signInWithEmailAndPassword(auth, email, password);
       await loadUserData(result.user);
       toast.success('登入成功！');

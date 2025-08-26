@@ -25,10 +25,8 @@ export default function LoginPage() {
     setIsLoggingIn(true);
     
     try {
-      // 構建 email
-      const email = employeeId.includes('@') ? employeeId : `${employeeId}@deer-lab.local`;
-      
-      const success = await login(email, password);
+      // 使用工號登入
+      const success = await login(employeeId, password);
       
       if (success) {
         // 登入成功後跳轉到儀表板

@@ -9,7 +9,6 @@ initializeApp();
 // 初始化 Next.js App
 const nextApp = next({
   dev: false,
-  conf: { distDir: ".next" },
 });
 const nextHandle = nextApp.getRequestHandler();
 
