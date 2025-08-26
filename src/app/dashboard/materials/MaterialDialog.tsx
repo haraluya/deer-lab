@@ -9,7 +9,8 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { collection, getDocs, DocumentReference, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
-import { generateUniqueMaterialCode, getCategoryIcon, getCategoryColor } from '@/lib/utils';
+import { generateUniqueMaterialCode } from '@/lib/utils';
+import { MaterialIcon } from '@/components/ui/material-icon';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -91,8 +92,6 @@ export function MaterialDialog({
   const [categories, setCategories] = useState<string[]>([]);
   const [subCategories, setSubCategories] = useState<string[]>([]);
   const [generatedCode, setGeneratedCode] = useState<string>('');
-  const [categoryIcon, setCategoryIcon] = useState<string>('📦');
-  const [bgColor, setBgColor] = useState<string>('bg-blue-100');
   const isEditMode = !!materialData;
 
   const form = useForm<FormData>({
@@ -130,13 +129,7 @@ export function MaterialDialog({
     }
   }, [watchCategory, watchSubCategory, isEditMode]);
 
-  // 更新分類圖示和背景顏色
-  useEffect(() => {
-    if (watchCategory) {
-      setCategoryIcon(getCategoryIcon(watchCategory));
-      setBgColor(getCategoryColor(watchCategory));
-    }
-  }, [watchCategory]);
+
 
   useEffect(() => {
     if (isOpen) {
@@ -193,13 +186,9 @@ export function MaterialDialog({
       };
       form.reset(formData);
       setGeneratedCode(materialData.code || '');
-      setCategoryIcon(getCategoryIcon(materialData.category || ''));
-      setBgColor(getCategoryColor(materialData.category || ''));
     } else if (isOpen && !materialData) {
       form.reset();
       setGeneratedCode('');
-      setCategoryIcon('📦');
-      setBgColor('bg-blue-100');
     }
   }, [isOpen, materialData, form]);
 
@@ -292,8 +281,8 @@ export function MaterialDialog({
                 />
 
                 <div className="flex items-center gap-3">
-                  <div className={`w-12 h-12 ${bgColor} rounded-lg flex items-center justify-center text-2xl`}>
-                    {categoryIcon}
+                  <div className="w-12 h-12 bg-gray-50 rounded-lg flex items-center justify-center">
+                    <MaterialIcon category={watchCategory || 'default'} size="lg" />
                   </div>
                   <div className="flex-1">
                     <FormField
@@ -312,7 +301,7 @@ export function MaterialDialog({
                               {categories.map((category) => (
                                 <SelectItem key={category} value={category}>
                                   <div className="flex items-center gap-2">
-                                    <span className="text-lg">{getCategoryIcon(category)}</span>
+                                    <MaterialIcon category={category} size="sm" />
                                     <span>{category}</span>
                                   </div>
                                 </SelectItem>

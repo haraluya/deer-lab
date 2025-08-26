@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import { collection, getDocs, DocumentReference, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
-import { getCategoryIcon, getCategoryColor } from '@/lib/utils';
+
 
 import { MaterialDialog, MaterialData } from './MaterialDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { MaterialIcon } from '@/components/ui/material-icon';
 import { MoreHorizontal, ShoppingCart, ListChecks, Save, X, Loader2, Search, FileSpreadsheet, Eye, Edit, Warehouse, Building, Tag, Package, AlertTriangle, Shield, Plus, Calculator } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -432,7 +433,9 @@ function MaterialsPageContent() {
               }`}
               onClick={() => handleCategoryFilter(category)}
             >
-              <span className="mr-1">{getCategoryIcon(category)}</span>
+              <span className="mr-1">
+                <MaterialIcon category={category} size="sm" />
+              </span>
               {category}
             </Badge>
           ))}
@@ -492,8 +495,8 @@ function MaterialsPageContent() {
                       >
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 ${getCategoryColor(material.category || '')} rounded-lg flex items-center justify-center`}>
-                              {getCategoryIcon(material.category || '')}
+                            <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center">
+                              <MaterialIcon category={material.category || 'default'} size="sm" />
                             </div>
                             <div>
                               <div className="font-medium text-gray-900 text-sm">{material.name}</div>
@@ -667,8 +670,8 @@ function MaterialsPageContent() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 ${getCategoryColor(material.category || '')} rounded-lg flex items-center justify-center`}>
-                            {getCategoryIcon(material.category || '')}
+                          <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center">
+                            <MaterialIcon category={material.category || 'default'} size="sm" />
                           </div>
                           <div>
                             <div className="font-medium text-gray-900">{material.name}</div>
@@ -724,7 +727,7 @@ function MaterialsPageContent() {
                       </TableCell>
                       <TableCell className="text-right">
                         <span className="number-display number-neutral">
-                          ${material.costPerUnit?.toFixed(2) || '0.00'}
+                          ${Math.floor(material.costPerUnit || 0)}
                         </span>
                       </TableCell>
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>

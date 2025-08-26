@@ -1,0 +1,105 @@
+# 構建輸出和靜態文件
+out/
+.next/
+dist/
+build/
+
+# 依賴包
+node_modules/
+functions/node_modules/
+
+# 環境變數文件
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# 日誌文件
+*.log
+logs/
+
+# 快取文件
+.cache/
+.parcel-cache/
+.eslintcache
+*.tsbuildinfo
+
+# 系統文件
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE 和編輯器文件
+.vscode/
+.idea/
+*.sublime-*
+.atom/
+
+# 測試覆蓋率報告
+coverage/
+.nyc_output/
+
+# 臨時文件
+tmp/
+temp/
+.tmp/
+
+# 備份文件
+*.bak
+*.backup
+*.old
+
+# 壓縮文件
+*.zip
+*.tar.gz
+*.rar
+
+# 文檔文件（如果不需要掃描）
+*.pdf
+*.doc
+*.docx
+*.xls
+*.xlsx
+
+# 圖片和媒體文件
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.svg
+*.ico
+*.mp4
+*.mp3
+*.wav
+*.avi
+
+# 字體文件
+*.ttf
+*.otf
+*.woff
+*.woff2
+
+# 其他不需要掃描的文件
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# 部署相關文件
+firebase-debug.log
+firebase-debug.*.log
+.firebase/
+
+# 腳本文件（如果需要排除）
+scripts/
+
+# 測試文件（如果需要排除）
+__tests__/
+*.test.js
+*.test.ts
+*.test.tsx
+*.spec.js
+*.spec.ts
+*.spec.tsx
