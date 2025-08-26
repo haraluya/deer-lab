@@ -32,8 +32,10 @@ export const createPersonnel = onCall(async (request) => {
 
 
     // 創建 Firebase Auth 用戶
+    const email = `${employeeId}@deer-lab.local`;
     const authData = {
       uid: employeeId,
+      email: email,
       password: password,
       displayName: name,
       disabled: status === "inactive"
@@ -105,13 +107,16 @@ export const updatePersonnel = onCall(async (request) => {
 
 
     // 更新 Firebase Auth 用戶
+    const email = `${employeeId}@deer-lab.local`;
     const updateAuthData: {
       displayName: string;
       disabled: boolean;
+      email?: string;
       password?: string;
     } = {
       displayName: name,
-      disabled: status === "inactive"
+      disabled: status === "inactive",
+      email: email
     };
 
     // 如果提供了新密碼，則更新密碼

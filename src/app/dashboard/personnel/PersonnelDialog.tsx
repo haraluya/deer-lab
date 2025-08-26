@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -19,12 +19,12 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 
-// 預設角色選項
-const DEFAULT_ROLES = [
-  { id: 'system-admin', name: '系統管理員' },
-  { id: 'production-leader', name: '生產領班' },
-  { id: 'hourly-worker', name: '計時人員' }
-];
+// 角色介面
+interface Role {
+  id: string;
+  name: string;
+  description?: string;
+}
 
 // 表單驗證 Schema
 const formSchema = z.object({
@@ -48,10 +48,7 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>
 
-interface Role {
-  id: string
-  name: string
-}
+// 移除重複的 Role 介面定義
 
 interface PersonnelData {
   id: string
@@ -78,7 +75,8 @@ export function PersonnelDialog({
 
   const { appUser, isLoading } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [roles] = useState<Role[]>(DEFAULT_ROLES)
+  const [roles, setRoles] = useState<Role[]>([])
+  const [isLoadingRoles, setIsLoadingRoles] = useState(false)
   const [showPasswordFields, setShowPasswordFields] = useState(false)
   const isEditMode = !!personnelData
 
@@ -97,7 +95,36 @@ export function PersonnelDialog({
     },
   })
 
-  // 移除載入角色資料的 useEffect，因為現在使用預設角色
+  // 載入角色資料
+  const loadRoles = useCallback(async () => {
+    setIsLoadingRoles(true);
+    try {
+      if (!db) {
+        throw new Error("Firebase 未初始化");
+      }
+      const rolesCollectionRef = collection(db, 'roles');
+      const rolesSnapshot = await getDocs(rolesCollectionRef);
+      const rolesData = rolesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        name: doc.data().name || '未知角色',
+        description: doc.data().description
+      }));
+      setRoles(rolesData);
+      console.log('✅ 角色資料載入成功:', rolesData);
+    } catch (error) {
+      console.error("載入角色資料失敗:", error);
+      toast.error("載入角色資料失敗，請重新整理頁面");
+    } finally {
+      setIsLoadingRoles(false);
+    }
+  }, []);
+
+  // 當對話框開啟時載入角色資料
+  useEffect(() => {
+    if (isOpen) {
+      loadRoles();
+    }
+  }, [isOpen, loadRoles]);
 
   // 當對話框開啟時，重置表單
   useEffect(() => {
@@ -233,7 +260,7 @@ export function PersonnelDialog({
   }
 
   // 如果正在載入，顯示載入狀態
-  if (isLoading) {
+  if (isLoading || isLoadingRoles) {
     return (
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-2xl" aria-describedby="loading-dialog-description">
@@ -326,19 +353,19 @@ export function PersonnelDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>角色 *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingRoles}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="選擇角色" />
+                            <SelectValue placeholder={isLoadingRoles ? "載入中..." : "選擇角色"} />
                           </SelectTrigger>
                         </FormControl>
-                                                 <SelectContent>
-                           {roles.map((role) => (
-                             <SelectItem key={role.id} value={role.id}>
-                               {role.name}
-                             </SelectItem>
-                           ))}
-                         </SelectContent>
+                        <SelectContent>
+                          {roles.map((role) => (
+                            <SelectItem key={role.id} value={role.id}>
+                              {role.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>

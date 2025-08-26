@@ -17,7 +17,13 @@ export const createUser = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (工號、密碼、姓名、角色、電話、狀態)。"); 
   }
   try {
-    const userRecord = await auth.createUser({ uid: employeeId, password: password, displayName: name });
+    const email = `${employeeId}@deer-lab.local`;
+    const userRecord = await auth.createUser({ 
+      uid: employeeId, 
+      email: email,
+      password: password, 
+      displayName: name 
+    });
     const roleRef = db.collection("roles").doc(roleId);
     await db.collection("users").doc(userRecord.uid).set({ 
       name: name, 
