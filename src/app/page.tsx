@@ -46,7 +46,10 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">🦌 Deer Lab</CardTitle>
+          <div className="flex items-center justify-center mb-2">
+            <img src="/icon.png" alt="Deer Lab Logo" className="w-12 h-12 mr-3" />
+            <CardTitle className="text-2xl font-bold">Deer Lab</CardTitle>
+          </div>
           <CardDescription>生產管理系統</CardDescription>
         </CardHeader>
         <CardContent>
