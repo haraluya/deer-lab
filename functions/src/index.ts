@@ -2,7 +2,6 @@
 import { initializeApp } from "firebase-admin/app";
 import { onRequest } from "firebase-functions/v2/https";
 import next from "next";
-import path from "path";
 
 // 初始化 Firebase Admin SDK，只需一次
 initializeApp();
@@ -10,7 +9,7 @@ initializeApp();
 // 初始化 Next.js App
 const nextApp = next({
   dev: false,
-  conf: { distDir: path.join("..", ".next") },
+  conf: { distDir: ".next" },
 });
 const nextHandle = nextApp.getRequestHandler();
 
