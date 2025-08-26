@@ -86,10 +86,7 @@ export default function LoginPage() {
             </Button>
           </form>
           
-          <div className="mt-4 text-center text-sm text-muted-foreground">
-            <p>測試帳號：test@deer-lab.local</p>
-            <p>測試密碼：123456</p>
-          </div>
+
         </CardContent>
       </Card>
     </div>
