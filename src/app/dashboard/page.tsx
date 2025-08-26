@@ -28,7 +28,7 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
             系統總覽
           </h1>
-          <p className="text-gray-600 mt-2">歡迎回來, {appUser?.name || '使用者'}!</p>
+          <p className="text-muted-foreground mt-2">歡迎回來, {appUser?.name || '使用者'}!</p>
         </div>
         <LowStockNotification />
       </div>
@@ -145,12 +145,12 @@ export default function DashboardPage() {
       </div>
 
       {/* 快速操作區域 */}
-      <Card className="bg-gradient-to-r from-gray-50 to-slate-50 border-gray-200">
+      <Card className="bg-gradient-to-r from-background to-muted/50 border-border">
         <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-800">快速操作</CardTitle>
+          <CardTitle className="text-lg font-semibold text-foreground">快速操作</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             點擊上方卡片可快速訪問對應的管理功能。這裡是未來放置儀表板卡片和圖表的地方，您可以快速訪問常用功能。
           </p>
         </CardContent>

@@ -45,16 +45,16 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
             <div className="mx-auto mb-4 w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
               <AlertTriangle className="h-8 w-8 text-red-600" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">發生錯誤</h2>
-            <p className="text-gray-600 mb-6">
+                    <h2 className="text-2xl font-bold text-foreground mb-2">發生錯誤</h2>
+        <p className="text-muted-foreground mb-6">
               抱歉，載入頁面時發生錯誤。請重新整理頁面或返回上一頁。
             </p>
             {this.state.error && (
               <details className="mb-6 text-left">
-                <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700">
+                <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
                   錯誤詳情
                 </summary>
-                <pre className="mt-2 p-3 bg-gray-100 rounded text-xs text-gray-700 overflow-auto">
+                <pre className="mt-2 p-3 bg-muted rounded text-xs text-foreground overflow-auto">
                   {this.state.error.message}
                 </pre>
               </details>

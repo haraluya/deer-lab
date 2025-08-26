@@ -41,7 +41,7 @@ export function DetailViewDialog({
 
   const formatValue = (value: any, type: string = "text") => {
     if (value === null || value === undefined || value === "") {
-      return <span className="text-gray-400">-</span>
+      return <span className="text-muted-foreground">-</span>
     }
 
     switch (type) {
@@ -141,9 +141,9 @@ export function DetailViewDialog({
                 case "red":
                   return "text-red-800"
                 case "gray":
-                  return "text-gray-800"
+                  return "text-foreground"
                 default:
-                  return "text-gray-800"
+                  return "text-foreground"
               }
             }
             

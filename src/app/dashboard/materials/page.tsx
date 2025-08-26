@@ -317,10 +317,10 @@ function MaterialsPageContent() {
     <div className="container mx-auto py-10">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold text-primary">
             物料管理
           </h1>
-          <p className="text-gray-600 mt-2">管理系統中的所有物料資料</p>
+          <p className="text-muted-foreground mt-2">管理系統中的所有物料資料</p>
         </div>
       </div>
 
@@ -353,7 +353,7 @@ function MaterialsPageContent() {
               </Button>
               <Button 
                 onClick={handleAdd}
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                className="w-full"
               >
                 <Plus className="mr-2 h-4 w-4" />
                 新增物料
@@ -392,7 +392,6 @@ function MaterialsPageContent() {
               </Button>
               <Button 
                 onClick={handleAdd}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
               >
                 <Plus className="mr-2 h-4 w-4" />
                 新增物料
@@ -403,15 +402,15 @@ function MaterialsPageContent() {
       </div>
 
       {/* 搜尋框 */}
-      <Card className="mb-6 border-0 shadow-lg bg-gradient-to-r from-gray-50 to-blue-50">
+      <Card className="mb-6 border-0 shadow-lg bg-gradient-to-r from-background to-primary/10">
         <CardContent className="pt-6">
           <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-blue-600" />
+            <Search className="absolute left-3 top-3 h-4 w-4 text-primary" />
             <Input
               placeholder="搜尋物料名稱、代號、分類或供應商..."
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
-              className="pl-10 border-blue-200 focus:border-blue-500 focus:ring-blue-500"
+              className="pl-10 border-input focus:border-primary focus:ring-primary"
             />
           </div>
         </CardContent>
@@ -419,18 +418,18 @@ function MaterialsPageContent() {
 
       {/* 分類篩選標籤 */}
       <div className="mb-6">
-        <h3 className="text-sm font-medium text-gray-700 mb-3">分類篩選</h3>
+        <h3 className="text-sm font-medium text-muted-foreground mb-3">分類篩選</h3>
         <div className="flex flex-wrap gap-2">
           {/* 主分類標籤 - 藍色系 */}
           {categories.map((category) => (
             <Badge
               key={`category-${category}`}
-              variant="outline"
+              variant={selectedCategory === category ? "default" : "secondary"}
               className={`cursor-pointer transition-all duration-200 ${
                 selectedCategory === category 
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
-                  : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300'
-              }`}
+                  ? 'shadow-md' 
+                  : 'hover:bg-primary/10 hover:border-primary/20'
+              }`}}
               onClick={() => handleCategoryFilter(category)}
             >
               <span className="mr-1">
@@ -444,12 +443,12 @@ function MaterialsPageContent() {
           {subCategories.map((subCategory) => (
             <Badge
               key={`subcategory-${subCategory}`}
-              variant="outline"
+              variant={selectedSubCategory === subCategory ? "success" : "secondary"}
               className={`cursor-pointer transition-all duration-200 ${
                 selectedSubCategory === subCategory 
-                  ? 'bg-green-600 text-white border-green-600 shadow-md' 
-                  : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300'
-              }`}
+                  ? 'shadow-md' 
+                  : 'hover:bg-success/10 hover:border-success/20'
+              }`}}
               onClick={() => handleSubCategoryFilter(subCategory)}
             >
               {subCategory}
@@ -460,16 +459,16 @@ function MaterialsPageContent() {
 
       {/* 手機版表格容器 */}
       <div className="lg:hidden">
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden mb-6">
-          <div className="px-4 py-3 bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200">
+        <div className="bg-card rounded-xl shadow-lg border border-border overflow-hidden mb-6">
+          <div className="px-4 py-3 bg-gradient-to-r from-background to-primary/10 border-b border-border">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Package className="h-4 w-4 text-blue-600" />
-                <h2 className="text-base font-semibold text-gray-800">物料清單</h2>
+                <Package className="h-4 w-4 text-primary" />
+                <h2 className="text-base font-semibold text-foreground">物料清單</h2>
               </div>
-              <div className="text-xs text-gray-600">
+              <div className="text-xs text-muted-foreground">
                 共 {filteredMaterials.length} 項
-              </div>
+              服務
             </div>
           </div>
           
@@ -478,10 +477,10 @@ function MaterialsPageContent() {
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-12">
                   <div className="relative">
-                    <div className="w-10 h-10 border-4 border-blue-200 rounded-full animate-spin"></div>
-                    <div className="absolute top-0 left-0 w-10 h-10 border-4 border-transparent border-t-blue-600 rounded-full animate-spin"></div>
+                    <div className="w-10 h-10 border-4 border-border rounded-full animate-spin"></div>
+                    <div className="absolute top-0 left-0 w-10 h-10 border-4 border-transparent border-t-primary rounded-full animate-spin"></div>
                   </div>
-                  <span className="mt-3 text-sm text-gray-600 font-medium">載入中...</span>
+                  <span className="mt-3 text-sm text-muted-foreground font-medium">載入中...</span>
                 </div>
               ) : filteredMaterials.length > 0 ? (
                 <div className="divide-y divide-gray-200">
@@ -490,17 +489,17 @@ function MaterialsPageContent() {
                     return (
                       <div 
                         key={material.id} 
-                        className={`p-4 ${isLowStockItem && !isStocktakeMode ? 'bg-red-50/50' : ''} hover:bg-blue-50/50 transition-colors duration-200`}
+                        className={`p-4 ${isLowStockItem && !isStocktakeMode ? 'bg-destructive/10' : ''} hover:bg-primary/5 transition-colors duration-200`}}
                         onClick={() => handleViewDetail(material)}
                       >
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center">
+                            <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center">
                               <MaterialIcon category={material.category || 'default'} size="sm" />
                             </div>
                             <div>
-                              <div className="font-medium text-gray-900 text-sm">{material.name}</div>
-                              <div className="text-xs text-gray-500">代號: {material.code}</div>
+                              <div className="font-medium text-foreground text-sm">{material.name}</div>
+                              <div className="text-xs text-muted-foreground">代號: {material.code}</div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -535,47 +534,47 @@ function MaterialsPageContent() {
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div>
                             <div className="flex items-center gap-1 mb-1">
-                              <Tag className="h-3 w-3 text-blue-600" />
-                              <span className="text-gray-500">主分類</span>
+                              <Tag className="h-3 w-3 text-primary" />
+                              <span className="text-muted-foreground">主分類</span>
                             </div>
-                            <span className="font-medium text-gray-700">{material.category}</span>
+                            <span className="font-medium text-foreground">{material.category}</span>
                           </div>
                           <div>
                             <div className="flex items-center gap-1 mb-1">
-                              <span className="text-gray-500">細分分類</span>
+                              <span className="text-muted-foreground">細分分類</span>
                             </div>
-                            <span className="font-medium text-gray-700">{material.subCategory}</span>
+                            <span className="font-medium text-foreground">{material.subCategory}</span>
                           </div>
                           <div>
                             <div className="flex items-center gap-1 mb-1">
-                              <Building className="h-3 w-3 text-gray-400" />
-                              <span className="text-gray-500">供應商</span>
+                              <Building className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-muted-foreground">供應商</span>
                             </div>
-                            <span className="font-medium text-gray-700">{material.supplierName}</span>
+                            <span className="font-medium text-foreground">{material.supplierName}</span>
                           </div>
                           <div>
                             <div className="flex items-center gap-1 mb-1">
-                              <Warehouse className="h-3 w-3 text-gray-400" />
-                              <span className="text-gray-500">目前庫存</span>
+                              <Warehouse className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-muted-foreground">目前庫存</span>
                             </div>
                             {isStocktakeMode ? (
                               <div className="flex items-center gap-2">
                                 <Input
                                   type="number"
-                                  className="w-20 h-7 text-sm border-blue-200 focus:border-blue-500 focus:ring-blue-500"
+                                  className="w-20 h-7 text-sm border-input focus:border-primary focus:ring-primary"
                                   value={updatedStocks[material.id] ?? material.currentStock}
                                   onChange={(e) => handleStockChange(material.id, Number(e.target.value))}
                                 />
-                                <span className="text-xs text-gray-600">{material.unit}</span>
+                                <span className="text-xs text-muted-foreground">{material.unit}</span>
                               </div>
                             ) : (
                               <div className="flex items-center gap-1">
-                                <span className={`font-medium ${isLowStockItem ? 'text-red-600' : 'text-green-600'}`}>
+                                <span className={`font-medium ${isLowStockItem ? 'text-destructive' : 'text-success'}`}>
                                   {material.currentStock} {material.unit}
                                 </span>
                                 {isLowStockItem && (
-                                  <span className="text-xs text-red-600 font-medium">低庫存</span>
-                                )}
+                                  <span className="text-xs text-destructive font-medium">低庫存</span>
+                                )}}
                               </div>
                             )}
                           </div>
@@ -586,16 +585,15 @@ function MaterialsPageContent() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-12">
-                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                    <Package className="h-6 w-6 text-gray-400" />
+                  <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-3">
+                    <Package className="h-6 w-6 text-muted-foreground" />
                   </div>
-                  <h3 className="text-base font-medium text-gray-900 mb-1">沒有物料資料</h3>
-                  <p className="text-sm text-gray-500 mb-4 text-center">開始新增第一個物料來管理您的庫存</p>
+                  <h3 className="text-base font-medium text-foreground mb-1">沒有物料資料</h3>
+                  <p className="text-sm text-muted-foreground mb-4 text-center">開始新增第一個物料來管理您的庫存</p>
                   <Button 
                     onClick={handleAdd}
                     variant="outline"
                     size="sm"
-                    className="border-blue-200 text-blue-600 hover:bg-blue-50"
                   >
                     <Plus className="mr-2 h-4 w-4" />
                     新增物料
@@ -609,14 +607,14 @@ function MaterialsPageContent() {
 
       {/* 桌面版表格容器 */}
       <div className="hidden lg:block">
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200">
+        <div className="bg-card rounded-xl shadow-lg border border-border overflow-hidden">
+        <div className="px-6 py-4 bg-gradient-to-r from-background to-primary/10 border-b border-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-blue-600" />
-              <h2 className="text-lg font-semibold text-gray-800">物料清單</h2>
+              <Package className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold text-foreground">物料清單</h2>
             </div>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-muted-foreground">
               共 {filteredMaterials.length} 項物料
             </div>
           </div>
@@ -643,10 +641,10 @@ function MaterialsPageContent() {
                   <TableCell colSpan={9} className="text-center py-16">
                     <div className="flex flex-col items-center justify-center">
                       <div className="relative">
-                        <div className="w-12 h-12 border-4 border-blue-200 rounded-full animate-spin"></div>
-                        <div className="absolute top-0 left-0 w-12 h-12 border-4 border-transparent border-t-blue-600 rounded-full animate-spin"></div>
+                        <div className="w-12 h-12 border-4 border-border rounded-full animate-spin"></div>
+                        <div className="absolute top-0 left-0 w-12 h-12 border-4 border-transparent border-t-primary rounded-full animate-spin"></div>
                       </div>
-                      <span className="mt-4 text-gray-600 font-medium">載入物料資料中...</span>
+                      <span className="mt-4 text-muted-foreground font-medium">載入物料資料中...</span>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -656,7 +654,7 @@ function MaterialsPageContent() {
                   return (
                     <TableRow 
                       key={material.id} 
-                      className={`${isLowStockItem && !isStocktakeMode ? 'bg-red-50/50' : ''} cursor-pointer hover:bg-blue-50/50 transition-colors duration-200`} 
+                      className={`${isLowStockItem && !isStocktakeMode ? 'bg-destructive/10' : ''} cursor-pointer hover:bg-primary/5 transition-colors duration-200`} 
                       data-state={purchaseCart.has(material.id) ? "selected" : ""}
                       onClick={() => handleViewDetail(material)}
                     >
@@ -670,12 +668,12 @@ function MaterialsPageContent() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center">
+                          <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center">
                             <MaterialIcon category={material.category || 'default'} size="sm" />
                           </div>
                           <div>
-                            <div className="font-medium text-gray-900">{material.name}</div>
-                            <div className="text-xs text-gray-500">代號: {material.code}</div>
+                            <div className="font-medium text-foreground">{material.name}</div>
+                            <div className="text-xs text-muted-foreground">代號: {material.code}</div>
                           </div>
                         </div>
                       </TableCell>
@@ -691,8 +689,8 @@ function MaterialsPageContent() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Building className="h-4 w-4 text-blue-600" />
-                          <span className="text-sm font-medium text-gray-700">{material.supplierName}</span>
+                          <Building className="h-4 w-4 text-primary" />
+                          <span className="text-sm font-medium text-foreground">{material.supplierName}</span>
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
@@ -700,20 +698,20 @@ function MaterialsPageContent() {
                           <div className="flex justify-end items-center gap-2">
                             <Input
                               type="number"
-                              className="w-24 h-8 text-right border-blue-200 focus:border-blue-500 focus:ring-blue-500"
+                              className="w-24 h-8 text-right border-input focus:border-primary focus:ring-primary"
                               value={updatedStocks[material.id] ?? material.currentStock}
                               onChange={(e) => handleStockChange(material.id, Number(e.target.value))}
                             />
-                            <span className="text-sm text-gray-600">{material.unit}</span>
+                            <span className="text-sm text-muted-foreground">{material.unit}</span>
                           </div>
                         ) : (
                           <div className="flex items-center justify-end gap-2">
-                            <Warehouse className="h-4 w-4 text-gray-400" />
-                            <span className={`font-medium ${isLowStockItem ? 'text-red-600' : 'text-green-600'}`}>
+                            <Warehouse className="h-4 w-4 text-muted-foreground" />
+                            <span className={`font-medium ${isLowStockItem ? 'text-destructive' : 'text-success'}`}>
                               {material.currentStock} {material.unit}
                             </span>
                             {isLowStockItem && (
-                              <span className="text-xs text-red-600 font-medium">低庫存</span>
+                              <span className="text-xs text-destructive font-medium">低庫存</span>
                             )}
                           </div>
                         )}
@@ -752,7 +750,7 @@ function MaterialsPageContent() {
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               onClick={() => handleDelete(material)}
-                              className="text-red-600 focus:text-red-600"
+                              className="text-destructive focus:text-destructive"
                             >
                               刪除物料
                             </DropdownMenuItem>
@@ -766,15 +764,15 @@ function MaterialsPageContent() {
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-16">
                     <div className="flex flex-col items-center justify-center">
-                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                        <Package className="h-8 w-8 text-gray-400" />
+                      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                        <Package className="h-8 w-8 text-muted-foreground" />
                       </div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">沒有物料資料</h3>
-                      <p className="text-gray-500 mb-4">開始新增第一個物料來管理您的庫存</p>
+                      <h3 className="text-lg font-medium text-foreground mb-2">沒有物料資料</h3>
+                      <p className="text-muted-foreground mb-4">開始新增第一個物料來管理您的庫存</p>
                       <Button 
                         onClick={handleAdd}
                         variant="outline"
-                        className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                        className="border-input text-primary hover:bg-primary/5"
                       >
                         <Plus className="mr-2 h-4 w-4" />
                         新增物料

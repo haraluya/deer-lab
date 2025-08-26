@@ -40,20 +40,20 @@ interface WorkOrderData {
 }
 
 const statusOptions = [
-  { value: "未確認", label: "未確認", color: "bg-gray-100 text-gray-800" },
-  { value: "進行中", label: "進行中", color: "bg-blue-100 text-blue-800" },
-  { value: "待完工確認", label: "待完工確認", color: "bg-yellow-100 text-yellow-800" },
+  { value: "未確認", label: "未確認", color: "bg-muted text-muted-foreground" },
+  { value: "進行中", label: "進行中", color: "bg-primary/10 text-primary" },
+  { value: "待完工確認", label: "待完工確認", color: "bg-warning/10 text-warning" },
   { value: "待品檢", label: "待品檢", color: "bg-orange-100 text-orange-800" },
-  { value: "已完工", label: "已完工", color: "bg-green-100 text-green-800" },
+  { value: "已完工", label: "已完工", color: "bg-success/10 text-success" },
   { value: "已入庫", label: "已入庫", color: "bg-purple-100 text-purple-800" },
-  { value: "已取消", label: "已取消", color: "bg-red-100 text-red-800" }
+  { value: "已取消", label: "已取消", color: "bg-destructive/10 text-destructive" }
 ]
 
 const qcStatusOptions = [
-  { value: "未檢驗", label: "未檢驗", color: "bg-gray-100 text-gray-800" },
-  { value: "檢驗中", label: "檢驗中", color: "bg-blue-100 text-blue-800" },
-  { value: "檢驗通過", label: "檢驗通過", color: "bg-green-100 text-green-800" },
-  { value: "檢驗失敗", label: "檢驗失敗", color: "bg-red-100 text-red-800" }
+  { value: "未檢驗", label: "未檢驗", color: "bg-muted text-muted-foreground" },
+  { value: "檢驗中", label: "檢驗中", color: "bg-primary/10 text-primary" },
+  { value: "檢驗通過", label: "檢驗通過", color: "bg-success/10 text-success" },
+  { value: "檢驗失敗", label: "檢驗失敗", color: "bg-destructive/10 text-destructive" }
 ]
 
 export default function WorkOrderDetailPage() {
@@ -139,12 +139,12 @@ export default function WorkOrderDetailPage() {
 
   const getStatusColor = (status: string) => {
     const option = statusOptions.find(opt => opt.value === status)
-    return option?.color || "bg-gray-100 text-gray-800"
+    return option?.color || "bg-muted text-muted-foreground"
   }
 
   const getQCStatusColor = (status: string) => {
     const option = qcStatusOptions.find(opt => opt.value === status)
-    return option?.color || "bg-gray-100 text-gray-800"
+    return option?.color || "bg-muted text-muted-foreground"
   }
 
   if (loading) {
@@ -206,19 +206,19 @@ export default function WorkOrderDetailPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm font-medium text-gray-500">產品名稱</Label>
+                  <Label className="text-sm font-medium text-muted-foreground">產品名稱</Label>
                   <p className="text-lg font-semibold">{workOrder.productSnapshot.name}</p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-500">產品代號</Label>
+                  <Label className="text-sm font-medium text-muted-foreground">產品代號</Label>
                   <p className="text-lg font-semibold">{workOrder.productSnapshot.code}</p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-500">香精</Label>
+                  <Label className="text-sm font-medium text-muted-foreground">香精</Label>
                   <p className="text-lg">{workOrder.productSnapshot.fragranceName}</p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-500">尼古丁濃度</Label>
+                  <Label className="text-sm font-medium text-muted-foreground">尼古丁濃度</Label>
                   <p className="text-lg">{workOrder.productSnapshot.nicotineMg} mg/ml</p>
                 </div>
               </div>
@@ -367,7 +367,7 @@ export default function WorkOrderDetailPage() {
                   <span className="text-sm text-gray-500">實際產量</span>
                   <span className="font-medium">{workOrder.actualQuantity} g</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-muted rounded-full h-2">
                   <div 
                     className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min((workOrder.actualQuantity / workOrder.targetQuantity) * 100, 100)}%` }}

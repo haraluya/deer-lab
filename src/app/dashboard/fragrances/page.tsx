@@ -489,11 +489,11 @@ function FragrancesPageContent() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-12">
-                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                    <Droplets className="h-6 w-6 text-gray-400" />
+                  <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-3">
+                    <Droplets className="h-6 w-6 text-muted-foreground" />
                   </div>
-                  <h3 className="text-base font-medium text-gray-900 mb-1">沒有香精資料</h3>
-                  <p className="text-sm text-gray-500 mb-4 text-center">開始建立第一個香精來管理配方</p>
+                  <h3 className="text-base font-medium text-foreground mb-1">沒有香精資料</h3>
+                  <p className="text-sm text-muted-foreground mb-4 text-center">開始建立第一個香精來管理配方</p>
                   <Button 
                     onClick={handleAdd}
                     variant="outline"
@@ -512,14 +512,14 @@ function FragrancesPageContent() {
 
       {/* 桌面版表格容器 */}
       <div className="hidden lg:block">
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-pink-50 border-b border-gray-200">
+        <div className="bg-card rounded-xl shadow-lg border border-border overflow-hidden">
+        <div className="px-6 py-4 bg-gradient-to-r from-background to-accent/10 border-b border-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Droplets className="h-5 w-5 text-pink-600" />
-              <h2 className="text-lg font-semibold text-gray-800">香精清單</h2>
+              <Droplets className="h-5 w-5 text-accent" />
+              <h2 className="text-lg font-semibold text-foreground">香精清單</h2>
             </div>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-muted-foreground">
               共 {filteredFragrances.length} 項香精
             </div>
           </div>
@@ -547,7 +547,7 @@ function FragrancesPageContent() {
                         <div className="w-12 h-12 border-4 border-pink-200 rounded-full animate-spin"></div>
                         <div className="absolute top-0 left-0 w-12 h-12 border-4 border-transparent border-t-pink-600 rounded-full animate-spin"></div>
                       </div>
-                      <span className="mt-4 text-gray-600 font-medium">載入香精資料中...</span>
+                      <span className="mt-4 text-muted-foreground font-medium">載入香精資料中...</span>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -557,7 +557,7 @@ function FragrancesPageContent() {
                   return (
                     <TableRow 
                       key={fragrance.id} 
-                      className={`${isLowStock && !isStocktakeMode ? 'bg-red-50/50' : ''} cursor-pointer hover:bg-pink-50/50 transition-colors duration-200`} 
+                      className={`${isLowStock && !isStocktakeMode ? 'bg-destructive/10' : ''} cursor-pointer hover:bg-accent/5 transition-colors duration-200`} 
                       data-state={purchaseCart.has(fragrance.id) ? "selected" : ""}
                       onClick={() => handleViewDetail(fragrance)}
                     >
@@ -571,19 +571,19 @@ function FragrancesPageContent() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-rose-600 rounded-lg flex items-center justify-center">
+                          <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center">
                             <Droplets className="h-4 w-4 text-white" />
                           </div>
                           <div>
-                            <div className="font-medium text-gray-900">{fragrance.name}</div>
-                            <div className="text-xs text-gray-500">代號: {fragrance.code}</div>
+                            <div className="font-medium text-foreground">{fragrance.name}</div>
+                            <div className="text-xs text-muted-foreground">代號: {fragrance.code}</div>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Building className="h-4 w-4 text-blue-600" />
-                          <span className="text-sm font-medium text-gray-700">{fragrance.supplierName}</span>
+                          <Building className="h-4 w-4 text-primary" />
+                          <span className="text-sm font-medium text-foreground">{fragrance.supplierName}</span>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -657,11 +657,11 @@ function FragrancesPageContent() {
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-16">
                     <div className="flex flex-col items-center justify-center">
-                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                        <Droplets className="h-8 w-8 text-gray-400" />
+                      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                        <Droplets className="h-8 w-8 text-muted-foreground" />
                       </div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">沒有香精資料</h3>
-                      <p className="text-gray-500 mb-4">開始建立第一個香精來管理配方</p>
+                                              <h3 className="text-lg font-medium text-foreground mb-2">沒有香精資料</h3>
+                        <p className="text-muted-foreground mb-4">開始建立第一個香精來管理配方</p>
                       <Button 
                         onClick={handleAdd}
                         variant="outline"

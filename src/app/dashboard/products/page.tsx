@@ -184,10 +184,10 @@ function ProductsPageContent() {
     <div className="container mx-auto py-10">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold text-primary">
             產品管理
           </h1>
-          <p className="text-gray-600 mt-2">管理產品系列與香精配置</p>
+          <p className="text-muted-foreground mt-2">管理產品系列與香精配置</p>
         </div>
       </div>
 
@@ -206,7 +206,7 @@ function ProductsPageContent() {
           <Button 
             onClick={handleAdd}
             disabled={false}
-            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200"
           >
             <Plus className="mr-2 h-4 w-4" />
             新增產品
@@ -228,7 +228,7 @@ function ProductsPageContent() {
           <Button 
             onClick={handleAdd}
             disabled={false}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200"
           >
             <Plus className="mr-2 h-4 w-4" />
             新增產品
@@ -238,14 +238,14 @@ function ProductsPageContent() {
 
       {/* 手機版表格容器 */}
       <div className="lg:hidden">
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden mb-6">
-          <div className="px-4 py-3 bg-gradient-to-r from-gray-50 to-purple-50 border-b border-gray-200">
+        <div className="bg-card rounded-xl shadow-lg border border-border overflow-hidden mb-6">
+          <div className="px-4 py-3 bg-gradient-to-r from-background to-primary/10 border-b border-border">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Package className="h-4 w-4 text-purple-600" />
-                <h2 className="text-base font-semibold text-gray-800">產品清單</h2>
+                <Package className="h-4 w-4 text-primary" />
+                <h2 className="text-base font-semibold text-foreground">產品清單</h2>
               </div>
-              <div className="text-xs text-gray-600">
+              <div className="text-xs text-muted-foreground">
                 共 {products.length} 個
               </div>
             </div>
@@ -256,26 +256,26 @@ function ProductsPageContent() {
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-12">
                   <div className="relative">
-                    <div className="w-10 h-10 border-4 border-purple-200 rounded-full animate-spin"></div>
-                    <div className="absolute top-0 left-0 w-10 h-10 border-4 border-transparent border-t-purple-600 rounded-full animate-spin"></div>
+                    <div className="w-10 h-10 border-4 border-border rounded-full animate-spin">
+                    <div className="absolute top-0 left-0 w-10 h-10 border-4 border-transparent border-t-primary rounded-full animate-spin"></div>
                   </div>
-                  <span className="mt-3 text-sm text-gray-600 font-medium">載入中...</span>
+                  <span className="mt-3 text-sm text-muted-foreground font-medium">載入中...</span>
                 </div>
               ) : products.length > 0 ? (
                 <div className="divide-y divide-gray-200">
                   {products.map((product) => (
                     <div 
                       key={product.id} 
-                      className="p-4 hover:bg-purple-50/50 transition-colors duration-200"
+                      className="p-4 hover:bg-primary/5 transition-colors duration-200"
                       onClick={() => handleViewDetail(product)}
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
+                          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                             <Package className="h-4 w-4 text-white" />
                           </div>
                           <div>
-                            <div className="font-medium text-gray-900 text-sm">{product.name}</div>
+                            <div className="font-medium text-foreground text-sm">{product.name}</div>
                             <div className="text-xs text-gray-500">代號: {product.code}</div>
                           </div>
                         </div>
@@ -309,17 +309,17 @@ function ProductsPageContent() {
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <div className="flex items-center gap-1 mb-1">
-                            <Tag className="h-3 w-3 text-purple-600" />
-                            <span className="text-gray-500">系列</span>
+                            <Tag className="h-3 w-3 text-primary" />
+                            <span className="text-muted-foreground">系列</span>
                           </div>
-                          <span className="font-medium text-gray-700">{product.seriesName}</span>
+                          <span className="font-medium text-foreground">{product.seriesName}</span>
                         </div>
                         <div>
                           <div className="flex items-center gap-1 mb-1">
-                            <Droplets className="h-3 w-3 text-pink-600" />
-                            <span className="text-gray-500">香精</span>
+                            <Droplets className="h-3 w-3 text-accent" />
+                            <span className="text-muted-foreground">香精</span>
                           </div>
-                          <span className="font-medium text-gray-700">{product.fragranceName}</span>
+                          <span className="font-medium text-foreground">{product.fragranceName}</span>
                         </div>
                         <div>
                           <div className="flex items-center gap-1 mb-1">
@@ -327,18 +327,18 @@ function ProductsPageContent() {
                           </div>
                           <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                             product.status === 'active' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
+                              ? 'bg-success/10 text-success' 
+                              : 'bg-destructive/10 text-destructive'
                           }`}>
                             {product.status === 'active' ? '活躍' : '非活躍'}
                           </span>
                         </div>
                         <div>
                           <div className="flex items-center gap-1 mb-1">
-                            <Calendar className="h-3 w-3 text-gray-400" />
-                            <span className="text-gray-500">建立時間</span>
+                            <Calendar className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-muted-foreground">建立時間</span>
                           </div>
-                          <span className="text-xs text-gray-600">
+                          <span className="text-xs text-muted-foreground">
                             {product.createdAt ? 
                               new Date(product.createdAt.toDate()).toLocaleDateString('zh-TW') : 
                               '未知'
@@ -351,16 +351,16 @@ function ProductsPageContent() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-12">
-                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                    <Package className="h-6 w-6 text-gray-400" />
+                  <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-3">
+                    <Package className="h-6 w-6 text-muted-foreground" />
                   </div>
-                  <h3 className="text-base font-medium text-gray-900 mb-1">沒有產品資料</h3>
-                  <p className="text-sm text-gray-500 mb-4 text-center">開始建立第一個產品來管理產品系列</p>
+                  <h3 className="text-base font-medium text-foreground mb-1">沒有產品資料</h3>
+                  <p className="text-sm text-muted-foreground mb-4 text-center">開始建立第一個產品來管理產品系列</p>
                   <Button 
                     onClick={handleAdd}
                     variant="outline"
                     size="sm"
-                    className="border-purple-200 text-purple-600 hover:bg-purple-50"
+                    className="border-input text-primary hover:bg-primary/5"
                   >
                     <Plus className="mr-2 h-4 w-4" />
                     新增產品
@@ -374,14 +374,14 @@ function ProductsPageContent() {
 
       {/* 桌面版表格容器 */}
       <div className="hidden lg:block">
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-purple-50 border-b border-gray-200">
+        <div className="bg-card rounded-xl shadow-lg border border-border overflow-hidden">
+        <div className="px-6 py-4 bg-gradient-to-r from-background to-primary/10 border-b border-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-purple-600" />
-              <h2 className="text-lg font-semibold text-gray-800">產品清單</h2>
+              <Package className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold text-foreground">產品清單</h2>
             </div>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-muted-foreground">
               共 {products.length} 個產品
             </div>
           </div>
@@ -405,48 +405,48 @@ function ProductsPageContent() {
                   <TableCell colSpan={6} className="text-center py-16">
                     <div className="flex flex-col items-center justify-center">
                       <div className="relative">
-                        <div className="w-12 h-12 border-4 border-purple-200 rounded-full animate-spin"></div>
-                        <div className="absolute top-0 left-0 w-12 h-12 border-4 border-transparent border-t-purple-600 rounded-full animate-spin"></div>
+                        <div className="w-12 h-12 border-4 border-border rounded-full animate-spin">
+                        <div className="absolute top-0 left-0 w-12 h-12 border-4 border-transparent border-t-primary rounded-full animate-spin"></div>
                       </div>
-                      <span className="mt-4 text-gray-600 font-medium">載入產品資料中...</span>
+                      <span className="mt-4 text-muted-foreground font-medium">載入產品資料中...</span>
                     </div>
                   </TableCell>
                 </TableRow>
               ) : products.length > 0 ? (
                 products.map((product) => (
-                  <TableRow key={product.id} className="hover:bg-purple-50/50 transition-colors duration-200">
+                  <TableRow key={product.id} className="hover:bg-primary/5 transition-colors duration-200">
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
+                        <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
                           <Package className="h-5 w-5 text-white" />
                         </div>
                         <div>
-                          <div className="font-semibold text-gray-900">{product.name}</div>
-                          <div className="text-xs text-gray-500">產品代號: {product.code}</div>
+                          <div className="font-semibold text-foreground">{product.name}</div>
+                          <div className="text-xs text-muted-foreground">產品代號: {product.code}</div>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Tag className="h-4 w-4 text-purple-600" />
-                        <span className="text-sm font-medium text-gray-700">{product.seriesName}</span>
+                        <Tag className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-medium text-foreground">{product.seriesName}</span>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Droplets className="h-4 w-4 text-pink-600" />
-                        <span className="text-sm font-medium text-gray-700">{product.fragranceName}</span>
+                        <Droplets className="h-4 w-4 text-accent" />
+                        <span className="text-sm font-medium text-foreground">{product.fragranceName}</span>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge className={`status-badge ${product.status === 'active' ? 'status-active' : 'status-inactive'}`}>
+                      <Badge variant={product.status === 'active' ? 'success' : 'destructive'}>
                         {product.status === 'active' ? '活躍' : '非活躍'}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-gray-600">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
                           {product.createdAt ? 
                             new Date(product.createdAt.toDate()).toLocaleDateString('zh-TW') : 
                             '未知'
@@ -487,7 +487,7 @@ function ProductsPageContent() {
                           <DropdownMenuItem 
                             onClick={() => handleDelete(product)}
                             disabled={false}
-                            className="text-red-600 focus:text-red-600"
+                            className="text-destructive focus:text-destructive"
                           >
                             刪除產品
                           </DropdownMenuItem>
@@ -500,16 +500,16 @@ function ProductsPageContent() {
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-16">
                     <div className="flex flex-col items-center justify-center">
-                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                        <Package className="h-8 w-8 text-gray-400" />
+                      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                        <Package className="h-8 w-8 text-muted-foreground" />
                       </div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">沒有產品資料</h3>
-                      <p className="text-gray-500 mb-4">開始建立第一個產品來管理產品系列</p>
+                      <h3 className="text-lg font-medium text-foreground mb-2">沒有產品資料</h3>
+                      <p className="text-muted-foreground mb-4">開始建立第一個產品來管理產品系列</p>
                       <Button 
                         onClick={handleAdd}
                         variant="outline"
                         disabled={false}
-                        className="border-purple-200 text-purple-600 hover:bg-purple-50"
+                        className="border-input text-primary hover:bg-primary/5"
                       >
                         <Plus className="mr-2 h-4 w-4" />
                         新增產品

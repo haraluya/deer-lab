@@ -249,7 +249,7 @@ function ProductSeriesPageContent() {
                               <span className="text-sm text-gray-500">無常用物料</span>
                             )}
                             {seriesItem.materialNames.length > 3 && (
-                              <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
+                              <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-muted text-muted-foreground">
                                 +{seriesItem.materialNames.length - 3} 更多
                               </span>
                             )}
@@ -257,10 +257,10 @@ function ProductSeriesPageContent() {
                         </div>
                         <div>
                           <div className="flex items-center gap-1 mb-1">
-                            <Calendar className="h-3 w-3 text-gray-400" />
-                            <span className="text-gray-500">建立時間</span>
+                            <Calendar className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-muted-foreground">建立時間</span>
                           </div>
-                          <span className="text-xs text-gray-600">
+                          <span className="text-xs text-muted-foreground">
                             {seriesItem.createdAt ? 
                               new Date(seriesItem.createdAt.toDate()).toLocaleDateString('zh-TW') : 
                               '未知'
@@ -273,11 +273,11 @@ function ProductSeriesPageContent() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-12">
-                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                    <Tag className="h-6 w-6 text-gray-400" />
+                  <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-3">
+                    <Tag className="h-6 w-6 text-muted-foreground" />
                   </div>
-                  <h3 className="text-base font-medium text-gray-900 mb-1">沒有產品系列資料</h3>
-                  <p className="text-sm text-gray-500 mb-4 text-center">開始建立第一個產品系列來管理常用物料</p>
+                  <h3 className="text-base font-medium text-foreground mb-1">沒有產品系列資料</h3>
+                  <p className="text-sm text-muted-foreground mb-4 text-center">開始建立第一個產品系列來管理常用物料</p>
                   <Button 
                     onClick={handleAdd}
                     variant="outline"
@@ -296,14 +296,14 @@ function ProductSeriesPageContent() {
 
       {/* 桌面版表格容器 */}
       <div className="hidden lg:block">
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-indigo-50 border-b border-gray-200">
+        <div className="bg-card rounded-xl shadow-lg border border-border overflow-hidden">
+        <div className="px-6 py-4 bg-gradient-to-r from-background to-primary/10 border-b border-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Tag className="h-5 w-5 text-indigo-600" />
-              <h2 className="text-lg font-semibold text-gray-800">產品系列清單</h2>
+              <Tag className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold text-foreground">產品系列清單</h2>
             </div>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-muted-foreground">
               共 {series.length} 個系列
             </div>
           </div>
@@ -328,21 +328,21 @@ function ProductSeriesPageContent() {
                         <div className="w-12 h-12 border-4 border-indigo-200 rounded-full animate-spin"></div>
                         <div className="absolute top-0 left-0 w-12 h-12 border-4 border-transparent border-t-indigo-600 rounded-full animate-spin"></div>
                       </div>
-                      <span className="mt-4 text-gray-600 font-medium">載入系列資料中...</span>
+                      <span className="mt-4 text-muted-foreground font-medium">載入系列資料中...</span>
                     </div>
                   </TableCell>
                 </TableRow>
               ) : series.length > 0 ? (
                 series.map((seriesItem) => (
-                  <TableRow key={seriesItem.id} className="hover:bg-indigo-50/50 transition-colors duration-200">
+                  <TableRow key={seriesItem.id} className="hover:bg-primary/5 transition-colors duration-200">
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                        <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
                           <Tag className="h-5 w-5 text-white" />
                         </div>
                         <div>
-                          <div className="font-semibold text-gray-900">{seriesItem.name}</div>
-                          <div className="text-xs text-gray-500">系列代號: {seriesItem.code}</div>
+                          <div className="font-semibold text-foreground">{seriesItem.name}</div>
+                          <div className="text-xs text-muted-foreground">系列代號: {seriesItem.code}</div>
                         </div>
                       </div>
                     </TableCell>
@@ -358,7 +358,7 @@ function ProductSeriesPageContent() {
                           <span className="text-sm text-gray-500">無常用物料</span>
                         )}
                         {seriesItem.materialNames.length > 3 && (
-                          <Badge className="bg-gray-100 text-gray-600 border-gray-200 text-xs">
+                          <Badge className="bg-muted text-muted-foreground border-border text-xs">
                             +{seriesItem.materialNames.length - 3} 更多
                           </Badge>
                         )}
@@ -406,11 +406,11 @@ function ProductSeriesPageContent() {
                 <TableRow>
                   <TableCell colSpan={4} className="text-center py-16">
                     <div className="flex flex-col items-center justify-center">
-                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                        <Tag className="h-8 w-8 text-gray-400" />
+                      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                        <Tag className="h-8 w-8 text-muted-foreground" />
                       </div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">沒有產品系列資料</h3>
-                      <p className="text-gray-500 mb-4">開始建立第一個產品系列來管理產品分類</p>
+                      <h3 className="text-lg font-medium text-foreground mb-2">沒有產品系列資料</h3>
+                      <p className="text-muted-foreground mb-4">開始建立第一個產品系列來管理產品分類</p>
                       <Button 
                         onClick={handleAdd}
                         variant="outline"

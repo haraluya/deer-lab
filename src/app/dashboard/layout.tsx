@@ -81,7 +81,7 @@ function SidebarNav() {
       {navLinks.map((link, index) => {
         if (link.isSeparator) {
           return (
-            <h2 key={`sep-${index}`} className="px-2 mt-4 mb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <h2 key={`sep-${index}`} className="px-2 mt-4 mb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               {link.label}
             </h2>
           );
@@ -102,11 +102,11 @@ function SidebarNav() {
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-all duration-200",
               isActive
-                ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg"
-                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
-            <Icon className={cn("h-4 w-4", isActive ? "text-white" : "text-gray-500")} />
+            <Icon className={cn("h-4 w-4", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
             <span className="truncate">{link.label}</span>
           </Link>
         );
@@ -137,32 +137,32 @@ function UserNav() {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-12 w-full justify-start px-4 text-left font-normal hover:bg-gray-100 rounded-lg transition-colors">
-                    <Avatar className="h-8 w-8 mr-3 ring-2 ring-gray-200">
-                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-medium">
+                <Button variant="ghost" className="relative h-12 w-full justify-start px-4 text-left font-normal hover:bg-muted rounded-lg transition-colors">
+                    <Avatar className="h-8 w-8 mr-3 ring-2 ring-border">
+                        <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground font-medium">
                             {userInitial}
                         </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col space-y-1 flex-1 min-w-0">
-                        <p className="text-sm font-medium leading-none text-gray-900 truncate">
+                        <p className="text-sm font-medium leading-none text-foreground truncate">
                             {appUser?.name || '使用者'}
                         </p>
-                        <p className="text-xs leading-none text-gray-500 truncate">
+                        <p className="text-xs leading-none text-muted-foreground truncate">
                             工號: {appUser?.employeeId || 'N/A'}
                         </p>
                     </div>
-                    <ChevronDown className="h-4 w-4 ml-2 text-gray-400 flex-shrink-0" />
+                    <ChevronDown className="h-4 w-4 ml-2 text-muted-foreground flex-shrink-0" />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none text-gray-900">{appUser?.name || '使用者'}</p>
-                        <p className="text-xs leading-none text-gray-500">{appUser?.employeeId}</p>
+                        <p className="text-sm font-medium leading-none text-foreground">{appUser?.name || '使用者'}</p>
+                        <p className="text-xs leading-none text-muted-foreground">{appUser?.employeeId}</p>
                     </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600">
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>登出</span>
                 </DropdownMenuItem>

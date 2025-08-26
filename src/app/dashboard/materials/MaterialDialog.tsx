@@ -281,7 +281,7 @@ export function MaterialDialog({
                 />
 
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gray-50 rounded-lg flex items-center justify-center">
+                  <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
                     <MaterialIcon category={watchCategory || 'default'} size="lg" />
                   </div>
                   <div className="flex-1">
@@ -290,10 +290,10 @@ export function MaterialDialog({
                       name="category"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm font-semibold text-gray-700">主分類 *</FormLabel>
+                          <FormLabel className="text-sm font-semibold text-foreground">主分類 *</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
-                              <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                              <SelectTrigger className="border-input focus:border-primary focus:ring-primary">
                                 <SelectValue placeholder="選擇主分類" />
                               </SelectTrigger>
                             </FormControl>
@@ -320,10 +320,10 @@ export function MaterialDialog({
                   name="subCategory"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm font-semibold text-gray-700">細分分類 *</FormLabel>
+                      <FormLabel className="text-sm font-semibold text-foreground">細分分類 *</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                                                        <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                                                        <SelectTrigger className="border-input focus:border-primary focus:ring-primary">
                                 <SelectValue placeholder="選擇細分分類" />
                               </SelectTrigger>
                         </FormControl>
@@ -341,10 +341,10 @@ export function MaterialDialog({
                 />
 
                 <div className="flex items-center gap-2">
-                  <Hash className="h-4 w-4 text-gray-500" />
+                  <Hash className="h-4 w-4 text-muted-foreground" />
                   <div className="flex-1">
-                    <label className="text-sm font-semibold text-gray-700">物料代號</label>
-                    <div className="mt-1 p-2 bg-gray-50 border border-gray-200 rounded-md text-sm font-mono">
+                    <label className="text-sm font-semibold text-foreground">物料代號</label>
+                    <div className="mt-1 p-2 bg-muted border border-border rounded-md text-sm font-mono">
                       {generatedCode || '選擇分類後自動生成'}
                     </div>
                   </div>
@@ -366,10 +366,10 @@ export function MaterialDialog({
                 name="supplierId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-semibold text-gray-700">供應商</FormLabel>
+                    <FormLabel className="text-sm font-semibold text-foreground">供應商</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className="border-gray-300 focus:border-green-500 focus:ring-green-500">
+                        <SelectTrigger className="border-input focus:border-success focus:ring-success">
                           <SelectValue placeholder="選擇供應商" />
                         </SelectTrigger>
                       </FormControl>

@@ -241,8 +241,8 @@ export function ImportExportDialog({
       case "gray":
         return {
           header: "bg-gradient-to-r from-gray-50 to-slate-50 border-gray-200",
-          title: "text-gray-800",
-          icon: "text-gray-600",
+                  title: "text-foreground",
+        icon: "text-muted-foreground",
           button: "bg-gray-600 hover:bg-gray-700 text-white"
         }
       default:
@@ -267,7 +267,7 @@ export function ImportExportDialog({
             </div>
             {title} - 匯入/匯出
           </DialogTitle>
-          <DialogDescription className="text-gray-600 mt-2" id="import-export-dialog-description">{description}</DialogDescription>
+          <DialogDescription className="text-muted-foreground mt-2" id="import-export-dialog-description">{description}</DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -280,7 +280,7 @@ export function ImportExportDialog({
                 </div>
                 資料匯入
               </CardTitle>
-              <CardDescription className="text-gray-600">
+              <CardDescription className="text-muted-foreground">
                 上傳 Excel (.xlsx) 或 CSV 檔案來匯入資料
               </CardDescription>
             </CardHeader>
@@ -328,7 +328,7 @@ export function ImportExportDialog({
                       </tbody>
                     </table>
                     {importData.length > 5 && (
-                      <div className="text-xs text-gray-500 text-center py-1">
+                      <div className="text-xs text-muted-foreground text-center py-1">
                         顯示前 5 筆，共 {importData.length} 筆資料
                       </div>
                     )}
@@ -369,7 +369,7 @@ export function ImportExportDialog({
                 </div>
                 資料匯出
               </CardTitle>
-              <CardDescription className="text-gray-600">
+              <CardDescription className="text-muted-foreground">
                 將現有資料匯出為 CSV 格式
               </CardDescription>
             </CardHeader>
