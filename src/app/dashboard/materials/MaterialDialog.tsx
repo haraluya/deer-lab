@@ -9,7 +9,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { collection, getDocs, DocumentReference, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
-import { generateUniqueMaterialCode } from '@/lib/utils';
+
 import { MaterialIcon } from '@/components/ui/material-icon';
 
 import { Button } from '@/components/ui/button';
@@ -91,7 +91,7 @@ export function MaterialDialog({
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [subCategories, setSubCategories] = useState<string[]>([]);
-  const [generatedCode, setGeneratedCode] = useState<string>('');
+  
   const isEditMode = !!materialData;
 
   const form = useForm<FormData>({
@@ -111,25 +111,88 @@ export function MaterialDialog({
   // 監聽分類變化，自動生成代號
   const watchCategory = form.watch('category');
   const watchSubCategory = form.watch('subCategory');
+  const [generatedCode, setGeneratedCode] = useState<string>('');
 
+  // 當分類改變時，自動生成新的代號
   useEffect(() => {
     if (watchCategory && watchSubCategory && !isEditMode) {
+      // 在新增模式下，當分類改變時生成新的代號
       const generateCode = async () => {
         try {
-          const code = await generateUniqueMaterialCode(watchCategory, watchSubCategory, db);
-          setGeneratedCode(code);
+          const { generateUniqueMaterialCode } = await import('@/lib/utils');
+          const mainCategoryId = await getCategoryId(watchCategory);
+          const subCategoryId = await getSubCategoryId(watchSubCategory);
+          const newCode = await generateUniqueMaterialCode(mainCategoryId, subCategoryId, db);
+          setGeneratedCode(newCode);
         } catch (error) {
           console.error('生成物料代號失敗:', error);
-          // 使用本地生成作為備用
-          const fallbackCode = `${watchCategory.substring(0, 2).toUpperCase()}${watchSubCategory.substring(0, 2).toUpperCase()}${Math.floor(Math.random() * 90) + 10}`;
-          setGeneratedCode(fallbackCode);
+          setGeneratedCode('生成失敗');
         }
       };
       generateCode();
     }
   }, [watchCategory, watchSubCategory, isEditMode]);
 
+  // 獲取主分類ID
+  const getCategoryId = async (categoryName: string): Promise<string> => {
+    try {
+      const { collection, getDocs, query, where } = await import('firebase/firestore');
+      const categoryQuery = query(collection(db, 'materialCategories'), where('name', '==', categoryName));
+      const categorySnapshot = await getDocs(categoryQuery);
+      
+      if (!categorySnapshot.empty) {
+        return categorySnapshot.docs[0].data().id || 'XX';
+      }
+      
+      // 如果沒有找到，生成新的ID
+      const { generateCategoryId } = await import('@/lib/utils');
+      return generateCategoryId();
+    } catch (error) {
+      console.error('獲取主分類ID失敗:', error);
+      return 'XX';
+    }
+  };
 
+  // 獲取細分分類ID
+  const getSubCategoryId = async (subCategoryName: string): Promise<string> => {
+    try {
+      const { collection, getDocs, query, where } = await import('firebase/firestore');
+      const subCategoryQuery = query(collection(db, 'materialSubCategories'), where('name', '==', subCategoryName));
+      const subCategorySnapshot = await getDocs(subCategoryQuery);
+      
+      if (!subCategorySnapshot.empty) {
+        return subCategorySnapshot.docs[0].data().id || '000';
+      }
+      
+      // 如果沒有找到，生成新的ID
+      const { generateSubCategoryId } = await import('@/lib/utils');
+      return generateSubCategoryId();
+    } catch (error) {
+      console.error('獲取細分分類ID失敗:', error);
+      return '000';
+    }
+  };
+
+  // 解析並顯示代碼結構
+  const renderCodeStructure = (code: string) => {
+    if (code.length !== 9) {
+      return <span className="text-muted-foreground">等待生成...</span>;
+    }
+    
+    const mainCategoryId = code.substring(0, 2);
+    const subCategoryId = code.substring(2, 5);
+    const randomCode = code.substring(5, 9);
+    
+    return (
+      <div className="flex items-center gap-1 text-sm font-mono">
+        <span className="bg-blue-100 text-blue-800 px-1 rounded">{mainCategoryId}</span>
+        <span className="text-muted-foreground">+</span>
+        <span className="bg-green-100 text-green-800 px-1 rounded">{subCategoryId}</span>
+        <span className="text-muted-foreground">+</span>
+        <span className="bg-purple-100 text-purple-800 px-1 rounded">{randomCode}</span>
+      </div>
+    );
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -199,14 +262,10 @@ export function MaterialDialog({
     try {
       const functions = getFunctions();
       
-      // 使用生成的代號或現有代號
-      const finalCode = isEditMode ? materialData?.code : generatedCode;
-      
       if (isEditMode && materialData) {
         const updateMaterial = httpsCallable(functions, 'updateMaterial');
         await updateMaterial({
           materialId: materialData.id,
-          code: finalCode,
           ...data,
           supplierId: data.supplierId === 'none' ? undefined : data.supplierId
         });
@@ -214,7 +273,6 @@ export function MaterialDialog({
       } else {
               const createMaterial = httpsCallable(functions, 'createMaterial');
       await createMaterial({
-        code: finalCode,
         ...data,
         supplierId: data.supplierId === 'none' ? undefined : data.supplierId
       });
@@ -344,8 +402,22 @@ export function MaterialDialog({
                   <Hash className="h-4 w-4 text-muted-foreground" />
                   <div className="flex-1">
                     <label className="text-sm font-semibold text-foreground">物料代號</label>
-                    <div className="mt-1 p-2 bg-muted border border-border rounded-md text-sm font-mono">
-                      {generatedCode || '選擇分類後自動生成'}
+                    <div className="mt-1 p-3 bg-muted border border-border rounded-md">
+                      {isEditMode ? (
+                        <div>
+                          <div className="text-sm font-mono mb-1">{materialData?.code}</div>
+                          {renderCodeStructure(materialData?.code || '')}
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="text-sm font-mono mb-1">{generatedCode || '等待選擇分類...'}</div>
+                          {renderCodeStructure(generatedCode)}
+                        </div>
+                      )}
+                      <div className="text-xs text-muted-foreground mt-2">
+                        <div>格式：主分類ID(2位字母) + 細分分類ID(3位數字) + 隨機碼(4位數字)</div>
+                        <div>例如：AB1234567</div>
+                      </div>
                     </div>
                   </div>
                 </div>

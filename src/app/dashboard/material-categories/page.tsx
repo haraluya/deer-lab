@@ -39,7 +39,7 @@ interface Category {
   name: string
   type: "category" | "subCategory"
   usageCount: number
-  generatedId?: string // 新增生成的 ID 欄位
+  generatedId?: string // 分類的ID
 }
 
 function MaterialCategoriesPageContent() {
@@ -57,6 +57,7 @@ function MaterialCategoriesPageContent() {
       name: category.name,
       type: category.type,
       usageCount: category.usageCount,
+      generatedId: category.generatedId,
     });
     setIsDialogOpen(true);
   };
@@ -78,40 +79,46 @@ function MaterialCategoriesPageContent() {
       
       // 從物料資料中提取分類和細分分類
       const materialsSnapshot = await getDocs(collection(db, "materials"))
-      const categoryMap = new Map<string, number>()
-      const subCategoryMap = new Map<string, number>()
+      const categoryMap = new Map<string, { count: number, id?: string }>()
+      const subCategoryMap = new Map<string, { count: number, id?: string }>()
       
       materialsSnapshot.docs.forEach(doc => {
         const data = doc.data()
         if (data.category) {
-          categoryMap.set(data.category, (categoryMap.get(data.category) || 0) + 1)
+          const existing = categoryMap.get(data.category) || { count: 0, id: data.mainCategoryId };
+          existing.count += 1;
+          if (data.mainCategoryId) existing.id = data.mainCategoryId;
+          categoryMap.set(data.category, existing);
         }
         if (data.subCategory) {
-          subCategoryMap.set(data.subCategory, (subCategoryMap.get(data.subCategory) || 0) + 1)
+          const existing = subCategoryMap.get(data.subCategory) || { count: 0, id: data.subCategoryId };
+          existing.count += 1;
+          if (data.subCategoryId) existing.id = data.subCategoryId;
+          subCategoryMap.set(data.subCategory, existing);
         }
       })
 
       const categoriesList: Category[] = []
       
-      // 添加分類
-      categoryMap.forEach((count, name) => {
+      // 添加主分類
+      categoryMap.forEach((info, name) => {
         categoriesList.push({
           id: `category_${name}`,
           name,
           type: "category",
-          usageCount: count,
-          generatedId: generateCategoryId(), // 為現有分類生成 ID
+          usageCount: info.count,
+          generatedId: info.id || generateCategoryId(), // 使用現有ID或生成新ID
         })
       })
 
       // 添加細分分類
-      subCategoryMap.forEach((count, name) => {
+      subCategoryMap.forEach((info, name) => {
         categoriesList.push({
           id: `subCategory_${name}`,
           name,
           type: "subCategory",
-          usageCount: count,
-          generatedId: generateSubCategoryId(), // 為現有細分分類生成 ID
+          usageCount: info.count,
+          generatedId: info.id || generateSubCategoryId(), // 使用現有ID或生成新ID
         })
       })
 
@@ -280,7 +287,10 @@ function MaterialCategoriesPageContent() {
                       {category.name}
                     </h3>
                     <p className="text-sm text-gray-500">
-                      ID: {category.generatedId || '待生成'}
+                      {category.type === 'category' ? '主分類' : '細分分類'} ID: 
+                      <span className="font-mono bg-gray-100 px-1 rounded ml-1">
+                        {category.generatedId || '待生成'}
+                      </span>
                     </p>
                   </div>
                 </div>

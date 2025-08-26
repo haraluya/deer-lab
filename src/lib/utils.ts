@@ -5,7 +5,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// 生成隨機 2 位大寫英文字母 ID
+// 生成隨機 2 位大寫英文字母 ID (主分類)
 export function generateCategoryId(): string {
   const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   let result = '';
@@ -15,7 +15,7 @@ export function generateCategoryId(): string {
   return result;
 }
 
-// 生成隨機 3 位數字 ID
+// 生成隨機 3 位數字 ID (細分分類)
 export function generateSubCategoryId(): string {
   let result = '';
   for (let i = 0; i < 3; i++) {
@@ -24,12 +24,55 @@ export function generateSubCategoryId(): string {
   return result;
 }
 
-// 生成物料代號：分類+子分類+2位隨機數字
-export function generateMaterialCode(category: string, subCategory: string): string {
-  const categoryPrefix = category ? category.substring(0, 2).toUpperCase() : 'XX';
-  const subCategoryPrefix = subCategory ? subCategory.substring(0, 2).toUpperCase() : 'XX';
-  const randomNum = Math.floor(Math.random() * 90) + 10; // 10-99
-  return `${categoryPrefix}${subCategoryPrefix}${randomNum}`;
+// 生成 4 位隨機數字 (物料代碼的隨機部分)
+export function generateRandomCode(): string {
+  let result = '';
+  for (let i = 0; i < 4; i++) {
+    result += Math.floor(Math.random() * 10);
+  }
+  return result;
+}
+
+// 新的物料代號生成：主分類ID(2位字母) + 細分分類ID(3位數字) + 隨機生成碼(4位數字) = 9碼
+export function generateMaterialCode(mainCategoryId: string, subCategoryId: string, randomCode?: string): string {
+  // 確保主分類ID是2位字母
+  const categoryId = mainCategoryId ? mainCategoryId.substring(0, 2).toUpperCase() : 'XX';
+  
+  // 確保細分分類ID是3位數字
+  const subCategoryIdStr = subCategoryId ? subCategoryId.padStart(3, '0').substring(0, 3) : '000';
+  
+  // 生成或使用現有的隨機生成碼
+  const randomPart = randomCode || generateRandomCode();
+  
+  return `${categoryId}${subCategoryIdStr}${randomPart}`;
+}
+
+// 從物料代號中提取各部分
+export function parseMaterialCode(code: string): {
+  mainCategoryId: string;
+  subCategoryId: string;
+  randomCode: string;
+} {
+  if (code.length !== 9) {
+    throw new Error('物料代號必須是9位');
+  }
+  
+  return {
+    mainCategoryId: code.substring(0, 2), // 前2位是主分類ID
+    subCategoryId: code.substring(2, 5),  // 中間3位是細分分類ID
+    randomCode: code.substring(5, 9)      // 後4位是隨機生成碼
+  };
+}
+
+// 更新物料代號（當分類改變時，保持隨機生成碼不變）
+export function updateMaterialCode(oldCode: string, newMainCategoryId: string, newSubCategoryId: string): string {
+  try {
+    const { randomCode } = parseMaterialCode(oldCode);
+    return generateMaterialCode(newMainCategoryId, newSubCategoryId, randomCode);
+  } catch (error) {
+    // 如果解析失敗，生成新的完整代號
+    return generateMaterialCode(newMainCategoryId, newSubCategoryId);
+  }
 }
 
 // 檢查 ID 是否已存在
@@ -45,7 +88,7 @@ export async function isIdExists(id: string, collection: string, db: any): Promi
   }
 }
 
-// 生成唯一的分類 ID
+// 生成唯一的主分類 ID
 export async function generateUniqueCategoryId(db: any): Promise<string> {
   let id = generateCategoryId();
   let attempts = 0;
@@ -87,13 +130,13 @@ export async function isMaterialCodeExists(code: string, db: any): Promise<boole
 }
 
 // 生成唯一的物料代號
-export async function generateUniqueMaterialCode(category: string, subCategory: string, db: any): Promise<string> {
-  let code = generateMaterialCode(category, subCategory);
+export async function generateUniqueMaterialCode(mainCategoryId: string, subCategoryId: string, db: any): Promise<string> {
+  let code = generateMaterialCode(mainCategoryId, subCategoryId);
   let attempts = 0;
   const maxAttempts = 10;
 
   while (await isMaterialCodeExists(code, db) && attempts < maxAttempts) {
-    code = generateMaterialCode(category, subCategory);
+    code = generateMaterialCode(mainCategoryId, subCategoryId);
     attempts++;
   }
 
