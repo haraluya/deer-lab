@@ -4,18 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 8080",
-    "build": "npx next build",
-    "build-static": "node scripts/build-static.js",
-    "build-fixed": "node scripts/build-static.js",
-    "build-github": "node scripts/build-static.js",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "export": "next build",
-    "deploy": "npm run build-static && firebase deploy --only hosting",
-    "deploy-only": "firebase deploy --only hosting",
-    "test-deployment": "node scripts/test-deployment.js",
-    "deploy-and-test": "npm run deploy && npm run test-deployment",
-    "fix-and-deploy": "npm run build-static && firebase deploy --only hosting && npm run test-deployment"
+    "deploy": "npm run build && firebase deploy --only hosting",
+    "deploy-only": "firebase deploy --only hosting"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

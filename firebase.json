@@ -8,18 +8,6 @@
     ],
     "rewrites": [
       {
-        "source": "/static/**",
-        "destination": "/static/**"
-      },
-      {
-        "source": "/_next/static/**",
-        "destination": "/static/**"
-      },
-      {
-        "source": "/next/static/**",
-        "destination": "/static/**"
-      },
-      {
         "source": "/dashboard/suppliers",
         "destination": "/dashboard/suppliers.html"
       },
