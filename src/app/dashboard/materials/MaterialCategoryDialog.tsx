@@ -6,7 +6,7 @@ import { db } from "@/lib/firebase"
 import { generateUniqueCategoryId, generateUniqueSubCategoryId } from "@/lib/utils"
 
 import { toast } from "sonner"
-import { Plus, Edit, Trash2, Tag, Calendar, MoreHorizontal, Eye, Package, X } from "lucide-react"
+import { Plus, Edit, Trash2, Tag, Calendar, MoreHorizontal, Eye, Package, X, Folder, FolderOpen } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -134,7 +134,10 @@ export function MaterialCategoryDialog({ isOpen, onOpenChange }: MaterialCategor
         console.log("無法統計使用數量")
       }
 
-      setCategories(categoriesList.sort((a, b) => a.name.localeCompare(b.name)))
+             // 分開排序：先主分類再細分分類，各自按名稱排序
+       const mainCategories = categoriesList.filter(cat => cat.type === 'category').sort((a, b) => a.name.localeCompare(b.name));
+       const subCategories = categoriesList.filter(cat => cat.type === 'subCategory').sort((a, b) => a.name.localeCompare(b.name));
+       setCategories([...mainCategories, ...subCategories]);
     } catch (error) {
       console.error("載入分類失敗:", error)
       toast.error("載入分類失敗")
@@ -281,115 +284,215 @@ export function MaterialCategoryDialog({ isOpen, onOpenChange }: MaterialCategor
             </Button>
           </div>
 
-          {/* 分類卡片容器 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {isLoading ? (
-              Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} className="bg-white rounded-xl shadow-lg border border-gray-100 p-4 animate-pulse">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 bg-gray-200 rounded-lg"></div>
-                    <div className="flex-1">
-                      <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                      <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="h-3 bg-gray-200 rounded"></div>
-                    <div className="h-3 bg-gray-200 rounded w-4/5"></div>
-                  </div>
-                </div>
-              ))
-            ) : categories.length > 0 ? (
-              categories.map((category) => (
-                <div 
-                  key={category.id}
-                  className="bg-white rounded-xl shadow-lg border border-gray-100 p-4 hover:shadow-xl transition-all duration-200"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-lg flex items-center justify-center">
-                        <Tag className="h-4 w-4 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900 text-sm">
-                          {category.name}
-                        </h3>
-                        <p className="text-xs text-gray-500">
-                          {category.type === 'category' ? '主分類' : '細分分類'} ID: 
-                          <span className="font-mono bg-gray-100 px-1 rounded ml-1">
-                            {category.generatedId || '待生成'}
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-6 w-6 p-0">
-                          <MoreHorizontal className="h-3 w-3" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>操作</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleEdit(category)}>
-                          <Edit className="h-3 w-3 mr-2" />
-                          編輯分類
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          onClick={() => handleDelete(category)}
-                          className="text-red-600 focus:text-red-600"
-                          disabled={category.usageCount > 0}
-                        >
-                          <Trash2 className="h-3 w-3 mr-2" />
-                          刪除分類
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Tag className="h-3 w-3 text-teal-600" />
-                      <div>
-                        <p className="text-xs text-gray-500">分類類型</p>
-                        <Badge className={`text-xs ${category.type === 'category' ? 'bg-teal-100 text-teal-800 border-teal-200' : 'bg-cyan-100 text-cyan-800 border-cyan-200'}`}>
-                          {category.type === 'category' ? '主分類' : '細分分類'}
-                        </Badge>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Package className="h-3 w-3 text-purple-600" />
-                      <div>
-                        <p className="text-xs text-gray-500">使用數量</p>
-                        <p className="text-xs font-medium text-gray-900">
-                          {category.usageCount} 個物料
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="col-span-full flex flex-col items-center justify-center py-8">
-                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                  <Tag className="h-6 w-6 text-gray-400" />
-                </div>
-                <h3 className="text-sm font-medium text-gray-900 mb-1">沒有分類資料</h3>
-                <p className="text-xs text-gray-500 mb-3">開始建立第一個分類來管理物料</p>
-                <Button 
-                  onClick={handleAdd}
-                  variant="outline"
-                  size="sm"
-                  className="border-teal-200 text-teal-600 hover:bg-teal-50"
-                >
-                  <Plus className="mr-2 h-3 w-3" />
-                  新增分類
-                </Button>
-              </div>
-            )}
-          </div>
+                     {/* 分類卡片容器 */}
+           <div className="space-y-6">
+             {/* 主分類區塊 */}
+             {categories.filter(cat => cat.type === 'category').length > 0 && (
+               <div>
+                 <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                   <Folder className="h-5 w-5 text-blue-600" />
+                   主分類
+                 </h3>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   {categories.filter(cat => cat.type === 'category').map((category) => (
+                     <div 
+                       key={category.id}
+                       className="bg-white rounded-xl shadow-lg border border-blue-100 p-4 hover:shadow-xl transition-all duration-200"
+                     >
+                       <div className="flex items-start justify-between mb-3">
+                         <div className="flex items-center gap-3">
+                           <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                             <Folder className="h-4 w-4 text-white" />
+                           </div>
+                           <div>
+                             <h3 className="font-semibold text-gray-900 text-sm">
+                               {category.name}
+                             </h3>
+                             <p className="text-xs text-gray-500">
+                               主分類 ID: 
+                               <span className="font-mono bg-blue-100 px-1 rounded ml-1">
+                                 {category.generatedId || '待生成'}
+                               </span>
+                             </p>
+                           </div>
+                         </div>
+                         <DropdownMenu>
+                           <DropdownMenuTrigger asChild>
+                             <Button variant="ghost" className="h-6 w-6 p-0">
+                               <MoreHorizontal className="h-3 w-3" />
+                             </Button>
+                           </DropdownMenuTrigger>
+                           <DropdownMenuContent align="end">
+                             <DropdownMenuLabel>操作</DropdownMenuLabel>
+                             <DropdownMenuSeparator />
+                             <DropdownMenuItem onClick={() => handleEdit(category)}>
+                               <Edit className="h-3 w-3 mr-2" />
+                               編輯分類
+                             </DropdownMenuItem>
+                             <DropdownMenuSeparator />
+                             <DropdownMenuItem 
+                               onClick={() => handleDelete(category)}
+                               className="text-red-600 focus:text-red-600"
+                               disabled={category.usageCount > 0}
+                             >
+                               <Trash2 className="h-3 w-3 mr-2" />
+                               刪除分類
+                             </DropdownMenuItem>
+                           </DropdownMenuContent>
+                         </DropdownMenu>
+                       </div>
+                       
+                       <div className="space-y-2">
+                         <div className="flex items-center gap-2">
+                           <Tag className="h-3 w-3 text-blue-600" />
+                           <div>
+                             <p className="text-xs text-gray-500">分類類型</p>
+                             <Badge className="text-xs bg-blue-100 text-blue-800 border-blue-200">
+                               主分類
+                             </Badge>
+                           </div>
+                         </div>
+                         
+                         <div className="flex items-center gap-2">
+                           <Package className="h-3 w-3 text-purple-600" />
+                           <div>
+                             <p className="text-xs text-gray-500">使用數量</p>
+                             <p className="text-xs font-medium text-gray-900">
+                               {category.usageCount} 個物料
+                             </p>
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+             )}
+
+             {/* 細分分類區塊 */}
+             {categories.filter(cat => cat.type === 'subCategory').length > 0 && (
+               <div>
+                 <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                   <FolderOpen className="h-5 w-5 text-green-600" />
+                   細分分類
+                 </h3>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   {categories.filter(cat => cat.type === 'subCategory').map((category) => (
+                     <div 
+                       key={category.id}
+                       className="bg-white rounded-xl shadow-lg border border-green-100 p-4 hover:shadow-xl transition-all duration-200"
+                     >
+                       <div className="flex items-start justify-between mb-3">
+                         <div className="flex items-center gap-3">
+                           <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                             <FolderOpen className="h-4 w-4 text-white" />
+                           </div>
+                           <div>
+                             <h3 className="font-semibold text-gray-900 text-sm">
+                               {category.name}
+                             </h3>
+                             <p className="text-xs text-gray-500">
+                               細分分類 ID: 
+                               <span className="font-mono bg-green-100 px-1 rounded ml-1">
+                                 {category.generatedId || '待生成'}
+                               </span>
+                             </p>
+                           </div>
+                         </div>
+                         <DropdownMenu>
+                           <DropdownMenuTrigger asChild>
+                             <Button variant="ghost" className="h-6 w-6 p-0">
+                               <MoreHorizontal className="h-3 w-3" />
+                             </Button>
+                           </DropdownMenuTrigger>
+                           <DropdownMenuContent align="end">
+                             <DropdownMenuLabel>操作</DropdownMenuLabel>
+                             <DropdownMenuSeparator />
+                             <DropdownMenuItem onClick={() => handleEdit(category)}>
+                               <Edit className="h-3 w-3 mr-2" />
+                               編輯分類
+                             </DropdownMenuItem>
+                             <DropdownMenuSeparator />
+                             <DropdownMenuItem 
+                               onClick={() => handleDelete(category)}
+                               className="text-red-600 focus:text-red-600"
+                               disabled={category.usageCount > 0}
+                             >
+                               <Trash2 className="h-3 w-3 mr-2" />
+                               刪除分類
+                             </DropdownMenuItem>
+                           </DropdownMenuContent>
+                         </DropdownMenu>
+                       </div>
+                       
+                       <div className="space-y-2">
+                         <div className="flex items-center gap-2">
+                           <Tag className="h-3 w-3 text-green-600" />
+                           <div>
+                             <p className="text-xs text-gray-500">分類類型</p>
+                             <Badge className="text-xs bg-green-100 text-green-800 border-green-200">
+                               細分分類
+                             </Badge>
+                           </div>
+                         </div>
+                         
+                         <div className="flex items-center gap-2">
+                           <Package className="h-3 w-3 text-purple-600" />
+                           <div>
+                             <p className="text-xs text-gray-500">使用數量</p>
+                             <p className="text-xs font-medium text-gray-900">
+                               {category.usageCount} 個物料
+                             </p>
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+             )}
+
+             {/* 載入中狀態 */}
+             {isLoading && (
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 {Array.from({ length: 4 }).map((_, index) => (
+                   <div key={index} className="bg-white rounded-xl shadow-lg border border-gray-100 p-4 animate-pulse">
+                     <div className="flex items-center gap-3 mb-4">
+                       <div className="w-8 h-8 bg-gray-200 rounded-lg"></div>
+                       <div className="flex-1">
+                         <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                         <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                       </div>
+                     </div>
+                     <div className="space-y-2">
+                       <div className="h-3 bg-gray-200 rounded"></div>
+                       <div className="h-3 bg-gray-200 rounded w-4/5"></div>
+                     </div>
+                   </div>
+                 ))}
+               </div>
+             )}
+
+             {/* 無資料狀態 */}
+             {!isLoading && categories.length === 0 && (
+               <div className="flex flex-col items-center justify-center py-8">
+                 <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                   <Tag className="h-6 w-6 text-gray-400" />
+                 </div>
+                 <h3 className="text-sm font-medium text-gray-900 mb-1">沒有分類資料</h3>
+                 <p className="text-xs text-gray-500 mb-3">開始建立第一個分類來管理物料</p>
+                 <Button 
+                   onClick={handleAdd}
+                   variant="outline"
+                   size="sm"
+                   className="border-teal-200 text-teal-600 hover:bg-teal-50"
+                 >
+                   <Plus className="mr-2 h-3 w-3" />
+                   新增分類
+                 </Button>
+               </div>
+             )}
+           </div>
         </DialogContent>
       </Dialog>
 
