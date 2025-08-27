@@ -7,57 +7,67 @@ import { ensureIsAdmin } from "../utils/auth";
 const db = getFirestore();
 
 interface FragranceData {
-  code: string; 
-  name: string; 
-  status: string; 
+  code: string;
+  name: string;
   fragranceType?: string;
-  coreType: string; 
-  currentStock: number; 
-  safetyStockLevel: number; 
-  costPerUnit: number; 
-  percentage: number; 
-  pgRatio: number; 
-  vgRatio: number; 
+  fragranceStatus?: string;
+  supplierRef?: DocumentReference;
+  safetyStockLevel?: number;
+  costPerUnit?: number;
+  percentage?: number;
+  pgRatio?: number;
+  vgRatio?: number;
+  description?: string;
+  notes?: string;
+  remarks?: string;
+  status?: string;
   unit?: string;
-  lastStockUpdate?: FieldValue; 
-  createdAt: FieldValue; 
-  updatedAt: FieldValue; 
-  supplierRef?: DocumentReference | FieldValue;
 }
 
-export const createFragrance = onCall(async (request) => {
-  const { data, auth: contextAuth } = request;
-  // 暫時移除權限檢查
-  // await ensureIsAdmin(contextAuth?.uid);
-  const { code, name, status, fragranceType, supplierId, coreType, safetyStockLevel, costPerUnit, percentage, pgRatio, vgRatio, unit } = data;
-  if (!code || !name) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (代號、名稱)。"); }
-  
-  // 處理 fragranceType 和 status 的相容性
-  const finalFragranceType = fragranceType || status || 'cotton';
-  const finalStatus = status || fragranceType || 'active';
-  
+export const createFragrance = onCall<FragranceData>(async (request) => {
   try {
-    const newFragrance: FragranceData = { 
-      code, 
-      name, 
-      status: finalStatus, 
+    const { data } = request;
+    const { code, name, fragranceType, fragranceStatus, supplierRef, safetyStockLevel, costPerUnit, percentage, pgRatio, vgRatio, description, notes, remarks, status, unit } = data;
+
+    // 驗證必要欄位
+    if (!code || !name) {
+      throw new HttpsError('invalid-argument', '請求缺少必要的欄位(代號、名稱)。');
+    }
+
+    // 處理向後相容性
+    const finalFragranceType = fragranceType || status || 'cotton';
+    const finalStatus = status || fragranceType || 'active';
+    const finalFragranceStatus = fragranceStatus || 'active';
+
+    const fragranceData = {
+      code,
+      name,
       fragranceType: finalFragranceType,
-      coreType: coreType || "", 
-      currentStock: 0, 
-      safetyStockLevel: Number(safetyStockLevel) || 0, 
-      costPerUnit: Number(costPerUnit) || 0, 
-      percentage: Number(percentage) || 0, 
-      pgRatio: Number(pgRatio) || 0, 
-      vgRatio: Number(vgRatio) || 0, 
+      fragranceStatus: finalFragranceStatus,
+      status: finalStatus,
+      supplierRef: supplierRef || null,
+      safetyStockLevel: safetyStockLevel || 0,
+      costPerUnit: costPerUnit || 0,
+      currentStock: 0,
+      percentage: percentage || 0,
+      pgRatio: pgRatio || 0,
+      vgRatio: vgRatio || 0,
+      description: description || '',
+      notes: notes || '',
+      remarks: remarks || '',
       unit: unit || 'KG',
-      createdAt: FieldValue.serverTimestamp(), 
-      updatedAt: FieldValue.serverTimestamp(), 
+      lastStockUpdate: FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     };
-    if (supplierId) { newFragrance.supplierRef = db.collection("suppliers").doc(supplierId); }
-    const docRef = await db.collection("fragrances").add(newFragrance);
-    logger.info(`管理員 ${contextAuth?.uid} 成功建立新香精: ${docRef.id}`);
-    return { status: "success", message: `香精 ${name} 已成功建立。`, fragranceId: docRef.id, };
-  } catch (error) { logger.error("建立香精時發生錯誤:", error); throw new HttpsError("internal", "建立香精時發生未知錯誤。"); }
+
+    const docRef = await db.collection('fragrances').add(fragranceData);
+    
+    return { success: true, fragranceId: docRef.id };
+  } catch (error) {
+    console.error('Error creating fragrance:', error);
+    throw new HttpsError('internal', '建立香精失敗');
+  }
 });
 
 export const updateFragrance = onCall(async (request) => {

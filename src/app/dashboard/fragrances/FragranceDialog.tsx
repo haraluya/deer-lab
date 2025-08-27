@@ -22,12 +22,14 @@ const formSchema = z.object({
   code: z.string().min(1, { message: '香精代號為必填欄位' }),
   name: z.string().min(2, { message: '香精名稱至少需要 2 個字元' }),
   fragranceType: z.string({ required_error: '必須選擇香精種類' }),
+  fragranceStatus: z.string({ required_error: '必須選擇香精狀態' }),
   supplierId: z.string().optional(),
   safetyStockLevel: z.coerce.number().min(0).optional(),
   costPerUnit: z.coerce.number().min(0).optional(),
   percentage: z.coerce.number().min(0).max(100, { message: '香精比例不能超過100%' }),
   pgRatio: z.coerce.number().min(0).max(100, { message: 'PG比例不能超過100%' }),
   vgRatio: z.coerce.number().min(0).max(100, { message: 'VG比例不能超過100%' }),
+  remarks: z.string().optional(),
 }).refine((data) => {
   const total = (data.percentage || 0) + (data.pgRatio || 0) + (data.vgRatio || 0);
   return total <= 100;
@@ -48,12 +50,14 @@ export interface FragranceData extends DocumentData {
   code: string;
   name: string;
   fragranceType?: string;
+  fragranceStatus?: string;
   supplierRef?: DocumentReference;
   safetyStockLevel?: number;
   costPerUnit?: number;
   percentage?: number;
   pgRatio?: number;
   vgRatio?: number;
+  remarks?: string;
   currentStock: number;
 }
 
@@ -77,8 +81,8 @@ export function FragranceDialog({
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      code: '', name: '', fragranceType: 'cotton', supplierId: '',
-      safetyStockLevel: 0, costPerUnit: 0, percentage: 0, pgRatio: 0, vgRatio: 0,
+      code: '', name: '', fragranceType: 'cotton', fragranceStatus: 'active', supplierId: '',
+      safetyStockLevel: 0, costPerUnit: 0, percentage: 0, pgRatio: 0, vgRatio: 0, remarks: '',
     },
   });
 
@@ -106,12 +110,14 @@ export function FragranceDialog({
         code: fragranceData.code || '',
         name: fragranceData.name || '',
         fragranceType: fragranceData.fragranceType || fragranceData.status || 'cotton',
+        fragranceStatus: fragranceData.fragranceStatus || 'active',
         supplierId: fragranceData.supplierRef?.id || '',
         safetyStockLevel: fragranceData.safetyStockLevel || 0,
         costPerUnit: fragranceData.costPerUnit || 0,
         percentage: fragranceData.percentage || 0,
         pgRatio: fragranceData.pgRatio || 0,
         vgRatio: fragranceData.vgRatio || 0,
+        remarks: fragranceData.remarks || '',
       });
     } else if (isOpen && !fragranceData) {
       form.reset();
@@ -280,6 +286,29 @@ export function FragranceDialog({
 
                 <FormField
                   control={form.control}
+                  name="fragranceStatus"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold text-gray-700">香精狀態 *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="border-gray-300 focus:border-purple-500 focus:ring-purple-500">
+                            <SelectValue placeholder="選擇香精狀態" />
+                          </SelectTrigger>
+                        </FormControl>
+                                                 <SelectContent>
+                           <SelectItem value="active">啟用</SelectItem>
+                           <SelectItem value="standby">備用</SelectItem>
+                           <SelectItem value="discontinued">棄用</SelectItem>
+                         </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="supplierId"
                   render={({ field }) => (
                     <FormItem>
@@ -420,6 +449,32 @@ export function FragranceDialog({
                   )}
                 />
               </div>
+            </div>
+
+            {/* 備註 */}
+            <div className="space-y-6 p-6 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl border border-yellow-200 shadow-sm">
+              <h3 className="text-xl font-bold flex items-center gap-3 text-yellow-800">
+                <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                  <Tag className="h-4 w-4 text-yellow-600" />
+                </div>
+                備註
+              </h3>
+              <FormField
+                control={form.control}
+                name="remarks"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Input 
+                        placeholder="輸入香精備註 (選填)"
+                        className="border-gray-300 focus:border-yellow-500 focus:ring-yellow-500"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">

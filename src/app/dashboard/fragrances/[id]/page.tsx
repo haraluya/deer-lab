@@ -29,6 +29,7 @@ interface Fragrance {
   createdBy: string;
   createdByName?: string;
   productCount: number;
+  remarks?: string; // 新增備註欄位
 }
 
 interface Product {
@@ -131,6 +132,7 @@ export default function FragranceDetailPage() {
           createdBy: data.createdBy,
           createdByName,
           productCount: productsList.length,
+          remarks: data.remarks, // 獲取備註
         });
       } catch (error) {
         console.error('Failed to fetch fragrance:', error);
@@ -230,6 +232,7 @@ export default function FragranceDetailPage() {
         createdBy: data.createdBy,
         createdByName,
         productCount: productsList.length,
+        remarks: data.remarks, // 更新備註
       });
     } catch (error) {
       console.error('Failed to refresh fragrance data:', error);
@@ -392,6 +395,18 @@ export default function FragranceDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* 備註 */}
+      {fragrance.remarks && (
+        <Card className="mt-6 border-0 shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-lg text-primary">備註</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm leading-relaxed">{fragrance.remarks}</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 香精詳細資訊 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
