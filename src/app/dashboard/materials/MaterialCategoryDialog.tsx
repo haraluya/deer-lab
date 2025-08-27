@@ -154,7 +154,10 @@ export function MaterialCategoryDialog({ isOpen, onOpenChange }: MaterialCategor
 
   const handleAdd = () => {
     setEditingCategory(null)
-    form.reset()
+    form.reset({
+      name: "",
+      type: "category",
+    })
     setIsDialogOpen(true)
   }
 

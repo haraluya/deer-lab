@@ -219,20 +219,27 @@ export function MaterialDialog({
           })) as Supplier[];
           setSuppliers(suppliersList);
 
-          // Fetch materials to extract categories and subCategories
-          const materialsCollectionRef = collection(db, 'materials');
-          const materialsSnapshot = await getDocs(materialsCollectionRef);
-          const categorySet = new Set<string>();
-          const subCategorySet = new Set<string>();
-          
-          materialsSnapshot.docs.forEach(doc => {
-            const data = doc.data();
-            if (data.category) categorySet.add(data.category);
-            if (data.subCategory) subCategorySet.add(data.subCategory);
-          });
-          
-          setCategories(Array.from(categorySet).sort());
-          setSubCategories(Array.from(subCategorySet).sort());
+          // Fetch categories from materialCategories collection
+          try {
+            const categoriesCollectionRef = collection(db, 'materialCategories');
+            const categoriesSnapshot = await getDocs(categoriesCollectionRef);
+            const categoriesList = categoriesSnapshot.docs.map(doc => doc.data().name).filter(Boolean);
+            setCategories(categoriesList.sort());
+          } catch (error) {
+            console.log("主分類集合不存在，使用空陣列");
+            setCategories([]);
+          }
+
+          // Fetch subCategories from materialSubCategories collection
+          try {
+            const subCategoriesCollectionRef = collection(db, 'materialSubCategories');
+            const subCategoriesSnapshot = await getDocs(subCategoriesCollectionRef);
+            const subCategoriesList = subCategoriesSnapshot.docs.map(doc => doc.data().name).filter(Boolean);
+            setSubCategories(subCategoriesList.sort());
+          } catch (error) {
+            console.log("細分分類集合不存在，使用空陣列");
+            setSubCategories([]);
+          }
         } catch (error) {
           console.error("Failed to fetch data:", error);
           toast.error("讀取資料失敗。");
