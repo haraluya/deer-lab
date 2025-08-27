@@ -10,11 +10,12 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface ImportExportDialogProps {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
-  onImport: (data: any[]) => Promise<void>
+  onImport: (data: any[], options?: { overwriteDuplicates?: boolean }) => Promise<void>
   onExport: () => Promise<any[]>
   title: string
   description: string
@@ -27,6 +28,7 @@ interface ImportExportDialogProps {
     format?: "percentage" // 新增百分比格式
   }>
   color?: "blue" | "green" | "purple" | "yellow" | "red" | "gray"
+  showOverwriteOption?: boolean
 }
 
 export function ImportExportDialog({
@@ -38,12 +40,14 @@ export function ImportExportDialog({
   description,
   sampleData,
   fields,
-  color = "blue"
+  color = "blue",
+  showOverwriteOption = false
 }: ImportExportDialogProps) {
   const [isImporting, setIsImporting] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [importData, setImportData] = useState<any[]>([])
   const [validationErrors, setValidationErrors] = useState<string[]>([])
+  const [overwriteDuplicates, setOverwriteDuplicates] = useState(false)
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -145,11 +149,12 @@ export function ImportExportDialog({
 
     setIsImporting(true)
     try {
-      await onImport(importData)
+      await onImport(importData, { overwriteDuplicates })
       toast.success("資料匯入成功")
       onOpenChange(false)
       setImportData([])
       setValidationErrors([])
+      setOverwriteDuplicates(false)
     } catch (error) {
       console.error("匯入失敗:", error)
       toast.error("資料匯入失敗")
@@ -294,6 +299,22 @@ export function ImportExportDialog({
                   className="w-full p-2 border border-gray-300 rounded-md"
                 />
               </div>
+
+              {showOverwriteOption && (
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="overwrite-duplicates"
+                    checked={overwriteDuplicates}
+                    onCheckedChange={(checked) => setOverwriteDuplicates(checked as boolean)}
+                  />
+                  <label
+                    htmlFor="overwrite-duplicates"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    覆蓋重複資料（以物料代號為主，相同代號將完全取代）
+                  </label>
+                </div>
+              )}
 
               {importData.length > 0 && (
                 <div className="space-y-2">
