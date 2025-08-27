@@ -695,14 +695,20 @@ function MaterialsPageContent() {
                         className="cursor-pointer"
                         onClick={() => router.push(`/dashboard/materials/${material.id}`)}
                       >
-                        <div className="space-y-1">
+                        <div className="flex flex-wrap gap-1">
                           {material.category && (
-                            <Badge variant="outline" className="text-xs">
+                            <Badge 
+                              variant="outline" 
+                              className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300"
+                            >
                               {material.category}
                             </Badge>
                           )}
                           {material.subCategory && (
-                            <Badge variant="outline" className="text-xs">
+                            <Badge 
+                              variant="outline" 
+                              className="text-xs bg-green-100 hover:bg-green-200 text-green-800 border-green-300"
+                            >
                               {material.subCategory}
                             </Badge>
                           )}

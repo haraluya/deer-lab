@@ -391,8 +391,39 @@ export const importMaterials = onCall(async (request) => {
           updatedAt: FieldValue.serverTimestamp(), 
         };
         
+        // 處理供應商 - 支援 supplierId 和 supplierName
         if (processedData.supplierId) { 
           newMaterial.supplierRef = db.collection("suppliers").doc(processedData.supplierId); 
+        } else if (processedData.supplierName) {
+          // 根據供應商名稱查找或創建供應商
+          try {
+            const supplierQuery = await db.collection("suppliers")
+              .where("name", "==", processedData.supplierName)
+              .limit(1)
+              .get();
+            
+            if (!supplierQuery.empty) {
+              // 找到現有供應商
+              newMaterial.supplierRef = supplierQuery.docs[0].ref;
+            } else {
+              // 創建新供應商
+              const newSupplierRef = await db.collection("suppliers").add({
+                name: processedData.supplierName,
+                products: "",
+                contactWindow: "",
+                contactMethod: "",
+                liaisonPersonId: "",
+                notes: `自動創建於物料匯入 - ${processedData.name}`,
+                createdAt: FieldValue.serverTimestamp(),
+                updatedAt: FieldValue.serverTimestamp()
+              });
+              newMaterial.supplierRef = newSupplierRef;
+              logger.info(`自動創建供應商: ${processedData.supplierName} (${newSupplierRef.id})`);
+            }
+          } catch (supplierError) {
+            logger.warn(`處理供應商 ${processedData.supplierName} 時發生錯誤:`, supplierError);
+            // 供應商處理失敗不影響物料匯入
+          }
         }
         
         const docRef = await db.collection("materials").add(newMaterial);
