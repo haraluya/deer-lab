@@ -364,7 +364,7 @@ function MaterialsPageContent() {
     <div className="container mx-auto py-10">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-primary">
+          <h1 className="text-3xl font-bold text-orange-600">
             物料管理
           </h1>
           <p className="text-muted-foreground mt-2">管理系統中的所有物料資料</p>
@@ -413,7 +413,7 @@ function MaterialsPageContent() {
               </Button>
               <Button 
                 onClick={handleAdd}
-                className="w-full"
+                className="w-full bg-orange-600 hover:bg-orange-700"
               >
                 <Plus className="mr-2 h-4 w-4" />
                 新增物料
@@ -464,6 +464,7 @@ function MaterialsPageContent() {
               </Button>
               <Button 
                 onClick={handleAdd}
+                className="bg-orange-600 hover:bg-orange-700"
               >
                 <Plus className="mr-2 h-4 w-4" />
                 新增物料
@@ -474,15 +475,15 @@ function MaterialsPageContent() {
       </div>
 
       {/* 搜尋框 */}
-      <Card className="mb-6 border-0 shadow-lg bg-gradient-to-r from-background to-primary/10">
+      <Card className="mb-6 border-0 shadow-lg bg-gradient-to-r from-orange-50 to-orange-100">
         <CardContent className="pt-6">
           <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-primary" />
+            <Search className="absolute left-3 top-3 h-4 w-4 text-orange-600" />
             <Input
               placeholder="搜尋物料名稱、代號、分類或供應商..."
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
-              className="pl-10 border-input focus:border-primary focus:ring-primary"
+              className="pl-10 border-input focus:border-orange-500 focus:ring-orange-500"
             />
           </div>
         </CardContent>
@@ -499,8 +500,8 @@ function MaterialsPageContent() {
                  variant={selectedCategory === category ? "default" : "secondary"}
                  className={`cursor-pointer transition-colors ${
                    selectedCategory === category 
-                     ? "bg-blue-600 hover:bg-blue-700 text-white" 
-                     : "bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300"
+                     ? "bg-orange-600 hover:bg-orange-700 text-white" 
+                     : "bg-orange-100 hover:bg-orange-200 text-orange-800 border-orange-300"
                  }`}
                  onClick={() => handleCategoryFilter(category)}
                >
@@ -510,18 +511,18 @@ function MaterialsPageContent() {
 
              {/* 子分類 */}
              {subCategories.length > 0 && subCategories.map((subCategory) => (
-               <Badge
-                 key={subCategory}
-                 variant={selectedSubCategory === subCategory ? "default" : "secondary"}
-                 className={`cursor-pointer transition-colors ${
-                   selectedSubCategory === subCategory 
-                     ? "bg-green-600 hover:bg-green-700 text-white" 
-                     : "bg-green-100 hover:bg-green-200 text-green-800 border-green-300"
-                 }`}
-                 onClick={() => handleSubCategoryFilter(subCategory)}
-               >
-                 {subCategory}
-               </Badge>
+                            <Badge
+               key={subCategory}
+               variant={selectedSubCategory === subCategory ? "default" : "secondary"}
+               className={`cursor-pointer transition-colors ${
+                 selectedSubCategory === subCategory 
+                   ? "bg-orange-500 hover:bg-orange-600 text-white" 
+                   : "bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200"
+               }`}
+               onClick={() => handleSubCategoryFilter(subCategory)}
+             >
+               {subCategory}
+             </Badge>
              ))}
            </div>
          </div>
@@ -673,7 +674,7 @@ function MaterialsPageContent() {
                   {filteredMaterials.map((material) => (
                     <TableRow 
                       key={material.id}
-                      className="hover:bg-primary/5 transition-colors duration-200"
+                      className="hover:bg-orange-50 transition-colors duration-200"
                     >
                                              <TableCell onClick={(e) => e.stopPropagation()}>
                          {!isStocktakeMode && (
@@ -902,7 +903,7 @@ function MaterialsPageContent() {
         }}
         title="物料資料"
         description="匯入或匯出物料資料，支援 Excel 和 CSV 格式。匯入時會自動生成缺失的分類和代號。"
-        color="blue"
+        color="yellow"
         sampleData={[
           {
             code: "MAT001",
