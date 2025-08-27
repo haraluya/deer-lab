@@ -256,8 +256,6 @@ function FragrancesPageContent() {
   // 盤點功能相關函式
   const handleStockChange = (id: string, value: number) => {
     setUpdatedStocks(prev => ({ ...prev, [id]: value }));
-    // 跳轉到香精詳情頁面
-    router.push(`/dashboard/fragrances/${id}`);
   };
 
   const handleSaveStocktake = async () => {

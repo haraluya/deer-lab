@@ -336,16 +336,13 @@ export default function FragranceDetailPage() {
         </Button>
       </div>
 
-      {/* 香精基本資訊卡片 */}
-      <Card className="mb-6 border-0 shadow-lg bg-gradient-to-r from-background to-primary/10">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-primary">
-            <div className="w-8 h-8 bg-gradient-to-r from-primary to-primary/80 rounded-lg flex items-center justify-center">
-              <FlaskConical className="h-4 w-4 text-white" />
-            </div>
-            香精基本資訊
-          </CardTitle>
-        </CardHeader>
+             {/* 香精基本資訊卡片 */}
+       <Card className="mb-6 border-0 shadow-lg bg-gradient-to-r from-background to-primary/10">
+         <CardHeader>
+           <CardTitle className="flex items-center gap-2 text-primary">
+             香精基本資訊
+           </CardTitle>
+         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* 香精名稱 */}
@@ -398,15 +395,15 @@ export default function FragranceDetailPage() {
       </Card>
 
       {/* 備註 */}
-      <Card className="mt-6 border-0 shadow-lg">
+      <Card className="mb-6 border-0 shadow-lg bg-gradient-to-r from-yellow-50 to-amber-50">
         <CardHeader>
-          <CardTitle className="flex items-center justify-between text-lg text-primary">
+          <CardTitle className="flex items-center justify-between text-lg text-yellow-800">
             <span>備註</span>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setIsEditRemarksOpen(true)}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 border-yellow-300 text-yellow-700 hover:bg-yellow-100"
             >
               <Edit className="h-3 w-3" />
               編輯
@@ -415,9 +412,9 @@ export default function FragranceDetailPage() {
         </CardHeader>
         <CardContent>
           {fragrance.remarks ? (
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">{fragrance.remarks}</p>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap text-yellow-900">{fragrance.remarks}</p>
           ) : (
-            <p className="text-sm text-muted-foreground">暫無備註</p>
+            <p className="text-sm text-yellow-600">暫無備註</p>
           )}
         </CardContent>
       </Card>
