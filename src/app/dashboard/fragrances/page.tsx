@@ -23,7 +23,6 @@ import { DetailViewDialog } from '@/components/DetailViewDialog';
 
 interface FragranceWithSupplier extends FragranceData {
   supplierName: string;
-  fragranceType?: string;
 }
 
 function FragrancesPageContent() {
@@ -255,6 +254,9 @@ function FragrancesPageContent() {
       
       // 獲取供應商映射表
       const suppliersMap = new Map<string, string>();
+      if (!db) {
+        throw new Error("Firebase 未初始化");
+      }
       const supplierSnapshot = await getDocs(collection(db, "suppliers"));
       supplierSnapshot.forEach(doc => suppliersMap.set(doc.data().name, doc.id));
       
@@ -800,7 +802,7 @@ function FragrancesPageContent() {
         onExport={handleExport}
         title="香精資料"
         description="匯入或匯出香精資料，支援 Excel 和 CSV 格式。匯入時會自動生成缺失的代號。"
-        color="pink"
+        color="purple"
         showUpdateOption={true}
         maxBatchSize={500}
         sampleData={[

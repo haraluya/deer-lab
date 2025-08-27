@@ -47,7 +47,7 @@ export interface FragranceData extends DocumentData {
   id: string;
   code: string;
   name: string;
-  fragranceType: string;
+  fragranceType?: string;
   supplierRef?: DocumentReference;
   safetyStockLevel?: number;
   costPerUnit?: number;
