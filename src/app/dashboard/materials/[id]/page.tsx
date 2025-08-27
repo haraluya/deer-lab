@@ -279,50 +279,54 @@ export default function MaterialDetailPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* 物料編號 */}
+            {/* 物料名稱 */}
             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg">
               <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <Package className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-blue-600 font-medium">物料名稱</p>
+                <p className="text-lg font-semibold text-blue-800">{material.name}</p>
+              </div>
+            </div>
+
+            {/* 物料編號 */}
+            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg">
+              <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
                 <Tag className="h-5 w-5 text-white" />
               </div>
               <div className="flex-1">
-                <p className="text-sm text-blue-600 font-medium">物料編號</p>
-                <p className="text-lg font-semibold text-blue-800">{material.code}</p>
+                <p className="text-sm text-green-600 font-medium">物料編號</p>
+                <p className="text-lg font-semibold text-green-800">{material.code}</p>
                 {renderCodeStructure(material.code)}
               </div>
             </div>
 
-            {/* 供應商 */}
-            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg">
-              <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
-                <Building className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-green-600 font-medium">供應商</p>
-                <p className="text-lg font-semibold text-green-800">{material.supplierName}</p>
-              </div>
-            </div>
-
-            {/* 建立人員 */}
+            {/* 主分類 */}
             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg">
               <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <User className="h-5 w-5 text-white" />
+                <Warehouse className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-sm text-purple-600 font-medium">建立人員</p>
-                <p className="text-lg font-semibold text-purple-800">{material.createdByName}</p>
+                <p className="text-sm text-purple-600 font-medium">主分類</p>
+                <p className="text-lg font-semibold text-purple-800">{material.category || '未分類'}</p>
+                {material.mainCategoryId && (
+                  <p className="text-xs text-purple-600">ID: {material.mainCategoryId}</p>
+                )}
               </div>
             </div>
 
-            {/* 建立時間 */}
+            {/* 細分分類 */}
             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg">
               <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-                <Calendar className="h-5 w-5 text-white" />
+                <Tag className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-sm text-orange-600 font-medium">建立時間</p>
-                <p className="text-lg font-semibold text-orange-800">
-                  {material.createdAt.toLocaleDateString('zh-TW')}
-                </p>
+                <p className="text-sm text-orange-600 font-medium">細分分類</p>
+                <p className="text-lg font-semibold text-orange-800">{material.subCategory || '未分類'}</p>
+                {material.subCategoryId && (
+                  <p className="text-xs text-orange-600">ID: {material.subCategoryId}</p>
+                )}
               </div>
             </div>
           </div>
@@ -339,30 +343,16 @@ export default function MaterialDetailPage() {
           <CardContent className="space-y-4">
             <div className="space-y-3">
               <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">物料名稱</span>
-                <span className="font-medium">{material.name}</span>
+                <span className="text-muted-foreground">供應商</span>
+                <span className="font-medium">{material.supplierName}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">主分類</span>
-                <div className="text-right">
-                  <span className="font-medium">{material.category || '未分類'}</span>
-                  {material.mainCategoryId && (
-                    <div className="text-xs text-muted-foreground">
-                      ID: {material.mainCategoryId}
-                    </div>
-                  )}
-                </div>
+                <span className="text-muted-foreground">建立人員</span>
+                <span className="font-medium">{material.createdByName}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">細分分類</span>
-                <div className="text-right">
-                  <span className="font-medium">{material.subCategory || '未分類'}</span>
-                  {material.subCategoryId && (
-                    <div className="text-xs text-muted-foreground">
-                      ID: {material.subCategoryId}
-                    </div>
-                  )}
-                </div>
+                <span className="text-muted-foreground">建立時間</span>
+                <span className="font-medium">{material.createdAt.toLocaleDateString('zh-TW')}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b">
                 <span className="text-muted-foreground">單位</span>
