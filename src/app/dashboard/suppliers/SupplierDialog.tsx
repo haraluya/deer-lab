@@ -132,17 +132,28 @@ export function SupplierDialog({
 
   // When the dialog opens or supplierData changes, populate the form
   useEffect(() => {
-    if (isOpen && supplierData) {
-      form.reset({
-        name: supplierData.name || '',
-        products: supplierData.products || '',
-        contactWindow: supplierData.contactWindow || '',
-        contactMethod: supplierData.contactMethod || '',
-        liaisonPersonId: supplierData.liaisonPersonId || '',
-        notes: supplierData.notes || '',
-      });
-    } else if (isOpen && !supplierData) {
-      form.reset(); // Reset form for new entry
+    if (isOpen) {
+      if (supplierData) {
+        // 編輯模式：填入現有資料
+        form.reset({
+          name: supplierData.name || '',
+          products: supplierData.products || '',
+          contactWindow: supplierData.contactWindow || '',
+          contactMethod: supplierData.contactMethod || '',
+          liaisonPersonId: supplierData.liaisonPersonId || '',
+          notes: supplierData.notes || '',
+        });
+      } else {
+        // 新增模式：清空所有欄位
+        form.reset({
+          name: '',
+          products: '',
+          contactWindow: '',
+          contactMethod: '',
+          liaisonPersonId: '',
+          notes: '',
+        });
+      }
     }
   }, [isOpen, supplierData, form]);
 

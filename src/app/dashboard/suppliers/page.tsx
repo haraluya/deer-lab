@@ -356,7 +356,10 @@ function SuppliersPageContent() {
                         <Eye className="h-4 w-4 mr-2" />
                         查看詳細
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleEdit(supplier)}>
+                      <DropdownMenuItem onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(supplier);
+                      }}>
                         <Edit className="h-4 w-4 mr-2" />
                         編輯供應商
                       </DropdownMenuItem>
@@ -547,7 +550,9 @@ function SuppliersPageContent() {
               <Button 
                 onClick={() => {
                   setIsDetailViewOpen(false);
-                  handleEdit(selectedDetailSupplier);
+                  setTimeout(() => {
+                    handleEdit(selectedDetailSupplier);
+                  }, 100);
                 }}
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
               >
