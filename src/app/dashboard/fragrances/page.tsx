@@ -117,7 +117,7 @@ function FragrancesPageContent() {
         fragrance.code?.toLowerCase().includes(searchLower) ||
         fragrance.name?.toLowerCase().includes(searchLower) ||
         fragrance.supplierName?.toLowerCase().includes(searchLower) ||
-        fragrance.status?.toLowerCase().includes(searchLower) ||
+        fragrance.fragranceType?.toLowerCase().includes(searchLower) ||
         fragrance.currentStock?.toString().includes(searchLower) ||
         fragrance.costPerUnit?.toString().includes(searchLower) ||
         fragrance.percentage?.toString().includes(searchLower)
@@ -235,25 +235,79 @@ function FragrancesPageContent() {
   };
 
   // 匯入/匯出處理函式
-  const handleImport = async (data: any[]) => {
+  const handleImport = async (data: any[], options?: { updateMode?: boolean }, onProgress?: (current: number, total: number) => void) => {
     const functions = getFunctions();
-    const createFragrance = httpsCallable(functions, 'createFragrance');
     
-    for (const item of data) {
-      try {
-        await createFragrance(item);
-      } catch (error) {
-        console.error('匯入香精失敗:', error);
-        throw error;
+    try {
+      // 調試日誌：檢查匯入資料
+      console.log('開始匯入香精資料:', {
+        totalRecords: data.length,
+        updateMode: options?.updateMode,
+        sampleData: data.slice(0, 3).map(item => ({
+          name: item.name,
+          code: item.code,
+          supplierName: item.supplierName,
+          hasSupplierName: !!item.supplierName
+        }))
+      });
+      
+      // 分批處理資料
+      const batchSize = 20; // 每批處理20筆
+      const totalBatches = Math.ceil(data.length / batchSize);
+      let processedCount = 0;
+      
+      for (let i = 0; i < totalBatches; i++) {
+        const startIndex = i * batchSize;
+        const endIndex = Math.min(startIndex + batchSize, data.length);
+        const batch = data.slice(startIndex, endIndex);
+        
+        // 處理每一批資料
+        for (const item of batch) {
+          try {
+            if (options?.updateMode) {
+              // 更新模式：根據香精編號更新現有資料
+              const updateFragrance = httpsCallable(functions, 'updateFragranceByCode');
+              await updateFragrance({
+                code: item.code,
+                ...item,
+                unit: 'KG' // 固定單位為KG
+              });
+            } else {
+              // 新增模式：建立新的香精
+              const createFragrance = httpsCallable(functions, 'createFragrance');
+              await createFragrance({
+                ...item,
+                unit: 'KG' // 固定單位為KG
+              });
+            }
+          } catch (error) {
+            console.error('處理香精資料失敗:', error);
+            throw error;
+          }
+        }
+        
+        processedCount += batch.length;
+        onProgress?.(processedCount, data.length);
+        
+        // 每批之間稍作延遲，避免過度負載
+        if (i < totalBatches - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
       }
+      
+      console.log('香精匯入結果:', `成功處理 ${processedCount} 筆資料`);
+      loadData();
+    } catch (error) {
+      console.error('匯入香精失敗:', error);
+      throw error;
     }
-    loadData();
   };
 
   const handleExport = async () => {
     return fragrances.map(fragrance => ({
       code: fragrance.code,
       name: fragrance.name,
+      fragranceType: fragrance.fragranceType || fragrance.status,
       supplierName: fragrance.supplierName,
       safetyStockLevel: fragrance.safetyStockLevel,
       costPerUnit: fragrance.costPerUnit,
@@ -261,7 +315,7 @@ function FragrancesPageContent() {
       pgRatio: fragrance.pgRatio,
       vgRatio: fragrance.vgRatio,
       currentStock: fragrance.currentStock,
-      status: fragrance.status
+      unit: 'KG'
     }));
   };
 
@@ -360,7 +414,7 @@ function FragrancesPageContent() {
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-pink-600" />
             <Input
-              placeholder="搜尋香精代號、名稱、供應商、狀態、庫存等..."
+              placeholder="搜尋香精代號、名稱、供應商、香精種類、庫存等..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 border-pink-200 focus:border-pink-500 focus:ring-pink-500"
@@ -453,14 +507,18 @@ function FragrancesPageContent() {
                           </div>
                           <div>
                             <div className="flex items-center gap-1 mb-1">
-                              <span className="text-gray-500">狀態</span>
+                              <span className="text-gray-500">香精種類</span>
                             </div>
                             <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                              fragrance.status === 'active' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-red-100 text-red-800'
+                              fragrance.fragranceType === 'cotton' ? 'bg-blue-100 text-blue-800' :
+                              fragrance.fragranceType === 'ceramic' ? 'bg-green-100 text-green-800' :
+                              fragrance.fragranceType === 'universal' ? 'bg-purple-100 text-purple-800' :
+                              'bg-gray-100 text-gray-800'
                             }`}>
-                              {fragrance.status === 'active' ? '活躍' : '非活躍'}
+                              {fragrance.fragranceType === 'cotton' ? '棉芯' :
+                               fragrance.fragranceType === 'ceramic' ? '陶瓷芯' :
+                               fragrance.fragranceType === 'universal' ? '棉陶芯通用' :
+                               '未指定'}
                             </span>
                           </div>
                           <div>
@@ -547,7 +605,7 @@ function FragrancesPageContent() {
                 <TableHead className="w-[60px] text-center">選取</TableHead>
                 <TableHead className="text-left">香精資訊</TableHead>
                 <TableHead className="text-left">供應商</TableHead>
-                <TableHead className="text-left">狀態</TableHead>
+                <TableHead className="text-left">香精種類</TableHead>
                 <TableHead className="text-right">目前庫存</TableHead>
                 <TableHead className="text-right">安全庫存</TableHead>
                 <TableHead className="text-right">操作</TableHead>
@@ -602,8 +660,16 @@ function FragrancesPageContent() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge className={`status-badge ${fragrance.status === 'active' ? 'status-active' : 'status-inactive'}`}>
-                          {fragrance.status === 'active' ? '活躍' : '非活躍'}
+                        <Badge className={`status-badge ${
+                          fragrance.fragranceType === 'cotton' ? 'bg-blue-100 text-blue-800' :
+                          fragrance.fragranceType === 'ceramic' ? 'bg-green-100 text-green-800' :
+                          fragrance.fragranceType === 'universal' ? 'bg-purple-100 text-purple-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {fragrance.fragranceType === 'cotton' ? '棉芯' :
+                           fragrance.fragranceType === 'ceramic' ? '陶瓷芯' :
+                           fragrance.fragranceType === 'universal' ? '棉陶芯通用' :
+                           '未指定'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
@@ -718,11 +784,15 @@ function FragrancesPageContent() {
         onImport={handleImport}
         onExport={handleExport}
         title="香精資料"
-        description="匯入或匯出香精資料，支援 Excel 和 CSV 格式"
+        description="匯入或匯出香精資料，支援 Excel 和 CSV 格式。匯入時會自動生成缺失的代號。"
+        color="pink"
+        showUpdateOption={true}
+        maxBatchSize={500}
         sampleData={[
           {
             code: "FRAG001",
             name: "示例香精",
+            fragranceType: "cotton",
             supplierName: "示例供應商",
             safetyStockLevel: 1000,
             costPerUnit: 15.5,
@@ -730,20 +800,21 @@ function FragrancesPageContent() {
             pgRatio: 70,
             vgRatio: 30,
             currentStock: 500,
-            status: "active"
+            unit: "KG"
           }
         ]}
         fields={[
-          { key: "code", label: "香精代號", required: true, type: "string" },
+          { key: "code", label: "香精代號", required: false, type: "string" },
           { key: "name", label: "香精名稱", required: true, type: "string" },
+          { key: "fragranceType", label: "香精種類", required: false, type: "string" },
           { key: "supplierName", label: "供應商", required: false, type: "string" },
           { key: "safetyStockLevel", label: "安全庫存", required: false, type: "number" },
           { key: "costPerUnit", label: "單位成本", required: false, type: "number" },
-          { key: "percentage", label: "濃度百分比", required: false, type: "number" },
+          { key: "percentage", label: "香精比例", required: false, type: "number" },
           { key: "pgRatio", label: "PG比例", required: false, type: "number" },
           { key: "vgRatio", label: "VG比例", required: false, type: "number" },
           { key: "currentStock", label: "目前庫存", required: false, type: "number" },
-          { key: "status", label: "狀態", required: false, type: "string" }
+          { key: "unit", label: "單位", required: false, type: "string" }
         ]}
       />
 
@@ -761,7 +832,9 @@ function FragrancesPageContent() {
                 { label: "香精代號", value: selectedDetailFragrance.code },
                 { label: "香精名稱", value: selectedDetailFragrance.name },
                 { label: "供應商", value: selectedDetailFragrance.supplierName },
-                { label: "狀態", value: selectedDetailFragrance.status === 'active' ? '活躍' : '非活躍' },
+                { label: "香精種類", value: selectedDetailFragrance.fragranceType === 'cotton' ? '棉芯' :
+                   selectedDetailFragrance.fragranceType === 'ceramic' ? '陶瓷芯' :
+                   selectedDetailFragrance.fragranceType === 'universal' ? '棉陶芯通用' : '未指定' },
               ]
             },
             {

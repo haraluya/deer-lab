@@ -15,12 +15,13 @@ interface Fragrance {
   id: string;
   code: string;
   name: string;
-  category?: string;
-  subCategory?: string;
+  fragranceType?: string;
   supplierRef?: any;
   supplierName?: string;
   costPerUnit?: number;
-  unit?: string;
+  percentage?: number;
+  pgRatio?: number;
+  vgRatio?: number;
   description?: string;
   notes?: string;
   status: 'active' | 'inactive' | 'discontinued';
@@ -116,12 +117,13 @@ export default function FragranceDetailPage() {
           id: fragranceDoc.id,
           code: data.code,
           name: data.name,
-          category: data.category,
-          subCategory: data.subCategory,
+          fragranceType: data.fragranceType || data.status,
           supplierRef: data.supplierRef,
           supplierName,
           costPerUnit: data.costPerUnit,
-          unit: data.unit,
+          percentage: data.percentage,
+          pgRatio: data.pgRatio,
+          vgRatio: data.vgRatio,
           description: data.description,
           notes: data.notes,
           status: data.status,
@@ -150,29 +152,43 @@ export default function FragranceDetailPage() {
     window.location.reload();
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
+  const getFragranceTypeText = (type: string) => {
+    switch (type) {
+      case 'cotton':
+        return '棉芯';
+      case 'ceramic':
+        return '陶瓷芯';
+      case 'universal':
+        return '棉陶芯通用';
+      default:
+        return '未指定';
+    }
+  };
+
+  const getFragranceTypeColor = (type: string) => {
+    switch (type) {
+      case 'cotton':
+        return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'ceramic':
         return 'bg-green-100 text-green-800 border-green-300';
-      case 'inactive':
-        return 'bg-gray-100 text-gray-800 border-gray-300';
-      case 'discontinued':
-        return 'bg-red-100 text-red-800 border-red-300';
+      case 'universal':
+        return 'bg-purple-100 text-purple-800 border-purple-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300';
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'active':
-        return '啟用';
-      case 'inactive':
-        return '停用';
-      case 'discontinued':
-        return '停產';
-      default:
-        return '未知';
+  // 格式化使用產品列表顯示
+  const formatProductList = (products: Product[]) => {
+    if (products.length === 0) {
+      return '暫無產品使用';
+    }
+    
+    const productNames = products.slice(0, 3).map(p => p.name);
+    if (products.length <= 3) {
+      return productNames.join('、');
+    } else {
+      return productNames.join('、') + '...';
     }
   };
 
@@ -241,49 +257,49 @@ export default function FragranceDetailPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* 香精編號 */}
+            {/* 香精名稱 */}
             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg">
               <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <FlaskConical className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-blue-600 font-medium">香精名稱</p>
+                <p className="text-lg font-semibold text-blue-800">{fragrance.name}</p>
+              </div>
+            </div>
+
+            {/* 香精編號 */}
+            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg">
+              <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
                 <Tag className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-sm text-blue-600 font-medium">香精編號</p>
-                <p className="text-lg font-semibold text-blue-800">{fragrance.code}</p>
+                <p className="text-sm text-green-600 font-medium">香精編號</p>
+                <p className="text-lg font-semibold text-green-800">{fragrance.code}</p>
+              </div>
+            </div>
+
+            {/* 使用產品列表 */}
+            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg">
+              <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <Package className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-purple-600 font-medium">使用產品列表</p>
+                <p className="text-lg font-semibold text-purple-800">
+                  {formatProductList(products)}
+                </p>
               </div>
             </div>
 
             {/* 供應商 */}
-            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg">
-              <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg">
+              <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
                 <Building className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-sm text-green-600 font-medium">供應商</p>
-                <p className="text-lg font-semibold text-green-800">{fragrance.supplierName}</p>
-              </div>
-            </div>
-
-            {/* 建立人員 */}
-            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg">
-              <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <User className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-purple-600 font-medium">建立人員</p>
-                <p className="text-lg font-semibold text-purple-800">{fragrance.createdByName}</p>
-              </div>
-            </div>
-
-            {/* 建立時間 */}
-            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg">
-              <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-                <Calendar className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-orange-600 font-medium">建立時間</p>
-                <p className="text-lg font-semibold text-orange-800">
-                  {fragrance.createdAt.toLocaleDateString('zh-TW')}
-                </p>
+                <p className="text-sm text-orange-600 font-medium">供應商</p>
+                <p className="text-lg font-semibold text-orange-800">{fragrance.supplierName}</p>
               </div>
             </div>
           </div>
@@ -304,46 +320,60 @@ export default function FragranceDetailPage() {
                 <span className="font-medium">{fragrance.name}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">主分類</span>
-                <span className="font-medium">{fragrance.category || '未分類'}</span>
+                <span className="text-muted-foreground">香精編號</span>
+                <span className="font-medium">{fragrance.code}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">細分分類</span>
-                <span className="font-medium">{fragrance.subCategory || '未分類'}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">狀態</span>
-                <Badge className={getStatusColor(fragrance.status)}>
-                  {getStatusText(fragrance.status)}
+                <span className="text-muted-foreground">香精種類</span>
+                <Badge className={getFragranceTypeColor(fragrance.fragranceType || '')}>
+                  {getFragranceTypeText(fragrance.fragranceType || '')}
                 </Badge>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 價格資訊 */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-lg text-primary">價格資訊</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
               <div className="flex justify-between items-center py-2 border-b">
                 <span className="text-muted-foreground">單位成本</span>
                 <span className="font-medium text-green-600">
-                  ${fragrance.costPerUnit?.toFixed(2) || '0.00'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">單位</span>
-                <span className="font-medium text-blue-600">
-                  {fragrance.unit || '未指定'}
+                  ${fragrance.costPerUnit?.toFixed(2) || '0.00'} / KG
                 </span>
               </div>
               <div className="flex justify-between items-center py-2 border-b">
                 <span className="text-muted-foreground">使用產品數</span>
                 <span className="font-medium text-purple-600">
                   {fragrance.productCount} 個產品
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 配方欄位 */}
+        <Card className="border-0 shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-lg text-primary">配方欄位</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-muted-foreground">香精比例</span>
+                <span className="font-medium text-blue-600">
+                  {fragrance.percentage || 0}%
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-muted-foreground">PG比例</span>
+                <span className="font-medium text-green-600">
+                  {fragrance.pgRatio || 0}%
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-muted-foreground">VG比例</span>
+                <span className="font-medium text-purple-600">
+                  {fragrance.vgRatio || 0}%
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-muted-foreground">總比例</span>
+                <span className="font-medium text-orange-600">
+                  {((fragrance.percentage || 0) + (fragrance.pgRatio || 0) + (fragrance.vgRatio || 0))}%
                 </span>
               </div>
             </div>

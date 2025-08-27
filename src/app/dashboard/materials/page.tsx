@@ -52,6 +52,7 @@ function MaterialsPageContent() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>("");
+  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
 
   // --- 盤點功能相關狀態 ---
   const [isStocktakeMode, setIsStocktakeMode] = useState(false);
@@ -143,6 +144,11 @@ function MaterialsPageContent() {
   // 檢查是否低於安全庫存
   const isLowStock = (material: MaterialWithSupplier) => {
     return (material.currentStock || 0) < (material.safetyStockLevel || 0);
+  };
+
+  // 計算低於安全庫存的物料數量
+  const getLowStockCount = () => {
+    return materials.filter(material => isLowStock(material)).length;
   };
 
   // 獲取所有分類和子分類
@@ -277,7 +283,7 @@ function MaterialsPageContent() {
       categories: Array.from(finalCategories).sort(),
       subCategories: Array.from(finalSubCategories).sort()
     };
-  }, [materials, searchTerm, selectedCategory, selectedSubCategory]);
+  }, [materials, searchTerm, selectedCategory, selectedSubCategory, showLowStockOnly]);
 
   // 處理查看詳情
   const handleViewDetail = (material: MaterialWithSupplier) => {
@@ -390,6 +396,11 @@ function MaterialsPageContent() {
       filtered = filtered.filter(material => material.subCategory === selectedSubCategory);
     }
 
+    // 低於安全庫存篩選
+    if (showLowStockOnly) {
+      filtered = filtered.filter(material => isLowStock(material));
+    }
+
     // 排序：先按主分類，再按細分分類，最後按物料名稱（升序）
     filtered.sort((a, b) => {
       // 第一級排序：主分類
@@ -419,7 +430,7 @@ function MaterialsPageContent() {
     });
 
     setFilteredMaterials(filtered);
-  }, [materials, searchTerm, selectedCategory, selectedSubCategory]);
+  }, [materials, searchTerm, selectedCategory, selectedSubCategory, showLowStockOnly]);
 
   // 處理搜尋 - 移除延遲
   const handleSearch = (term: string) => {
@@ -444,6 +455,11 @@ function MaterialsPageContent() {
     
     // 如果取消選取子分類，保留主分類，讓篩選邏輯自動處理
     // 不再自動清除主分類
+  };
+
+  // 處理低於安全庫存篩選
+  const handleLowStockFilter = () => {
+    setShowLowStockOnly(!showLowStockOnly);
   };
 
   // 處理新增物料
@@ -605,19 +621,7 @@ function MaterialsPageContent() {
                 <FileSpreadsheet className="mr-2 h-4 w-4" />
                 匯入/匯出
               </Button>
-              <Button onClick={handleCreatePurchaseOrder} disabled={purchaseCart.size === 0} variant="outline" className="w-full">
-                <ShoppingCart className="mr-2 h-4 w-4" />
-                採購單 ({purchaseCart.size})
-              </Button>
-              <Button 
-                onClick={() => setIsBatchDeleteOpen(true)} 
-                disabled={purchaseCart.size === 0} 
-                variant="destructive" 
-                className="w-full"
-              >
-                <X className="mr-2 h-4 w-4" />
-                批量刪除 ({purchaseCart.size})
-              </Button>
+
               <Button variant="outline" onClick={() => setIsStocktakeMode(true)} className="w-full">
                 <Calculator className="mr-2 h-4 w-4" />
                 盤點模式
@@ -657,18 +661,7 @@ function MaterialsPageContent() {
                 <FileSpreadsheet className="mr-2 h-4 w-4" />
                 匯入/匯出
               </Button>
-              <Button onClick={handleCreatePurchaseOrder} disabled={purchaseCart.size === 0} variant="outline">
-                <ShoppingCart className="mr-2 h-4 w-4" />
-                建立採購單 ({purchaseCart.size})
-              </Button>
-              <Button 
-                onClick={() => setIsBatchDeleteOpen(true)} 
-                disabled={purchaseCart.size === 0} 
-                variant="destructive"
-              >
-                <X className="mr-2 h-4 w-4" />
-                批量刪除 ({purchaseCart.size})
-              </Button>
+
               <Button variant="outline" onClick={() => setIsStocktakeMode(true)}>
                 <Calculator className="mr-2 h-4 w-4" />
                 盤點模式
@@ -701,61 +694,84 @@ function MaterialsPageContent() {
       </Card>
 
              {/* 分類標籤 */}
-       {(categories.length > 0 || subCategories.length > 0) && (
-         <div className="mb-6">
-           <div className="flex items-center justify-end mb-3">
-             {(selectedCategory || selectedSubCategory) && (
-               <Button
-                 variant="ghost"
-                 size="sm"
-                 onClick={() => {
-                   setSelectedCategory("");
-                   setSelectedSubCategory("");
-                 }}
-                 className="text-xs text-muted-foreground hover:text-foreground"
-               >
-                 <X className="mr-1 h-3 w-3" />
-                 清除篩選
-               </Button>
-             )}
-           </div>
-           <div className="flex flex-wrap gap-2">
-             {/* 主分類 */}
-             {categories.map((category) => (
-               <Badge
-                 key={category}
-                 variant={selectedCategory === category ? "default" : "secondary"}
-                 className={`cursor-pointer transition-colors ${
-                   selectedCategory === category 
-                     ? "bg-blue-600 hover:bg-blue-700 text-white" 
-                     : "bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300"
-                 }`}
-                 onClick={() => handleCategoryFilter(category)}
-               >
-                 {category}
-               </Badge>
-             ))}
+       <div className="mb-6">
+         <div className="flex flex-wrap gap-2">
+           {/* 安全庫存標籤 */}
+           {getLowStockCount() > 0 && (
+             <Badge
+               variant={showLowStockOnly ? "default" : "secondary"}
+               className={`cursor-pointer transition-colors ${
+                 showLowStockOnly 
+                   ? "bg-red-600 hover:bg-red-700 text-white" 
+                   : "bg-red-100 hover:bg-red-200 text-red-800 border-red-300"
+               }`}
+               onClick={handleLowStockFilter}
+             >
+               安全庫存 ({getLowStockCount()})
+             </Badge>
+           )}
 
-             {/* 子分類 */}
-             {subCategories.map((subCategory) => (
-               <Badge
-                 key={subCategory}
-                 variant={selectedSubCategory === subCategory ? "default" : "secondary"}
-                 className={`cursor-pointer transition-colors ${
-                   selectedSubCategory === subCategory 
-                     ? "bg-green-600 hover:bg-green-700 text-white" 
-                     : "bg-green-100 hover:bg-green-200 text-green-800 border-green-300"
-                 }`}
-                 onClick={() => handleSubCategoryFilter(subCategory)}
-               >
-                 {subCategory}
-               </Badge>
-             ))}
+           {/* 主分類 */}
+           {categories.map((category) => (
+             <Badge
+               key={category}
+               variant={selectedCategory === category ? "default" : "secondary"}
+               className={`cursor-pointer transition-colors ${
+                 selectedCategory === category 
+                   ? "bg-blue-600 hover:bg-blue-700 text-white" 
+                   : "bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300"
+               }`}
+               onClick={() => handleCategoryFilter(category)}
+             >
+               {category}
+             </Badge>
+           ))}
+
+           {/* 子分類 */}
+           {subCategories.map((subCategory) => (
+             <Badge
+               key={subCategory}
+               variant={selectedSubCategory === subCategory ? "default" : "secondary"}
+               className={`cursor-pointer transition-colors ${
+                 selectedSubCategory === subCategory 
+                   ? "bg-green-600 hover:bg-green-700 text-white" 
+                   : "bg-green-100 hover:bg-green-200 text-green-800 border-green-300"
+               }`}
+               onClick={() => handleSubCategoryFilter(subCategory)}
+             >
+               {subCategory}
+             </Badge>
+           ))}
+                  </div>
+       </div>
+
+       {/* 購物車操作按鈕 - 只有當有項目被勾選時才顯示 */}
+       {purchaseCart.size > 0 && !isStocktakeMode && (
+         <div className="mb-6">
+           <div className="flex items-center gap-2">
+             <Button
+               variant="outline"
+               size="sm"
+               onClick={handleCreatePurchaseOrder}
+               className="flex items-center gap-2"
+             >
+               <ShoppingCart className="h-4 w-4" />
+               建立採購單 ({purchaseCart.size})
+             </Button>
+             <Button
+               variant="destructive"
+               size="sm"
+               onClick={() => setIsBatchDeleteOpen(true)}
+               className="flex items-center gap-2"
+             >
+               <X className="h-4 w-4" />
+               批量刪除 ({purchaseCart.size})
+             </Button>
            </div>
          </div>
        )}
 
-      {/* 載入中 */}
+       {/* 載入中 */}
       {isLoading && (
         <div className="flex justify-center items-center py-20">
           <div className="text-center">
@@ -768,10 +784,15 @@ function MaterialsPageContent() {
       {/* 物料列表 */}
       {!isLoading && (
         <>
-          {/* 手機版列表 */}
+          {/* 手機版卡片列表 */}
           <div className="lg:hidden space-y-4">
             {filteredMaterials.map((material) => (
-              <Card key={material.id} className="relative">
+              <Card 
+                key={material.id} 
+                className={`relative transition-colors duration-200 ${
+                  isLowStock(material) ? "bg-pink-50" : ""
+                }`}
+              >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1 cursor-pointer" onClick={() => router.push(`/dashboard/materials/${material.id}`)}>
@@ -806,7 +827,24 @@ function MaterialsPageContent() {
                   <div className="mt-3 space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">分類:</span>
-                      <span>{material.category || '未分類'}</span>
+                      <div className="flex flex-wrap gap-1">
+                        {material.category && (
+                          <Badge 
+                            variant="outline" 
+                            className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300"
+                          >
+                            {material.category}
+                          </Badge>
+                        )}
+                        {material.subCategory && (
+                          <Badge 
+                            variant="outline" 
+                            className="text-xs bg-green-100 hover:bg-green-200 text-green-800 border-green-300"
+                          >
+                            {material.subCategory}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                     {!isStocktakeMode && (
                       <div className="flex items-center justify-between text-sm">
@@ -839,7 +877,13 @@ function MaterialsPageContent() {
 
                   {/* 盤點模式下的庫存輸入 */}
                   {isStocktakeMode && (
-                    <div className="mt-3 pt-3 border-t">
+                    <div className={`mt-3 pt-3 border-t ${
+                      (updatedStocks[material.id] ?? material.currentStock ?? 0) > (material.currentStock ?? 0)
+                        ? "bg-green-50 -mx-4 -mb-4 px-4 pb-4"
+                        : (updatedStocks[material.id] ?? material.currentStock ?? 0) < (material.currentStock ?? 0)
+                        ? "bg-pink-50 -mx-4 -mb-4 px-4 pb-4"
+                        : ""
+                    }`}>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium">現有庫存:</span>
                         <Input
@@ -847,13 +891,7 @@ function MaterialsPageContent() {
                           inputMode="numeric"
                           value={updatedStocks[material.id] ?? material.currentStock ?? 0}
                           onChange={(e) => handleStockChange(material.id, Number(e.target.value))}
-                          className={`w-20 h-8 text-sm ${
-                            (updatedStocks[material.id] ?? material.currentStock ?? 0) > (material.currentStock ?? 0)
-                              ? "bg-green-50 border-green-300"
-                              : (updatedStocks[material.id] ?? material.currentStock ?? 0) < (material.currentStock ?? 0)
-                              ? "bg-pink-50 border-pink-300"
-                              : ""
-                          }`}
+                          className="w-20 h-8 text-sm"
                         />
                         <span className="text-sm text-muted-foreground">{material.unit}</span>
                       </div>
@@ -917,7 +955,9 @@ function MaterialsPageContent() {
                   {filteredMaterials.map((material) => (
                     <TableRow 
                       key={material.id}
-                      className="hover:bg-orange-50 transition-colors duration-200"
+                      className={`hover:bg-orange-50 transition-colors duration-200 ${
+                        isLowStock(material) ? "bg-pink-50" : ""
+                      }`}
                     >
                                              <TableCell onClick={(e) => e.stopPropagation()}>
                          {!isStocktakeMode && (
@@ -982,19 +1022,19 @@ function MaterialsPageContent() {
                         </div>
                       </TableCell>
                       {isStocktakeMode && (
-                        <TableCell>
+                        <TableCell className={
+                          (updatedStocks[material.id] ?? material.currentStock ?? 0) > (material.currentStock ?? 0)
+                            ? "bg-green-50"
+                            : (updatedStocks[material.id] ?? material.currentStock ?? 0) < (material.currentStock ?? 0)
+                            ? "bg-pink-50"
+                            : ""
+                        }>
                           <Input
                             type="number"
                             inputMode="numeric"
                             value={updatedStocks[material.id] ?? material.currentStock ?? 0}
                             onChange={(e) => handleStockChange(material.id, Number(e.target.value))}
-                            className={`w-20 h-8 text-sm ${
-                              (updatedStocks[material.id] ?? material.currentStock ?? 0) > (material.currentStock ?? 0)
-                                ? "bg-green-50 border-green-300"
-                                : (updatedStocks[material.id] ?? material.currentStock ?? 0) < (material.currentStock ?? 0)
-                                ? "bg-pink-50 border-pink-300"
-                                : ""
-                            }`}
+                            className="w-20 h-8 text-sm"
                           />
                         </TableCell>
                       )}

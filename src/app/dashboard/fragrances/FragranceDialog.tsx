@@ -21,7 +21,7 @@ import { FlaskConical, Tag, Package, Droplets } from 'lucide-react';
 const formSchema = z.object({
   code: z.string().min(1, { message: '香精代號為必填欄位' }),
   name: z.string().min(2, { message: '香精名稱至少需要 2 個字元' }),
-  status: z.string({ required_error: '必須選擇一個狀態' }),
+  fragranceType: z.string({ required_error: '必須選擇香精種類' }),
   supplierId: z.string().optional(),
   safetyStockLevel: z.coerce.number().min(0).optional(),
   costPerUnit: z.coerce.number().min(0).optional(),
@@ -47,7 +47,7 @@ export interface FragranceData extends DocumentData {
   id: string;
   code: string;
   name: string;
-  status: string;
+  fragranceType: string;
   supplierRef?: DocumentReference;
   safetyStockLevel?: number;
   costPerUnit?: number;
@@ -77,7 +77,7 @@ export function FragranceDialog({
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      code: '', name: '', status: 'active', supplierId: '',
+      code: '', name: '', fragranceType: 'cotton', supplierId: '',
       safetyStockLevel: 0, costPerUnit: 0, percentage: 0, pgRatio: 0, vgRatio: 0,
     },
   });
@@ -105,7 +105,7 @@ export function FragranceDialog({
       form.reset({
         code: fragranceData.code || '',
         name: fragranceData.name || '',
-        status: fragranceData.status || 'active',
+        fragranceType: fragranceData.fragranceType || fragranceData.status || 'cotton',
         supplierId: fragranceData.supplierRef?.id || '',
         safetyStockLevel: fragranceData.safetyStockLevel || 0,
         costPerUnit: fragranceData.costPerUnit || 0,
@@ -160,6 +160,7 @@ export function FragranceDialog({
         ...values,
         pgRatio,
         vgRatio,
+        unit: 'KG', // 固定單位為KG
       };
       
       if (isEditMode) {
@@ -246,20 +247,20 @@ export function FragranceDialog({
 
                 <FormField
                   control={form.control}
-                  name="status"
+                  name="fragranceType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm font-semibold text-gray-700">狀態 *</FormLabel>
+                      <FormLabel className="text-sm font-semibold text-gray-700">香精種類 *</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger className="border-gray-300 focus:border-purple-500 focus:ring-purple-500">
-                            <SelectValue placeholder="選擇狀態" />
+                            <SelectValue placeholder="選擇香精種類" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="active">啟用</SelectItem>
-                          <SelectItem value="inactive">停用</SelectItem>
-                          <SelectItem value="discontinued">已下架</SelectItem>
+                          <SelectItem value="cotton">棉芯</SelectItem>
+                          <SelectItem value="ceramic">陶瓷芯</SelectItem>
+                          <SelectItem value="universal">棉陶芯通用</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -307,7 +308,7 @@ export function FragranceDialog({
                   name="safetyStockLevel"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm font-semibold text-gray-700">安全庫存</FormLabel>
+                      <FormLabel className="text-sm font-semibold text-gray-700">安全庫存 (KG)</FormLabel>
                       <FormControl>
                         <Input 
                           type="number" 
@@ -326,7 +327,7 @@ export function FragranceDialog({
                   name="costPerUnit"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm font-semibold text-gray-700">單位成本</FormLabel>
+                      <FormLabel className="text-sm font-semibold text-gray-700">單位成本 (元/KG)</FormLabel>
                       <FormControl>
                         <Input 
                           type="number" 
