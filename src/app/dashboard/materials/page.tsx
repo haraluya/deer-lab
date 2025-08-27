@@ -57,6 +57,7 @@ function MaterialsPageContent() {
   const [isStocktakeMode, setIsStocktakeMode] = useState(false);
   const [updatedStocks, setUpdatedStocks] = useState<{ [key: string]: number }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isStocktakeConfirmOpen, setIsStocktakeConfirmOpen] = useState(false);
   const [isImportExportOpen, setIsImportExportOpen] = useState(false);
   const [selectedDetailMaterial, setSelectedDetailMaterial] = useState<MaterialWithSupplier | null>(null);
   const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
@@ -159,6 +160,124 @@ function MaterialsPageContent() {
       subCategories: Array.from(subCategorySet).sort()
     };
   };
+
+  // 高效篩選算法：使用 Map 和 Set 進行快速查找
+  const getAvailableFilterOptions = useCallback(() => {
+    // 使用 Map 建立分類關係索引，提升查找效率
+    const categoryToSubCategories = new Map<string, Set<string>>();
+    const subCategoryToCategories = new Map<string, Set<string>>();
+    
+    // 建立索引關係（只執行一次）
+    materials.forEach(material => {
+      if (material.category && material.subCategory) {
+        // 主分類 -> 子分類映射
+        if (!categoryToSubCategories.has(material.category)) {
+          categoryToSubCategories.set(material.category, new Set());
+        }
+        categoryToSubCategories.get(material.category)!.add(material.subCategory);
+        
+        // 子分類 -> 主分類映射
+        if (!subCategoryToCategories.has(material.subCategory)) {
+          subCategoryToCategories.set(material.subCategory, new Set());
+        }
+        subCategoryToCategories.get(material.subCategory)!.add(material.category);
+      }
+    });
+
+    // 根據搜尋條件快速篩選
+    let searchFilteredMaterials = materials;
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase().trim();
+      searchFilteredMaterials = materials.filter(material => {
+        return material.name.toLowerCase().includes(searchLower) ||
+               material.code.toLowerCase().includes(searchLower) ||
+               material.category?.toLowerCase().includes(searchLower) ||
+               material.subCategory?.toLowerCase().includes(searchLower) ||
+               material.supplierName.toLowerCase().includes(searchLower);
+      });
+    }
+
+    // 從搜尋結果中提取可用的分類
+    const availableCategories = new Set<string>();
+    const availableSubCategories = new Set<string>();
+    
+    searchFilteredMaterials.forEach(material => {
+      if (material.category) availableCategories.add(material.category);
+      if (material.subCategory) availableSubCategories.add(material.subCategory);
+    });
+
+    // 根據當前選擇進行智能篩選
+    let finalCategories = new Set<string>();
+    let finalSubCategories = new Set<string>();
+
+    if (selectedCategory && selectedSubCategory) {
+      // 兩個都選了：檢查組合是否有效
+      const subCats = categoryToSubCategories.get(selectedCategory);
+      const cats = subCategoryToCategories.get(selectedSubCategory);
+      
+      if (subCats?.has(selectedSubCategory) && cats?.has(selectedCategory)) {
+        // 組合有效：只顯示選中的標籤
+        finalCategories.add(selectedCategory);
+        finalSubCategories.add(selectedSubCategory);
+      } else {
+        // 組合無效：分別處理每個選擇
+        if (selectedCategory) {
+          finalCategories.add(selectedCategory);
+          const subCats = categoryToSubCategories.get(selectedCategory);
+          if (subCats) {
+            subCats.forEach(subCat => {
+              if (availableSubCategories.has(subCat)) {
+                finalSubCategories.add(subCat);
+              }
+            });
+          }
+        }
+        
+        if (selectedSubCategory) {
+          finalSubCategories.add(selectedSubCategory);
+          const cats = subCategoryToCategories.get(selectedSubCategory);
+          if (cats) {
+            cats.forEach(cat => {
+              if (availableCategories.has(cat)) {
+                finalCategories.add(cat);
+              }
+            });
+          }
+        }
+      }
+    } else if (selectedCategory) {
+      // 只選了主分類：顯示該主分類和相關的子分類
+      finalCategories.add(selectedCategory);
+      const subCats = categoryToSubCategories.get(selectedCategory);
+      if (subCats) {
+        subCats.forEach(subCat => {
+          if (availableSubCategories.has(subCat)) {
+            finalSubCategories.add(subCat);
+          }
+        });
+      }
+    } else if (selectedSubCategory) {
+      // 只選了子分類：顯示該子分類和相關的主分類
+      finalSubCategories.add(selectedSubCategory);
+      const cats = subCategoryToCategories.get(selectedSubCategory);
+      if (cats) {
+        cats.forEach(cat => {
+          if (availableCategories.has(cat)) {
+            finalCategories.add(cat);
+          }
+        });
+      }
+    } else {
+      // 都沒選：顯示所有可用的分類
+      finalCategories = availableCategories;
+      finalSubCategories = availableSubCategories;
+    }
+
+    return {
+      categories: Array.from(finalCategories).sort(),
+      subCategories: Array.from(finalSubCategories).sort()
+    };
+  }, [materials, searchTerm, selectedCategory, selectedSubCategory]);
 
   // 處理查看詳情
   const handleViewDetail = (material: MaterialWithSupplier) => {
@@ -311,12 +430,20 @@ function MaterialsPageContent() {
 
   // 處理分類篩選
   const handleCategoryFilter = (category: string) => {
-    setSelectedCategory(selectedCategory === category ? "" : category);
+    const newCategory = selectedCategory === category ? "" : category;
+    setSelectedCategory(newCategory);
+    
+    // 如果取消選取主分類，保留子分類，讓篩選邏輯自動處理
+    // 不再自動清除子分類
   };
 
   // 處理子分類篩選
   const handleSubCategoryFilter = (subCategory: string) => {
-    setSelectedSubCategory(selectedSubCategory === subCategory ? "" : subCategory);
+    const newSubCategory = selectedSubCategory === subCategory ? "" : subCategory;
+    setSelectedSubCategory(newSubCategory);
+    
+    // 如果取消選取子分類，保留主分類，讓篩選邏輯自動處理
+    // 不再自動清除主分類
   };
 
   // 處理新增物料
@@ -375,6 +502,19 @@ function MaterialsPageContent() {
       return;
     }
 
+    // 顯示確認對話框
+    setIsStocktakeConfirmOpen(true);
+  };
+
+  const handleConfirmStocktake = async () => {
+    const changedItems = materials
+      .filter(m => updatedStocks[m.id] !== undefined && updatedStocks[m.id] !== m.currentStock)
+      .map(m => ({
+        itemRefPath: `materials/${m.id}`,
+        currentStock: m.currentStock,
+        newStock: updatedStocks[m.id],
+      }));
+
     const toastId = toast.loading("正在儲存盤點結果...");
     try {
       const functions = getFunctions();
@@ -384,6 +524,7 @@ function MaterialsPageContent() {
       toast.success("盤點結果儲存成功，庫存已更新。", { id: toastId });
       setUpdatedStocks({});
       setIsStocktakeMode(false);
+      setIsStocktakeConfirmOpen(false);
       const suppliersMap = await fetchSuppliers();
       await fetchMaterials(suppliersMap);
     } catch (error) {
@@ -426,16 +567,18 @@ function MaterialsPageContent() {
     }
   }, [materials, handleSearchAndFilter]);
 
-  const { categories, subCategories } = useMemo(() => getAllCategories(), [materials]);
+  const { categories, subCategories } = useMemo(() => getAvailableFilterOptions(), [getAvailableFilterOptions]);
 
   return (
     <div className="container mx-auto py-10">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold text-orange-600">
-            物料管理
+            {isStocktakeMode ? "盤點模式中" : "物料管理"}
           </h1>
-          <p className="text-muted-foreground mt-2">管理系統中的所有物料資料</p>
+          <p className="text-muted-foreground mt-2">
+            {isStocktakeMode ? "進行庫存盤點作業" : "管理系統中的所有物料資料"}
+          </p>
         </div>
       </div>
 
@@ -560,37 +703,53 @@ function MaterialsPageContent() {
              {/* 分類標籤 */}
        {(categories.length > 0 || subCategories.length > 0) && (
          <div className="mb-6">
+           <div className="flex items-center justify-end mb-3">
+             {(selectedCategory || selectedSubCategory) && (
+               <Button
+                 variant="ghost"
+                 size="sm"
+                 onClick={() => {
+                   setSelectedCategory("");
+                   setSelectedSubCategory("");
+                 }}
+                 className="text-xs text-muted-foreground hover:text-foreground"
+               >
+                 <X className="mr-1 h-3 w-3" />
+                 清除篩選
+               </Button>
+             )}
+           </div>
            <div className="flex flex-wrap gap-2">
              {/* 主分類 */}
-             {categories.length > 0 && categories.map((category) => (
-                            <Badge
-               key={category}
-               variant={selectedCategory === category ? "default" : "secondary"}
-               className={`cursor-pointer transition-colors ${
-                 selectedCategory === category 
-                   ? "bg-blue-600 hover:bg-blue-700 text-white" 
-                   : "bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300"
-               }`}
-               onClick={() => handleCategoryFilter(category)}
-             >
-               {category}
-             </Badge>
+             {categories.map((category) => (
+               <Badge
+                 key={category}
+                 variant={selectedCategory === category ? "default" : "secondary"}
+                 className={`cursor-pointer transition-colors ${
+                   selectedCategory === category 
+                     ? "bg-blue-600 hover:bg-blue-700 text-white" 
+                     : "bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300"
+                 }`}
+                 onClick={() => handleCategoryFilter(category)}
+               >
+                 {category}
+               </Badge>
              ))}
 
              {/* 子分類 */}
-             {subCategories.length > 0 && subCategories.map((subCategory) => (
-                                                         <Badge
-                key={subCategory}
-                variant={selectedSubCategory === subCategory ? "default" : "secondary"}
-                className={`cursor-pointer transition-colors ${
-                  selectedSubCategory === subCategory 
-                    ? "bg-green-600 hover:bg-green-700 text-white" 
-                    : "bg-green-100 hover:bg-green-200 text-green-800 border-green-300"
-                }`}
-                onClick={() => handleSubCategoryFilter(subCategory)}
-              >
-                {subCategory}
-              </Badge>
+             {subCategories.map((subCategory) => (
+               <Badge
+                 key={subCategory}
+                 variant={selectedSubCategory === subCategory ? "default" : "secondary"}
+                 className={`cursor-pointer transition-colors ${
+                   selectedSubCategory === subCategory 
+                     ? "bg-green-600 hover:bg-green-700 text-white" 
+                     : "bg-green-100 hover:bg-green-200 text-green-800 border-green-300"
+                 }`}
+                 onClick={() => handleSubCategoryFilter(subCategory)}
+               >
+                 {subCategory}
+               </Badge>
              ))}
            </div>
          </div>
@@ -649,12 +808,14 @@ function MaterialsPageContent() {
                       <span className="text-muted-foreground">分類:</span>
                       <span>{material.category || '未分類'}</span>
                     </div>
+                    {!isStocktakeMode && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">供應商:</span>
+                        <span>{material.supplierName}</span>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">供應商:</span>
-                      <span>{material.supplierName}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">目前庫存:</span>
+                      <span className="text-muted-foreground">{isStocktakeMode ? "應有庫存:" : "目前庫存:"}</span>
                       <div className="flex items-center gap-2">
                         <span className={isLowStock(material) ? "text-red-600 font-medium" : ""}>
                           {material.currentStock || 0} {material.unit}
@@ -668,40 +829,53 @@ function MaterialsPageContent() {
                       <span className="text-muted-foreground">安全庫存:</span>
                       <span>{material.safetyStockLevel || 0} {material.unit}</span>
                     </div>
+                    {!isStocktakeMode && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">成本:</span>
+                        <span>${material.costPerUnit || 0}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* 盤點模式下的庫存輸入 */}
                   {isStocktakeMode && (
                     <div className="mt-3 pt-3 border-t">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">盤點數量:</span>
+                        <span className="text-sm font-medium">現有庫存:</span>
                         <Input
                           type="number"
+                          inputMode="numeric"
                           value={updatedStocks[material.id] ?? material.currentStock ?? 0}
                           onChange={(e) => handleStockChange(material.id, Number(e.target.value))}
-                          className="w-20 h-8 text-sm"
+                          className={`w-20 h-8 text-sm ${
+                            (updatedStocks[material.id] ?? material.currentStock ?? 0) > (material.currentStock ?? 0)
+                              ? "bg-green-50 border-green-300"
+                              : (updatedStocks[material.id] ?? material.currentStock ?? 0) < (material.currentStock ?? 0)
+                              ? "bg-pink-50 border-pink-300"
+                              : ""
+                          }`}
                         />
                         <span className="text-sm text-muted-foreground">{material.unit}</span>
                       </div>
                     </div>
                   )}
 
-                                     {/* 購物車功能 */}
-                   {!isStocktakeMode && (
-                     <div className="mt-3 pt-3 border-t">
-                       <div className="flex items-center justify-between">
-                         <div className="flex items-center gap-2">
-                           <Checkbox
-                             checked={purchaseCart.has(material.id)}
-                             onCheckedChange={() => handleCartToggle(material.id)}
-                           />
-                         </div>
-                         <div className="text-sm text-muted-foreground">
-                           ${material.costPerUnit || 0}
-                         </div>
-                       </div>
-                     </div>
-                   )}
+                  {/* 購物車功能 */}
+                  {!isStocktakeMode && (
+                    <div className="mt-3 pt-3 border-t">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={purchaseCart.has(material.id)}
+                            onCheckedChange={() => handleCartToggle(material.id)}
+                          />
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          ${material.costPerUnit || 0}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
@@ -732,9 +906,10 @@ function MaterialsPageContent() {
                     </TableHead>
                     <TableHead>物料資訊</TableHead>
                     <TableHead>分類</TableHead>
-                    <TableHead>供應商</TableHead>
-                    <TableHead>庫存</TableHead>
-                    <TableHead>成本</TableHead>
+                    {!isStocktakeMode && <TableHead>供應商</TableHead>}
+                    <TableHead>{isStocktakeMode ? "應有庫存" : "庫存"}</TableHead>
+                    {isStocktakeMode && <TableHead>現有庫存</TableHead>}
+                    {!isStocktakeMode && <TableHead>成本</TableHead>}
                     <TableHead className="w-12">操作</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -782,12 +957,14 @@ function MaterialsPageContent() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell 
-                        className="cursor-pointer"
-                        onClick={() => router.push(`/dashboard/materials/${material.id}`)}
-                      >
-                        {material.supplierName}
-                      </TableCell>
+                      {!isStocktakeMode && (
+                        <TableCell 
+                          className="cursor-pointer"
+                          onClick={() => router.push(`/dashboard/materials/${material.id}`)}
+                        >
+                          {material.supplierName}
+                        </TableCell>
+                      )}
                       <TableCell 
                         className="cursor-pointer"
                         onClick={() => router.push(`/dashboard/materials/${material.id}`)}
@@ -804,12 +981,31 @@ function MaterialsPageContent() {
                           安全庫存: {material.safetyStockLevel || 0} {material.unit}
                         </div>
                       </TableCell>
-                      <TableCell 
-                        className="cursor-pointer"
-                        onClick={() => router.push(`/dashboard/materials/${material.id}`)}
-                      >
-                        ${material.costPerUnit || 0}
-                      </TableCell>
+                      {isStocktakeMode && (
+                        <TableCell>
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            value={updatedStocks[material.id] ?? material.currentStock ?? 0}
+                            onChange={(e) => handleStockChange(material.id, Number(e.target.value))}
+                            className={`w-20 h-8 text-sm ${
+                              (updatedStocks[material.id] ?? material.currentStock ?? 0) > (material.currentStock ?? 0)
+                                ? "bg-green-50 border-green-300"
+                                : (updatedStocks[material.id] ?? material.currentStock ?? 0) < (material.currentStock ?? 0)
+                                ? "bg-pink-50 border-pink-300"
+                                : ""
+                            }`}
+                          />
+                        </TableCell>
+                      )}
+                      {!isStocktakeMode && (
+                        <TableCell 
+                          className="cursor-pointer"
+                          onClick={() => router.push(`/dashboard/materials/${material.id}`)}
+                        >
+                          ${material.costPerUnit || 0}
+                        </TableCell>
+                      )}
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -935,6 +1131,15 @@ function MaterialsPageContent() {
         onConfirm={handleBatchDelete}
         title="確認批量刪除"
         description={`您確定要刪除選取的 ${purchaseCart.size} 個物料嗎？此操作無法復原。`}
+      />
+
+      {/* 盤點確認對話框 */}
+      <ConfirmDialog
+        isOpen={isStocktakeConfirmOpen}
+        onOpenChange={setIsStocktakeConfirmOpen}
+        onConfirm={handleConfirmStocktake}
+        title="確認盤點結果"
+        description={`您確定要更新 ${materials.filter(m => updatedStocks[m.id] !== undefined && updatedStocks[m.id] !== m.currentStock).length} 個物料的庫存嗎？此操作將直接修改庫存資料。`}
       />
 
       {/* 物料分類對話框 */}
