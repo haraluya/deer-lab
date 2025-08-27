@@ -873,14 +873,15 @@ function MaterialsPageContent() {
       <ImportExportDialog
         isOpen={isImportExportOpen}
         onOpenChange={setIsImportExportOpen}
-        onImport={async (data: any[], options?: { overwriteDuplicates?: boolean }) => {
+        onImport={async (data: any[], options?: { overwriteDuplicates?: boolean; updateMode?: boolean }) => {
           const functions = getFunctions();
           const importMaterials = httpsCallable(functions, 'importMaterials');
           
           try {
             const result = await importMaterials({ 
               materials: data,
-              overwriteDuplicates: options?.overwriteDuplicates || false
+              overwriteDuplicates: options?.overwriteDuplicates || false,
+              updateMode: options?.updateMode || false
             });
             console.log('匯入結果:', result);
             toast.success('物料匯入完成');
@@ -908,6 +909,7 @@ function MaterialsPageContent() {
         description="匯入或匯出物料資料，支援 Excel 和 CSV 格式。匯入時會自動生成缺失的分類和代號。"
         color="yellow"
         showOverwriteOption={true}
+        showUpdateOption={true}
         sampleData={[
           {
             code: "MAT001",

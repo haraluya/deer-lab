@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 interface ImportExportDialogProps {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
-  onImport: (data: any[], options?: { overwriteDuplicates?: boolean }) => Promise<void>
+  onImport: (data: any[], options?: { overwriteDuplicates?: boolean; updateMode?: boolean }) => Promise<void>
   onExport: () => Promise<any[]>
   title: string
   description: string
@@ -29,6 +29,7 @@ interface ImportExportDialogProps {
   }>
   color?: "blue" | "green" | "purple" | "yellow" | "red" | "gray"
   showOverwriteOption?: boolean
+  showUpdateOption?: boolean
 }
 
 export function ImportExportDialog({
@@ -41,13 +42,15 @@ export function ImportExportDialog({
   sampleData,
   fields,
   color = "blue",
-  showOverwriteOption = false
+  showOverwriteOption = false,
+  showUpdateOption = false
 }: ImportExportDialogProps) {
   const [isImporting, setIsImporting] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [importData, setImportData] = useState<any[]>([])
   const [validationErrors, setValidationErrors] = useState<string[]>([])
   const [overwriteDuplicates, setOverwriteDuplicates] = useState(false)
+  const [updateMode, setUpdateMode] = useState(false)
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -149,12 +152,13 @@ export function ImportExportDialog({
 
     setIsImporting(true)
     try {
-      await onImport(importData, { overwriteDuplicates })
+      await onImport(importData, { overwriteDuplicates, updateMode })
       toast.success("資料匯入成功")
       onOpenChange(false)
       setImportData([])
       setValidationErrors([])
       setOverwriteDuplicates(false)
+      setUpdateMode(false)
     } catch (error) {
       console.error("匯入失敗:", error)
       toast.error("資料匯入失敗")
@@ -265,15 +269,26 @@ export function ImportExportDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white" aria-describedby="import-export-dialog-description">
-        <DialogHeader className={`pb-4 border-b ${colorClasses.header}`}>
-          <DialogTitle className={`flex items-center gap-3 text-2xl font-bold ${colorClasses.title}`}>
-            <div className={`w-10 h-10 ${colorClasses.header} rounded-lg flex items-center justify-center`}>
-              <FileSpreadsheet className={`h-5 w-5 ${colorClasses.icon}`} />
-            </div>
-            {title} - 匯入/匯出
-          </DialogTitle>
-          <DialogDescription className="text-muted-foreground mt-2" id="import-export-dialog-description">{description}</DialogDescription>
-        </DialogHeader>
+                 <DialogHeader className={`pb-4 border-b ${colorClasses.header}`}>
+           <DialogTitle className={`flex items-center gap-3 text-2xl font-bold ${colorClasses.title}`}>
+             <div className={`w-10 h-10 ${colorClasses.header} rounded-lg flex items-center justify-center`}>
+               <FileSpreadsheet className={`h-5 w-5 ${colorClasses.icon}`} />
+             </div>
+             {title} - 匯入/匯出
+           </DialogTitle>
+           <DialogDescription className="text-muted-foreground mt-2" id="import-export-dialog-description">{description}</DialogDescription>
+         </DialogHeader>
+
+         {/* 匯入/匯出規則說明 */}
+         <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-6">
+           <h4 className="font-semibold text-blue-800 mb-2">匯入/匯出規則</h4>
+           <div className="text-sm text-blue-700 space-y-1">
+             <p>• <strong>預設匯入模式</strong>：如果沒有物料代號，系統會自動生成；如果分類不存在，會自動創建並生成物料代號</p>
+             <p>• <strong>更新資料模式</strong>：只更新相同物料號碼的欄位，用於大量資料更新</p>
+             <p>• <strong>覆蓋重複資料</strong>：以物料代號為主，相同代號將完全取代現有資料</p>
+             <p>• <strong>支援格式</strong>：Excel (.xlsx) 和 CSV 檔案格式</p>
+           </div>
+         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* 匯入區塊 */}
@@ -300,21 +315,37 @@ export function ImportExportDialog({
                 />
               </div>
 
-              {showOverwriteOption && (
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="overwrite-duplicates"
-                    checked={overwriteDuplicates}
-                    onCheckedChange={(checked) => setOverwriteDuplicates(checked as boolean)}
-                  />
-                  <label
-                    htmlFor="overwrite-duplicates"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    覆蓋重複資料（以物料代號為主，相同代號將完全取代）
-                  </label>
-                </div>
-              )}
+                             {showUpdateOption && (
+                 <div className="flex items-center space-x-2">
+                   <Checkbox
+                     id="update-mode"
+                     checked={updateMode}
+                     onCheckedChange={(checked) => setUpdateMode(checked as boolean)}
+                   />
+                   <label
+                     htmlFor="update-mode"
+                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                   >
+                     更新資料模式（只更新相同物料號碼的欄位，用於大量資料更新）
+                   </label>
+                 </div>
+               )}
+
+               {showOverwriteOption && (
+                 <div className="flex items-center space-x-2">
+                   <Checkbox
+                     id="overwrite-duplicates"
+                     checked={overwriteDuplicates}
+                     onCheckedChange={(checked) => setOverwriteDuplicates(checked as boolean)}
+                   />
+                   <label
+                     htmlFor="overwrite-duplicates"
+                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                   >
+                     覆蓋重複資料（以物料代號為主，相同代號將完全取代）
+                   </label>
+                 </div>
+               )}
 
               {importData.length > 0 && (
                 <div className="space-y-2">
