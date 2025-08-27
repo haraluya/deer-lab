@@ -177,7 +177,16 @@ export function MaterialCategoryDialog({ isOpen, onOpenChange }: MaterialCategor
     if (!categoryToDelete) return
 
     try {
-      // 這裡可以添加刪除邏輯，但由於分類是從物料中提取的，實際刪除需要更新所有相關物料
+      if (!db) {
+        throw new Error("Firebase 未初始化")
+      }
+
+      // 確定要刪除的分類集合
+      const collectionName = categoryToDelete.type === 'category' ? 'materialCategories' : 'materialSubCategories';
+      
+      // 刪除 Firestore 中的分類文檔
+      await deleteDoc(doc(db, collectionName, categoryToDelete.id));
+      
       toast.success(`分類「${categoryToDelete.name}」已刪除`)
       loadCategories()
     } catch (error) {
