@@ -216,13 +216,30 @@ function MaterialsPageContent() {
 
     // 搜尋篩選
     if (searchTerm.trim()) {
-      filtered = filtered.filter(material =>
-        material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        material.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        material.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        material.subCategory?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        material.supplierName.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const searchLower = searchTerm.toLowerCase().trim();
+      console.log('搜尋條件:', searchLower);
+      
+      filtered = filtered.filter(material => {
+        const nameMatch = material.name.toLowerCase().includes(searchLower);
+        const codeMatch = material.code.toLowerCase().includes(searchLower);
+        const categoryMatch = material.category?.toLowerCase().includes(searchLower);
+        const subCategoryMatch = material.subCategory?.toLowerCase().includes(searchLower);
+        const supplierMatch = material.supplierName.toLowerCase().includes(searchLower);
+        
+        const isMatch = nameMatch || codeMatch || categoryMatch || subCategoryMatch || supplierMatch;
+        
+        if (isMatch) {
+          console.log('找到匹配:', material.name, {
+            nameMatch,
+            codeMatch,
+            categoryMatch,
+            subCategoryMatch,
+            supplierMatch
+          });
+        }
+        
+        return isMatch;
+      });
     }
 
     // 主分類篩選
@@ -235,13 +252,22 @@ function MaterialsPageContent() {
       filtered = filtered.filter(material => material.subCategory === selectedSubCategory);
     }
 
+    console.log('篩選結果:', {
+      searchTerm: searchTerm.trim(),
+      totalMaterials: materials.length,
+      filteredCount: filtered.length,
+      selectedCategory,
+      selectedSubCategory
+    });
+
     setFilteredMaterials(filtered);
   };
 
-  // 處理搜尋
+  // 處理搜尋 - 移除延遲
   const handleSearch = (term: string) => {
     setSearchTerm(term);
-    setTimeout(handleSearchAndFilter, 100);
+    // 立即執行篩選，不使用延遲
+    handleSearchAndFilter();
   };
 
   // 處理分類篩選

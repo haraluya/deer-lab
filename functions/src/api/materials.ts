@@ -363,6 +363,22 @@ export const importMaterials = onCall(async (request) => {
   try {
     const results = [];
     
+    // 在更新模式下，先獲取所有現有物料的代號映射
+    let existingMaterialsMap = new Map();
+    if (updateMode) {
+      logger.info("更新模式：開始獲取現有物料代號映射");
+      const existingMaterialsQuery = await db.collection("materials").get();
+      existingMaterialsQuery.docs.forEach(doc => {
+        const data = doc.data();
+        existingMaterialsMap.set(data.code, {
+          docId: doc.id,
+          docRef: doc.ref,
+          data: data
+        });
+      });
+      logger.info(`更新模式：找到 ${existingMaterialsMap.size} 個現有物料`);
+    }
+    
     for (const materialData of materials) {
       try {
         // 自動生成分類和子分類（如果沒有提供）
@@ -381,19 +397,19 @@ export const importMaterials = onCall(async (request) => {
           finalCode = await generateUniqueMaterialCode(mainCategoryId, subCategoryId);
         }
 
-        // 在更新模式下，先查找現有物料
+        // 在更新模式下，檢查是否存在相同代號的物料
         let existingMaterialDoc = null;
         if (updateMode && finalCode) {
-          const existingQuery = await db.collection("materials")
-            .where("code", "==", finalCode)
-            .limit(1)
-            .get();
-          
-          if (!existingQuery.empty) {
-            existingMaterialDoc = existingQuery.docs[0];
-            logger.info(`找到現有物料: ${finalCode} (${existingMaterialDoc.id})`);
+          const existingMaterial = existingMaterialsMap.get(finalCode);
+          if (existingMaterial) {
+            existingMaterialDoc = {
+              id: existingMaterial.docId,
+              ref: existingMaterial.docRef,
+              data: existingMaterial.data
+            };
+            logger.info(`更新模式：找到現有物料 ${finalCode} (${existingMaterial.docId})`);
           } else {
-            logger.info(`更新模式下找不到物料: ${finalCode}，將跳過此筆資料`);
+            logger.info(`更新模式：找不到物料 ${finalCode}，將跳過此筆資料`);
           }
         }
 
@@ -550,6 +566,14 @@ export const importMaterials = onCall(async (request) => {
     const successCount = results.filter(r => r.status === "success").length;
     const errorCount = results.filter(r => r.status === "error").length;
     const skippedCount = results.filter(r => r.status === "skipped").length;
+    
+    logger.info(`匯入完成統計:`, {
+      total: materials.length,
+      success: successCount,
+      error: errorCount,
+      skipped: skippedCount,
+      updateMode: updateMode
+    });
     
     return { 
       status: "success", 
