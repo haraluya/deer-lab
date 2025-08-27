@@ -252,14 +252,9 @@ export default function MaterialDetailPage() {
            <h1 className="text-3xl font-bold text-primary">
              物料詳情
            </h1>
-           <div className="flex items-center gap-2">
-             <p className="text-muted-foreground font-mono text-lg">{material.name}</p>
-             {material.code.length === 9 && (
-               <Badge variant="secondary" className="text-xs">
-                 新格式
-               </Badge>
-             )}
-           </div>
+                       <div className="flex items-center gap-2">
+              <p className="text-muted-foreground font-mono text-lg">{material.name}</p>
+            </div>
          </div>
         <Button onClick={handleEdit} className="bg-primary hover:bg-primary/90">
           <Edit className="mr-2 h-4 w-4" />
@@ -296,15 +291,11 @@ export default function MaterialDetailPage() {
                <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
                  <Warehouse className="h-5 w-5 text-white" />
                </div>
-               <div className="flex-1">
-                 <p className="text-sm text-green-600 font-medium">分類資訊</p>
-                 <p className="text-xl font-bold text-green-800">{material.category || '未分類'}</p>
-                 <p className="text-sm text-green-700">{material.subCategory || '未分類'}</p>
-                 <div className="text-xs text-green-600 mt-1">
-                   {material.mainCategoryId && <span>主分類ID: {material.mainCategoryId}</span>}
-                   {material.subCategoryId && <span className="ml-2">細分ID: {material.subCategoryId}</span>}
-                 </div>
-               </div>
+                               <div className="flex-1">
+                  <p className="text-sm text-green-600 font-medium">分類資訊</p>
+                  <p className="text-xl font-bold text-green-800">{material.category || '未分類'}</p>
+                  <p className="text-sm text-green-700">{material.subCategory || '未分類'}</p>
+                </div>
              </div>
 
              {/* 第3個欄位：現有庫存 + 單位 */}
