@@ -148,8 +148,95 @@ export default function FragranceDetailPage() {
   };
 
   const handleFragranceUpdate = async () => {
-    // 重新載入香精資料
-    window.location.reload();
+    // 重新獲取香精資料而不是重新載入頁面
+    setIsLoading(true);
+    try {
+      if (!params.id || typeof params.id !== 'string') {
+        setError('香精 ID 無效');
+        return;
+      }
+
+      if (!db) {
+        throw new Error('Firebase 未初始化');
+      }
+      
+      const fragranceDoc = await getDoc(doc(db, 'fragrances', params.id));
+      if (!fragranceDoc.exists()) {
+        setError('香精不存在');
+        return;
+      }
+
+      const data = fragranceDoc.data();
+
+      // 獲取供應商名稱
+      let supplierName = '未指定';
+      if (data.supplierRef) {
+        try {
+          const supplierDoc = await getDoc(data.supplierRef);
+          if (supplierDoc.exists()) {
+            const supplierData = supplierDoc.data() as any;
+            supplierName = supplierData?.name || '未指定';
+          }
+        } catch (error) {
+          console.error('Failed to fetch supplier name:', error);
+        }
+      }
+
+      // 獲取創建者名稱
+      let createdByName = '未知';
+      if (data.createdBy) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', data.createdBy));
+          if (userDoc.exists()) {
+            const userData = userDoc.data() as any;
+            createdByName = userData?.name || userData?.email || '未知';
+          }
+        } catch (error) {
+          console.error('Failed to fetch creator name:', error);
+        }
+      }
+
+      // 獲取使用該香精的產品數量
+      const productsQuery = query(
+        collection(db, 'products'),
+        where('fragranceRef', '==', doc(db, 'fragrances', params.id))
+      );
+      const productsSnapshot = await getDocs(productsQuery);
+      const productsList = productsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        code: doc.data().code,
+        name: doc.data().name,
+        status: doc.data().status,
+        createdAt: doc.data().createdAt?.toDate() || new Date(),
+      }));
+
+      setProducts(productsList);
+
+      setFragrance({
+        id: fragranceDoc.id,
+        code: data.code,
+        name: data.name,
+        fragranceType: data.fragranceType || data.status,
+        supplierRef: data.supplierRef,
+        supplierName,
+        costPerUnit: data.costPerUnit,
+        percentage: data.percentage,
+        pgRatio: data.pgRatio,
+        vgRatio: data.vgRatio,
+        description: data.description,
+        notes: data.notes,
+        status: data.status,
+        createdAt: data.createdAt?.toDate() || new Date(),
+        createdBy: data.createdBy,
+        createdByName,
+        productCount: productsList.length,
+      });
+    } catch (error) {
+      console.error('Failed to refresh fragrance data:', error);
+      setError('重新載入香精資料失敗');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getFragranceTypeText = (type: string) => {
