@@ -23,6 +23,7 @@ import { DetailViewDialog } from '@/components/DetailViewDialog';
 
 interface FragranceWithSupplier extends FragranceData {
   supplierName: string;
+  fragranceStatus?: string;
 }
 
 function FragrancesPageContent() {
@@ -69,6 +70,7 @@ function FragrancesPageContent() {
           name: data.name,
           status: data.status,
           fragranceType: data.fragranceType || data.status, // 向後相容性
+          fragranceStatus: data.fragranceStatus || data.status || 'active', // 向後相容性
           supplierRef: data.supplierRef,
           safetyStockLevel: data.safetyStockLevel,
           costPerUnit: data.costPerUnit,
@@ -802,7 +804,7 @@ function FragrancesPageContent() {
                 <TableHead className="w-[60px] text-center">選取</TableHead>
                 <TableHead className="text-left">香精資訊</TableHead>
                 {!isStocktakeMode && <TableHead className="text-left">香精種類</TableHead>}
-                {!isStocktakeMode && <TableHead className="text-left">香精狀態</TableHead>}
+                {!isStocktakeMode && <TableHead className="text-left">啟用狀態</TableHead>}
                 {!isStocktakeMode && <TableHead className="text-left">供應商</TableHead>}
                 <TableHead className="text-right">{isStocktakeMode ? "應有庫存" : "目前庫存"}</TableHead>
                 {isStocktakeMode && <TableHead className="text-right">現有庫存</TableHead>}

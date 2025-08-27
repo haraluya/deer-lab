@@ -290,18 +290,18 @@ export function FragranceDialog({
                   name="fragranceStatus"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm font-semibold text-gray-700">香精狀態 *</FormLabel>
+                      <FormLabel className="text-sm font-semibold text-gray-700">啟用狀態 *</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger className="border-gray-300 focus:border-purple-500 focus:ring-purple-500">
-                            <SelectValue placeholder="選擇香精狀態" />
+                            <SelectValue placeholder="選擇啟用狀態" />
                           </SelectTrigger>
                         </FormControl>
-                                                 <SelectContent>
-                           <SelectItem value="active">啟用</SelectItem>
-                           <SelectItem value="standby">備用</SelectItem>
-                           <SelectItem value="discontinued">棄用</SelectItem>
-                         </SelectContent>
+                        <SelectContent>
+                          <SelectItem value="active">啟用</SelectItem>
+                          <SelectItem value="standby">備用</SelectItem>
+                          <SelectItem value="discontinued">棄用</SelectItem>
+                        </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>

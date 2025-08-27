@@ -16,6 +16,7 @@ interface Fragrance {
   code: string;
   name: string;
   fragranceType?: string;
+  fragranceStatus?: string;
   supplierRef?: any;
   supplierName?: string;
   costPerUnit?: number;
@@ -120,6 +121,7 @@ export default function FragranceDetailPage() {
           code: data.code,
           name: data.name,
           fragranceType: data.fragranceType || data.status,
+          fragranceStatus: data.fragranceStatus || data.status || 'active',
           supplierRef: data.supplierRef,
           supplierName,
           costPerUnit: data.costPerUnit,
@@ -215,26 +217,27 @@ export default function FragranceDetailPage() {
 
       setProducts(productsList);
 
-      setFragrance({
-        id: fragranceDoc.id,
-        code: data.code,
-        name: data.name,
-        fragranceType: data.fragranceType || data.status,
-        supplierRef: data.supplierRef,
-        supplierName,
-        costPerUnit: data.costPerUnit,
-        percentage: data.percentage,
-        pgRatio: data.pgRatio,
-        vgRatio: data.vgRatio,
-        description: data.description,
-        notes: data.notes,
-        status: data.status,
-        createdAt: data.createdAt?.toDate() || new Date(),
-        createdBy: data.createdBy,
-        createdByName,
-        productCount: productsList.length,
-        remarks: data.remarks, // 更新備註
-      });
+             setFragrance({
+         id: fragranceDoc.id,
+         code: data.code,
+         name: data.name,
+         fragranceType: data.fragranceType || data.status,
+         fragranceStatus: data.fragranceStatus || data.status || 'active',
+         supplierRef: data.supplierRef,
+         supplierName,
+         costPerUnit: data.costPerUnit,
+         percentage: data.percentage,
+         pgRatio: data.pgRatio,
+         vgRatio: data.vgRatio,
+         description: data.description,
+         notes: data.notes,
+         status: data.status,
+         createdAt: data.createdAt?.toDate() || new Date(),
+         createdBy: data.createdBy,
+         createdByName,
+         productCount: productsList.length,
+         remarks: data.remarks, // 更新備註
+       });
     } catch (error) {
       console.error('Failed to refresh fragrance data:', error);
       setError('重新載入香精資料失敗');
@@ -417,6 +420,20 @@ export default function FragranceDetailPage() {
                 <span className="text-muted-foreground">香精種類</span>
                 <Badge className={getFragranceTypeColor(fragrance.fragranceType || '')}>
                   {getFragranceTypeText(fragrance.fragranceType || '')}
+                </Badge>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-muted-foreground">啟用狀態</span>
+                <Badge className={
+                  fragrance.fragranceStatus === 'active' ? 'bg-green-100 text-green-800 border-green-300' :
+                  fragrance.fragranceStatus === 'standby' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                  fragrance.fragranceStatus === 'discontinued' ? 'bg-red-100 text-red-800 border-red-300' :
+                  'bg-gray-100 text-gray-800 border-gray-300'
+                }>
+                  {fragrance.fragranceStatus === 'active' ? '啟用' :
+                   fragrance.fragranceStatus === 'standby' ? '備用' :
+                   fragrance.fragranceStatus === 'discontinued' ? '棄用' :
+                   '未指定'}
                 </Badge>
               </div>
               <div className="flex justify-between items-center py-2 border-b">
