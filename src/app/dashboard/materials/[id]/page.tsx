@@ -266,7 +266,7 @@ export default function MaterialDetailPage() {
       <Card className="mb-6 border-0 shadow-lg bg-gradient-to-r from-background to-primary/10">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-primary">
-            物料基本資訊
+            核心資訊
           </CardTitle>
         </CardHeader>
         <CardContent>

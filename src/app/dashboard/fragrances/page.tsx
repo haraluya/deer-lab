@@ -498,79 +498,81 @@ function FragrancesPageContent() {
             />
           </div>
           
-          {/* 篩選標籤 */}
-          <div className="mb-6">
-            <div className="flex flex-wrap gap-2">
-              {/* 安全庫存標籤 */}
-              {getLowStockCount() > 0 && (
-                <Badge
-                  variant={showLowStockOnly ? "default" : "secondary"}
-                  className={`cursor-pointer transition-colors ${
-                    showLowStockOnly 
-                      ? "bg-red-600 hover:bg-red-700 text-white" 
-                      : "bg-red-100 hover:bg-red-200 text-red-800 border-red-300"
-                  }`}
-                  onClick={() => setShowLowStockOnly(!showLowStockOnly)}
-                >
-                  安全庫存 ({getLowStockCount()})
-                </Badge>
-              )}
 
-              {/* 供應商標籤 */}
-              {uniqueSuppliers.map(supplier => (
-                <Badge
-                  key={supplier}
-                  variant={selectedSuppliers.has(supplier) ? "default" : "secondary"}
-                  className={`cursor-pointer transition-colors ${
-                    selectedSuppliers.has(supplier) 
-                      ? "bg-blue-600 hover:bg-blue-700 text-white" 
-                      : "bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300"
-                  }`}
-                  onClick={() => {
-                    setSelectedSuppliers(prev => {
-                      const newSet = new Set(prev);
-                      if (newSet.has(supplier)) {
-                        newSet.delete(supplier);
-                      } else {
-                        newSet.add(supplier);
-                      }
-                      return newSet;
-                    });
-                  }}
-                >
-                  {supplier}
-                </Badge>
-              ))}
-
-              {/* 香精種類標籤 */}
-              {uniqueFragranceTypes.map(type => (
-                <Badge
-                  key={type}
-                  variant={selectedFragranceTypes.has(type) ? "default" : "secondary"}
-                  className={`cursor-pointer transition-colors ${
-                    selectedFragranceTypes.has(type) 
-                      ? "bg-green-600 hover:bg-green-700 text-white" 
-                      : "bg-green-100 hover:bg-green-200 text-green-800 border-green-300"
-                  }`}
-                  onClick={() => {
-                    setSelectedFragranceTypes(prev => {
-                      const newSet = new Set(prev);
-                      if (newSet.has(type)) {
-                        newSet.delete(type);
-                      } else {
-                        newSet.add(type);
-                      }
-                      return newSet;
-                    });
-                  }}
-                >
-                  {type === 'cotton' ? '棉芯' : type === 'ceramic' ? '陶瓷芯' : '棉陶芯通用'}
-                </Badge>
-              ))}
-            </div>
-          </div>
         </CardContent>
       </Card>
+
+      {/* 篩選標籤 */}
+      <div className="mb-6">
+        <div className="flex flex-wrap gap-2">
+          {/* 安全庫存標籤 */}
+          {getLowStockCount() > 0 && (
+            <Badge
+              variant={showLowStockOnly ? "default" : "secondary"}
+              className={`cursor-pointer transition-colors ${
+                showLowStockOnly 
+                  ? "bg-red-600 hover:bg-red-700 text-white" 
+                  : "bg-red-100 hover:bg-red-200 text-red-800 border-red-300"
+              }`}
+              onClick={() => setShowLowStockOnly(!showLowStockOnly)}
+            >
+              安全庫存 ({getLowStockCount()})
+            </Badge>
+          )}
+
+          {/* 供應商標籤 */}
+          {uniqueSuppliers.map(supplier => (
+            <Badge
+              key={supplier}
+              variant={selectedSuppliers.has(supplier) ? "default" : "secondary"}
+              className={`cursor-pointer transition-colors ${
+                selectedSuppliers.has(supplier) 
+                  ? "bg-blue-600 hover:bg-blue-700 text-white" 
+                  : "bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300"
+              }`}
+              onClick={() => {
+                setSelectedSuppliers(prev => {
+                  const newSet = new Set(prev);
+                  if (newSet.has(supplier)) {
+                    newSet.delete(supplier);
+                  } else {
+                    newSet.add(supplier);
+                  }
+                  return newSet;
+                });
+              }}
+            >
+              {supplier}
+            </Badge>
+          ))}
+
+          {/* 香精種類標籤 */}
+          {uniqueFragranceTypes.map(type => (
+            <Badge
+              key={type}
+              variant={selectedFragranceTypes.has(type) ? "default" : "secondary"}
+              className={`cursor-pointer transition-colors ${
+                selectedFragranceTypes.has(type) 
+                  ? "bg-green-600 hover:bg-green-700 text-white" 
+                  : "bg-green-100 hover:bg-green-200 text-green-800 border-green-300"
+              }`}
+              onClick={() => {
+                setSelectedFragranceTypes(prev => {
+                  const newSet = new Set(prev);
+                  if (newSet.has(type)) {
+                    newSet.delete(type);
+                  } else {
+                    newSet.add(type);
+                  }
+                  return newSet;
+                });
+              }}
+            >
+              {type === 'cotton' ? '棉芯' : type === 'ceramic' ? '陶瓷芯' : '棉陶芯通用'}
+            </Badge>
+          ))}
+        </div>
+      </div>
 
       {/* 購物車操作按鈕 - 只有當有項目被勾選時才顯示 */}
       {purchaseCart.size > 0 && !isStocktakeMode && (
@@ -900,8 +902,7 @@ function FragrancesPageContent() {
                             {isLowStock && (
                               <AlertTriangle className="h-4 w-4 text-red-600" />
                             )}
-                            <Warehouse className="h-4 w-4 text-gray-400" />
-                            <span className={`number-display ${isLowStock ? 'number-negative' : 'number-positive'}`}>
+                            <span className={`text-lg font-bold ${isLowStock ? 'text-red-600' : 'text-green-600'}`}>
                               {fragrance.currentStock} KG
                             </span>
                           </div>
