@@ -348,7 +348,7 @@ export const importMaterials = onCall(async (request) => {
   // 暫時移除權限檢查
   // await ensureCanManageMaterials(contextAuth?.uid);
   
-  const { materials } = data;
+  const { materials, updateMode = false } = data;
   
   if (!materials || !Array.isArray(materials)) {
     throw new HttpsError("invalid-argument", "請求缺少物料資料陣列。");
@@ -375,7 +375,21 @@ export const importMaterials = onCall(async (request) => {
           finalCode = await generateUniqueMaterialCode(mainCategoryId, subCategoryId);
         }
 
-        const newMaterial: MaterialData = { 
+        // 在更新模式下，先查找現有物料
+        let existingMaterialDoc = null;
+        if (updateMode && finalCode) {
+          const existingQuery = await db.collection("materials")
+            .where("code", "==", finalCode)
+            .limit(1)
+            .get();
+          
+          if (!existingQuery.empty) {
+            existingMaterialDoc = existingQuery.docs[0];
+            logger.info(`找到現有物料: ${finalCode} (${existingMaterialDoc.id})`);
+          }
+        }
+
+        const materialDataToSave: MaterialData = { 
           code: finalCode, 
           name: processedData.name, 
           category: processedData.category || "", 
@@ -387,13 +401,12 @@ export const importMaterials = onCall(async (request) => {
           unit: processedData.unit || "", 
           currentStock: Number(processedData.currentStock) || 0, 
           notes: processedData.notes || "",
-          createdAt: FieldValue.serverTimestamp(), 
           updatedAt: FieldValue.serverTimestamp(), 
         };
         
         // 處理供應商 - 支援 supplierId 和 supplierName
         if (processedData.supplierId) { 
-          newMaterial.supplierRef = db.collection("suppliers").doc(processedData.supplierId); 
+          materialDataToSave.supplierRef = db.collection("suppliers").doc(processedData.supplierId); 
         } else if (processedData.supplierName) {
           // 根據供應商名稱查找或創建供應商
           try {
@@ -404,7 +417,7 @@ export const importMaterials = onCall(async (request) => {
             
             if (!supplierQuery.empty) {
               // 找到現有供應商
-              newMaterial.supplierRef = supplierQuery.docs[0].ref;
+              materialDataToSave.supplierRef = supplierQuery.docs[0].ref;
             } else {
               // 創建新供應商
               const newSupplierRef = await db.collection("suppliers").add({
@@ -417,7 +430,7 @@ export const importMaterials = onCall(async (request) => {
                 createdAt: FieldValue.serverTimestamp(),
                 updatedAt: FieldValue.serverTimestamp()
               });
-              newMaterial.supplierRef = newSupplierRef;
+              materialDataToSave.supplierRef = newSupplierRef;
               logger.info(`自動創建供應商: ${processedData.supplierName} (${newSupplierRef.id})`);
             }
           } catch (supplierError) {
@@ -425,16 +438,42 @@ export const importMaterials = onCall(async (request) => {
             // 供應商處理失敗不影響物料匯入
           }
         }
+
+        let docRef;
+        let action = "created";
+
+        if (updateMode && existingMaterialDoc) {
+          // 更新現有物料
+          await existingMaterialDoc.ref.update(materialDataToSave);
+          docRef = existingMaterialDoc.ref;
+          action = "updated";
+          logger.info(`更新物料成功: ${processedData.name} (${docRef.id})`);
+        } else if (updateMode && !existingMaterialDoc) {
+          // 更新模式下找不到現有物料，跳過
+          results.push({
+            name: processedData.name,
+            status: "skipped",
+            reason: `找不到物料代號: ${finalCode}`,
+            code: finalCode
+          });
+          logger.info(`跳過物料: ${processedData.name} (代號: ${finalCode}) - 找不到現有資料`);
+          continue;
+        } else {
+          // 新增模式或非更新模式
+          materialDataToSave.createdAt = FieldValue.serverTimestamp();
+          docRef = await db.collection("materials").add(materialDataToSave);
+          action = "created";
+          logger.info(`新增物料成功: ${processedData.name} (${docRef.id})`);
+        }
         
-        const docRef = await db.collection("materials").add(newMaterial);
         results.push({
           name: processedData.name,
           status: "success",
           materialId: docRef.id,
-          generatedCode: finalCode
+          action: action,
+          code: finalCode
         });
         
-        logger.info(`匯入物料成功: ${processedData.name} (${docRef.id})`);
       } catch (error) {
         results.push({
           name: materialData.name,
@@ -447,10 +486,11 @@ export const importMaterials = onCall(async (request) => {
     
     const successCount = results.filter(r => r.status === "success").length;
     const errorCount = results.filter(r => r.status === "error").length;
+    const skippedCount = results.filter(r => r.status === "skipped").length;
     
     return { 
       status: "success", 
-      message: `匯入完成：成功 ${successCount} 項，失敗 ${errorCount} 項。`, 
+      message: `匯入完成：成功 ${successCount} 項，失敗 ${errorCount} 項，跳過 ${skippedCount} 項。`, 
       results
     };
   } catch (error) { 
