@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { ArrowLeft, Loader2, Package, Building, User, Calendar, Tag, Warehouse, Edit, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Loader2, Package, Building, User, Calendar, Tag, Warehouse, Edit, AlertTriangle, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { MaterialDialog, MaterialData } from '../MaterialDialog';
+import { toast } from 'sonner';
 
 interface Material {
   id: string;
@@ -37,6 +39,9 @@ export default function MaterialDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [notesValue, setNotesValue] = useState('');
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
 
   // 解析並顯示代碼結構
   const renderCodeStructure = (code: string) => {
@@ -156,6 +161,45 @@ export default function MaterialDetailPage() {
   const handleMaterialUpdate = async () => {
     // 重新載入物料資料
     window.location.reload();
+  };
+
+  // 格式化數字顯示，如果沒有小數點就不顯示
+  const formatNumber = (value: number | undefined): string => {
+    if (value === undefined || value === null) return '0';
+    return value % 1 === 0 ? value.toString() : value.toFixed(2);
+  };
+
+  // 開始編輯備註
+  const handleStartEditNotes = () => {
+    setNotesValue(material?.notes || '');
+    setIsEditingNotes(true);
+  };
+
+  // 取消編輯備註
+  const handleCancelEditNotes = () => {
+    setNotesValue(material?.notes || '');
+    setIsEditingNotes(false);
+  };
+
+  // 儲存備註
+  const handleSaveNotes = async () => {
+    if (!material || !db) return;
+
+    setIsSavingNotes(true);
+    try {
+      await updateDoc(doc(db, 'materials', material.id), {
+        notes: notesValue
+      });
+      
+      setMaterial(prev => prev ? { ...prev, notes: notesValue } : null);
+      setIsEditingNotes(false);
+      toast.success('備註已更新');
+    } catch (error) {
+      console.error('更新備註失敗:', error);
+      toast.error('更新備註失敗');
+    } finally {
+      setIsSavingNotes(false);
+    }
   };
 
   // 檢查是否低於安全庫存
@@ -355,13 +399,13 @@ export default function MaterialDetailPage() {
               <div className="flex justify-between items-center py-2 border-b">
                 <span className="text-muted-foreground">單位成本</span>
                 <span className="font-medium text-blue-600">
-                  ${material.costPerUnit?.toFixed(2) || '0.00'}
+                  ${formatNumber(material.costPerUnit)}
                 </span>
               </div>
               <div className="flex justify-between items-center py-2 border-b">
                 <span className="text-muted-foreground">庫存價值</span>
                 <span className="font-medium text-purple-600">
-                  ${((material.currentStock || 0) * (material.costPerUnit || 0)).toFixed(2)}
+                  ${formatNumber((material.currentStock || 0) * (material.costPerUnit || 0))}
                 </span>
               </div>
             </div>
@@ -370,16 +414,59 @@ export default function MaterialDetailPage() {
       </div>
 
       {/* 備註 */}
-      {material.notes && (
-        <Card className="mt-6 border-0 shadow-lg">
-          <CardHeader>
+      <Card className="mt-6 border-0 shadow-lg">
+        <CardHeader>
+          <div className="flex items-center justify-between">
             <CardTitle className="text-lg text-primary">備註</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm leading-relaxed">{material.notes}</p>
-          </CardContent>
-        </Card>
-      )}
+            {!isEditingNotes && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleStartEditNotes}
+                className="h-8 px-3"
+              >
+                <Edit className="mr-1 h-3 w-3" />
+                編輯
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isEditingNotes ? (
+            <div className="space-y-3">
+              <Textarea
+                value={notesValue}
+                onChange={(e) => setNotesValue(e.target.value)}
+                placeholder="輸入備註內容..."
+                className="min-h-[100px] resize-none"
+              />
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCancelEditNotes}
+                  disabled={isSavingNotes}
+                >
+                  <X className="mr-1 h-3 w-3" />
+                  取消
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSaveNotes}
+                  disabled={isSavingNotes}
+                >
+                  <Save className="mr-1 h-3 w-3" />
+                  {isSavingNotes ? '儲存中...' : '儲存'}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {material.notes || '暫無備註'}
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* 庫存警告 */}
       {isLowStock() && (
