@@ -495,34 +495,34 @@ function MaterialsPageContent() {
            <div className="flex flex-wrap gap-2">
              {/* 主分類 */}
              {categories.length > 0 && categories.map((category) => (
-               <Badge
-                 key={category}
-                 variant={selectedCategory === category ? "default" : "secondary"}
-                 className={`cursor-pointer transition-colors ${
-                   selectedCategory === category 
-                     ? "bg-orange-600 hover:bg-orange-700 text-white" 
-                     : "bg-orange-100 hover:bg-orange-200 text-orange-800 border-orange-300"
-                 }`}
-                 onClick={() => handleCategoryFilter(category)}
-               >
-                 {category}
-               </Badge>
+                            <Badge
+               key={category}
+               variant={selectedCategory === category ? "default" : "secondary"}
+               className={`cursor-pointer transition-colors ${
+                 selectedCategory === category 
+                   ? "bg-blue-600 hover:bg-blue-700 text-white" 
+                   : "bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300"
+               }`}
+               onClick={() => handleCategoryFilter(category)}
+             >
+               {category}
+             </Badge>
              ))}
 
              {/* 子分類 */}
              {subCategories.length > 0 && subCategories.map((subCategory) => (
-                            <Badge
-               key={subCategory}
-               variant={selectedSubCategory === subCategory ? "default" : "secondary"}
-               className={`cursor-pointer transition-colors ${
-                 selectedSubCategory === subCategory 
-                   ? "bg-orange-500 hover:bg-orange-600 text-white" 
-                   : "bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200"
-               }`}
-               onClick={() => handleSubCategoryFilter(subCategory)}
-             >
-               {subCategory}
-             </Badge>
+                                                         <Badge
+                key={subCategory}
+                variant={selectedSubCategory === subCategory ? "default" : "secondary"}
+                className={`cursor-pointer transition-colors ${
+                  selectedSubCategory === subCategory 
+                    ? "bg-green-600 hover:bg-green-700 text-white" 
+                    : "bg-green-100 hover:bg-green-200 text-green-800 border-green-300"
+                }`}
+                onClick={() => handleSubCategoryFilter(subCategory)}
+              >
+                {subCategory}
+              </Badge>
              ))}
            </div>
          </div>
