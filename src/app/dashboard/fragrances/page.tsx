@@ -827,9 +827,9 @@ function FragrancesPageContent() {
                   return (
                     <TableRow 
                       key={fragrance.id} 
-                      className={`${isLowStock && !isStocktakeMode ? 'bg-destructive/10' : ''} cursor-pointer hover:bg-accent/5 transition-colors duration-200`} 
+                      className={`${isLowStock && !isStocktakeMode ? 'bg-destructive/10' : ''} ${!isStocktakeMode ? 'cursor-pointer hover:bg-accent/5' : ''} transition-colors duration-200`} 
                       data-state={purchaseCart.has(fragrance.id) ? "selected" : ""}
-                      onClick={() => router.push(`/dashboard/fragrances/${fragrance.id}`)}
+                      onClick={!isStocktakeMode ? () => router.push(`/dashboard/fragrances/${fragrance.id}`) : undefined}
                     >
                       <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                         <Checkbox

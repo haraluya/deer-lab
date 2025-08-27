@@ -795,7 +795,7 @@ function MaterialsPageContent() {
               >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
-                    <div className="flex-1 cursor-pointer" onClick={() => router.push(`/dashboard/materials/${material.id}`)}>
+                    <div className={`flex-1 ${!isStocktakeMode ? 'cursor-pointer' : ''}`} onClick={!isStocktakeMode ? () => router.push(`/dashboard/materials/${material.id}`) : undefined}>
                       <div className="font-medium text-foreground text-sm">{material.name}</div>
                       <div className="text-xs text-muted-foreground">代號: {material.code}</div>
                     </div>
@@ -968,15 +968,15 @@ function MaterialsPageContent() {
                          )}
                        </TableCell>
                       <TableCell 
-                        className="cursor-pointer"
-                        onClick={() => router.push(`/dashboard/materials/${material.id}`)}
+                        className={!isStocktakeMode ? "cursor-pointer" : ""}
+                        onClick={!isStocktakeMode ? () => router.push(`/dashboard/materials/${material.id}`) : undefined}
                       >
                         <div className="font-medium text-foreground">{material.name}</div>
                         <div className="text-xs text-muted-foreground">代號: {material.code}</div>
                       </TableCell>
                       <TableCell 
-                        className="cursor-pointer"
-                        onClick={() => router.push(`/dashboard/materials/${material.id}`)}
+                        className={!isStocktakeMode ? "cursor-pointer" : ""}
+                        onClick={!isStocktakeMode ? () => router.push(`/dashboard/materials/${material.id}`) : undefined}
                       >
                         <div className="flex flex-wrap gap-1">
                           {material.category && (
@@ -999,15 +999,15 @@ function MaterialsPageContent() {
                       </TableCell>
                       {!isStocktakeMode && (
                         <TableCell 
-                          className="cursor-pointer"
-                          onClick={() => router.push(`/dashboard/materials/${material.id}`)}
+                          className={!isStocktakeMode ? "cursor-pointer" : ""}
+                          onClick={!isStocktakeMode ? () => router.push(`/dashboard/materials/${material.id}`) : undefined}
                         >
                           {material.supplierName}
                         </TableCell>
                       )}
                       <TableCell 
-                        className="cursor-pointer"
-                        onClick={() => router.push(`/dashboard/materials/${material.id}`)}
+                        className={!isStocktakeMode ? "cursor-pointer" : ""}
+                        onClick={!isStocktakeMode ? () => router.push(`/dashboard/materials/${material.id}`) : undefined}
                       >
                         <div className="flex items-center gap-2">
                           <span className={isLowStock(material) ? "text-red-600 font-medium" : ""}>
@@ -1040,8 +1040,8 @@ function MaterialsPageContent() {
                       )}
                       {!isStocktakeMode && (
                         <TableCell 
-                          className="cursor-pointer"
-                          onClick={() => router.push(`/dashboard/materials/${material.id}`)}
+                          className={!isStocktakeMode ? "cursor-pointer" : ""}
+                          onClick={!isStocktakeMode ? () => router.push(`/dashboard/materials/${material.id}`) : undefined}
                         >
                           ${material.costPerUnit || 0}
                         </TableCell>
