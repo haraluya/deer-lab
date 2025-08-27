@@ -927,7 +927,7 @@ function MaterialsPageContent() {
         description="匯入或匯出物料資料，支援 Excel 和 CSV 格式。匯入時會自動生成缺失的分類和代號。"
         color="yellow"
         showUpdateOption={true}
-        maxBatchSize={100}
+        maxBatchSize={500}
         sampleData={[
           {
             code: "MAT001",
