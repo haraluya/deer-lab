@@ -248,19 +248,19 @@ export default function MaterialDetailPage() {
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <div className="flex-grow">
-          <h1 className="text-3xl font-bold text-primary">
-            物料詳情
-          </h1>
-          <div className="flex items-center gap-2">
-            <p className="text-muted-foreground font-mono text-lg">{material.code}</p>
-            {material.code.length === 9 && (
-              <Badge variant="secondary" className="text-xs">
-                新格式
-              </Badge>
-            )}
-          </div>
-        </div>
+                 <div className="flex-grow">
+           <h1 className="text-3xl font-bold text-primary">
+             物料詳情
+           </h1>
+           <div className="flex items-center gap-2">
+             <p className="text-muted-foreground font-mono text-lg">{material.name}</p>
+             {material.code.length === 9 && (
+               <Badge variant="secondary" className="text-xs">
+                 新格式
+               </Badge>
+             )}
+           </div>
+         </div>
         <Button onClick={handleEdit} className="bg-primary hover:bg-primary/90">
           <Edit className="mr-2 h-4 w-4" />
           編輯物料
@@ -278,58 +278,58 @@ export default function MaterialDetailPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* 物料名稱 */}
-            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                <Package className="h-5 w-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm text-blue-600 font-medium">物料名稱</p>
-                <p className="text-lg font-semibold text-blue-800">{material.name}</p>
-              </div>
-            </div>
+                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+             {/* 第1個欄位：物料名稱 + 物料代碼 */}
+             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg">
+               <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                 <Package className="h-5 w-5 text-white" />
+               </div>
+               <div className="flex-1">
+                 <p className="text-sm text-blue-600 font-medium">物料名稱</p>
+                 <p className="text-xl font-bold text-blue-800">{material.name}</p>
+                 <p className="text-xs text-blue-600 mt-1">代碼：{material.code}</p>
+               </div>
+             </div>
 
-            {/* 物料編號 */}
-            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg">
-              <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
-                <Tag className="h-5 w-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm text-green-600 font-medium">物料編號</p>
-                <p className="text-lg font-semibold text-green-800">{material.code}</p>
-                {renderCodeStructure(material.code)}
-              </div>
-            </div>
+             {/* 第2個欄位：主分類 + 細分分類 */}
+             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg">
+               <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                 <Warehouse className="h-5 w-5 text-white" />
+               </div>
+               <div className="flex-1">
+                 <p className="text-sm text-green-600 font-medium">分類資訊</p>
+                 <p className="text-xl font-bold text-green-800">{material.category || '未分類'}</p>
+                 <p className="text-sm text-green-700">{material.subCategory || '未分類'}</p>
+                 <div className="text-xs text-green-600 mt-1">
+                   {material.mainCategoryId && <span>主分類ID: {material.mainCategoryId}</span>}
+                   {material.subCategoryId && <span className="ml-2">細分ID: {material.subCategoryId}</span>}
+                 </div>
+               </div>
+             </div>
 
-            {/* 主分類 */}
-            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg">
-              <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <Warehouse className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-purple-600 font-medium">主分類</p>
-                <p className="text-lg font-semibold text-purple-800">{material.category || '未分類'}</p>
-                {material.mainCategoryId && (
-                  <p className="text-xs text-purple-600">ID: {material.mainCategoryId}</p>
-                )}
-              </div>
-            </div>
+             {/* 第3個欄位：現有庫存 + 單位 */}
+             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg">
+               <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                 <Tag className="h-5 w-5 text-white" />
+               </div>
+               <div className="flex-1">
+                 <p className="text-sm text-purple-600 font-medium">現有庫存</p>
+                 <p className="text-xl font-bold text-purple-800">{material.currentStock}</p>
+                 <p className="text-sm text-purple-700">{material.unit || '未指定'}</p>
+               </div>
+             </div>
 
-            {/* 細分分類 */}
-            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg">
-              <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-                <Tag className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-orange-600 font-medium">細分分類</p>
-                <p className="text-lg font-semibold text-orange-800">{material.subCategory || '未分類'}</p>
-                {material.subCategoryId && (
-                  <p className="text-xs text-orange-600">ID: {material.subCategoryId}</p>
-                )}
-              </div>
-            </div>
-          </div>
+             {/* 第4個欄位：供應商 */}
+             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg">
+               <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                 <Building className="h-5 w-5 text-white" />
+               </div>
+               <div className="flex-1">
+                 <p className="text-sm text-orange-600 font-medium">供應商</p>
+                 <p className="text-xl font-bold text-orange-800">{material.supplierName}</p>
+               </div>
+             </div>
+           </div>
         </CardContent>
       </Card>
 
