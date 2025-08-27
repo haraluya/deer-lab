@@ -30,13 +30,18 @@ export const createFragrance = onCall(async (request) => {
   // 暫時移除權限檢查
   // await ensureIsAdmin(contextAuth?.uid);
   const { code, name, status, fragranceType, supplierId, coreType, safetyStockLevel, costPerUnit, percentage, pgRatio, vgRatio, unit } = data;
-  if (!code || !name || !status) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (代號、名稱、狀態)。"); }
+  if (!code || !name) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (代號、名稱)。"); }
+  
+  // 處理 fragranceType 和 status 的相容性
+  const finalFragranceType = fragranceType || status || 'cotton';
+  const finalStatus = status || fragranceType || 'active';
+  
   try {
     const newFragrance: FragranceData = { 
       code, 
       name, 
-      status, 
-      fragranceType: fragranceType || status, // 如果沒有fragranceType，使用status作為備用
+      status: finalStatus, 
+      fragranceType: finalFragranceType,
       coreType: coreType || "", 
       currentStock: 0, 
       safetyStockLevel: Number(safetyStockLevel) || 0, 
@@ -60,14 +65,19 @@ export const updateFragrance = onCall(async (request) => {
   // 暫時移除權限檢查
   // await ensureIsAdmin(contextAuth?.uid);
   const { fragranceId, code, name, status, fragranceType, supplierId, coreType, safetyStockLevel, costPerUnit, percentage, pgRatio, vgRatio, unit } = data;
-  if (!fragranceId || !code || !name || !status) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (ID, 代號、名稱、狀態)。"); }
+  if (!fragranceId || !code || !name) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (ID, 代號、名稱)。"); }
+  
+  // 處理 fragranceType 和 status 的相容性
+  const finalFragranceType = fragranceType || status || 'cotton';
+  const finalStatus = status || fragranceType || 'active';
+  
   try {
     const fragranceRef = db.collection("fragrances").doc(fragranceId);
     const updateData: Partial<FragranceData> = { 
       code, 
       name, 
-      status, 
-      fragranceType: fragranceType || status, // 如果沒有fragranceType，使用status作為備用
+      status: finalStatus, 
+      fragranceType: finalFragranceType,
       coreType: coreType || "", 
       safetyStockLevel: Number(safetyStockLevel) || 0, 
       costPerUnit: Number(costPerUnit) || 0, 
@@ -89,7 +99,12 @@ export const updateFragranceByCode = onCall(async (request) => {
   // 暫時移除權限檢查
   // await ensureIsAdmin(contextAuth?.uid);
   const { code, name, status, fragranceType, supplierId, coreType, safetyStockLevel, costPerUnit, percentage, pgRatio, vgRatio, unit } = data;
-  if (!code || !name || !status) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (代號、名稱、狀態)。"); }
+  if (!code || !name) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (代號、名稱)。"); }
+  
+  // 處理 fragranceType 和 status 的相容性
+  const finalFragranceType = fragranceType || status || 'cotton';
+  const finalStatus = status || fragranceType || 'active';
+  
   try {
     // 根據香精編號查找現有的香精
     const fragranceQuery = await db.collection("fragrances").where("code", "==", code).limit(1).get();
@@ -104,8 +119,8 @@ export const updateFragranceByCode = onCall(async (request) => {
     const updateData: Partial<FragranceData> = { 
       code, 
       name, 
-      status, 
-      fragranceType: fragranceType || status, // 如果沒有fragranceType，使用status作為備用
+      status: finalStatus, 
+      fragranceType: finalFragranceType,
       coreType: coreType || "", 
       safetyStockLevel: Number(safetyStockLevel) || 0, 
       costPerUnit: Number(costPerUnit) || 0, 

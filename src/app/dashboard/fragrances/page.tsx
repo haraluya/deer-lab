@@ -23,6 +23,7 @@ import { DetailViewDialog } from '@/components/DetailViewDialog';
 
 interface FragranceWithSupplier extends FragranceData {
   supplierName: string;
+  fragranceType?: string;
 }
 
 function FragrancesPageContent() {
@@ -64,6 +65,7 @@ function FragrancesPageContent() {
           code: data.code,
           name: data.name,
           status: data.status,
+          fragranceType: data.fragranceType || data.status, // 向後相容性
           supplierRef: data.supplierRef,
           safetyStockLevel: data.safetyStockLevel,
           costPerUnit: data.costPerUnit,
@@ -251,6 +253,11 @@ function FragrancesPageContent() {
         }))
       });
       
+      // 獲取供應商映射表
+      const suppliersMap = new Map<string, string>();
+      const supplierSnapshot = await getDocs(collection(db, "suppliers"));
+      supplierSnapshot.forEach(doc => suppliersMap.set(doc.data().name, doc.id));
+      
       // 分批處理資料
       const batchSize = 20; // 每批處理20筆
       const totalBatches = Math.ceil(data.length / batchSize);
@@ -264,21 +271,29 @@ function FragrancesPageContent() {
         // 處理每一批資料
         for (const item of batch) {
           try {
+            // 處理供應商ID
+            let supplierId = undefined;
+            if (item.supplierName) {
+              supplierId = suppliersMap.get(item.supplierName);
+              if (!supplierId) {
+                console.warn(`找不到供應商: ${item.supplierName}`);
+              }
+            }
+            
+            const processedItem = {
+              ...item,
+              supplierId,
+              unit: 'KG' // 固定單位為KG
+            };
+            
             if (options?.updateMode) {
               // 更新模式：根據香精編號更新現有資料
               const updateFragrance = httpsCallable(functions, 'updateFragranceByCode');
-              await updateFragrance({
-                code: item.code,
-                ...item,
-                unit: 'KG' // 固定單位為KG
-              });
+              await updateFragrance(processedItem);
             } else {
               // 新增模式：建立新的香精
               const createFragrance = httpsCallable(functions, 'createFragrance');
-              await createFragrance({
-                ...item,
-                unit: 'KG' // 固定單位為KG
-              });
+              await createFragrance(processedItem);
             }
           } catch (error) {
             console.error('處理香精資料失敗:', error);
