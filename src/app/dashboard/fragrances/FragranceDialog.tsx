@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { FlaskConical, Tag, Package, Droplets } from 'lucide-react';
 
 // Zod schema for fragrance form validation
@@ -465,7 +466,7 @@ export function FragranceDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <Input 
+                      <Textarea 
                         placeholder="輸入香精備註 (選填)"
                         className="border-gray-300 focus:border-yellow-500 focus:ring-yellow-500"
                         {...field} 

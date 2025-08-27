@@ -48,6 +48,7 @@ export default function FragranceDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isEditRemarksOpen, setIsEditRemarksOpen] = useState(false); // 新增備註編輯對話框狀態
 
   useEffect(() => {
     const fetchFragrance = async () => {
@@ -397,16 +398,29 @@ export default function FragranceDetailPage() {
       </Card>
 
       {/* 備註 */}
-      {fragrance.remarks && (
-        <Card className="mt-6 border-0 shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-lg text-primary">備註</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm leading-relaxed">{fragrance.remarks}</p>
-          </CardContent>
-        </Card>
-      )}
+      <Card className="mt-6 border-0 shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between text-lg text-primary">
+            <span>備註</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditRemarksOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <Edit className="h-3 w-3" />
+              編輯
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {fragrance.remarks ? (
+            <p className="text-sm leading-relaxed whitespace-pre-wrap">{fragrance.remarks}</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">暫無備註</p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* 香精詳細資訊 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -584,6 +598,20 @@ export default function FragranceDetailPage() {
             currentStock: 0, // 添加缺失的屬性
           } as FragranceData}
         />
+      )}
+
+      {/* 編輯備註對話框 */}
+      {fragrance && (
+                 <FragranceDialog
+           isOpen={isEditRemarksOpen}
+           onOpenChange={setIsEditRemarksOpen}
+           onFragranceUpdate={handleFragranceUpdate}
+           fragranceData={{
+             ...fragrance,
+             currentStock: 0, // 添加缺少的屬性
+             remarks: fragrance.remarks || '', // 傳入當前備註
+           } as FragranceData}
+         />
       )}
     </div>
   );
