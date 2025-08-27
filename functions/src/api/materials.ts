@@ -375,6 +375,41 @@ export const importMaterials = onCall(async (request) => {
           finalCode = await generateUniqueMaterialCode(mainCategoryId, subCategoryId);
         }
 
+        // 檢查代號是否重複，如果重複則生成新代號
+        let isCodeUnique = false;
+        let attempts = 0;
+        const maxAttempts = 10; // 最多嘗試10次生成唯一代號
+        const originalCode = finalCode; // 保存原始代號
+
+        while (!isCodeUnique && attempts < maxAttempts) {
+          // 檢查代號是否已存在
+          const existingCodeQuery = await db.collection("materials")
+            .where("code", "==", finalCode)
+            .limit(1)
+            .get();
+          
+          if (existingCodeQuery.empty) {
+            // 代號唯一，可以使用
+            isCodeUnique = true;
+            logger.info(`代號 ${finalCode} 檢查通過，可以使用`);
+          } else {
+            // 代號重複，生成新代號
+            attempts++;
+            logger.warn(`代號 ${finalCode} 已存在，重新生成 (嘗試 ${attempts}/${maxAttempts})`);
+            
+            if (attempts < maxAttempts) {
+              // 生成新的隨機代號
+              finalCode = await generateUniqueMaterialCode(mainCategoryId, subCategoryId);
+            } else {
+              // 達到最大嘗試次數，使用時間戳作為後綴
+              const timestamp = Date.now().toString().slice(-6);
+              finalCode = `${finalCode}_${timestamp}`;
+              logger.warn(`達到最大嘗試次數，使用時間戳後綴: ${finalCode}`);
+              isCodeUnique = true; // 強制使用這個代號
+            }
+          }
+        }
+
         // 在更新模式下，先查找現有物料
         let existingMaterialDoc = null;
         if (updateMode && finalCode) {
@@ -471,7 +506,9 @@ export const importMaterials = onCall(async (request) => {
           status: "success",
           materialId: docRef.id,
           action: action,
-          code: finalCode
+          code: finalCode,
+          originalCode: originalCode !== finalCode ? originalCode : undefined,
+          codeChanged: originalCode !== finalCode
         });
         
       } catch (error) {
