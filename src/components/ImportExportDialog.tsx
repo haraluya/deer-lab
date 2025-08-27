@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 interface ImportExportDialogProps {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
-  onImport: (data: any[], options?: { overwriteDuplicates?: boolean; updateMode?: boolean }) => Promise<void>
+  onImport: (data: any[], options?: { updateMode?: boolean }, onProgress?: (current: number, total: number) => void) => Promise<void>
   onExport: () => Promise<any[]>
   title: string
   description: string
@@ -28,8 +28,8 @@ interface ImportExportDialogProps {
     format?: "percentage" // 新增百分比格式
   }>
   color?: "blue" | "green" | "purple" | "yellow" | "red" | "gray"
-  showOverwriteOption?: boolean
   showUpdateOption?: boolean
+  maxBatchSize?: number
 }
 
 export function ImportExportDialog({
@@ -42,15 +42,15 @@ export function ImportExportDialog({
   sampleData,
   fields,
   color = "blue",
-  showOverwriteOption = false,
-  showUpdateOption = false
+  showUpdateOption = false,
+  maxBatchSize = 100
 }: ImportExportDialogProps) {
   const [isImporting, setIsImporting] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [importData, setImportData] = useState<any[]>([])
   const [validationErrors, setValidationErrors] = useState<string[]>([])
-  const [overwriteDuplicates, setOverwriteDuplicates] = useState(false)
   const [updateMode, setUpdateMode] = useState(false)
+  const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(null)
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -150,20 +150,31 @@ export function ImportExportDialog({
       return
     }
 
+    if (importData.length > maxBatchSize) {
+      toast.error(`資料量過大，建議一次匯入不超過 ${maxBatchSize} 筆資料。目前有 ${importData.length} 筆資料。`)
+      return
+    }
+
     setIsImporting(true)
+    setImportProgress({ current: 0, total: importData.length })
+    
     try {
-      await onImport(importData, { overwriteDuplicates, updateMode })
-      toast.success("資料匯入成功")
+      await onImport(importData, { updateMode }, (current, total) => {
+        setImportProgress({ current, total })
+      })
+      
+      toast.success(`資料匯入成功！共處理 ${importData.length} 筆資料`)
       onOpenChange(false)
       setImportData([])
       setValidationErrors([])
-      setOverwriteDuplicates(false)
       setUpdateMode(false)
+      setImportProgress(null)
     } catch (error) {
       console.error("匯入失敗:", error)
       toast.error("資料匯入失敗")
     } finally {
       setIsImporting(false)
+      setImportProgress(null)
     }
   }
 
@@ -331,19 +342,14 @@ export function ImportExportDialog({
                  </div>
                )}
 
-               {showOverwriteOption && (
-                 <div className="flex items-center space-x-2">
-                   <Checkbox
-                     id="overwrite-duplicates"
-                     checked={overwriteDuplicates}
-                     onCheckedChange={(checked) => setOverwriteDuplicates(checked as boolean)}
-                   />
-                   <label
-                     htmlFor="overwrite-duplicates"
-                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                   >
-                     覆蓋重複資料（以物料代號為主，相同代號將完全取代）
-                   </label>
+               {importData.length > 0 && (
+                 <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                   <div className="text-sm text-yellow-800">
+                     <strong>建議：</strong>一次匯入不超過 {maxBatchSize} 筆資料以確保穩定性。目前有 {importData.length} 筆資料。
+                     {importData.length > maxBatchSize && (
+                       <span className="text-red-600 font-semibold"> 建議分批匯入！</span>
+                     )}
+                   </div>
                  </div>
                )}
 
@@ -400,13 +406,28 @@ export function ImportExportDialog({
                     </div>
                   )}
 
-                  <Button 
-                    onClick={handleImport} 
-                    disabled={isImporting || validationErrors.length > 0}
-                    className={`w-full ${colorClasses.button}`}
-                  >
-                    {isImporting ? "匯入中..." : "確認匯入"}
-                  </Button>
+                                     {importProgress && (
+                     <div className="space-y-2">
+                       <div className="flex justify-between text-sm">
+                         <span>處理進度</span>
+                         <span>{importProgress.current} / {importProgress.total}</span>
+                       </div>
+                       <div className="w-full bg-gray-200 rounded-full h-2">
+                         <div 
+                           className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                           style={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
+                         ></div>
+                       </div>
+                     </div>
+                   )}
+
+                   <Button 
+                     onClick={handleImport} 
+                     disabled={isImporting || validationErrors.length > 0}
+                     className={`w-full ${colorClasses.button}`}
+                   >
+                     {isImporting ? "匯入中..." : "確認匯入"}
+                   </Button>
                 </div>
               )}
             </CardContent>

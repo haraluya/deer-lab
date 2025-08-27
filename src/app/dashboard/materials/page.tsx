@@ -873,18 +873,36 @@ function MaterialsPageContent() {
       <ImportExportDialog
         isOpen={isImportExportOpen}
         onOpenChange={setIsImportExportOpen}
-        onImport={async (data: any[], options?: { overwriteDuplicates?: boolean; updateMode?: boolean }) => {
+        onImport={async (data: any[], options?: { updateMode?: boolean }, onProgress?: (current: number, total: number) => void) => {
           const functions = getFunctions();
           const importMaterials = httpsCallable(functions, 'importMaterials');
           
           try {
-            const result = await importMaterials({ 
-              materials: data,
-              overwriteDuplicates: options?.overwriteDuplicates || false,
-              updateMode: options?.updateMode || false
-            });
-            console.log('匯入結果:', result);
-            toast.success('物料匯入完成');
+            // 分批處理資料
+            const batchSize = 20; // 每批處理20筆
+            const totalBatches = Math.ceil(data.length / batchSize);
+            let processedCount = 0;
+            
+            for (let i = 0; i < totalBatches; i++) {
+              const startIndex = i * batchSize;
+              const endIndex = Math.min(startIndex + batchSize, data.length);
+              const batch = data.slice(startIndex, endIndex);
+              
+              const result = await importMaterials({ 
+                materials: batch,
+                updateMode: options?.updateMode || false
+              });
+              
+              processedCount += batch.length;
+              onProgress?.(processedCount, data.length);
+              
+              // 每批之間稍作延遲，避免過度負載
+              if (i < totalBatches - 1) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+              }
+            }
+            
+            console.log('匯入結果:', `成功處理 ${processedCount} 筆資料`);
             handleMaterialUpdate();
           } catch (error) {
             console.error('匯入物料失敗:', error);
@@ -908,8 +926,8 @@ function MaterialsPageContent() {
         title="物料"
         description="匯入或匯出物料資料，支援 Excel 和 CSV 格式。匯入時會自動生成缺失的分類和代號。"
         color="yellow"
-        showOverwriteOption={true}
         showUpdateOption={true}
+        maxBatchSize={100}
         sampleData={[
           {
             code: "MAT001",
