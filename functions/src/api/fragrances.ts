@@ -77,12 +77,13 @@ export const updateFragrance = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
   // 暫時移除權限檢查
   // await ensureIsAdmin(contextAuth?.uid);
-  const { fragranceId, code, name, status, fragranceType, supplierId, safetyStockLevel, costPerUnit, percentage, pgRatio, vgRatio, unit } = data;
+  const { fragranceId, code, name, status, fragranceType, fragranceStatus, supplierId, safetyStockLevel, costPerUnit, percentage, pgRatio, vgRatio, unit } = data;
   if (!fragranceId || !code || !name) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (ID, 代號、名稱)。"); }
   
   // 處理 fragranceType 和 status 的相容性
   const finalFragranceType = fragranceType || status || 'cotton';
   const finalStatus = status || fragranceType || 'active';
+  const finalFragranceStatus = fragranceStatus || status || 'active';
   
   try {
     const fragranceRef = db.collection("fragrances").doc(fragranceId);
@@ -91,6 +92,7 @@ export const updateFragrance = onCall(async (request) => {
       name, 
       status: finalStatus, 
       fragranceType: finalFragranceType,
+      fragranceStatus: finalFragranceStatus,
       safetyStockLevel: Number(safetyStockLevel) || 0, 
       costPerUnit: Number(costPerUnit) || 0, 
       percentage: Number(percentage) || 0, 
@@ -114,12 +116,13 @@ export const updateFragranceByCode = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
   // 暫時移除權限檢查
   // await ensureIsAdmin(contextAuth?.uid);
-  const { code, name, status, fragranceType, supplierId, safetyStockLevel, costPerUnit, percentage, pgRatio, vgRatio, unit } = data;
+  const { code, name, status, fragranceType, fragranceStatus, supplierId, safetyStockLevel, costPerUnit, percentage, pgRatio, vgRatio, unit } = data;
   if (!code || !name) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (代號、名稱)。"); }
   
   // 處理 fragranceType 和 status 的相容性
   const finalFragranceType = fragranceType || status || 'cotton';
   const finalStatus = status || fragranceType || 'active';
+  const finalFragranceStatus = fragranceStatus || status || 'active';
   
   try {
     // 根據香精編號查找現有的香精
@@ -137,6 +140,7 @@ export const updateFragranceByCode = onCall(async (request) => {
       name, 
       status: finalStatus, 
       fragranceType: finalFragranceType,
+      fragranceStatus: finalFragranceStatus,
       safetyStockLevel: Number(safetyStockLevel) || 0, 
       costPerUnit: Number(costPerUnit) || 0, 
       percentage: Number(percentage) || 0, 
