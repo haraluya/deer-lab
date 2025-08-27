@@ -440,11 +440,20 @@ export const importMaterials = onCall(async (request) => {
         };
         
         // 處理供應商 - 支援 supplierId 和 supplierName
+        logger.info(`處理物料 ${processedData.name} 的供應商資訊:`, {
+          supplierId: processedData.supplierId,
+          supplierName: processedData.supplierName,
+          hasSupplierId: !!processedData.supplierId,
+          hasSupplierName: !!processedData.supplierName
+        });
+
         if (processedData.supplierId) { 
           materialDataToSave.supplierRef = db.collection("suppliers").doc(processedData.supplierId); 
+          logger.info(`使用供應商ID: ${processedData.supplierId}`);
         } else if (processedData.supplierName) {
           // 根據供應商名稱查找或創建供應商
           try {
+            logger.info(`開始查找供應商: ${processedData.supplierName}`);
             const supplierQuery = await db.collection("suppliers")
               .where("name", "==", processedData.supplierName)
               .limit(1)
@@ -453,8 +462,10 @@ export const importMaterials = onCall(async (request) => {
             if (!supplierQuery.empty) {
               // 找到現有供應商
               materialDataToSave.supplierRef = supplierQuery.docs[0].ref;
+              logger.info(`找到現有供應商: ${processedData.supplierName} (${supplierQuery.docs[0].id})`);
             } else {
               // 創建新供應商
+              logger.info(`未找到供應商，開始創建: ${processedData.supplierName}`);
               const newSupplierRef = await db.collection("suppliers").add({
                 name: processedData.supplierName,
                 products: "",
@@ -466,12 +477,14 @@ export const importMaterials = onCall(async (request) => {
                 updatedAt: FieldValue.serverTimestamp()
               });
               materialDataToSave.supplierRef = newSupplierRef;
-              logger.info(`自動創建供應商: ${processedData.supplierName} (${newSupplierRef.id})`);
+              logger.info(`自動創建供應商成功: ${processedData.supplierName} (${newSupplierRef.id})`);
             }
           } catch (supplierError) {
             logger.warn(`處理供應商 ${processedData.supplierName} 時發生錯誤:`, supplierError);
             // 供應商處理失敗不影響物料匯入
           }
+        } else {
+          logger.info(`物料 ${processedData.name} 沒有供應商資訊`);
         }
 
         let docRef;

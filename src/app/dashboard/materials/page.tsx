@@ -884,6 +884,17 @@ function MaterialsPageContent() {
           const importMaterials = httpsCallable(functions, 'importMaterials');
           
           try {
+            // 調試日誌：檢查匯入資料
+            console.log('開始匯入資料:', {
+              totalRecords: data.length,
+              updateMode: options?.updateMode,
+              sampleData: data.slice(0, 3).map(item => ({
+                name: item.name,
+                supplierName: item.supplierName,
+                hasSupplierName: !!item.supplierName
+              }))
+            });
+            
             // 分批處理資料
             const batchSize = 20; // 每批處理20筆
             const totalBatches = Math.ceil(data.length / batchSize);

@@ -98,22 +98,38 @@ export function ImportExportDialog({
       })
 
       // 轉換資料類型
-      parsedData = parsedData.map(row => {
+      parsedData = parsedData.map((row, index) => {
         const cleanedRow: any = {}
         fields.forEach(field => {
-          const value = row[field.key] || row[field.label]
-          if (value !== undefined && value !== null) {
+          // 優先使用 field.key，如果沒有則使用 field.label
+          let value = row[field.key]
+          if (value === undefined || value === null || value === '') {
+            value = row[field.label]
+          }
+          
+          if (value !== undefined && value !== null && value !== '') {
             if (field.type === 'number') {
               cleanedRow[field.key] = Number(value)
             } else if (field.type === 'boolean') {
               cleanedRow[field.key] = Boolean(value)
             } else {
-              cleanedRow[field.key] = String(value)
+              cleanedRow[field.key] = String(value).trim()
             }
           } else {
             cleanedRow[field.key] = value
           }
         })
+        
+        // 調試日誌：檢查供應商欄位
+        if (index < 3) { // 只記錄前3筆資料的調試資訊
+          console.log(`第 ${index + 1} 筆資料解析結果:`, {
+            originalRow: row,
+            cleanedRow: cleanedRow,
+            supplierName: cleanedRow.supplierName,
+            hasSupplierName: !!cleanedRow.supplierName
+          })
+        }
+        
         return cleanedRow
       })
 
