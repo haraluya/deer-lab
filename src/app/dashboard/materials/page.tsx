@@ -110,8 +110,27 @@ function MaterialsPageContent() {
         };
       }) as MaterialWithSupplier[];
       
+      // 排序：先按主分類，再按細分分類，最後按物料名稱（升序）
+      materialsList.sort((a, b) => {
+        // 第一級排序：主分類
+        const categoryA = a.category || '';
+        const categoryB = b.category || '';
+        if (categoryA !== categoryB) {
+          return categoryA.localeCompare(categoryB, 'zh-TW');
+        }
+        
+        // 第二級排序：細分分類
+        const subCategoryA = a.subCategory || '';
+        const subCategoryB = b.subCategory || '';
+        if (subCategoryA !== subCategoryB) {
+          return subCategoryA.localeCompare(subCategoryB, 'zh-TW');
+        }
+        
+        // 第三級排序：物料名稱
+        return a.name.localeCompare(b.name, 'zh-TW');
+      });
+      
       setMaterials(materialsList);
-      setFilteredMaterials(materialsList);
     } catch (error) {
       console.error("Failed to fetch materials:", error);
       toast.error("讀取物料資料失敗。");
@@ -211,7 +230,7 @@ function MaterialsPageContent() {
   };
 
   // 處理搜尋和篩選
-  const handleSearchAndFilter = () => {
+  const handleSearchAndFilter = useCallback(() => {
     let filtered = materials;
 
     // 搜尋篩選
@@ -252,6 +271,26 @@ function MaterialsPageContent() {
       filtered = filtered.filter(material => material.subCategory === selectedSubCategory);
     }
 
+    // 排序：先按主分類，再按細分分類，最後按物料名稱（升序）
+    filtered.sort((a, b) => {
+      // 第一級排序：主分類
+      const categoryA = a.category || '';
+      const categoryB = b.category || '';
+      if (categoryA !== categoryB) {
+        return categoryA.localeCompare(categoryB, 'zh-TW');
+      }
+      
+      // 第二級排序：細分分類
+      const subCategoryA = a.subCategory || '';
+      const subCategoryB = b.subCategory || '';
+      if (subCategoryA !== subCategoryB) {
+        return subCategoryA.localeCompare(subCategoryB, 'zh-TW');
+      }
+      
+      // 第三級排序：物料名稱
+      return a.name.localeCompare(b.name, 'zh-TW');
+    });
+
     console.log('篩選結果:', {
       searchTerm: searchTerm.trim(),
       totalMaterials: materials.length,
@@ -261,7 +300,7 @@ function MaterialsPageContent() {
     });
 
     setFilteredMaterials(filtered);
-  };
+  }, [materials, searchTerm, selectedCategory, selectedSubCategory]);
 
   // 處理搜尋 - 移除延遲
   const handleSearch = (term: string) => {
@@ -380,9 +419,12 @@ function MaterialsPageContent() {
     }
   }, [searchParams, materials, router]);
 
+  // 當篩選條件或資料變化時，重新應用篩選和排序
   useEffect(() => {
-    handleSearchAndFilter();
-  }, [selectedCategory, selectedSubCategory, searchTerm]);
+    if (materials.length > 0) {
+      handleSearchAndFilter();
+    }
+  }, [materials, handleSearchAndFilter]);
 
   const { categories, subCategories } = useMemo(() => getAllCategories(), [materials]);
 
