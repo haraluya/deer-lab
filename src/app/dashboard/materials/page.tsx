@@ -7,9 +7,10 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 
 import { MaterialDialog, MaterialData } from './MaterialDialog';
+import { MaterialCategoryDialog } from './MaterialCategoryDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { MaterialIcon } from '@/components/ui/material-icon';
-import { MoreHorizontal, ShoppingCart, ListChecks, Save, X, Loader2, Search, FileSpreadsheet, Eye, Edit, Warehouse, Building, Tag, Package, AlertTriangle, Shield, Plus, Calculator } from 'lucide-react';
+import { MoreHorizontal, ShoppingCart, ListChecks, Save, X, Loader2, Search, FileSpreadsheet, Eye, Edit, Warehouse, Building, Tag, Package, AlertTriangle, Shield, Plus, Calculator, FolderOpen } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -59,6 +60,7 @@ function MaterialsPageContent() {
   const [isImportExportOpen, setIsImportExportOpen] = useState(false);
   const [selectedDetailMaterial, setSelectedDetailMaterial] = useState<MaterialWithSupplier | null>(null);
   const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   // -------------------------
 
   const fetchSuppliers = useCallback(async () => {
@@ -384,6 +386,10 @@ function MaterialsPageContent() {
             </>
           ) : (
             <>
+              <Button variant="outline" onClick={() => setIsCategoryDialogOpen(true)} className="w-full">
+                <FolderOpen className="mr-2 h-4 w-4" />
+                物料分類
+              </Button>
               <Button variant="outline" onClick={() => setIsImportExportOpen(true)} className="w-full">
                 <FileSpreadsheet className="mr-2 h-4 w-4" />
                 匯入/匯出
@@ -432,6 +438,10 @@ function MaterialsPageContent() {
             </>
           ) : (
             <>
+              <Button variant="outline" onClick={() => setIsCategoryDialogOpen(true)}>
+                <FolderOpen className="mr-2 h-4 w-4" />
+                物料分類
+              </Button>
               <Button variant="outline" onClick={() => setIsImportExportOpen(true)}>
                 <FileSpreadsheet className="mr-2 h-4 w-4" />
                 匯入/匯出
@@ -850,6 +860,12 @@ function MaterialsPageContent() {
         onConfirm={handleBatchDelete}
         title="確認批量刪除"
         description={`您確定要刪除選取的 ${purchaseCart.size} 個物料嗎？此操作無法復原。`}
+      />
+
+      {/* 物料分類對話框 */}
+      <MaterialCategoryDialog
+        isOpen={isCategoryDialogOpen}
+        onOpenChange={setIsCategoryDialogOpen}
       />
 
       {/* 匯入匯出對話框 */}

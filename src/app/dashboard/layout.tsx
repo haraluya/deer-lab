@@ -37,7 +37,6 @@ const navLinks: NavItem[] = [
   { href: '/dashboard/profile', label: '個人資料', icon: User },
   { href: '/dashboard/personnel', label: '人員管理', icon: Users },
   // { href: '/dashboard/roles', label: '角色管理', icon: Shield }, // 已移除角色管理
-  { href: '/dashboard/material-categories', label: '物料分類管理', icon: Tag },
   { isSeparator: true, label: '基礎資料管理' },
   { href: '/dashboard/suppliers', label: '供應商管理', icon: Building },
   { href: '/dashboard/materials', label: '物料管理', icon: Package },
