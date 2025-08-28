@@ -207,6 +207,35 @@ function FragrancesPageContent() {
     setIsBatchDeleteOpen(true);
   };
 
+  const handleConfirmBatchDelete = async () => {
+    const selectedFragranceIds = Array.from(purchaseCart);
+    if (selectedFragranceIds.length === 0) return;
+
+    const toastId = toast.loading(`正在刪除 ${selectedFragranceIds.length} 個香精...`);
+    try {
+      const functions = getFunctions();
+      const deleteFragrance = httpsCallable(functions, 'deleteFragrance');
+      
+      // 批量刪除選中的香精
+      for (const fragranceId of selectedFragranceIds) {
+        await deleteFragrance({ fragranceId });
+      }
+
+      toast.success(`成功刪除 ${selectedFragranceIds.length} 個香精。`, { id: toastId });
+      setPurchaseCart(new Set()); // 清空選中的項目
+      loadData();
+    } catch (error) {
+      console.error("批量刪除香精失敗:", error);
+      let errorMessage = "批量刪除香精時發生錯誤。";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      toast.error(errorMessage, { id: toastId });
+    } finally {
+      setIsBatchDeleteOpen(false);
+    }
+  };
+
   const getLowStockCount = () => {
     return fragrances.filter(f => typeof f.safetyStockLevel === 'number' && f.currentStock < f.safetyStockLevel).length;
   };
@@ -1194,6 +1223,14 @@ function FragrancesPageContent() {
           description={`您確定要永久刪除香精「${selectedFragrance.name}」嗎？此操作無法復原。`}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={isBatchDeleteOpen}
+        onOpenChange={setIsBatchDeleteOpen}
+        onConfirm={handleConfirmBatchDelete}
+        title="確認批量刪除"
+        description={`您確定要永久刪除選中的 ${purchaseCart.size} 個香精嗎？此操作無法復原。`}
+      />
 
       <ImportExportDialog
         isOpen={isImportExportOpen}

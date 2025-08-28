@@ -115,7 +115,7 @@ export const updateFragrance = onCall(async (request) => {
 export const updateFragranceByCode = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
   // await ensureIsAdmin(contextAuth?.uid);
-  const { code, name, status, fragranceType, fragranceStatus, supplierId, safetyStockLevel, costPerUnit, percentage, pgRatio, vgRatio, unit } = data;
+  const { code, name, status, fragranceType, fragranceStatus, supplierId, safetyStockLevel, costPerUnit, percentage, pgRatio, vgRatio, unit, currentStock } = data;
   if (!code || !name) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (代號、名稱)。"); }
   
   // 處理 fragranceType 和 status 的相容性
@@ -148,6 +148,13 @@ export const updateFragranceByCode = onCall(async (request) => {
       unit: unit || 'KG',
       updatedAt: FieldValue.serverTimestamp(), 
     };
+    
+    // 如果提供了 currentStock，則更新庫存
+    if (currentStock !== undefined && currentStock !== null) {
+      updateData.currentStock = Number(currentStock) || 0;
+      updateData.lastStockUpdate = FieldValue.serverTimestamp();
+    }
+    
     if (supplierId) { 
       updateData.supplierRef = db.collection("suppliers").doc(supplierId); 
     } else { 
