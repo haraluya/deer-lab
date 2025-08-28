@@ -88,14 +88,16 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
 
           const [seriesSnapshot, fragrancesSnapshot, materialsSnapshot] = await Promise.all([seriesQuery, fragrancesQuery, materialsQuery]);
           
-          setOptions({
-            series: seriesSnapshot.docs.map(doc => ({ value: doc.id, label: doc.data().name })),
-            fragrances: fragrancesSnapshot.docs.map(doc => ({ 
-              value: doc.id, 
-              label: `${doc.data().code}(${doc.data().name})` 
-            })),
-            materials: materialsSnapshot.docs.map(doc => ({ value: doc.id, label: doc.data().name })),
-          });
+                     setOptions({
+             series: seriesSnapshot.docs.map(doc => ({ value: doc.id, label: doc.data().name })),
+             fragrances: fragrancesSnapshot.docs.map(doc => ({ 
+               value: doc.id, 
+               label: `${doc.data().code}(${doc.data().name})` 
+             })),
+             materials: materialsSnapshot.docs
+               .map(doc => ({ value: doc.id, label: doc.data().name }))
+               .sort((a, b) => a.label.localeCompare(b.label, 'zh-TW')),
+           });
         } catch (error) {
           console.error("讀取下拉選單資料失敗:", error);
           toast.error("讀取下拉選單資料失敗。");

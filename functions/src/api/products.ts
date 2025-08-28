@@ -68,7 +68,7 @@ export const createProduct = onCall(async (request) => {
 export const updateProduct = onCall(async (request) => {
   const { auth: contextAuth, data } = request;
   // await ensureCanManageProducts(contextAuth?.uid);
-  const { productId, name, fragranceId, nicotineMg, targetProduction, specificMaterialIds } = data;
+  const { productId, name, fragranceId, nicotineMg, specificMaterialIds } = data;
   if (!productId) { throw new HttpsError("invalid-argument", "缺少 productId"); }
   const productRef = db.doc(`products/${productId}`);
   const fragranceRef = db.doc(`fragrances/${fragranceId}`);
@@ -77,7 +77,6 @@ export const updateProduct = onCall(async (request) => {
     name, 
     currentFragranceRef: fragranceRef, 
     nicotineMg: Number(nicotineMg) || 0, 
-    targetProduction: Number(targetProduction) || 1, 
     specificMaterials: materialRefs, 
     updatedAt: FieldValue.serverTimestamp(), 
   });

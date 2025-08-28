@@ -323,26 +323,26 @@ export default function ProductDetailPage() {
            <CardHeader>
              <CardTitle className="text-lg text-primary">基本資訊</CardTitle>
            </CardHeader>
-           <CardContent className="space-y-4">
-             <div className="space-y-3">
-               <div className="flex justify-between items-center py-2 border-b">
-                 <span className="text-muted-foreground">產品名稱</span>
-                 <span className="font-medium">{product.name}</span>
-               </div>
-               <div className="flex justify-between items-center py-2 border-b">
-                 <span className="text-muted-foreground">產品系列</span>
-                 <span className="font-medium">{product.seriesName}</span>
-               </div>
-               <div className="flex justify-between items-center py-2 border-b">
-                 <span className="text-muted-foreground">丁鹽濃度</span>
-                 <span className="font-medium">{product.nicotineMg || 0} MG</span>
-               </div>
-               <div className="flex justify-between items-center py-2 border-b">
-                 <span className="text-muted-foreground">目標產量</span>
-                 <span className="font-medium">{product.targetProduction || 1} KG</span>
-               </div>
-             </div>
-           </CardContent>
+                       <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center py-2 border-b">
+                  <span className="text-muted-foreground">產品名稱</span>
+                  <span className="font-medium">{product.name}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b">
+                  <span className="text-muted-foreground">產品系列</span>
+                  <span className="font-medium">{product.seriesName}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b">
+                  <span className="text-muted-foreground">使用香精</span>
+                  <span className="font-medium">{product.fragranceName || '未指定'}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b">
+                  <span className="text-muted-foreground">丁鹽濃度</span>
+                  <span className="font-medium">{product.nicotineMg || 0} MG</span>
+                </div>
+              </div>
+            </CardContent>
          </Card>
 
          {/* 專屬材料 */}
