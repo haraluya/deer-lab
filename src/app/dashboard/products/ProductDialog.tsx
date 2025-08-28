@@ -118,12 +118,30 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
              const seriesData = seriesSnapshot.docs.map(doc => {
                const data = doc.data();
                console.log('單個系列資料:', { id: doc.id, data }); // 調試用
-               return {
-                 id: doc.id,
-                 name: data.name,
-                 code: data.code,
-                 productType: data.productType,
+               
+               // 處理產品類型，將顯示名稱轉換為代碼
+               let productType = data.productType;
+               if (!productType || productType === '') {
+                 productType = '其他(ETC)'; // 預設為其他
+               }
+               
+               // 將產品類型名稱轉換為代碼
+               const productTypeCodeMap: { [key: string]: string } = {
+                 '罐裝油(BOT)': 'BOT',
+                 '一代棉芯煙彈(OMP)': 'OMP',
+                 '一代陶瓷芯煙彈(OTP)': 'OTP',
+                 '五代陶瓷芯煙彈(FTP)': 'FTP',
+                 '其他(ETC)': 'ETC',
                };
+               
+               const productTypeCode = productTypeCodeMap[productType] || 'ETC';
+               
+                                return {
+                   id: doc.id,
+                   name: data.name,
+                   code: data.code,
+                   productType: productTypeCode, // 使用轉換後的代碼
+                 };
              });
              console.log('完整系列資訊:', seriesData); // 調試用
              setSeriesInfo(seriesData);
@@ -217,15 +235,21 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
       const selectedSeriesInfo = seriesInfo.find(s => s.id === seriesId);
       console.log('找到的系列信息:', selectedSeriesInfo); // 調試用
       
-      if (selectedSeriesInfo && selectedSeriesInfo.productType && selectedSeriesInfo.code) {
-        // 生成隨機4位數編號
-        const randomNumber = Math.floor(1000 + Math.random() * 9000);
-        setGeneratedProductNumber(String(randomNumber));
-        
-        // 預覽產品代碼格式
-        setGeneratedProductCode(`${selectedSeriesInfo.productType}-${selectedSeriesInfo.code}-${randomNumber}`);
-        console.log('生成的產品代碼:', `${selectedSeriesInfo.productType}-${selectedSeriesInfo.code}-${randomNumber}`); // 調試用
-      } else {
+             if (selectedSeriesInfo && selectedSeriesInfo.productType && selectedSeriesInfo.code) {
+         // 生成隨機4位數編號
+         const randomNumber = Math.floor(1000 + Math.random() * 9000);
+         setGeneratedProductNumber(String(randomNumber));
+         
+         // 預覽產品代碼格式
+         const generatedCode = `${selectedSeriesInfo.productType}-${selectedSeriesInfo.code}-${randomNumber}`;
+         setGeneratedProductCode(generatedCode);
+         console.log('成功生成產品代碼:', {
+           productType: selectedSeriesInfo.productType,
+           code: selectedSeriesInfo.code,
+           randomNumber: randomNumber,
+           fullCode: generatedCode
+         }); // 調試用
+       } else {
         // 如果沒有找到系列信息或產品類型，清空預覽
         setGeneratedProductNumber('');
         setGeneratedProductCode('');
