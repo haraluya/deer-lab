@@ -939,7 +939,7 @@ function FragrancesPageContent() {
           <Table className="table-enhanced">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[60px] text-center">選取</TableHead>
+                <TableHead className="w-[60px] text-center"></TableHead>
                 <TableHead className="text-left">香精資訊</TableHead>
                 {!isStocktakeMode && <TableHead className="text-left">香精種類</TableHead>}
                 {!isStocktakeMode && <TableHead className="text-left">啟用狀態</TableHead>}
