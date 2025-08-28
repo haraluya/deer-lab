@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { collection, getDocs, DocumentReference, DocumentData, doc, getDoc, query, where } from 'firebase/firestore';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -220,4 +221,94 @@ export async function autoGenerateCategories(materialData: any, db: any) {
   }
   
   return materialData;
+}
+
+// 產品類型代號映射
+export const PRODUCT_TYPE_CODES = {
+  '罐裝油(BOT)': 'BOT',
+  '一代棉芯煙彈(OMP)': 'OMP',
+  '一代陶瓷芯煙彈(OTP)': 'OTP',
+  '五代陶瓷芯煙彈(FTP)': 'FTP',
+  '其他(ETC)': 'ETC',
+} as const;
+
+// 生成完整的產品編號
+export async function generateCompleteProductCode(
+  seriesCode: string, 
+  productType: string, 
+  db: any
+): Promise<string> {
+  try {
+    // 獲取產品類型代號
+    const typeCode = PRODUCT_TYPE_CODES[productType as keyof typeof PRODUCT_TYPE_CODES] || 'ETC';
+    
+    // 查詢該系列下現有的產品數量
+    const productsQuery = query(
+      collection(db, 'products'),
+      where('seriesRef', '==', doc(db, 'productSeries', seriesCode))
+    );
+    const productsSnapshot = await getDocs(productsQuery);
+    const existingCount = productsSnapshot.size;
+    
+    // 生成序號（從1開始）
+    const sequenceNumber = (existingCount + 1).toString().padStart(3, '0');
+    
+    // 組合完整編號：[類型代號+系列代號+產品序號]
+    const completeCode = `${typeCode}${seriesCode}${sequenceNumber}`;
+    
+    return completeCode;
+  } catch (error) {
+    console.error('生成產品編號失敗:', error);
+    throw new Error('生成產品編號失敗');
+  }
+}
+
+// 解析產品編號
+export function parseProductCode(productCode: string): {
+  typeCode: string;
+  seriesCode: string;
+  sequenceNumber: string;
+} | null {
+  // 產品編號格式：[類型代號+系列代號+產品序號]
+  // 例如：BOTJNK001, OMPMSK002
+  
+  if (productCode.length < 6) {
+    return null;
+  }
+  
+  // 提取類型代號（前3個字符）
+  const typeCode = productCode.substring(0, 3);
+  
+  // 提取系列代號（中間部分，通常是3個字符）
+  const seriesCode = productCode.substring(3, 6);
+  
+  // 提取序號（最後3個字符）
+  const sequenceNumber = productCode.substring(6);
+  
+  return {
+    typeCode,
+    seriesCode,
+    sequenceNumber,
+  };
+}
+
+// 驗證產品編號格式
+export function validateProductCode(productCode: string): boolean {
+  const parsed = parseProductCode(productCode);
+  if (!parsed) {
+    return false;
+  }
+  
+  // 檢查類型代號是否有效
+  const validTypeCodes = Object.values(PRODUCT_TYPE_CODES);
+  if (!validTypeCodes.includes(parsed.typeCode as any)) {
+    return false;
+  }
+  
+  // 檢查序號是否為數字
+  if (!/^\d+$/.test(parsed.sequenceNumber)) {
+    return false;
+  }
+  
+  return true;
 }

@@ -24,6 +24,7 @@ const formSchema = z.object({
   seriesId: z.string({ required_error: '必須選擇一個產品系列' }),
   fragranceId: z.string({ required_error: '必須選擇一個香精' }),
   nicotineMg: z.coerce.number().min(0, { message: '尼古丁濃度不能為負數' }).default(0),
+  concentration: z.coerce.number().min(0, { message: '濃度不能為負數' }).default(0),
   specificMaterialIds: z.array(z.string()).optional().default([]),
   status: z.enum(['active', 'inactive']),
 });
@@ -39,6 +40,7 @@ export interface ProductData extends DocumentData {
   currentFragranceRef: DocumentReference;
   specificMaterials: DocumentReference[];
   nicotineMg: number;
+  concentration: number;
   status: 'active' | 'inactive';
 }
 
@@ -68,6 +70,7 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
       seriesId: undefined,
       fragranceId: undefined,
       nicotineMg: 0,
+      concentration: 0,
       specificMaterialIds: [],
       status: 'active',
     },
@@ -110,6 +113,7 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
         seriesId: productData.seriesRef?.id || undefined,
         fragranceId: productData.currentFragranceRef?.id || undefined,
         nicotineMg: productData.nicotineMg || 0,
+        concentration: productData.concentration || 0,
         specificMaterialIds: productData.specificMaterials?.map(ref => ref.id) || [],
         status: productData.status || 'active',
       });
@@ -119,6 +123,7 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
         seriesId: undefined,
         fragranceId: undefined,
         nicotineMg: 0,
+        concentration: 0,
         specificMaterialIds: [],
         status: 'active',
       });
@@ -203,6 +208,25 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-sm font-semibold text-gray-700">尼古丁濃度 (mg)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="0"
+                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="concentration"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold text-gray-700">濃度 (MG)</FormLabel>
                       <FormControl>
                         <Input 
                           type="number" 

@@ -9,12 +9,14 @@ const db = getFirestore();
 export const createProduct = onCall(async (request) => {
   const { auth: contextAuth, data } = request;
   // await ensureCanManageProducts(contextAuth?.uid);
-  const { name, seriesId, fragranceId, nicotineMg, specificMaterialIds, status } = data;
+  const { name, seriesId, fragranceId, nicotineMg, concentration, specificMaterialIds, status } = data;
   if (!name || !seriesId || !fragranceId || !status) { throw new HttpsError("invalid-argument", "請求缺少產品名稱、系列、香精或狀態。"); }
   const seriesRef = db.doc(`productSeries/${seriesId}`);
   const seriesDoc = await seriesRef.get();
   if (!seriesDoc.exists) { throw new HttpsError("not-found", "指定的產品系列不存在"); }
-  const seriesCode = seriesDoc.data()?.code;
+  const seriesData = seriesDoc.data();
+  const seriesCode = seriesData?.code;
+  const productType = seriesData?.productType;
   const productCode = await db.runTransaction(async (transaction) => {
     const counterRef = db.doc(`counters/product_${seriesId}`);
     const counterDoc = await transaction.get(counterRef);
@@ -22,23 +24,23 @@ export const createProduct = onCall(async (request) => {
     if (counterDoc.exists) { newCount = (counterDoc.data()?.count || 0) + 1; }
     transaction.set(counterRef, { count: newCount }, { merge: true });
     const sequenceNumber = String(newCount).padStart(3, '0');
-    return `${seriesCode}-${sequenceNumber}`;
+    return `${productType}-${seriesCode}-${sequenceNumber}`;
   });
   const fragranceRef = db.doc(`fragrances/${fragranceId}`);
   const materialRefs = (specificMaterialIds || []).map((id: string) => db.doc(`materials/${id}`));
-  await db.collection("products").add({ name, code: productCode, seriesRef, currentFragranceRef: fragranceRef, nicotineMg: Number(nicotineMg) || 0, specificMaterials: materialRefs, status, createdAt: FieldValue.serverTimestamp(), });
+  await db.collection("products").add({ name, code: productCode, seriesRef, currentFragranceRef: fragranceRef, nicotineMg: Number(nicotineMg) || 0, concentration: Number(concentration) || 0, specificMaterials: materialRefs, status, createdAt: FieldValue.serverTimestamp(), });
   return { success: true, code: productCode };
 });
 
 export const updateProduct = onCall(async (request) => {
   const { auth: contextAuth, data } = request;
   // await ensureCanManageProducts(contextAuth?.uid);
-  const { productId, name, fragranceId, nicotineMg, specificMaterialIds, status } = data;
+  const { productId, name, fragranceId, nicotineMg, concentration, specificMaterialIds, status } = data;
   if (!productId) { throw new HttpsError("invalid-argument", "缺少 productId"); }
   const productRef = db.doc(`products/${productId}`);
   const fragranceRef = db.doc(`fragrances/${fragranceId}`);
   const materialRefs = (specificMaterialIds || []).map((id: string) => db.doc(`materials/${id}`));
-  await productRef.update({ name, currentFragranceRef: fragranceRef, nicotineMg: Number(nicotineMg) || 0, specificMaterials: materialRefs, status, updatedAt: FieldValue.serverTimestamp(), });
+  await productRef.update({ name, currentFragranceRef: fragranceRef, nicotineMg: Number(nicotineMg) || 0, concentration: Number(concentration) || 0, specificMaterials: materialRefs, status, updatedAt: FieldValue.serverTimestamp(), });
   return { success: true };
 });
 

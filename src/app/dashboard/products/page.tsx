@@ -7,13 +7,16 @@ import { collection, getDocs, DocumentReference } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 
-import { MoreHorizontal, Droplets, FileSpreadsheet, Eye, Edit, Package, Factory, Calendar, Plus, Tag } from 'lucide-react';
+import { MoreHorizontal, Droplets, FileSpreadsheet, Eye, Edit, Package, Factory, Calendar, Plus, Tag, Library, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 
 import { ProductDialog, ProductData } from './ProductDialog'; 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -40,6 +43,11 @@ function ProductsPageContent() {
   const [selectedDetailProduct, setSelectedDetailProduct] = useState<ProductWithDetails | null>(null);
   const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ProductWithDetails | null>(null);
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filteredProducts, setFilteredProducts] = useState<ProductWithDetails[]>([]);
+  const [selectedProductTypes, setSelectedProductTypes] = useState<Set<string>>(new Set());
+  const [selectedSeries, setSelectedSeries] = useState<Set<string>>(new Set());
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -70,6 +78,7 @@ function ProductsPageContent() {
       });
 
       setProducts(productsList);
+      setFilteredProducts(productsList);
     } catch (error) {
       console.error("讀取產品資料失敗:", error);
       toast.error("讀取產品資料失敗。");
@@ -79,6 +88,43 @@ function ProductsPageContent() {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // 搜尋過濾功能
+  useEffect(() => {
+    if (!searchTerm.trim() && selectedProductTypes.size === 0 && selectedSeries.size === 0) {
+      setFilteredProducts(products);
+      return;
+    }
+
+    const filtered = products.filter(product => {
+      // 搜尋詞過濾
+      if (searchTerm.trim()) {
+        const searchLower = searchTerm.toLowerCase();
+        const matchesSearch = (
+          product.code?.toLowerCase().includes(searchLower) ||
+          product.name?.toLowerCase().includes(searchLower) ||
+          product.seriesName?.toLowerCase().includes(searchLower) ||
+          product.fragranceName?.toLowerCase().includes(searchLower)
+        );
+        if (!matchesSearch) return false;
+      }
+
+      // 產品類型過濾
+      if (selectedProductTypes.size > 0) {
+        // 這裡需要從產品系列中獲取產品類型，暫時跳過
+        // TODO: 實現產品類型過濾
+      }
+
+      // 產品系列過濾
+      if (selectedSeries.size > 0 && !selectedSeries.has(product.seriesName || '')) {
+        return false;
+      }
+
+      return true;
+    });
+
+    setFilteredProducts(filtered);
+  }, [products, searchTerm, selectedProductTypes, selectedSeries]);
 
   // 處理 URL 查詢參數
   useEffect(() => {
@@ -96,58 +142,70 @@ function ProductsPageContent() {
 
   // 操作處理函式
   const handleAdd = () => { 
-    // 暫時移除權限檢查
-    // if (!canManageProducts()) {
-    //   toast.error("權限不足，無法新增產品");
-    //   return;
-    // }
     setSelectedProduct(null); 
     setIsDialogOpen(true); 
   };
   
   const handleEdit = (product: ProductWithDetails) => { 
-    // 暫時移除權限檢查
-    // if (!canManageProducts()) {
-    //   toast.error("權限不足，無法編輯產品");
-    //   return;
-    // }
     setSelectedProduct(product); 
     setIsDialogOpen(true); 
   };
   
   const handleDelete = (product: ProductWithDetails) => { 
-    // 暫時移除權限檢查
-    // if (!canManageProducts()) {
-    //   toast.error("權限不足，無法刪除產品");
-    //   return;
-    // }
     setSelectedProduct(product); 
     setIsConfirmOpen(true); 
   };
 
   const handleViewDetail = (product: ProductWithDetails) => {
-    setSelectedDetailProduct(product);
-    setIsDetailViewOpen(true);
+    router.push(`/dashboard/products/${product.id}`);
   };
-  
-  const handleFragranceChange = (product: ProductWithDetails) => { 
-    // 暫時移除權限檢查
-    // if (!canManageProducts()) {
-    //   toast.error("權限不足，無法變更香精");
-    //   return;
-    // }
-    setSelectedProduct(product); 
-    setIsFragranceDialogOpen(true); 
+
+  const handleSeriesManagement = () => {
+    router.push('/dashboard/product-series');
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedProducts(new Set(filteredProducts.map(p => p.id)));
+    } else {
+      setSelectedProducts(new Set());
+    }
+  };
+
+  const handleSelectProduct = (productId: string, checked: boolean) => {
+    const newSelected = new Set(selectedProducts);
+    if (checked) {
+      newSelected.add(productId);
+    } else {
+      newSelected.delete(productId);
+    }
+    setSelectedProducts(newSelected);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedProduct) return;
+    const toastId = toast.loading("正在刪除產品...");
+    try {
+      const functions = getFunctions();
+      const deleteProduct = httpsCallable(functions, 'deleteProduct');
+      await deleteProduct({ productId: selectedProduct.id });
+      toast.success(`產品 ${selectedProduct.name} 已成功刪除。`, { id: toastId });
+      loadData();
+    } catch (error) {
+      console.error("刪除產品失敗:", error);
+      let errorMessage = "刪除產品時發生錯誤。";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      toast.error(errorMessage, { id: toastId });
+    } finally {
+      setIsConfirmOpen(false);
+      setSelectedProduct(null);
+    }
   };
 
   // 匯入/匯出處理函式
   const handleImport = async (data: any[]) => {
-    // 暫時移除權限檢查
-    // if (!canManageProducts()) {
-    //   toast.error("權限不足，無法匯入產品");
-    //   return;
-    // }
-
     const functions = getFunctions();
     const createProduct = httpsCallable(functions, 'createProduct');
     
@@ -168,62 +226,40 @@ function ProductsPageContent() {
       code: product.code,
       seriesName: product.seriesName,
       fragranceName: product.fragranceName,
-      description: product.description,
+      nicotineMg: product.nicotineMg,
       status: product.status
     }));
   };
 
-  const handleConfirmDelete = async () => {
-    if (!selectedProduct) return;
-
-    const toastId = toast.loading("正在刪除產品...");
-    try {
-      const functions = getFunctions();
-      const deleteProduct = httpsCallable(functions, 'deleteProduct');
-      await deleteProduct({ productId: selectedProduct.id });
-
-      toast.success(`產品 ${selectedProduct.name} 已成功刪除。`, { id: toastId });
-      loadData();
-    } catch (error) {
-      console.error("刪除產品失敗:", error);
-      let errorMessage = "刪除產品時發生錯誤。";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      toast.error(errorMessage, { id: toastId });
-    } finally {
-      setIsConfirmOpen(false);
-      setSelectedProduct(null);
-    }
-  };
-
   return (
-    <div className="container mx-auto py-10 products-page">
+    <div className="container mx-auto py-10">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-primary">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
             產品管理
           </h1>
-          <p className="text-muted-foreground mt-2">管理產品系列與香精配置</p>
+          <p className="text-gray-600 mt-2">管理產品資訊與系列配置</p>
         </div>
       </div>
 
       {/* 手機版功能按鈕區域 */}
       <div className="lg:hidden mb-6">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <Button 
             variant="outline" 
-            onClick={() => setIsImportExportOpen(true)} 
-            disabled={false}
-            className="w-full"
+            onClick={handleSeriesManagement}
+            className="border-purple-200 text-purple-600 hover:bg-purple-50"
           >
+            <Library className="mr-2 h-4 w-4" />
+            系列管理
+          </Button>
+          <Button variant="outline" onClick={() => setIsImportExportOpen(true)} className="w-full">
             <FileSpreadsheet className="mr-2 h-4 w-4" />
             匯入/匯出
           </Button>
           <Button 
             onClick={handleAdd}
-            disabled={false}
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200"
+            className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
           >
             <Plus className="mr-2 h-4 w-4" />
             新增產品
@@ -236,16 +272,19 @@ function ProductsPageContent() {
         <div className="flex flex-wrap items-center gap-2 justify-end">
           <Button 
             variant="outline" 
-            onClick={() => setIsImportExportOpen(true)}
-            disabled={false}
+            onClick={handleSeriesManagement}
+            className="border-purple-200 text-purple-600 hover:bg-purple-50"
           >
+            <Library className="mr-2 h-4 w-4" />
+            系列管理
+          </Button>
+          <Button variant="outline" onClick={() => setIsImportExportOpen(true)}>
             <FileSpreadsheet className="mr-2 h-4 w-4" />
             匯入/匯出
           </Button>
           <Button 
             onClick={handleAdd}
-            disabled={false}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200"
+            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
           >
             <Plus className="mr-2 h-4 w-4" />
             新增產品
@@ -253,17 +292,63 @@ function ProductsPageContent() {
         </div>
       </div>
 
+      {/* 搜尋框 */}
+      <Card className="mb-6 border-0 shadow-lg bg-gradient-to-r from-gray-50 to-purple-50">
+        <CardContent className="pt-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-purple-600" />
+            <Input
+              placeholder="搜尋產品名稱、代號、系列或香精..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 border-purple-200 focus:border-purple-500 focus:ring-purple-500"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 篩選標籤 */}
+      <div className="mb-6">
+        <div className="flex flex-wrap gap-2">
+          {/* 產品系列標籤 */}
+          {Array.from(new Set(products.map(p => p.seriesName))).map(series => (
+            <Badge
+              key={series}
+              variant={selectedSeries.has(series || '') ? "default" : "secondary"}
+              className={`cursor-pointer transition-colors ${
+                selectedSeries.has(series || '') 
+                  ? "bg-purple-600 hover:bg-purple-700 text-white" 
+                  : "bg-purple-100 hover:bg-purple-200 text-purple-800 border-purple-300"
+              }`}
+              onClick={() => {
+                setSelectedSeries(prev => {
+                  const newSet = new Set(prev);
+                  if (newSet.has(series || '')) {
+                    newSet.delete(series || '');
+                  } else {
+                    newSet.add(series || '');
+                  }
+                  return newSet;
+                });
+              }}
+            >
+              {series}
+            </Badge>
+          ))}
+        </div>
+      </div>
+
       {/* 手機版表格容器 */}
       <div className="lg:hidden">
-        <div className="bg-card rounded-xl shadow-lg border border-border overflow-hidden mb-6">
-          <div className="px-4 py-3 bg-gradient-to-r from-background to-primary/10 border-b border-border">
+        <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden mb-6">
+          <div className="px-4 py-3 bg-gradient-to-r from-gray-50 to-purple-50 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Package className="h-4 w-4 text-primary" />
-                <h2 className="text-base font-semibold text-foreground">產品清單</h2>
+                <Package className="h-4 w-4 text-purple-600" />
+                <h2 className="text-base font-semibold text-gray-800">產品清單</h2>
               </div>
-              <div className="text-xs text-muted-foreground">
-                共 {products.length} 個
+              <div className="text-xs text-gray-600">
+                共 {filteredProducts.length} 個
               </div>
             </div>
           </div>
@@ -273,82 +358,83 @@ function ProductsPageContent() {
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-12">
                   <div className="relative">
-                    <div className="w-10 h-10 border-4 border-border rounded-full animate-spin"></div>
-                    <div className="absolute top-0 left-0 w-10 h-10 border-4 border-transparent border-t-primary rounded-full animate-spin"></div>
+                    <div className="w-10 h-10 border-4 border-purple-200 rounded-full animate-spin"></div>
+                    <div className="absolute top-0 left-0 w-10 h-10 border-4 border-transparent border-t-purple-600 rounded-full animate-spin"></div>
                   </div>
-                  <span className="mt-3 text-sm text-muted-foreground font-medium">載入中...</span>
+                  <span className="mt-3 text-sm text-gray-600 font-medium">載入中...</span>
                 </div>
-              ) : products.length > 0 ? (
+              ) : filteredProducts.length > 0 ? (
                 <div className="divide-y divide-gray-200">
-                  {products.map((product) => (
+                  {filteredProducts.map((product) => (
                     <div 
                       key={product.id} 
-                      className="p-4 hover:bg-primary/5 transition-colors duration-200"
+                      className="p-4 hover:bg-purple-50/50 transition-colors duration-200 cursor-pointer"
                       onClick={() => handleViewDetail(product)}
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                          <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center">
                             <Package className="h-4 w-4 text-white" />
                           </div>
                           <div>
-                            <div className="font-medium text-foreground text-sm">{product.name}</div>
-                            <div className="text-xs text-gray-500">代號: {product.code}</div>
+                            <div className="font-medium text-gray-900 text-sm">{product.name}</div>
+                            <div className="text-xs text-green-600 font-medium">{product.code}</div>
                           </div>
                         </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleViewDetail(product)}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              查看詳細
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(product)}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              編輯產品
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleFragranceChange(product)}>
-                              <Droplets className="h-4 w-4 mr-2" />
-                              更換香精
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleDelete(product)} className="text-red-600">
-                              刪除產品
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={selectedProducts.has(product.id)}
+                            onCheckedChange={(checked) => handleSelectProduct(product.id, checked as boolean)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleViewDetail(product)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                查看詳細
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEdit(product)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                編輯產品
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => handleDelete(product)} className="text-red-600">
+                                <Package className="h-4 w-4 mr-2" />
+                                刪除產品
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="grid grid-cols-1 gap-3 text-sm">
                         <div>
                           <div className="flex items-center gap-1 mb-1">
-                            <Tag className="h-3 w-3 text-primary" />
-                            <span className="text-muted-foreground">系列</span>
+                            <span className="text-gray-500">系列</span>
                           </div>
-                          <span className="font-medium text-foreground">{product.seriesName}</span>
+                          <span className="text-sm text-gray-700">{product.seriesName}</span>
                         </div>
                         <div>
                           <div className="flex items-center gap-1 mb-1">
-                            <Droplets className="h-3 w-3 text-accent" />
-                            <span className="text-muted-foreground">香精</span>
+                            <span className="text-gray-500">香精</span>
                           </div>
-                          <span className="font-medium text-foreground">{product.fragranceName}</span>
+                          <span className="text-sm text-gray-700">{product.fragranceName}</span>
                         </div>
                         <div>
                           <div className="flex items-center gap-1 mb-1">
                             <span className="text-gray-500">狀態</span>
                           </div>
-                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                            product.status === 'active' 
-                              ? 'bg-success/10 text-success' 
-                              : 'bg-destructive/10 text-destructive'
-                          }`}>
-                            {product.status === 'active' ? '活躍' : '非活躍'}
-                          </span>
+                          <Badge 
+                            variant={product.status === 'active' ? 'default' : 'secondary'}
+                            className={product.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}
+                          >
+                            {product.status === 'active' ? '啟用' : '停用'}
+                          </Badge>
                         </div>
                         <div>
                           <div className="flex items-center gap-1 mb-1">
@@ -372,12 +458,12 @@ function ProductsPageContent() {
                     <Package className="h-6 w-6 text-muted-foreground" />
                   </div>
                   <h3 className="text-base font-medium text-foreground mb-1">沒有產品資料</h3>
-                  <p className="text-sm text-muted-foreground mb-4 text-center">開始建立第一個產品來管理產品系列</p>
+                  <p className="text-sm text-muted-foreground mb-4 text-center">開始建立第一個產品來管理產品資訊</p>
                   <Button 
                     onClick={handleAdd}
                     variant="outline"
                     size="sm"
-                    className="border-input text-primary hover:bg-primary/5"
+                    className="border-purple-200 text-purple-600 hover:bg-purple-50"
                   >
                     <Plus className="mr-2 h-4 w-4" />
                     新增產品
@@ -392,14 +478,14 @@ function ProductsPageContent() {
       {/* 桌面版表格容器 */}
       <div className="hidden lg:block">
         <div className="bg-card rounded-xl shadow-lg border border-border overflow-hidden">
-        <div className="px-6 py-4 bg-gradient-to-r from-background to-primary/10 border-b border-border">
+        <div className="px-6 py-4 bg-gradient-to-r from-background to-purple-50 border-b border-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-primary" />
+              <Package className="h-5 w-5 text-purple-600" />
               <h2 className="text-lg font-semibold text-foreground">產品清單</h2>
             </div>
             <div className="text-sm text-muted-foreground">
-              共 {products.length} 個產品
+              共 {filteredProducts.length} 個產品
             </div>
           </div>
         </div>
@@ -408,6 +494,15 @@ function ProductsPageContent() {
           <Table className="table-enhanced">
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[60px] text-center">
+                  <div className="flex items-center gap-2" title="全選所有產品">
+                    <Checkbox
+                      checked={selectedProducts.size === filteredProducts.length && filteredProducts.length > 0}
+                      onCheckedChange={handleSelectAll}
+                    />
+                    <span className="text-xs text-muted-foreground">全選</span>
+                  </div>
+                </TableHead>
                 <TableHead className="text-left">產品資訊</TableHead>
                 <TableHead className="text-left">系列</TableHead>
                 <TableHead className="text-left">香精</TableHead>
@@ -419,55 +514,58 @@ function ProductsPageContent() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-16">
+                  <TableCell colSpan={7} className="text-center py-16">
                     <div className="flex flex-col items-center justify-center">
                       <div className="relative">
-                        <div className="w-12 h-12 border-4 border-border rounded-full animate-spin"></div>
-                        <div className="absolute top-0 left-0 w-12 h-12 border-4 border-transparent border-t-primary rounded-full animate-spin"></div>
+                        <div className="w-12 h-12 border-4 border-purple-200 rounded-full animate-spin"></div>
+                        <div className="absolute top-0 left-0 w-12 h-12 border-4 border-transparent border-t-purple-600 rounded-full animate-spin"></div>
                       </div>
                       <span className="mt-4 text-muted-foreground font-medium">載入產品資料中...</span>
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : products.length > 0 ? (
-                products.map((product) => (
+              ) : filteredProducts.length > 0 ? (
+                filteredProducts.map((product) => (
                   <TableRow 
                     key={product.id} 
-                    className="hover:bg-primary/5 transition-colors duration-200 cursor-pointer"
-                    onClick={() => router.push(`/dashboard/products/${product.id}`)}
+                    className="hover:bg-purple-50/50 transition-colors duration-200 cursor-pointer"
+                    onClick={() => handleViewDetail(product)}
                   >
+                    <TableCell className="text-center">
+                      <Checkbox
+                        checked={selectedProducts.has(product.id)}
+                        onCheckedChange={(checked) => handleSelectProduct(product.id, checked as boolean)}
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                        <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center">
                           <Package className="h-5 w-5 text-white" />
                         </div>
                         <div>
                           <div className="font-semibold text-foreground">{product.name}</div>
-                          <div className="text-xs text-muted-foreground">產品代號: {product.code}</div>
+                          <div className="text-xs text-green-600 font-medium">{product.code}</div>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Tag className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-medium text-foreground">{product.seriesName}</span>
-                      </div>
+                      <span className="text-sm font-medium text-foreground">{product.seriesName}</span>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Droplets className="h-4 w-4 text-accent" />
-                        <span className="text-sm font-medium text-foreground">{product.fragranceName}</span>
-                      </div>
+                      <span className="text-sm font-medium text-foreground">{product.fragranceName}</span>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={product.status === 'active' ? 'success' : 'destructive'}>
-                        {product.status === 'active' ? '活躍' : '非活躍'}
+                      <Badge 
+                        variant={product.status === 'active' ? 'default' : 'secondary'}
+                        className={product.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}
+                      >
+                        {product.status === 'active' ? '啟用' : '停用'}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm text-gray-600">
                           {product.createdAt ? 
                             new Date(product.createdAt.toDate()).toLocaleDateString('zh-TW') : 
                             '未知'
@@ -481,7 +579,6 @@ function ProductsPageContent() {
                           <Button 
                             variant="ghost" 
                             className="h-8 w-8 p-0"
-                            onClick={(e) => e.stopPropagation()}
                           >
                             <span className="sr-only">開啟選單</span>
                             <MoreHorizontal className="h-4 w-4" />
@@ -494,25 +591,14 @@ function ProductsPageContent() {
                             <Eye className="h-4 w-4 mr-2" />
                             查看詳細
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleEdit(product)}
-                            disabled={false}
-                          >
+                          <DropdownMenuItem onClick={() => handleEdit(product)}>
                             <Edit className="h-4 w-4 mr-2" />
                             編輯產品
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleFragranceChange(product)}
-                            disabled={false}
-                          >
-                            <Droplets className="h-4 w-4 mr-2" />
-                            更換香精
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem 
                             onClick={() => handleDelete(product)}
-                            disabled={false}
-                            className="text-destructive focus:text-destructive"
+                            className="text-red-600 focus:text-red-600"
                           >
                             刪除產品
                           </DropdownMenuItem>
@@ -523,18 +609,17 @@ function ProductsPageContent() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-16">
+                  <TableCell colSpan={7} className="text-center py-16">
                     <div className="flex flex-col items-center justify-center">
                       <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
                         <Package className="h-8 w-8 text-muted-foreground" />
                       </div>
                       <h3 className="text-lg font-medium text-foreground mb-2">沒有產品資料</h3>
-                      <p className="text-muted-foreground mb-4">開始建立第一個產品來管理產品系列</p>
+                      <p className="text-muted-foreground mb-4">開始建立第一個產品來管理產品資訊</p>
                       <Button 
                         onClick={handleAdd}
                         variant="outline"
-                        disabled={false}
-                        className="border-input text-primary hover:bg-primary/5"
+                        className="border-purple-200 text-purple-600 hover:bg-purple-50"
                       >
                         <Plus className="mr-2 h-4 w-4" />
                         新增產品
@@ -574,6 +659,8 @@ function ProductsPageContent() {
         currentFragranceName={selectedProduct?.fragranceName || ''}
       />
 
+
+
       <ImportExportDialog
         isOpen={isImportExportOpen}
         onOpenChange={setIsImportExportOpen}
@@ -587,62 +674,19 @@ function ProductsPageContent() {
             code: "PROD001",
             seriesName: "示例系列",
             fragranceName: "示例香精",
-            description: "這是一個示例產品",
+            nicotineMg: 3,
             status: "active"
           }
         ]}
         fields={[
           { key: "name", label: "產品名稱", required: true, type: "string" },
           { key: "code", label: "產品代號", required: true, type: "string" },
-          { key: "seriesName", label: "產品系列", required: false, type: "string" },
-          { key: "fragranceName", label: "香精名稱", required: false, type: "string" },
-          { key: "description", label: "描述", required: false, type: "string" },
+          { key: "seriesName", label: "系列名稱", required: true, type: "string" },
+          { key: "fragranceName", label: "香精名稱", required: true, type: "string" },
+          { key: "nicotineMg", label: "尼古丁濃度", required: false, type: "number" },
           { key: "status", label: "狀態", required: false, type: "string" }
         ]}
       />
-
-      {selectedDetailProduct && (
-        <DetailViewDialog
-          isOpen={isDetailViewOpen}
-          onOpenChange={setIsDetailViewOpen}
-          title={selectedDetailProduct.name}
-          subtitle={`代號: ${selectedDetailProduct.code}`}
-          sections={[
-            {
-              title: "基本資訊",
-              icon: <Package className="h-4 w-4" />,
-              fields: [
-                { label: "產品名稱", value: selectedDetailProduct.name },
-                { label: "產品代號", value: selectedDetailProduct.code },
-                { label: "產品系列", value: selectedDetailProduct.seriesName },
-                { label: "描述", value: selectedDetailProduct.description },
-                { label: "狀態", value: selectedDetailProduct.status === 'active' ? '活躍' : '非活躍' },
-              ]
-            },
-            {
-              title: "香精資訊",
-              icon: <Droplets className="h-4 w-4" />,
-              fields: [
-                { label: "當前香精", value: selectedDetailProduct.fragranceName },
-              ]
-            }
-          ]}
-          actions={
-            <>
-              <Button variant="outline" onClick={() => setIsDetailViewOpen(false)}>
-                關閉
-              </Button>
-              <Button onClick={() => {
-                setIsDetailViewOpen(false);
-                handleEdit(selectedDetailProduct);
-              }}>
-                <Edit className="mr-2 h-4 w-4" />
-                編輯
-              </Button>
-            </>
-          }
-        />
-      )}
     </div>
   );
 }

@@ -17,10 +17,9 @@ interface Product {
   name: string;
   seriesRef?: DocumentReference;
   seriesName?: string;
-  category?: string;
-  subCategory?: string;
-  cost?: number;
-  price?: number;
+  currentFragranceRef?: DocumentReference;
+  fragranceName?: string;
+  nicotineMg?: number;
   status: 'active' | 'inactive' | 'discontinued';
   description?: string;
   notes?: string;
@@ -72,6 +71,20 @@ export default function ProductDetailPage() {
           }
         }
 
+        // 獲取香精名稱
+        let fragranceName = '未指定';
+        if (data.currentFragranceRef) {
+          try {
+            const fragranceDoc = await getDoc(data.currentFragranceRef);
+            if (fragranceDoc.exists()) {
+              const fragranceData = fragranceDoc.data() as any;
+              fragranceName = fragranceData?.name || '未指定';
+            }
+          } catch (error) {
+            console.error('Failed to fetch fragrance name:', error);
+          }
+        }
+
         // 獲取創建者名稱
         let createdByName = '未知';
         if (data.createdBy) {
@@ -92,10 +105,10 @@ export default function ProductDetailPage() {
           name: data.name,
           seriesRef: data.seriesRef,
           seriesName,
-          category: data.category,
-          subCategory: data.subCategory,
-          cost: data.cost,
-          price: data.price,
+          currentFragranceRef: data.currentFragranceRef,
+          fragranceName,
+          nicotineMg: data.nicotineMg || 0,
+          concentration: data.concentration || 0,
           status: data.status,
           description: data.description,
           notes: data.notes,
@@ -277,56 +290,34 @@ export default function ProductDetailPage() {
                 <span className="font-medium">{product.name}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">主分類</span>
-                <span className="font-medium">{product.category || '未分類'}</span>
+                <span className="text-muted-foreground">產品系列</span>
+                <span className="font-medium">{product.seriesName}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">細分分類</span>
-                <span className="font-medium">{product.subCategory || '未分類'}</span>
+                <span className="text-muted-foreground">使用香精</span>
+                <span className="font-medium">{product.fragranceName}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">狀態</span>
-                <Badge className={getStatusColor(product.status)}>
-                  {getStatusText(product.status)}
-                </Badge>
+                <span className="text-muted-foreground">丁鹽濃度</span>
+                <span className="font-medium">{product.nicotineMg || 0} MG</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-muted-foreground">濃度</span>
+                <span className="font-medium">{product.concentration || 0} MG</span>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* 價格資訊 */}
-        <Card className="border-0 shadow-lg">
+        {/* 專屬材料 */}
+        <Card className="border-0 shadow-lg bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
           <CardHeader>
-            <CardTitle className="text-lg text-primary">價格資訊</CardTitle>
+            <CardTitle className="text-lg text-purple-700">專屬材料</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">成本</span>
-                <span className="font-medium text-green-600">
-                  ${product.cost?.toFixed(2) || '0.00'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">售價</span>
-                <span className="font-medium text-blue-600">
-                  ${product.price?.toFixed(2) || '0.00'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">利潤</span>
-                <span className="font-medium text-purple-600">
-                  ${((product.price || 0) - (product.cost || 0)).toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">利潤率</span>
-                <span className="font-medium text-orange-600">
-                  {product.cost && product.price 
-                    ? (((product.price - product.cost) / product.cost) * 100).toFixed(1) + '%'
-                    : '0.0%'
-                  }
-                </span>
+            <div className="text-center py-8">
+              <div className="text-muted-foreground">
+                專屬材料功能開發中...
               </div>
             </div>
           </CardContent>

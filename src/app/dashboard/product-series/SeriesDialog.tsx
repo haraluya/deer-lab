@@ -15,12 +15,19 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { MultiSelect, OptionType } from '@/components/ui/multi-select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Package, Tag } from 'lucide-react'; 
 
-// ... (SeriesDialog 的其餘程式碼保持不變) ...
 const formSchema = z.object({
   name: z.string().min(2, { message: '系列名稱至少需要 2 個字元' }),
   code: z.string().min(1, { message: '系列代號為必填欄位' }),
+  productType: z.string().min(1, { message: '產品類型為必填欄位' }),
   commonMaterialIds: z.array(z.string()).optional(),
 });
 
@@ -30,6 +37,7 @@ export interface SeriesData extends DocumentData {
   id: string;
   name: string;
   code: string;
+  productType: string;
   commonMaterials: DocumentReference[];
 }
 
@@ -40,6 +48,14 @@ interface SeriesDialogProps {
   seriesData?: SeriesData | null;
 }
 
+const PRODUCT_TYPES = [
+  { value: '罐裝油(BOT)', label: '罐裝油(BOT)' },
+  { value: '一代棉芯煙彈(OMP)', label: '一代棉芯煙彈(OMP)' },
+  { value: '一代陶瓷芯煙彈(OTP)', label: '一代陶瓷芯煙彈(OTP)' },
+  { value: '五代陶瓷芯煙彈(FTP)', label: '五代陶瓷芯煙彈(FTP)' },
+  { value: '其他(ETC)', label: '其他(ETC)' },
+];
+
 export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData }: SeriesDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [materialOptions, setMaterialOptions] = useState<OptionType[]>([]);
@@ -47,7 +63,7 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: { name: '', code: '', commonMaterialIds: [] },
+    defaultValues: { name: '', code: '', productType: '其他(ETC)', commonMaterialIds: [] },
   });
 
   useEffect(() => {
@@ -76,10 +92,11 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
       form.reset({
         name: seriesData.name || '',
         code: seriesData.code || '',
+        productType: seriesData.productType || '其他(ETC)',
         commonMaterialIds: seriesData.commonMaterials.map(ref => ref.id),
       });
     } else if (isOpen && !seriesData) {
-      form.reset({ name: '', code: '', commonMaterialIds: [] });
+      form.reset({ name: '', code: '', productType: '其他(ETC)', commonMaterialIds: [] });
     }
   }, [isOpen, seriesData, form]);
 
@@ -100,7 +117,11 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
       onSeriesUpdate();
       onOpenChange(false);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '發生未知錯誤。';
+      console.error('操作失敗:', error);
+      let errorMessage = isEditMode ? '更新系列失敗。' : '新增系列失敗。';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
       toast.error(errorMessage, { id: toastId });
     } finally {
       setIsSubmitting(false);
@@ -109,28 +130,25 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white">
-        <DialogHeader className="pb-4 border-b border-gray-200">
-          <DialogTitle className="flex items-center gap-3 text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-            <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-600 rounded-lg flex items-center justify-center">
-              <Package className="h-5 w-5 text-white" />
-            </div>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold text-gray-800">
             {isEditMode ? '編輯產品系列' : '新增產品系列'}
           </DialogTitle>
-          <DialogDescription className="text-gray-600 mt-2">
-            {isEditMode ? '修改產品系列詳細資訊' : '建立新的產品系列資料'}
+          <DialogDescription className="text-gray-600">
+            {isEditMode ? '修改產品系列的基本資訊和常用物料配置' : '建立新的產品系列並配置常用物料'}
           </DialogDescription>
         </DialogHeader>
-        
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* 基本資料 */}
-            <div className="space-y-6 p-6 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl border border-orange-200 shadow-sm">
+            {/* 基本資訊 */}
+            <div className="space-y-6 p-6 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl border border-orange-200 shadow-sm">
               <h3 className="text-xl font-bold flex items-center gap-3 text-orange-800">
                 <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
                   <Tag className="h-4 w-4 text-orange-600" />
                 </div>
-                基本資料
+                基本資訊
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -165,6 +183,31 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
                           {...field} 
                         />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="productType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold text-gray-700">產品類型 *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="border-gray-300 focus:border-orange-500 focus:ring-orange-500">
+                            <SelectValue placeholder="選擇產品類型" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {PRODUCT_TYPES.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -204,22 +247,24 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                disabled={isSubmitting}
               >
                 取消
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={isSubmitting}
-                className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-lg hover:shadow-xl transition-all duration-200"
               >
                 {isSubmitting ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    處理中...
+                    {isEditMode ? '更新中...' : '建立中...'}
                   </>
                 ) : (
-                  isEditMode ? '儲存更新' : '確認新增'
+                  <>
+                    {isEditMode ? '更新系列' : '建立系列'}
+                  </>
                 )}
               </Button>
             </div>

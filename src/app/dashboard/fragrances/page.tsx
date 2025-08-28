@@ -166,36 +166,109 @@ function FragrancesPageContent() {
 
       // 低庫存過濾
       if (showLowStockOnly) {
-        const isLowStock = typeof fragrance.safetyStockLevel === 'number' && 
-                          fragrance.currentStock < fragrance.safetyStockLevel;
+        const isLowStock = typeof fragrance.safetyStockLevel === 'number' && fragrance.currentStock < fragrance.safetyStockLevel;
         if (!isLowStock) return false;
       }
 
       return true;
     });
-    setFilteredFragrances(filtered);
+
+    // 排序：啟用狀態 -> 香精種類 -> 香精名稱
+    const sortedFragrances = filtered.sort((a, b) => {
+      // 1. 按啟用狀態排序：啟用 -> 備用 -> 棄用
+      const statusOrder = { '啟用': 1, '備用': 2, '棄用': 3 };
+      const aStatus = statusOrder[a.fragranceStatus as keyof typeof statusOrder] || 4;
+      const bStatus = statusOrder[b.fragranceStatus as keyof typeof statusOrder] || 4;
+      
+      if (aStatus !== bStatus) {
+        return aStatus - bStatus;
+      }
+
+      // 2. 按香精種類排序
+      const typeOrder = { '棉芯': 1, '陶瓷芯': 2, '棉陶芯通用': 3 };
+      const aType = typeOrder[a.fragranceType as keyof typeof typeOrder] || 4;
+      const bType = typeOrder[b.fragranceType as keyof typeof typeOrder] || 4;
+      
+      if (aType !== bType) {
+        return aType - bType;
+      }
+
+      // 3. 按香精名稱排序
+      return (a.name || '').localeCompare(b.name || '', 'zh-TW');
+    });
+
+    setFilteredFragrances(sortedFragrances);
   }, [fragrances, searchTerm, selectedSuppliers, selectedFragranceTypes, showLowStockOnly]);
 
-  // 獲取唯一的供應商和香精種類
-  const uniqueSuppliers = useMemo(() => {
-    const suppliers = new Set<string>();
-    fragrances.forEach(fragrance => {
-      if (fragrance.supplierName && fragrance.supplierName !== '未指定') {
-        suppliers.add(fragrance.supplierName);
-      }
-    });
-    return Array.from(suppliers).sort();
-  }, [fragrances]);
+  // 智能篩選標籤邏輯
+  const { availableSuppliers, availableFragranceTypes } = useMemo(() => {
+    // 先根據搜尋詞過濾
+    let searchFilteredFragrances = fragrances;
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
+      searchFilteredFragrances = fragrances.filter(fragrance => {
+        return (
+          fragrance.code?.toLowerCase().includes(searchLower) ||
+          fragrance.name?.toLowerCase().includes(searchLower) ||
+          fragrance.supplierName?.toLowerCase().includes(searchLower) ||
+          fragrance.fragranceType?.toLowerCase().includes(searchLower) ||
+          fragrance.currentStock?.toString().includes(searchLower) ||
+          fragrance.costPerUnit?.toString().includes(searchLower) ||
+          fragrance.percentage?.toString().includes(searchLower)
+        );
+      });
+    }
 
-  const uniqueFragranceTypes = useMemo(() => {
-    const types = new Set<string>();
-    fragrances.forEach(fragrance => {
-      if (fragrance.fragranceType) {
-        types.add(fragrance.fragranceType);
-      }
+    // 從搜尋結果中提取可用的供應商和香精種類
+    const availableSuppliers = new Set<string>();
+    const availableFragranceTypes = new Set<string>();
+    
+    searchFilteredFragrances.forEach(fragrance => {
+      if (fragrance.supplierName) availableSuppliers.add(fragrance.supplierName);
+      if (fragrance.fragranceType) availableFragranceTypes.add(fragrance.fragranceType);
     });
-    return Array.from(types).sort();
-  }, [fragrances]);
+
+    // 根據當前選擇進行智能篩選
+    let finalSuppliers = new Set<string>();
+    let finalFragranceTypes = new Set<string>();
+
+    if (selectedSuppliers.size > 0 && selectedFragranceTypes.size > 0) {
+      // 兩個都選了：只顯示選中的標籤
+      finalSuppliers = new Set(selectedSuppliers);
+      finalFragranceTypes = new Set(selectedFragranceTypes);
+    } else if (selectedSuppliers.size > 0) {
+      // 只選了供應商：顯示選中的供應商和相關的香精種類
+      finalSuppliers = new Set(selectedSuppliers);
+      searchFilteredFragrances.forEach(fragrance => {
+        if (selectedSuppliers.has(fragrance.supplierName || '')) {
+          if (fragrance.fragranceType) {
+            finalFragranceTypes.add(fragrance.fragranceType);
+          }
+        }
+      });
+    } else if (selectedFragranceTypes.size > 0) {
+      // 只選了香精種類：顯示選中的香精種類和相關的供應商
+      finalFragranceTypes = new Set(selectedFragranceTypes);
+      searchFilteredFragrances.forEach(fragrance => {
+        if (selectedFragranceTypes.has(fragrance.fragranceType || '')) {
+          if (fragrance.supplierName) {
+            finalSuppliers.add(fragrance.supplierName);
+          }
+        }
+      });
+    } else {
+      // 都沒選：顯示所有可用的標籤
+      finalSuppliers = availableSuppliers;
+      finalFragranceTypes = availableFragranceTypes;
+    }
+
+    return {
+      availableSuppliers: Array.from(finalSuppliers).sort(),
+      availableFragranceTypes: Array.from(finalFragranceTypes).sort()
+    };
+  }, [fragrances, searchTerm, selectedSuppliers, selectedFragranceTypes]);
+
+  // 移除舊的邏輯，使用新的智能篩選邏輯
 
   const handleCartToggle = (fragranceId: string) => {
     setPurchaseCart(prevCart => {
@@ -767,77 +840,77 @@ function FragrancesPageContent() {
             </Badge>
           )}
 
-          {/* 供應商標籤 */}
-          {uniqueSuppliers.map(supplier => (
-            <Badge
-              key={supplier}
-              variant={selectedSuppliers.has(supplier) ? "default" : "secondary"}
-              className={`cursor-pointer transition-colors ${
-                selectedSuppliers.has(supplier) 
-                  ? "bg-blue-600 hover:bg-blue-700 text-white" 
-                  : "bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300"
-              }`}
-              onClick={() => {
-                setSelectedSuppliers(prev => {
-                  const newSet = new Set(prev);
-                  if (newSet.has(supplier)) {
-                    newSet.delete(supplier);
-                  } else {
-                    newSet.add(supplier);
-                  }
-                  return newSet;
-                });
-              }}
-            >
-              {supplier}
-            </Badge>
-          ))}
-
-          {/* 香精種類標籤 */}
-          {uniqueFragranceTypes.map(type => {
-            const isSelected = selectedFragranceTypes.has(type);
-            const getTypeColor = (type: string) => {
-              switch (type) {
-                case '棉芯':
-                  return isSelected 
-                    ? "bg-blue-600 hover:bg-blue-700 text-white" 
-                    : "bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300";
-                case '陶瓷芯':
-                  return isSelected 
-                    ? "bg-green-600 hover:bg-green-700 text-white" 
-                    : "bg-green-100 hover:bg-green-200 text-green-800 border-green-300";
-                case '棉陶芯通用':
-                  return isSelected 
-                    ? "bg-purple-600 hover:bg-purple-700 text-white" 
-                    : "bg-purple-100 hover:bg-purple-200 text-purple-800 border-purple-300";
-                default:
-                  return isSelected 
-                    ? "bg-gray-600 hover:bg-gray-700 text-white" 
-                    : "bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300";
-              }
-            };
-            
-            return (
+                      {/* 供應商標籤 - 橙色 */}
+            {availableSuppliers.map(supplier => (
               <Badge
-                key={type}
-                variant={isSelected ? "default" : "secondary"}
-                className={`cursor-pointer transition-colors ${getTypeColor(type)}`}
+                key={supplier}
+                variant={selectedSuppliers.has(supplier) ? "default" : "secondary"}
+                className={`cursor-pointer transition-colors ${
+                  selectedSuppliers.has(supplier) 
+                    ? "bg-orange-600 hover:bg-orange-700 text-white" 
+                    : "bg-orange-100 hover:bg-orange-200 text-orange-800 border-orange-300"
+                }`}
                 onClick={() => {
-                  setSelectedFragranceTypes(prev => {
+                  setSelectedSuppliers(prev => {
                     const newSet = new Set(prev);
-                    if (newSet.has(type)) {
-                      newSet.delete(type);
+                    if (newSet.has(supplier)) {
+                      newSet.delete(supplier);
                     } else {
-                      newSet.add(type);
+                      newSet.add(supplier);
                     }
                     return newSet;
                   });
                 }}
               >
-                {type}
+                {supplier}
               </Badge>
-            );
-          })}
+            ))}
+
+            {/* 香精種類標籤 - 紫色 */}
+            {availableFragranceTypes.map(type => {
+              const isSelected = selectedFragranceTypes.has(type);
+              const getTypeColor = (type: string) => {
+                switch (type) {
+                  case '棉芯':
+                    return isSelected 
+                      ? "bg-blue-600 hover:bg-blue-700 text-white" 
+                      : "bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300";
+                  case '陶瓷芯':
+                    return isSelected 
+                      ? "bg-green-600 hover:bg-green-700 text-white" 
+                      : "bg-green-100 hover:bg-green-200 text-green-800 border-green-300";
+                  case '棉陶芯通用':
+                    return isSelected 
+                      ? "bg-purple-600 hover:bg-purple-700 text-white" 
+                      : "bg-purple-100 hover:bg-purple-200 text-purple-800 border-purple-300";
+                  default:
+                    return isSelected 
+                      ? "bg-gray-600 hover:bg-gray-700 text-white" 
+                      : "bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300";
+                }
+              };
+              
+              return (
+                <Badge
+                  key={type}
+                  variant={isSelected ? "default" : "secondary"}
+                  className={`cursor-pointer transition-colors ${getTypeColor(type)}`}
+                  onClick={() => {
+                    setSelectedFragranceTypes(prev => {
+                      const newSet = new Set(prev);
+                      if (newSet.has(type)) {
+                        newSet.delete(type);
+                      } else {
+                        newSet.add(type);
+                      }
+                      return newSet;
+                    });
+                  }}
+                >
+                  {type}
+                </Badge>
+              );
+            })}
         </div>
       </div>
 
@@ -908,13 +981,12 @@ function FragrancesPageContent() {
                               <Droplets className="h-4 w-4 text-white" />
                             </div>
                             <div>
-                              <div className="font-medium text-gray-900 text-sm">{fragrance.name}</div>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="text-xs text-gray-500">代號:</span>
-                                <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                                  {fragrance.code}
-                                </span>
-                              </div>
+                                                              <div className="font-medium text-gray-900 text-sm">{fragrance.name}</div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                                    {fragrance.code}
+                                  </span>
+                                </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -1147,13 +1219,12 @@ function FragrancesPageContent() {
                             <Droplets className="h-4 w-4 text-white" />
                           </div>
                           <div>
-                            <div className="font-medium text-foreground">{fragrance.name}</div>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs text-muted-foreground">代號:</span>
-                              <Badge className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
-                                {fragrance.code}
-                              </Badge>
-                            </div>
+                                                          <div className="font-medium text-foreground">{fragrance.name}</div>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
+                                  {fragrance.code}
+                                </Badge>
+                              </div>
                           </div>
                         </div>
                       </TableCell>

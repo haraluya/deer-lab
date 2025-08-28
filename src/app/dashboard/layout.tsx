@@ -41,7 +41,6 @@ const navLinks: NavItem[] = [
   { href: '/dashboard/suppliers', label: '供應商管理', icon: Building },
   { href: '/dashboard/materials', label: '物料管理', icon: Package },
   { href: '/dashboard/fragrances', label: '香精管理', icon: FlaskConical },
-  { href: '/dashboard/product-series', label: '產品系列管理', icon: Library },
   { href: '/dashboard/products', label: '產品管理', icon: Box },
   { isSeparator: true, label: '生產作業管理' },
   { href: '/dashboard/purchase-orders', label: '採購管理', icon: ShoppingCart },
@@ -212,7 +211,7 @@ export default function DashboardLayout({
       <aside className="hidden lg:flex fixed inset-y-0 left-0 z-20 h-full w-64 flex-col border-r bg-white/95 backdrop-blur-sm shadow-lg">
         <div className="flex h-16 shrink-0 items-center border-b px-6 bg-gradient-to-r from-blue-600 to-indigo-600">
             <Factory className="h-6 w-6 text-white" />
-            <span className="ml-2 font-semibold text-white text-sm">Deer Lab 生產管理系統</span>
+            <span className="ml-2 font-semibold text-white text-sm">鹿鹿小作坊</span>
         </div>
         <div className="flex-1 overflow-y-auto">
             <SidebarNav />
@@ -277,7 +276,7 @@ export default function DashboardLayout({
              </svg>
            </button>
             <Factory className="h-6 w-6 text-blue-600" />
-            <span className="font-semibold text-gray-900 text-sm">Deer Lab</span>
+            <span className="font-semibold text-gray-900 text-sm">鹿鹿小作坊</span>
           </div>
         </header>
 
@@ -286,7 +285,7 @@ export default function DashboardLayout({
           <div className="flex h-16 shrink-0 items-center justify-between border-b px-6 bg-gradient-to-r from-blue-600 to-indigo-600">
             <div className="flex items-center">
               <Factory className="h-6 w-6 text-white" />
-              <span className="ml-2 font-semibold text-white text-sm">Deer Lab</span>
+              <span className="ml-2 font-semibold text-white text-sm">鹿鹿小作坊</span>
             </div>
                          <button 
                className="p-2 rounded-md hover:bg-white/10 text-white"

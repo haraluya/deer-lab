@@ -8,7 +8,7 @@ import { ClientProvider } from "./client-provider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Deer Lab 生產管理系統",
+  title: "鹿鹿小作坊",
   description: "專業的生產管理系統，提供完整的生產流程管理功能",
   icons: {
     icon: [

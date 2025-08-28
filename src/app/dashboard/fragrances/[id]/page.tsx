@@ -248,24 +248,24 @@ export default function FragranceDetailPage() {
 
   const getFragranceTypeText = (type: string) => {
     switch (type) {
-      case 'cotton':
+      case '棉芯':
         return '棉芯';
-      case 'ceramic':
+      case '陶瓷芯':
         return '陶瓷芯';
-      case 'universal':
+      case '棉陶芯通用':
         return '棉陶芯通用';
       default:
-        return '未指定';
+        return type || '未指定';
     }
   };
 
   const getFragranceTypeColor = (type: string) => {
     switch (type) {
-      case 'cotton':
+      case '棉芯':
         return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'ceramic':
+      case '陶瓷芯':
         return 'bg-green-100 text-green-800 border-green-300';
-      case 'universal':
+      case '棉陶芯通用':
         return 'bg-purple-100 text-purple-800 border-purple-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300';
@@ -425,15 +425,12 @@ export default function FragranceDetailPage() {
               <div className="flex justify-between items-center py-2 border-b">
                 <span className="text-muted-foreground">啟用狀態</span>
                 <Badge className={
-                  fragrance.fragranceStatus === 'active' ? 'bg-green-100 text-green-800 border-green-300' :
-                  fragrance.fragranceStatus === 'standby' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
-                  fragrance.fragranceStatus === 'discontinued' ? 'bg-red-100 text-red-800 border-red-300' :
+                  fragrance.fragranceStatus === '啟用' ? 'bg-green-100 text-green-800 border-green-300' :
+                  fragrance.fragranceStatus === '備用' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                  fragrance.fragranceStatus === '棄用' ? 'bg-red-100 text-red-800 border-red-300' :
                   'bg-gray-100 text-gray-800 border-gray-300'
                 }>
-                  {fragrance.fragranceStatus === 'active' ? '啟用' :
-                   fragrance.fragranceStatus === 'standby' ? '備用' :
-                   fragrance.fragranceStatus === 'discontinued' ? '棄用' :
-                   '未指定'}
+                  {fragrance.fragranceStatus || '未指定'}
                 </Badge>
               </div>
               <div className="flex justify-between items-center py-2 border-b">
