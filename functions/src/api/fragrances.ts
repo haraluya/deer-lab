@@ -150,7 +150,7 @@ export const updateFragranceByCode = onCall(async (request) => {
     };
     
     // 如果提供了 currentStock，則更新庫存
-    if (currentStock !== undefined && currentStock !== null) {
+    if (currentStock !== undefined && currentStock !== null && currentStock !== '') {
       updateData.currentStock = Number(currentStock) || 0;
       updateData.lastStockUpdate = FieldValue.serverTimestamp();
     }

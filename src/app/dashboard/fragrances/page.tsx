@@ -355,8 +355,13 @@ function FragrancesPageContent() {
           name: item.name,
           code: item.code,
           supplierName: item.supplierName,
-          hasSupplierName: !!item.supplierName,
-          percentage: item.percentage
+          fragranceType: item.fragranceType,
+          fragranceStatus: item.fragranceStatus,
+          currentStock: item.currentStock,
+          safetyStockLevel: item.safetyStockLevel,
+          costPerUnit: item.costPerUnit,
+          percentage: item.percentage,
+          hasSupplierName: !!item.supplierName
         }))
       });
       
@@ -451,12 +456,12 @@ function FragrancesPageContent() {
             }
 
             // 處理數值欄位
-            const percentage = item.percentage ? roundToTwoDecimals(Number(item.percentage)) : 0;
-            let pgRatio = item.pgRatio ? roundToTwoDecimals(Number(item.pgRatio)) : 0;
-            let vgRatio = item.vgRatio ? roundToTwoDecimals(Number(item.vgRatio)) : 0;
-            const currentStock = item.currentStock ? Number(item.currentStock) : 0;
-            const safetyStockLevel = item.safetyStockLevel ? Number(item.safetyStockLevel) : 0;
-            const costPerUnit = item.costPerUnit ? Number(item.costPerUnit) : 0;
+            const percentage = item.percentage !== undefined && item.percentage !== null && item.percentage !== '' ? roundToTwoDecimals(Number(item.percentage)) : 0;
+            let pgRatio = item.pgRatio !== undefined && item.pgRatio !== null && item.pgRatio !== '' ? roundToTwoDecimals(Number(item.pgRatio)) : 0;
+            let vgRatio = item.vgRatio !== undefined && item.vgRatio !== null && item.vgRatio !== '' ? roundToTwoDecimals(Number(item.vgRatio)) : 0;
+            const currentStock = item.currentStock !== undefined && item.currentStock !== null && item.currentStock !== '' ? Number(item.currentStock) : 0;
+            const safetyStockLevel = item.safetyStockLevel !== undefined && item.safetyStockLevel !== null && item.safetyStockLevel !== '' ? Number(item.safetyStockLevel) : 0;
+            const costPerUnit = item.costPerUnit !== undefined && item.costPerUnit !== null && item.costPerUnit !== '' ? Number(item.costPerUnit) : 0;
             
             // 如果提供了香精比例但沒有提供 PG/VG 比例，則自動計算
             if (percentage > 0 && (pgRatio === 0 || vgRatio === 0)) {
@@ -1271,8 +1276,8 @@ function FragrancesPageContent() {
           {
             code: "FRAG001",
             name: "示例香精",
-            fragranceType: "cotton",
-            fragranceStatus: "active",
+            fragranceType: "棉芯",
+            fragranceStatus: "啟用",
             supplierName: "示例供應商",
             safetyStockLevel: 1000,
             costPerUnit: 15.5,
