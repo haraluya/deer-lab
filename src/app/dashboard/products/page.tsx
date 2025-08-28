@@ -333,7 +333,7 @@ function ProductsPageContent() {
           <Button 
             variant="outline" 
             onClick={handleSeriesManagement}
-            className="border-purple-200 text-purple-600 hover:bg-purple-100 hover:border-purple-300 hover:shadow-sm transition-all duration-200"
+            className="border-purple-200 text-purple-600 hover:bg-purple-600 hover:text-white hover:border-purple-600 transition-all duration-200"
           >
             <Library className="mr-2 h-4 w-4" />
             系列管理
