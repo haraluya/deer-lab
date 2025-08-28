@@ -427,11 +427,13 @@ function ProductsPageContent() {
                   {filteredProducts.map((product) => (
                     <div 
                       key={product.id} 
-                      className="p-4 hover:bg-purple-50/50 transition-colors duration-200 cursor-pointer"
-                      onClick={() => handleViewDetail(product)}
+                      className="p-4 hover:bg-purple-50/50 transition-colors duration-200"
                     >
                       <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
+                        <div 
+                          className="flex items-center gap-3 cursor-pointer flex-1"
+                          onClick={() => handleViewDetail(product)}
+                        >
                           <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center">
                             <Package className="h-4 w-4 text-white" />
                           </div>
@@ -444,10 +446,9 @@ function ProductsPageContent() {
                           <Checkbox
                             checked={selectedProducts.has(product.id)}
                             onCheckedChange={(checked) => handleSelectProduct(product.id, checked as boolean)}
-                            onClick={(e) => e.stopPropagation()}
                           />
                           <DropdownMenu>
-                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenuTrigger asChild>
                               <Button variant="ghost" className="h-8 w-8 p-0">
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
@@ -471,7 +472,10 @@ function ProductsPageContent() {
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-1 gap-3 text-sm">
+                      <div 
+                        className="grid grid-cols-1 gap-3 text-sm cursor-pointer"
+                        onClick={() => handleViewDetail(product)}
+                      >
                         <div>
                           <div className="flex items-center gap-1 mb-1">
                             <span className="text-gray-500">系列</span>
