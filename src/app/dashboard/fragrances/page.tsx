@@ -297,6 +297,18 @@ function FragrancesPageContent() {
     setIsStocktakeMode(false);
   };
 
+  // 計算 PG 和 VG 比例的函數
+  const calculatePGRatios = (fragrancePercentage: number): { pgRatio: number; vgRatio: number } => {
+    const remainingPercentage = 100 - fragrancePercentage;
+    
+    // 根據香精種類決定 PG/VG 比例
+    // 這裡使用標準的 PG/VG 比例：PG 70%, VG 30%
+    const pgRatio = Math.round((remainingPercentage * 0.7) * 10) / 10; // 四捨五入到小數點後1位
+    const vgRatio = Math.round((remainingPercentage * 0.3) * 10) / 10; // 四捨五入到小數點後1位
+    
+    return { pgRatio, vgRatio };
+  };
+
   // 匯入/匯出處理函式
   const handleImport = async (data: any[], options?: { updateMode?: boolean }, onProgress?: (current: number, total: number) => void) => {
     const functions = getFunctions();
@@ -310,7 +322,8 @@ function FragrancesPageContent() {
           name: item.name,
           code: item.code,
           supplierName: item.supplierName,
-          hasSupplierName: !!item.supplierName
+          hasSupplierName: !!item.supplierName,
+          percentage: item.percentage
         }))
       });
       
@@ -344,9 +357,28 @@ function FragrancesPageContent() {
               }
             }
             
+            // 自動計算 PG 和 VG 比例
+            let pgRatio = item.pgRatio;
+            let vgRatio = item.vgRatio;
+            
+            // 如果提供了香精比例但沒有提供 PG/VG 比例，則自動計算
+            if (item.percentage && (!pgRatio || !vgRatio)) {
+              const calculatedRatios = calculatePGRatios(item.percentage);
+              pgRatio = calculatedRatios.pgRatio;
+              vgRatio = calculatedRatios.vgRatio;
+              
+              console.log(`自動計算香精 ${item.name} 的比例:`, {
+                fragrancePercentage: item.percentage,
+                calculatedPgRatio: pgRatio,
+                calculatedVgRatio: vgRatio
+              });
+            }
+            
             const processedItem = {
               ...item,
               supplierId,
+              pgRatio,
+              vgRatio,
               unit: 'KG' // 固定單位為KG
             };
             
@@ -1034,7 +1066,7 @@ function FragrancesPageContent() {
         onImport={handleImport}
         onExport={handleExport}
         title="香精資料"
-        description="匯入或匯出香精資料，支援 Excel 和 CSV 格式。匯入時會自動生成缺失的代號。"
+        description="匯入或匯出香精資料，支援 Excel 和 CSV 格式。匯入時會自動生成缺失的代號，並根據香精比例自動計算 PG 和 VG 比例。"
         color="purple"
         showUpdateOption={true}
         maxBatchSize={500}
@@ -1047,8 +1079,6 @@ function FragrancesPageContent() {
             safetyStockLevel: 1000,
             costPerUnit: 15.5,
             percentage: 5,
-            pgRatio: 70,
-            vgRatio: 30,
             currentStock: 500,
             unit: "KG"
           }
