@@ -175,7 +175,7 @@ export function ImportExportDialog({
     setImportProgress({ current: 0, total: importData.length })
     
     try {
-      await onImport(importData, { updateMode }, (current, total) => {
+      await onImport(importData, {}, (current, total) => {
         setImportProgress({ current, total })
       })
       
@@ -310,9 +310,9 @@ export function ImportExportDialog({
          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-6">
            <h4 className="font-semibold text-blue-800 mb-2">匯入/匯出規則</h4>
            <div className="text-sm text-blue-700 space-y-1">
-             <p>• <strong>預設匯入模式</strong>：如果沒有物料代號，系統會自動生成；如果分類不存在，會自動創建並生成物料代號</p>
-             <p>• <strong>更新資料模式</strong>：只更新相同物料號碼的欄位，用於大量資料更新</p>
-             <p>• <strong>覆蓋重複資料</strong>：以物料代號為主，相同代號將完全取代現有資料</p>
+             <p>• <strong>智能匹配模式</strong>：系統會根據香精代號自動判斷是新增還是更新</p>
+             <p>• <strong>新增邏輯</strong>：如果香精代號不存在，系統會建立新的香精項目</p>
+             <p>• <strong>更新邏輯</strong>：如果香精代號已存在，系統會更新覆蓋有填入的欄位</p>
              <p>• <strong>支援格式</strong>：Excel (.xlsx) 和 CSV 檔案格式</p>
            </div>
          </div>
@@ -342,21 +342,7 @@ export function ImportExportDialog({
                 />
               </div>
 
-                             {showUpdateOption && (
-                 <div className="flex items-center space-x-2">
-                   <Checkbox
-                     id="update-mode"
-                     checked={updateMode}
-                     onCheckedChange={(checked) => setUpdateMode(checked as boolean)}
-                   />
-                   <label
-                     htmlFor="update-mode"
-                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                   >
-                     更新資料模式（只更新相同物料號碼的欄位，用於大量資料更新）
-                   </label>
-                 </div>
-               )}
+
 
                {importData.length > 0 && (
                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">

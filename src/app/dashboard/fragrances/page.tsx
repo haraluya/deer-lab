@@ -322,7 +322,6 @@ function FragrancesPageContent() {
       // 調試日誌：檢查匯入資料
       console.log('開始匯入香精資料:', {
         totalRecords: data.length,
-        updateMode: options?.updateMode,
         sampleData: data.slice(0, 3).map(item => ({
           name: item.name,
           code: item.code,
@@ -340,10 +339,22 @@ function FragrancesPageContent() {
       const supplierSnapshot = await getDocs(collection(db, "suppliers"));
       supplierSnapshot.forEach(doc => suppliersMap.set(doc.data().name, doc.id));
       
+      // 獲取現有香精代號映射表
+      const existingFragrancesMap = new Map<string, string>();
+      const fragranceSnapshot = await getDocs(collection(db, "fragrances"));
+      fragranceSnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.code) {
+          existingFragrancesMap.set(data.code, doc.id);
+        }
+      });
+      
       // 分批處理資料
       const batchSize = 20; // 每批處理20筆
       const totalBatches = Math.ceil(data.length / batchSize);
       let processedCount = 0;
+      let createdCount = 0;
+      let updatedCount = 0;
       
       for (let i = 0; i < totalBatches; i++) {
         const startIndex = i * batchSize;
@@ -359,8 +370,6 @@ function FragrancesPageContent() {
               supplierId = suppliersMap.get(item.supplierName.trim());
               if (!supplierId) {
                 console.warn(`找不到供應商: ${item.supplierName}`);
-                // 如果找不到供應商，可以選擇創建新的供應商或跳過
-                // 這裡我們先跳過，讓用戶手動處理
               }
             }
             
@@ -454,14 +463,21 @@ function FragrancesPageContent() {
               processedPercentage: percentage
             });
             
-            if (options?.updateMode) {
-              // 更新模式：根據香精編號更新現有資料
+            // 智能匹配邏輯：檢查香精代號是否存在
+            const existingFragranceId = existingFragrancesMap.get(item.code);
+            
+            if (existingFragranceId) {
+              // 香精代號已存在，執行更新
+              console.log(`香精代號 ${item.code} 已存在，執行更新操作`);
               const updateFragrance = httpsCallable(functions, 'updateFragranceByCode');
               await updateFragrance(processedItem);
+              updatedCount++;
             } else {
-              // 新增模式：建立新的香精
+              // 香精代號不存在，執行新增
+              console.log(`香精代號 ${item.code} 不存在，執行新增操作`);
               const createFragrance = httpsCallable(functions, 'createFragrance');
               await createFragrance(processedItem);
+              createdCount++;
             }
           } catch (error) {
             console.error('處理香精資料失敗:', error);
@@ -478,7 +494,7 @@ function FragrancesPageContent() {
         }
       }
       
-      console.log('香精匯入結果:', `成功處理 ${processedCount} 筆資料`);
+      console.log('香精匯入結果:', `成功處理 ${processedCount} 筆資料 (新增: ${createdCount}, 更新: ${updatedCount})`);
       loadData();
     } catch (error) {
       console.error('匯入香精失敗:', error);
@@ -1185,9 +1201,9 @@ function FragrancesPageContent() {
         onImport={handleImport}
         onExport={handleExport}
         title="香精資料"
-        description="匯入或匯出香精資料，支援 Excel 和 CSV 格式。匯入時會自動生成缺失的代號，並根據香精比例自動計算 PG 和 VG 比例。"
+        description="匯入或匯出香精資料，支援 Excel 和 CSV 格式。匯入時會智能匹配香精代號：如果代號不存在則新增，如果代號已存在則更新覆蓋有填入的欄位。"
         color="purple"
-        showUpdateOption={true}
+        showUpdateOption={false}
         maxBatchSize={500}
         sampleData={[
           {
