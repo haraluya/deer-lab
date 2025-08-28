@@ -296,7 +296,12 @@ export default function ProductDetailPage() {
               </div>
               <div>
                 <p className="text-sm text-purple-600 font-medium">使用香精</p>
-                <p className="text-lg font-semibold text-purple-800">{product.fragranceName || '未指定'}</p>
+                <p className="text-lg font-semibold text-purple-800">
+                  {product.fragranceCode && product.fragranceName && product.fragranceName !== '未指定'
+                    ? `${product.fragranceCode}(${product.fragranceName})`
+                    : product.fragranceCode || '未指定'
+                  }
+                </p>
               </div>
             </div>
 
@@ -333,7 +338,14 @@ export default function ProductDetailPage() {
                 </div>
                 <div className="flex justify-between items-center py-2 border-b">
                   <span className="text-muted-foreground">使用香精</span>
-                  <span className="font-medium">{product.fragranceName || '未指定'}</span>
+                  <div className="text-right">
+                    <div className="font-medium">
+                      {product.fragranceCode && product.fragranceName && product.fragranceName !== '未指定'
+                        ? `${product.fragranceCode}(${product.fragranceName})`
+                        : product.fragranceCode || '未指定'
+                      }
+                    </div>
+                  </div>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b">
                   <span className="text-muted-foreground">丁鹽濃度</span>
