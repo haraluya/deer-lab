@@ -199,7 +199,7 @@ function ProductSeriesPageContent() {
                   {series.map((seriesItem) => (
                     <div 
                       key={seriesItem.id} 
-                      className="p-4 hover:bg-green-50/50 transition-colors duration-200 cursor-pointer"
+                      className="p-4 hover:bg-green-50/80 transition-colors duration-200 cursor-pointer border border-transparent hover:border-green-200 rounded-lg"
                       onClick={() => handleViewDetail(seriesItem)}
                     >
                       <div className="flex items-start justify-between mb-3">
@@ -324,7 +324,8 @@ function ProductSeriesPageContent() {
                 series.map((seriesItem) => (
                   <TableRow 
                     key={seriesItem.id} 
-                    className="hover:bg-green-50/50 transition-colors duration-200"
+                    className="hover:bg-green-50/80 transition-colors duration-200 cursor-pointer"
+                    onClick={() => handleViewDetail(seriesItem)}
                   >
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -345,7 +346,7 @@ function ProductSeriesPageContent() {
                     <TableCell>
                       <span className="text-sm font-medium text-foreground">{seriesItem.productCount}</span>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button 
