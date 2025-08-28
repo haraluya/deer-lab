@@ -584,20 +584,17 @@ function ProductsPageContent() {
                 filteredProducts.map((product) => (
                   <TableRow 
                     key={product.id} 
-                    className="hover:bg-purple-50/50 transition-colors duration-200"
+                    className="hover:bg-purple-50/50 transition-colors duration-200 cursor-pointer"
+                    onClick={() => handleViewDetail(product)}
                   >
-                    <TableCell className="text-center">
+                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={selectedProducts.has(product.id)}
                         onCheckedChange={(checked) => handleSelectProduct(product.id, checked as boolean)}
-                        onClick={(e) => e.stopPropagation()}
                       />
                     </TableCell>
                     <TableCell>
-                      <div 
-                        className="flex items-center gap-3 cursor-pointer"
-                        onClick={() => handleViewDetail(product)}
-                      >
+                      <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center">
                           <Package className="h-5 w-5 text-white" />
                         </div>
@@ -628,7 +625,7 @@ function ProductsPageContent() {
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button 
