@@ -18,6 +18,7 @@ interface Product {
   productNumber?: string;
   seriesRef?: DocumentReference;
   seriesName?: string;
+  seriesType?: string;
   currentFragranceRef?: DocumentReference;
   fragranceName?: string;
   fragranceCode?: string;
@@ -67,14 +68,16 @@ export default function ProductDetailPage() {
 
         const data = productDoc.data();
         
-        // 獲取產品系列名稱
+        // 獲取產品系列名稱和類型
         let seriesName = '未指定';
+        let seriesType = '未指定';
         if (data.seriesRef) {
           try {
             const seriesDoc = await getDoc(data.seriesRef);
             if (seriesDoc.exists()) {
               const seriesData = seriesDoc.data() as any;
               seriesName = seriesData?.name || '未指定';
+              seriesType = seriesData?.productType || '未指定';
             }
           } catch (error) {
             console.error('Failed to fetch series name:', error);
@@ -139,6 +142,7 @@ export default function ProductDetailPage() {
           productNumber: data.productNumber,
           seriesRef: data.seriesRef,
           seriesName,
+          seriesType,
           currentFragranceRef: data.currentFragranceRef,
           fragranceName,
           fragranceCode,
@@ -278,32 +282,29 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            {/* 產品系列 */}
-            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg">
-              <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
-                <ShoppingCart className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-green-600 font-medium">產品系列</p>
-                <p className="text-lg font-semibold text-green-800">{product.seriesName}</p>
-              </div>
-            </div>
+                         {/* 產品系列 */}
+             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg">
+               <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                 <ShoppingCart className="h-5 w-5 text-white" />
+               </div>
+               <div>
+                 <p className="text-sm text-green-600 font-medium">產品系列</p>
+                 <p className="text-lg font-semibold text-green-800">{product.seriesName}</p>
+                 <p className="text-xs text-gray-500">{product.seriesType || '未指定'}</p>
+               </div>
+             </div>
 
-            {/* 使用香精 */}
-            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg">
-              <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <Droplets className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-purple-600 font-medium">使用香精</p>
-                <p className="text-lg font-semibold text-purple-800">
-                  {product.fragranceCode && product.fragranceName && product.fragranceName !== '未指定'
-                    ? `${product.fragranceCode}(${product.fragranceName})`
-                    : product.fragranceCode || '未指定'
-                  }
-                </p>
-              </div>
-            </div>
+                         {/* 使用香精 */}
+             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg">
+               <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                 <Droplets className="h-5 w-5 text-white" />
+               </div>
+               <div>
+                 <p className="text-sm text-purple-600 font-medium">使用香精</p>
+                 <p className="text-lg font-semibold text-purple-800">{product.fragranceCode || '未指定'}</p>
+                 <p className="text-xs text-gray-500">{product.fragranceName && product.fragranceName !== '未指定' ? product.fragranceName : '未指定'}</p>
+               </div>
+             </div>
 
             {/* 丁鹽濃度 */}
             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg">
