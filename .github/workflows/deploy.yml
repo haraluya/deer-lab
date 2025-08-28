@@ -30,7 +30,9 @@ jobs:
       run: npm ci
 
     - name: Install functions dependencies
-      run: npm ci --prefix functions
+      run: |
+        cd functions
+        npm ci
       
     - name: Build Next.js project
       env:
@@ -46,7 +48,9 @@ jobs:
       run: cp -r .next functions/
 
     - name: Build Cloud Functions
-      run: npm run build --prefix functions
+      run: |
+        cd functions
+        npm run build
       
     - name: Deploy to Firebase
       if: github.ref == 'refs/heads/main'
