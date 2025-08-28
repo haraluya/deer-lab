@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, DocumentReference } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, DocumentReference } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { ArrowLeft, Loader2, Package, Building, User, Calendar, Tag, DollarSign, ShoppingCart, Edit, Droplets } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ProductDialog, ProductData } from '../ProductDialog';
+import { RemarksDialog } from './RemarksDialog';
 
 interface Product {
   id: string;
@@ -46,6 +48,8 @@ export default function ProductDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [targetProduction, setTargetProduction] = useState<number>(1);
+  const [isRemarksDialogOpen, setIsRemarksDialogOpen] = useState(false);
+  const [remarks, setRemarks] = useState<string>('');
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -160,6 +164,7 @@ export default function ProductDetailPage() {
         
         setProduct(productData);
         setTargetProduction(data.targetProduction || 1);
+        setRemarks(data.notes || '');
       } catch (error) {
         console.error('Failed to fetch product:', error);
         setError('讀取產品資料失敗');
@@ -178,6 +183,27 @@ export default function ProductDetailPage() {
   const handleProductUpdate = async () => {
     // 重新載入產品資料
     window.location.reload();
+  };
+
+  const handleRemarksUpdate = async (newRemarks: string) => {
+    try {
+      if (!db || !product) {
+        throw new Error('資料庫或產品資料未初始化');
+      }
+      
+      const productRef = doc(db, 'products', product.id);
+      await updateDoc(productRef, {
+        notes: newRemarks,
+        updatedAt: new Date(),
+      });
+      
+      setRemarks(newRemarks);
+      setIsRemarksDialogOpen(false);
+      toast.success('備註已更新');
+    } catch (error) {
+      console.error('更新備註失敗:', error);
+      toast.error('更新備註失敗');
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -473,28 +499,32 @@ export default function ProductDetailPage() {
           </CardContent>
         </Card>
 
-      {/* 描述和備註 */}
-      {(product.description || product.notes) && (
-        <Card className="mt-6 border-0 shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-lg text-primary">詳細資訊</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {product.description && (
-              <div>
-                <h4 className="font-medium text-muted-foreground mb-2">產品描述</h4>
-                <p className="text-sm leading-relaxed">{product.description}</p>
-              </div>
+      {/* 備註區塊 */}
+      <Card className="mt-6 border-0 shadow-lg">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg text-primary font-bold">備註</CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsRemarksDialogOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <Edit className="h-4 w-4" />
+              編輯
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="min-h-[100px] bg-white rounded-lg border border-gray-200 p-4">
+            {remarks ? (
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">{remarks}</p>
+            ) : (
+              <p className="text-sm text-gray-500 text-center py-8">暫無備註</p>
             )}
-            {product.notes && (
-              <div>
-                <h4 className="font-medium text-muted-foreground mb-2">備註</h4>
-                <p className="text-sm leading-relaxed">{product.notes}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* 編輯產品對話框 */}
       {product && (
@@ -514,6 +544,14 @@ export default function ProductDetailPage() {
           } as ProductData}
         />
       )}
+
+      {/* 備註編輯對話框 */}
+      <RemarksDialog
+        isOpen={isRemarksDialogOpen}
+        onOpenChange={setIsRemarksDialogOpen}
+        onSave={handleRemarksUpdate}
+        currentRemarks={remarks}
+      />
     </div>
   );
 }
