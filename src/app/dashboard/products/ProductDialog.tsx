@@ -16,7 +16,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MultiSelect, OptionType } from '@/components/ui/multi-select';
-import { Package, Tag, FlaskConical } from 'lucide-react';
+import { Package, Tag, FlaskConical, Search, ChevronDown, Check } from 'lucide-react';
 
 // 表單的 Zod 驗證 Schema
 const formSchema = z.object({
@@ -60,6 +60,8 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
   const [options, setOptions] = useState<SelectOptions>({ series: [], fragrances: [], materials: [] });
   const [selectedFragrance, setSelectedFragrance] = useState<any>(null);
   const [fragranceFormula, setFragranceFormula] = useState({ percentage: 0, pgRatio: 0, vgRatio: 0 });
+  const [fragranceSearchTerm, setFragranceSearchTerm] = useState('');
+  const [isFragranceDropdownOpen, setIsFragranceDropdownOpen] = useState(false);
   const isEditMode = !!productData;
 
   const form = useForm<FormData>({
@@ -158,6 +160,25 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
       });
     }
   }, [isOpen, productData, form]);
+
+  // 點擊外部關閉下拉選單
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.fragrance-dropdown')) {
+        setIsFragranceDropdownOpen(false);
+        setFragranceSearchTerm('');
+      }
+    };
+
+    if (isFragranceDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isFragranceDropdownOpen]);
 
   // 表單提交處理
   async function onSubmit(values: FormData) {
@@ -291,24 +312,73 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-sm font-semibold text-gray-700">選擇香精 *</FormLabel>
-                        <Select 
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            handleFragranceChange(value);
-                          }} 
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="border-gray-300 focus:border-green-500 focus:ring-green-500">
-                              <SelectValue placeholder="選擇一個香精" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {options.fragrances.map(option => (
-                              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="relative fragrance-dropdown">
+                          <div
+                            className="flex items-center justify-between w-full px-3 py-2 border border-gray-300 rounded-md bg-white cursor-pointer hover:border-green-500 focus-within:border-green-500 focus-within:ring-2 focus-within:ring-green-500"
+                            onClick={() => setIsFragranceDropdownOpen(!isFragranceDropdownOpen)}
+                          >
+                            <span className={field.value ? 'text-gray-900' : 'text-gray-500'}>
+                              {field.value 
+                                ? options.fragrances.find(opt => opt.value === field.value)?.label || '選擇一個香精'
+                                : '選擇一個香精'
+                              }
+                            </span>
+                            <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isFragranceDropdownOpen ? 'rotate-180' : ''}`} />
+                          </div>
+                          
+                          {isFragranceDropdownOpen && (
+                            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-hidden">
+                              {/* 搜尋輸入框 */}
+                              <div className="p-2 border-b border-gray-200">
+                                <div className="relative">
+                                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                  <Input
+                                    type="text"
+                                    placeholder="搜尋香精..."
+                                    value={fragranceSearchTerm}
+                                    onChange={(e) => setFragranceSearchTerm(e.target.value)}
+                                    className="pl-10 border-0 focus:ring-0 focus:border-0"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                </div>
+                              </div>
+                              
+                              {/* 選項列表 */}
+                              <div className="max-h-48 overflow-y-auto">
+                                {options.fragrances
+                                  .filter(option => 
+                                    option.label.toLowerCase().includes(fragranceSearchTerm.toLowerCase())
+                                  )
+                                  .map(option => (
+                                    <div
+                                      key={option.value}
+                                      className={`flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-green-50 ${
+                                        field.value === option.value ? 'bg-green-100' : ''
+                                      }`}
+                                      onClick={() => {
+                                        field.onChange(option.value);
+                                        handleFragranceChange(option.value);
+                                        setIsFragranceDropdownOpen(false);
+                                        setFragranceSearchTerm('');
+                                      }}
+                                    >
+                                      <span className="text-sm">{option.label}</span>
+                                      {field.value === option.value && (
+                                        <Check className="h-4 w-4 text-green-600" />
+                                      )}
+                                    </div>
+                                  ))}
+                                {options.fragrances.filter(option => 
+                                  option.label.toLowerCase().includes(fragranceSearchTerm.toLowerCase())
+                                ).length === 0 && (
+                                  <div className="px-3 py-2 text-sm text-gray-500 text-center">
+                                    沒有找到符合的香精
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
