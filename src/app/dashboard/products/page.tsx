@@ -28,6 +28,7 @@ import { ImportExportDialog } from '@/components/ImportExportDialog';
 interface ProductWithDetails extends ProductData {
   seriesName: string;
   fragranceName: string;
+  fragranceCode: string;
 }
 
 function ProductsPageContent() {
@@ -58,23 +59,31 @@ function ProductsPageContent() {
       }
       
       const seriesMap = new Map<string, string>();
-      const fragrancesMap = new Map<string, string>();
+      const fragrancesMap = new Map<string, { name: string; code: string }>();
       
       const seriesSnapshot = await getDocs(collection(db, "productSeries"));
       seriesSnapshot.forEach(doc => seriesMap.set(doc.id, doc.data().name));
       
       const fragrancesSnapshot = await getDocs(collection(db, "fragrances"));
-      fragrancesSnapshot.forEach(doc => fragrancesMap.set(doc.id, doc.data().name));
+      fragrancesSnapshot.forEach(doc => {
+        const data = doc.data();
+        fragrancesMap.set(doc.id, {
+          name: data.name || '未知香精',
+          code: data.code || ''
+        });
+      });
 
       const productsSnapshot = await getDocs(collection(db, 'products'));
       
       const productsList = productsSnapshot.docs.map(doc => {
         const data = doc.data() as ProductData;
+        const fragranceInfo = fragrancesMap.get(data.currentFragranceRef?.id);
         return {
           ...data,
           id: doc.id,
           seriesName: seriesMap.get(data.seriesRef?.id) || '未知系列',
-          fragranceName: fragrancesMap.get(data.currentFragranceRef?.id) || '未知香精',
+          fragranceName: fragranceInfo?.name || '未知香精',
+          fragranceCode: fragranceInfo?.code || '',
         } as ProductWithDetails;
       });
 
@@ -471,9 +480,12 @@ function ProductsPageContent() {
                         </div>
                         <div>
                           <div className="flex items-center gap-1 mb-1">
-                            <span className="text-gray-500">香精</span>
+                            <span className="text-gray-500">使用香精</span>
                           </div>
-                          <span className="text-sm text-gray-700">{product.fragranceName}</span>
+                          <div>
+                            <span className="text-sm text-gray-700">{product.fragranceCode || '未指定'}</span>
+                            <div className="text-xs text-gray-500">{product.fragranceName}</div>
+                          </div>
                         </div>
 
                         <div>
