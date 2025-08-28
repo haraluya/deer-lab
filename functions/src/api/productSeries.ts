@@ -42,6 +42,13 @@ export const updateProductSeries = onCall(async (request) => {
   try {
     const materialRefs = (commonMaterialIds || []).map((id: string) => db.collection("materials").doc(id));
     const seriesRef = db.collection("productSeries").doc(seriesId);
+    
+    // 先獲取舊的系列資料，用於比較產品類型是否改變
+    const oldSeriesDoc = await seriesRef.get();
+    const oldSeriesData = oldSeriesDoc.data();
+    const oldProductType = oldSeriesData?.productType;
+    
+    // 更新系列資料
     await seriesRef.update({ 
       name, 
       code, 
@@ -49,6 +56,46 @@ export const updateProductSeries = onCall(async (request) => {
       commonMaterials: materialRefs, 
       updatedAt: FieldValue.serverTimestamp(), 
     });
+    
+    // 如果產品類型改變了，需要更新該系列下所有產品的產品代號
+    if (oldProductType !== productType) {
+      // 將產品類型名稱轉換為代碼
+      const productTypeCodeMap: { [key: string]: string } = {
+        '罐裝油(BOT)': 'BOT',
+        '一代棉芯煙彈(OMP)': 'OMP',
+        '一代陶瓷芯煙彈(OTP)': 'OTP',
+        '五代陶瓷芯煙彈(FTP)': 'FTP',
+        '其他(ETC)': 'ETC',
+      };
+      
+      const newProductTypeCode = productTypeCodeMap[productType] || 'ETC';
+      
+      // 查找該系列下的所有產品
+      const productsQuery = await db.collection("products")
+        .where("seriesRef", "==", seriesRef)
+        .get();
+      
+      // 批量更新產品代號
+      const batch = db.batch();
+      productsQuery.docs.forEach(productDoc => {
+        const productData = productDoc.data();
+        const productNumber = productData.productNumber;
+        if (productNumber) {
+          const newProductCode = `${newProductTypeCode}-${code}-${productNumber}`;
+          batch.update(productDoc.ref, { 
+            code: newProductCode,
+            updatedAt: FieldValue.serverTimestamp()
+          });
+        }
+      });
+      
+      // 執行批量更新
+      if (!productsQuery.empty) {
+        await batch.commit();
+        logger.info(`已更新 ${productsQuery.size} 個產品的產品代號`);
+      }
+    }
+    
     logger.info(`管理員 ${contextAuth?.uid} 成功更新產品系列: ${seriesId}`);
     return { status: "success", message: `產品系列 ${name} 已成功更新。` };
   } catch (error) { 

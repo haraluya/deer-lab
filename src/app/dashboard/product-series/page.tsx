@@ -324,8 +324,7 @@ function ProductSeriesPageContent() {
                 series.map((seriesItem) => (
                   <TableRow 
                     key={seriesItem.id} 
-                    className="hover:bg-green-50/50 transition-colors duration-200 cursor-pointer"
-                    onClick={() => handleViewDetail(seriesItem)}
+                    className="hover:bg-green-50/50 transition-colors duration-200"
                   >
                     <TableCell>
                       <div className="flex items-center gap-3">
