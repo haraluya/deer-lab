@@ -64,7 +64,14 @@ function FragrancesPageContent() {
         const supplierRef = data.supplierRef as DocumentReference | undefined;
         const supplierName = supplierRef ? suppliersMap.get(supplierRef.id) || 'N/A' : '未指定';
         
-        return {
+        // 調試日誌：檢查原始資料
+        console.log(`香精 ${data.name} (${data.code}) 的原始資料:`, {
+          fragranceType: data.fragranceType,
+          status: data.status,
+          fragranceStatus: data.fragranceStatus
+        });
+        
+        const processedFragrance = {
           id: doc.id,
           code: data.code,
           name: data.name,
@@ -82,6 +89,14 @@ function FragrancesPageContent() {
           createdAt: data.createdAt,
           updatedAt: data.updatedAt,
         } as FragranceWithSupplier;
+        
+        // 調試日誌：檢查處理後的資料
+        console.log(`香精 ${processedFragrance.name} (${processedFragrance.code}) 的處理後資料:`, {
+          fragranceType: processedFragrance.fragranceType,
+          fragranceStatus: processedFragrance.fragranceStatus
+        });
+        
+        return processedFragrance;
       });
       setFragrances(fragrancesList);
       setFilteredFragrances(fragrancesList);
