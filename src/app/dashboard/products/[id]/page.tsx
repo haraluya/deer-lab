@@ -503,10 +503,14 @@ export default function ProductDetailPage() {
           onOpenChange={setIsEditDialogOpen}
           onProductUpdate={handleProductUpdate}
           productData={{
-            ...product,
-            currentFragranceRef: product.seriesRef || null, // 添加缺失的屬性
-            specificMaterials: [], // 添加缺失的屬性
-            nicotineMg: 0, // 添加缺失的屬性
+            id: product.id,
+            name: product.name,
+            code: product.code,
+            productNumber: product.productNumber,
+            seriesRef: product.seriesRef,
+            currentFragranceRef: product.currentFragranceRef,
+            specificMaterials: product.specificMaterials || [],
+            nicotineMg: product.nicotineMg || 0,
           } as ProductData}
         />
       )}

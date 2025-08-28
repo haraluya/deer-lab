@@ -180,7 +180,15 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
 
   // 當處於編輯模式時，用傳入的 productData 填充表單
   useEffect(() => {
-    if (isOpen && productData) {
+    if (isOpen && productData && options.series.length > 0 && options.fragrances.length > 0 && options.materials.length > 0) {
+      console.log('重置表單資料:', {
+        name: productData.name,
+        seriesId: productData.seriesRef?.id,
+        fragranceId: productData.currentFragranceRef?.id,
+        nicotineMg: productData.nicotineMg,
+        specificMaterialIds: productData.specificMaterials?.map(ref => ref.id)
+      });
+      
       form.reset({
         name: productData.name || '',
         seriesId: productData.seriesRef?.id || undefined,
@@ -193,19 +201,19 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
       if (productData.currentFragranceRef?.id) {
         handleFragranceChange(productData.currentFragranceRef.id);
       }
-         } else if (isOpen && !productData) {
-       form.reset({
-         name: '',
-         seriesId: undefined,
-         fragranceId: undefined,
-         nicotineMg: 0,
-         specificMaterialIds: [],
-       });
-       // 重置產品編號和代碼預覽
-       setGeneratedProductNumber('');
-       setGeneratedProductCode('');
-     }
-  }, [isOpen, productData, form]);
+    } else if (isOpen && !productData) {
+      form.reset({
+        name: '',
+        seriesId: undefined,
+        fragranceId: undefined,
+        nicotineMg: 0,
+        specificMaterialIds: [],
+      });
+      // 重置產品編號和代碼預覽
+      setGeneratedProductNumber('');
+      setGeneratedProductCode('');
+    }
+  }, [isOpen, productData, form, options.series.length, options.fragrances.length, options.materials.length]);
 
   // 點擊外部關閉下拉選單
   useEffect(() => {
