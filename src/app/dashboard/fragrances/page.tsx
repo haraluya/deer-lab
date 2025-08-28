@@ -64,14 +64,7 @@ function FragrancesPageContent() {
         const supplierRef = data.supplierRef as DocumentReference | undefined;
         const supplierName = supplierRef ? suppliersMap.get(supplierRef.id) || 'N/A' : '未指定';
         
-        // 調試日誌：檢查原始資料
-        console.log(`香精 ${data.name} (${data.code}) 的原始資料:`, {
-          fragranceType: data.fragranceType,
-          status: data.status,
-          fragranceStatus: data.fragranceStatus
-        });
-        
-        const processedFragrance = {
+        return {
           id: doc.id,
           code: data.code,
           name: data.name,
@@ -89,14 +82,6 @@ function FragrancesPageContent() {
           createdAt: data.createdAt,
           updatedAt: data.updatedAt,
         } as FragranceWithSupplier;
-        
-        // 調試日誌：檢查處理後的資料
-        console.log(`香精 ${processedFragrance.name} (${processedFragrance.code}) 的處理後資料:`, {
-          fragranceType: processedFragrance.fragranceType,
-          fragranceStatus: processedFragrance.fragranceStatus
-        });
-        
-        return processedFragrance;
       });
       setFragrances(fragrancesList);
       setFilteredFragrances(fragrancesList);
@@ -564,30 +549,50 @@ function FragrancesPageContent() {
           ))}
 
           {/* 香精種類標籤 */}
-          {uniqueFragranceTypes.map(type => (
-            <Badge
-              key={type}
-              variant={selectedFragranceTypes.has(type) ? "default" : "secondary"}
-              className={`cursor-pointer transition-colors ${
-                selectedFragranceTypes.has(type) 
-                  ? "bg-green-600 hover:bg-green-700 text-white" 
-                  : "bg-green-100 hover:bg-green-200 text-green-800 border-green-300"
-              }`}
-              onClick={() => {
-                setSelectedFragranceTypes(prev => {
-                  const newSet = new Set(prev);
-                  if (newSet.has(type)) {
-                    newSet.delete(type);
-                  } else {
-                    newSet.add(type);
-                  }
-                  return newSet;
-                });
-              }}
-            >
-              {type === 'cotton' ? '棉芯' : type === 'ceramic' ? '陶瓷芯' : '棉陶芯通用'}
-            </Badge>
-          ))}
+          {uniqueFragranceTypes.map(type => {
+            const isSelected = selectedFragranceTypes.has(type);
+            const getTypeColor = (type: string) => {
+              switch (type) {
+                case 'cotton':
+                  return isSelected 
+                    ? "bg-blue-600 hover:bg-blue-700 text-white" 
+                    : "bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300";
+                case 'ceramic':
+                  return isSelected 
+                    ? "bg-green-600 hover:bg-green-700 text-white" 
+                    : "bg-green-100 hover:bg-green-200 text-green-800 border-green-300";
+                case 'universal':
+                  return isSelected 
+                    ? "bg-purple-600 hover:bg-purple-700 text-white" 
+                    : "bg-purple-100 hover:bg-purple-200 text-purple-800 border-purple-300";
+                default:
+                  return isSelected 
+                    ? "bg-gray-600 hover:bg-gray-700 text-white" 
+                    : "bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300";
+              }
+            };
+            
+            return (
+              <Badge
+                key={type}
+                variant={isSelected ? "default" : "secondary"}
+                className={`cursor-pointer transition-colors ${getTypeColor(type)}`}
+                onClick={() => {
+                  setSelectedFragranceTypes(prev => {
+                    const newSet = new Set(prev);
+                    if (newSet.has(type)) {
+                      newSet.delete(type);
+                    } else {
+                      newSet.add(type);
+                    }
+                    return newSet;
+                  });
+                }}
+              >
+                {type === 'cotton' ? '棉芯' : type === 'ceramic' ? '陶瓷芯' : type === 'universal' ? '棉陶芯通用' : type}
+              </Badge>
+            );
+          })}
         </div>
       </div>
 
