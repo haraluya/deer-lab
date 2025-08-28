@@ -210,7 +210,7 @@ export const createMaterial = onCall(async (request) => {
     // 如果沒有提供代號，自動生成
     let finalCode = code;
     if (!finalCode) {
-      finalCode = await generateUniqueMaterialCode(mainCategoryId, subCategoryId);
+      finalCode = generateUniqueMaterialCode(mainCategoryId, subCategoryId, new Set());
     }
 
     const newMaterial: MaterialData = { 
