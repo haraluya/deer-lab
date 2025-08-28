@@ -415,19 +415,35 @@ function FragrancesPageContent() {
   };
 
   const handleExport = async () => {
-    return fragrances.map(fragrance => ({
-      code: fragrance.code,
-      name: fragrance.name,
-      fragranceType: fragrance.fragranceType || fragrance.status,
-      supplierName: fragrance.supplierName,
-      safetyStockLevel: fragrance.safetyStockLevel,
-      costPerUnit: fragrance.costPerUnit,
-      percentage: fragrance.percentage,
-      pgRatio: fragrance.pgRatio,
-      vgRatio: fragrance.vgRatio,
-      currentStock: fragrance.currentStock,
-      unit: 'KG'
-    }));
+    return fragrances.map(fragrance => {
+      // 將英文的香精種類轉換為中文
+      const getFragranceTypeText = (type: string) => {
+        switch (type) {
+          case 'cotton':
+            return '棉芯';
+          case 'ceramic':
+            return '陶瓷芯';
+          case 'universal':
+            return '棉陶芯通用';
+          default:
+            return type;
+        }
+      };
+
+      return {
+        code: fragrance.code,
+        name: fragrance.name,
+        fragranceType: getFragranceTypeText(fragrance.fragranceType || fragrance.status),
+        supplierName: fragrance.supplierName,
+        safetyStockLevel: fragrance.safetyStockLevel,
+        costPerUnit: fragrance.costPerUnit,
+        percentage: fragrance.percentage,
+        pgRatio: fragrance.pgRatio,
+        vgRatio: fragrance.vgRatio,
+        currentStock: fragrance.currentStock,
+        unit: 'KG'
+      };
+    });
   };
 
   return (
