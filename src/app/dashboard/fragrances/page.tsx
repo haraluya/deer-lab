@@ -69,8 +69,8 @@ function FragrancesPageContent() {
           code: data.code,
           name: data.name,
           status: data.status,
-          fragranceType: data.fragranceType || data.status, // 向後相容性
-          fragranceStatus: data.fragranceStatus || data.status || 'active', // 向後相容性
+          fragranceType: data.fragranceType !== undefined && data.fragranceType !== null && data.fragranceType !== '' ? data.fragranceType : (data.status || '未指定'),
+          fragranceStatus: data.fragranceStatus !== undefined && data.fragranceStatus !== null && data.fragranceStatus !== '' ? data.fragranceStatus : (data.status || '未指定'),
           supplierRef: data.supplierRef,
           safetyStockLevel: data.safetyStockLevel,
           costPerUnit: data.costPerUnit,

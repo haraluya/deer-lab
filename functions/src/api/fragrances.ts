@@ -81,9 +81,9 @@ export const updateFragrance = onCall(async (request) => {
   if (!fragranceId || !code || !name) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (ID, 代號、名稱)。"); }
   
   // 處理 fragranceType 和 status 的相容性
-  const finalFragranceType = fragranceType || status || 'cotton';
-  const finalStatus = status || fragranceType || 'active';
-  const finalFragranceStatus = fragranceStatus || status || 'active';
+  const finalFragranceType = fragranceType !== undefined && fragranceType !== null && fragranceType !== '' ? fragranceType : (status || 'cotton');
+  const finalStatus = status !== undefined && status !== null && status !== '' ? status : (fragranceType || 'active');
+  const finalFragranceStatus = fragranceStatus !== undefined && fragranceStatus !== null && fragranceStatus !== '' ? fragranceStatus : (status || 'active');
   
   try {
     const fragranceRef = db.collection("fragrances").doc(fragranceId);
@@ -119,9 +119,9 @@ export const updateFragranceByCode = onCall(async (request) => {
   if (!code || !name) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (代號、名稱)。"); }
   
   // 處理 fragranceType 和 status 的相容性
-  const finalFragranceType = fragranceType || status || 'cotton';
-  const finalStatus = status || fragranceType || 'active';
-  const finalFragranceStatus = fragranceStatus || status || 'active';
+  const finalFragranceType = fragranceType !== undefined && fragranceType !== null && fragranceType !== '' ? fragranceType : (status || 'cotton');
+  const finalStatus = status !== undefined && status !== null && status !== '' ? status : (fragranceType || 'active');
+  const finalFragranceStatus = fragranceStatus !== undefined && fragranceStatus !== null && fragranceStatus !== '' ? fragranceStatus : (status || 'active');
   
   try {
     // 根據香精編號查找現有的香精
