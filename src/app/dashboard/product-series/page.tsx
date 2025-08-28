@@ -199,7 +199,7 @@ function ProductSeriesPageContent() {
                   {series.map((seriesItem) => (
                     <div 
                       key={seriesItem.id} 
-                      className="p-4 hover:bg-green-50/80 transition-colors duration-200 cursor-pointer border border-transparent hover:border-green-200 rounded-lg"
+                      className="p-4 hover:bg-green-100/60 transition-all duration-200 cursor-pointer border border-transparent hover:border-green-300 hover:shadow-md rounded-lg"
                       onClick={() => handleViewDetail(seriesItem)}
                     >
                       <div className="flex items-start justify-between mb-3">
@@ -324,7 +324,7 @@ function ProductSeriesPageContent() {
                 series.map((seriesItem) => (
                   <TableRow 
                     key={seriesItem.id} 
-                    className="hover:bg-green-50/80 transition-colors duration-200 cursor-pointer"
+                    className="hover:bg-green-100/60 transition-all duration-200 cursor-pointer"
                     onClick={() => handleViewDetail(seriesItem)}
                   >
                     <TableCell>
