@@ -91,3 +91,83 @@
     @apply bg-gradient-to-br from-gray-900 to-slate-950;
   }
 }
+
+/* Toast 樣式 - 根據不同頁面設定不同配色 */
+@layer components {
+  /* 預設 toast 樣式 */
+  :root {
+    --toast-bg: 255 255 255; /* 白色背景 */
+    --toast-text: 15 23 42; /* slate-800 文字 */
+    --toast-border: 226 232 240; /* slate-200 邊框 */
+  }
+
+  /* 香精管理頁面 - 紫色主題 */
+  .fragrances-page {
+    --toast-bg: 147 51 234; /* purple-600 背景 */
+    --toast-text: 255 255 255; /* 白色文字 */
+    --toast-border: 168 85 247; /* purple-500 邊框 */
+  }
+
+  /* 物料管理頁面 - 藍色主題 */
+  .materials-page {
+    --toast-bg: 37 99 235; /* blue-600 背景 */
+    --toast-text: 255 255 255; /* 白色文字 */
+    --toast-border: 59 130 246; /* blue-500 邊框 */
+  }
+
+  /* 供應商管理頁面 - 綠色主題 */
+  .suppliers-page {
+    --toast-bg: 34 197 94; /* green-600 背景 */
+    --toast-text: 255 255 255; /* 白色文字 */
+    --toast-border: 52 211 153; /* green-500 邊框 */
+  }
+
+  /* 人員管理頁面 - 橙色主題 */
+  .personnel-page {
+    --toast-bg: 249 115 22; /* orange-600 背景 */
+    --toast-text: 255 255 255; /* 白色文字 */
+    --toast-border: 251 146 60; /* orange-500 邊框 */
+  }
+
+  /* 產品管理頁面 - 靛藍色主題 */
+  .products-page {
+    --toast-bg: 99 102 241; /* indigo-600 背景 */
+    --toast-text: 255 255 255; /* 白色文字 */
+    --toast-border: 129 140 248; /* indigo-500 邊框 */
+  }
+
+  /* 工作單管理頁面 - 紅色主題 */
+  .work-orders-page {
+    --toast-bg: 220 38 38; /* red-600 背景 */
+    --toast-text: 255 255 255; /* 白色文字 */
+    --toast-border: 239 68 68; /* red-500 邊框 */
+  }
+
+  /* 採購單管理頁面 - 黃色主題 */
+  .purchase-orders-page {
+    --toast-bg: 202 138 4; /* yellow-600 背景 */
+    --toast-text: 15 23 42; /* slate-800 文字 */
+    --toast-border: 217 119 6; /* yellow-500 邊框 */
+  }
+
+  /* 成本管理頁面 - 青色主題 */
+  .cost-management-page {
+    --toast-bg: 8 145 178; /* cyan-600 背景 */
+    --toast-text: 255 255 255; /* 白色文字 */
+    --toast-border: 14 165 233; /* cyan-500 邊框 */
+  }
+
+  /* 報表頁面 - 灰色主題 */
+  .reports-page {
+    --toast-bg: 75 85 99; /* gray-600 背景 */
+    --toast-text: 255 255 255; /* 白色文字 */
+    --toast-border: 107 114 128; /* gray-500 邊框 */
+  }
+
+  /* 個人資料頁面 - 粉色主題 */
+  .profile-page {
+    --toast-bg: 219 39 119; /* pink-600 背景 */
+    --toast-text: 255 255 255; /* 白色文字 */
+    --toast-border: 236 72 153; /* pink-500 邊框 */
+  }
+}

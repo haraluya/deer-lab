@@ -56,7 +56,7 @@ function WorkOrdersPageContent() {
   }, [])
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="container mx-auto py-10 work-orders-page">
       {/* 桌面版標題和按鈕 */}
       <div className="hidden lg:flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>

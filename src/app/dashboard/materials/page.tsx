@@ -586,7 +586,7 @@ function MaterialsPageContent() {
   const { categories, subCategories } = useMemo(() => getAvailableFilterOptions(), [getAvailableFilterOptions]);
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="container mx-auto py-10 materials-page">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold text-orange-600">
