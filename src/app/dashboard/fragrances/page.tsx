@@ -297,14 +297,19 @@ function FragrancesPageContent() {
     setIsStocktakeMode(false);
   };
 
+  // 四捨五入到小數點第二位的函數
+  const roundToTwoDecimals = (value: number): number => {
+    return Math.round(value * 100) / 100;
+  };
+
   // 計算 PG 和 VG 比例的函數
   const calculatePGRatios = (fragrancePercentage: number): { pgRatio: number; vgRatio: number } => {
     const remainingPercentage = 100 - fragrancePercentage;
     
     // 根據香精種類決定 PG/VG 比例
     // 這裡使用標準的 PG/VG 比例：PG 70%, VG 30%
-    const pgRatio = Math.round((remainingPercentage * 0.7) * 10) / 10; // 四捨五入到小數點後1位
-    const vgRatio = Math.round((remainingPercentage * 0.3) * 10) / 10; // 四捨五入到小數點後1位
+    const pgRatio = roundToTwoDecimals(remainingPercentage * 0.7); // 四捨五入到小數點後2位
+    const vgRatio = roundToTwoDecimals(remainingPercentage * 0.3); // 四捨五入到小數點後2位
     
     return { pgRatio, vgRatio };
   };
@@ -399,18 +404,22 @@ function FragrancesPageContent() {
               }
             }
 
-            // 自動計算 PG 和 VG 比例
-            let pgRatio = item.pgRatio;
-            let vgRatio = item.vgRatio;
+            // 處理數值欄位，四捨五入到小數點第二位
+            const percentage = item.percentage ? roundToTwoDecimals(Number(item.percentage)) : 0;
+            const pgRatio = item.pgRatio ? roundToTwoDecimals(Number(item.pgRatio)) : 0;
+            const vgRatio = item.vgRatio ? roundToTwoDecimals(Number(item.vgRatio)) : 0;
+            const currentStock = item.currentStock ? roundToTwoDecimals(Number(item.currentStock)) : 0;
+            const safetyStockLevel = item.safetyStockLevel ? roundToTwoDecimals(Number(item.safetyStockLevel)) : 0;
+            const costPerUnit = item.costPerUnit ? roundToTwoDecimals(Number(item.costPerUnit)) : 0;
             
             // 如果提供了香精比例但沒有提供 PG/VG 比例，則自動計算
-            if (item.percentage && (!pgRatio || !vgRatio)) {
-              const calculatedRatios = calculatePGRatios(item.percentage);
+            if (percentage > 0 && (pgRatio === 0 || vgRatio === 0)) {
+              const calculatedRatios = calculatePGRatios(percentage);
               pgRatio = calculatedRatios.pgRatio;
               vgRatio = calculatedRatios.vgRatio;
               
               console.log(`自動計算香精 ${item.name} 的比例:`, {
-                fragrancePercentage: item.percentage,
+                fragrancePercentage: percentage,
                 calculatedPgRatio: pgRatio,
                 calculatedVgRatio: vgRatio
               });
@@ -421,8 +430,12 @@ function FragrancesPageContent() {
               supplierId,
               fragranceType,
               fragranceStatus,
+              percentage,
               pgRatio,
               vgRatio,
+              currentStock,
+              safetyStockLevel,
+              costPerUnit,
               unit: 'KG' // 固定單位為KG
             };
 
@@ -434,7 +447,11 @@ function FragrancesPageContent() {
               processedFragranceStatus: fragranceStatus,
               originalSupplierName: item.supplierName,
               processedSupplierId: supplierId,
-              hasSupplierId: !!supplierId
+              hasSupplierId: !!supplierId,
+              originalCurrentStock: item.currentStock,
+              processedCurrentStock: currentStock,
+              originalPercentage: item.percentage,
+              processedPercentage: percentage
             });
             
             if (options?.updateMode) {
