@@ -562,7 +562,7 @@ function ProductsPageContent() {
                 </TableHead>
                 <TableHead className="text-left">產品資訊</TableHead>
                 <TableHead className="text-left">系列</TableHead>
-                <TableHead className="text-left">香精</TableHead>
+                <TableHead className="text-left">使用香精</TableHead>
                 <TableHead className="text-left">建立時間</TableHead>
                 <TableHead className="text-right">操作</TableHead>
               </TableRow>
@@ -611,7 +611,10 @@ function ProductsPageContent() {
                       <span className="text-sm font-medium text-foreground">{product.seriesName}</span>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm font-medium text-foreground">{product.fragranceName}</span>
+                      <div>
+                        <span className="text-sm font-medium text-foreground">{product.fragranceCode || '未指定'}</span>
+                        <div className="text-xs text-gray-500">{product.fragranceName}</div>
+                      </div>
                     </TableCell>
 
                     <TableCell>
