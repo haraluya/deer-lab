@@ -156,7 +156,7 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
 
   // 當香精選擇改變時，獲取香精配方資訊
   const handleFragranceChange = async (fragranceId: string) => {
-    if (!fragranceId) {
+    if (!fragranceId || !db) {
       setSelectedFragrance(null);
       setFragranceFormula({ percentage: 0, pgRatio: 0, vgRatio: 0 });
       return;
