@@ -47,7 +47,7 @@ export const createProduct = onCall(async (request) => {
     if (counterDoc.exists) { newCount = (counterDoc.data()?.count || 0) + 1; }
     transaction.set(counterRef, { count: newCount }, { merge: true });
     const sequenceNumber = String(newCount).padStart(3, '0');
-    return `${productType}-${seriesCode}-${sequenceNumber}`;
+    return `${productType}-${seriesCode}-${productNumber}`;
   });
   const fragranceRef = db.doc(`fragrances/${fragranceId}`);
   const materialRefs = (specificMaterialIds || []).map((id: string) => db.doc(`materials/${id}`));
