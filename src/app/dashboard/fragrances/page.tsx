@@ -357,6 +357,25 @@ function FragrancesPageContent() {
               }
             }
             
+            // 處理啟用狀態（從中文轉換為英文）
+            let fragranceStatus = item.fragranceStatus;
+            if (fragranceStatus) {
+              switch (fragranceStatus) {
+                case '啟用':
+                  fragranceStatus = 'active';
+                  break;
+                case '備用':
+                  fragranceStatus = 'standby';
+                  break;
+                case '棄用':
+                  fragranceStatus = 'discontinued';
+                  break;
+                default:
+                  // 如果已經是英文，保持不變
+                  break;
+              }
+            }
+
             // 自動計算 PG 和 VG 比例
             let pgRatio = item.pgRatio;
             let vgRatio = item.vgRatio;
@@ -377,6 +396,7 @@ function FragrancesPageContent() {
             const processedItem = {
               ...item,
               supplierId,
+              fragranceStatus,
               pgRatio,
               vgRatio,
               unit: 'KG' // 固定單位為KG
@@ -430,10 +450,25 @@ function FragrancesPageContent() {
         }
       };
 
+      // 將英文的啟用狀態轉換為中文
+      const getFragranceStatusText = (status: string) => {
+        switch (status) {
+          case 'active':
+            return '啟用';
+          case 'standby':
+            return '備用';
+          case 'discontinued':
+            return '棄用';
+          default:
+            return status;
+        }
+      };
+
       return {
         code: fragrance.code,
         name: fragrance.name,
         fragranceType: getFragranceTypeText(fragrance.fragranceType || fragrance.status),
+        fragranceStatus: getFragranceStatusText(fragrance.fragranceStatus || fragrance.status || 'active'),
         supplierName: fragrance.supplierName,
         safetyStockLevel: fragrance.safetyStockLevel,
         costPerUnit: fragrance.costPerUnit,
@@ -1091,6 +1126,7 @@ function FragrancesPageContent() {
             code: "FRAG001",
             name: "示例香精",
             fragranceType: "cotton",
+            fragranceStatus: "active",
             supplierName: "示例供應商",
             safetyStockLevel: 1000,
             costPerUnit: 15.5,
@@ -1103,6 +1139,7 @@ function FragrancesPageContent() {
           { key: "code", label: "香精代號", required: false, type: "string" },
           { key: "name", label: "香精名稱", required: true, type: "string" },
           { key: "fragranceType", label: "香精種類", required: false, type: "string" },
+          { key: "fragranceStatus", label: "啟用狀態", required: false, type: "string" },
           { key: "supplierName", label: "供應商", required: false, type: "string" },
           { key: "safetyStockLevel", label: "安全庫存", required: false, type: "number" },
           { key: "costPerUnit", label: "單位成本", required: false, type: "number" },
