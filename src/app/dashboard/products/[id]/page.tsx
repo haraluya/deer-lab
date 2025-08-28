@@ -405,51 +405,62 @@ export default function ProductDetailPage() {
                   />
                 </div>
                 
-                {/* 配方計算結果 */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div>
-                    <span className="text-gray-600 text-sm">香精名稱：</span>
-                    <div className="font-medium text-green-800">{product.fragranceName}</div>
-                  </div>
-                  <div>
-                    <span className="text-gray-600 text-sm">香精代號：</span>
-                    <div className="font-medium text-green-800">{product.fragranceCode || 'N/A'}</div>
-                  </div>
-                  <div>
-                    <span className="text-gray-600 text-sm">香精比例：</span>
-                    <div className="font-medium text-green-600">{product.fragranceFormula?.percentage || 0}%</div>
-                  </div>
-                  <div>
-                    <span className="text-gray-600 text-sm">PG比例：</span>
-                    <div className="font-medium text-blue-600">{product.fragranceFormula?.pgRatio || 0}%</div>
-                  </div>
-                  <div>
-                    <span className="text-gray-600 text-sm">VG比例：</span>
-                    <div className="font-medium text-purple-600">{product.fragranceFormula?.vgRatio || 0}%</div>
-                  </div>
-                  <div>
-                    <span className="text-gray-600 text-sm">目標產量：</span>
-                    <div className="font-medium">{targetProduction} KG</div>
-                  </div>
-                  <div>
-                    <span className="text-gray-600 text-sm">需要香精：</span>
-                    <div className="font-medium text-green-600">
-                      {(targetProduction * ((product.fragranceFormula?.percentage || 0) / 100)).toFixed(2)} KG
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-gray-600 text-sm">需要PG：</span>
-                    <div className="font-medium text-blue-600">
-                      {(targetProduction * ((product.fragranceFormula?.pgRatio || 0) / 100)).toFixed(2)} KG
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-gray-600 text-sm">需要VG：</span>
-                    <div className="font-medium text-purple-600">
-                      {(targetProduction * ((product.fragranceFormula?.vgRatio || 0) / 100)).toFixed(2)} KG
-                    </div>
-                  </div>
-                </div>
+                                 {/* 配方計算結果 */}
+                 <div className="space-y-4">
+                   {/* 第一排：產品目標產量、香精編號、香精名稱 */}
+                   <div className="grid grid-cols-3 gap-4">
+                     <div>
+                       <span className="text-gray-600 text-sm">產品目標產量 (KG)：</span>
+                       <div className="font-medium">{targetProduction} KG</div>
+                     </div>
+                     <div>
+                       <span className="text-gray-600 text-sm">香精編號：</span>
+                       <div className="font-medium text-green-800">{product.fragranceCode || 'N/A'}</div>
+                     </div>
+                     <div>
+                       <span className="text-gray-600 text-sm">香精名稱：</span>
+                       <div className="font-medium text-green-800">{product.fragranceName}</div>
+                     </div>
+                   </div>
+                   
+                   {/* 第二排：香精比例、PG比例、VG比例 */}
+                   <div className="grid grid-cols-3 gap-4">
+                     <div>
+                       <span className="text-gray-600 text-sm">香精比例：</span>
+                       <div className="font-medium text-green-600">{product.fragranceFormula?.percentage || 0}%</div>
+                     </div>
+                     <div>
+                       <span className="text-gray-600 text-sm">PG比例：</span>
+                       <div className="font-medium text-blue-600">{product.fragranceFormula?.pgRatio || 0}%</div>
+                     </div>
+                     <div>
+                       <span className="text-gray-600 text-sm">VG比例：</span>
+                       <div className="font-medium text-purple-600">{product.fragranceFormula?.vgRatio || 0}%</div>
+                     </div>
+                   </div>
+                   
+                   {/* 第三排：需要香精、需要PG、需要VG */}
+                   <div className="grid grid-cols-3 gap-4">
+                     <div>
+                       <span className="text-gray-600 text-sm">需要香精：</span>
+                       <div className="font-medium text-green-600">
+                         {(targetProduction * ((product.fragranceFormula?.percentage || 0) / 100)).toFixed(2)} KG
+                       </div>
+                     </div>
+                     <div>
+                       <span className="text-gray-600 text-sm">需要PG：</span>
+                       <div className="font-medium text-blue-600">
+                         {(targetProduction * ((product.fragranceFormula?.pgRatio || 0) / 100)).toFixed(2)} KG
+                       </div>
+                     </div>
+                     <div>
+                       <span className="text-gray-600 text-sm">需要VG：</span>
+                       <div className="font-medium text-purple-600">
+                         {(targetProduction * ((product.fragranceFormula?.vgRatio || 0) / 100)).toFixed(2)} KG
+                       </div>
+                     </div>
+                   </div>
+                 </div>
               </div>
             ) : (
               <div className="text-center py-8">
