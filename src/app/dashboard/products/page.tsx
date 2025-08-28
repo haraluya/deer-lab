@@ -584,7 +584,7 @@ function ProductsPageContent() {
                 filteredProducts.map((product) => (
                   <TableRow 
                     key={product.id} 
-                    className="hover:bg-purple-100/60 transition-all duration-200 cursor-pointer"
+                    className="hover:bg-purple-200/70 hover:shadow-md transition-all duration-200 cursor-pointer"
                     onClick={() => handleViewDetail(product)}
                   >
                     <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
