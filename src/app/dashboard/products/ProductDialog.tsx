@@ -114,13 +114,15 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
                .sort((a, b) => a.label.localeCompare(b.label, 'zh-TW')),
            });
            
-           // 保存系列詳細資訊
-           setSeriesInfo(seriesSnapshot.docs.map(doc => ({
-             id: doc.id,
-             name: doc.data().name,
-             code: doc.data().code,
-             productType: doc.data().productType,
-           })));
+                       // 保存系列詳細資訊
+            const seriesData = seriesSnapshot.docs.map(doc => ({
+              id: doc.id,
+              name: doc.data().name,
+              code: doc.data().code,
+              productType: doc.data().productType,
+            }));
+            console.log('系列資訊:', seriesData); // 調試用
+            setSeriesInfo(seriesData);
         } catch (error) {
           console.error("讀取下拉選單資料失敗:", error);
           toast.error("讀取下拉選單資料失敗。");
@@ -204,13 +206,17 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
     const seriesId = form.watch('seriesId');
     if (seriesId && !isEditMode) {
       const selectedSeriesInfo = seriesInfo.find(s => s.id === seriesId);
-      if (selectedSeriesInfo) {
+      if (selectedSeriesInfo && selectedSeriesInfo.productType) {
         // 生成隨機4位數編號
         const randomNumber = Math.floor(1000 + Math.random() * 9000);
         setGeneratedProductNumber(String(randomNumber));
         
         // 預覽產品代碼格式
         setGeneratedProductCode(`${selectedSeriesInfo.productType}-${selectedSeriesInfo.code}-${randomNumber}`);
+      } else {
+        // 如果沒有找到系列信息或產品類型，清空預覽
+        setGeneratedProductNumber('');
+        setGeneratedProductCode('');
       }
     } else {
       setGeneratedProductNumber('');
@@ -262,31 +268,31 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* 基本資料 */}
-            <div className="space-y-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm">
-              <h3 className="text-xl font-bold flex items-center gap-3 text-blue-800">
-                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Tag className="h-4 w-4 text-blue-600" />
-                </div>
-                基本資料
-              </h3>
+                         {/* 基本資料 */}
+             <div className="space-y-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm">
+                             <h3 className="text-lg font-bold flex items-center gap-2 text-blue-800">
+                 <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
+                   <Tag className="h-3 w-3 text-blue-600" />
+                 </div>
+                 基本資料
+               </h3>
               
-                                                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                                                                                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <FormField
                     control={form.control}
                     name="name"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-semibold text-gray-700">產品名稱 *</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="例如：茉莉綠茶香精" 
-                            className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                                             <FormItem className="space-y-2">
+                         <FormLabel className="text-sm font-semibold text-gray-700">產品名稱 *</FormLabel>
+                         <FormControl>
+                           <Input 
+                             placeholder="例如：茉莉綠茶香精" 
+                             className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                             {...field} 
+                           />
+                         </FormControl>
+                         <FormMessage />
+                       </FormItem>
                     )}
                   />
 
@@ -294,22 +300,22 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
                     control={form.control}
                     name="seriesId"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-semibold text-gray-700">所屬系列 *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                              <SelectValue placeholder="選擇一個產品系列" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {options.series.map(option => (
-                              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
+                                             <FormItem className="space-y-2">
+                         <FormLabel className="text-sm font-semibold text-gray-700">所屬系列 *</FormLabel>
+                         <Select onValueChange={field.onChange} defaultValue={field.value}>
+                           <FormControl>
+                             <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                               <SelectValue placeholder="選擇一個產品系列" />
+                             </SelectTrigger>
+                           </FormControl>
+                           <SelectContent>
+                             {options.series.map(option => (
+                               <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                             ))}
+                           </SelectContent>
+                         </Select>
+                         <FormMessage />
+                       </FormItem>
                     )}
                   />
 
@@ -317,42 +323,41 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
                     control={form.control}
                     name="nicotineMg"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-semibold text-gray-700">丁鹽濃度 (MG)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            placeholder="0"
-                            className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                                             <FormItem className="space-y-2">
+                         <FormLabel className="text-sm font-semibold text-gray-700">丁鹽濃度 (MG)</FormLabel>
+                         <FormControl>
+                           <Input 
+                             type="number" 
+                             placeholder="0"
+                             className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                             {...field} 
+                           />
+                         </FormControl>
+                         <FormMessage />
+                       </FormItem>
                     )}
                   />
 
-                  {/* 產品編號預覽（僅在新增模式下顯示） */}
-                  {!isEditMode && generatedProductNumber && (
-                    <FormItem>
-                      <FormLabel className="text-sm font-semibold text-gray-700">產品編號</FormLabel>
-                      <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md">
-                        <span className="text-sm font-mono text-gray-700">{generatedProductNumber}</span>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">4位數隨機編號，系統自動生成</p>
-                    </FormItem>
-                  )}
+                                     {/* 產品編號和代碼預覽（僅在新增模式下顯示） */}
+                   {!isEditMode && generatedProductNumber && (
+                     <>
+                       <FormItem className="space-y-2">
+                         <FormLabel className="text-sm font-semibold text-gray-700">產品編號</FormLabel>
+                         <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md">
+                           <span className="text-sm font-mono text-gray-700">{generatedProductNumber}</span>
+                         </div>
+                         <p className="text-xs text-gray-500">4位數隨機編號，系統自動生成</p>
+                       </FormItem>
 
-                  {/* 產品代碼預覽（僅在新增模式下顯示） */}
-                  {!isEditMode && generatedProductCode && (
-                    <FormItem>
-                      <FormLabel className="text-sm font-semibold text-gray-700">產品代碼預覽</FormLabel>
-                      <div className="px-3 py-2 bg-blue-50 border border-blue-300 rounded-md">
-                        <span className="text-sm font-mono text-blue-700">{generatedProductCode}</span>
-                      </div>
-                      <p className="text-xs text-blue-500 mt-1">格式：[系列類型]-[系列代號]-[隨機編號]</p>
-                    </FormItem>
-                  )}
+                       <FormItem className="space-y-2">
+                         <FormLabel className="text-sm font-semibold text-gray-700">產品代碼預覽</FormLabel>
+                         <div className="px-3 py-2 bg-blue-50 border border-blue-300 rounded-md">
+                           <span className="text-sm font-mono text-blue-700">{generatedProductCode}</span>
+                         </div>
+                         <p className="text-xs text-blue-500">格式：[系列類型]-[系列代號]-[隨機編號]</p>
+                       </FormItem>
+                     </>
+                   )}
                 </div>
             </div>
 
