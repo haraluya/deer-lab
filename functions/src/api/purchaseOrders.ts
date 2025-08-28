@@ -75,7 +75,6 @@ export const createPurchaseOrders = onCall(async (request) => {
 
 export const updatePurchaseOrderStatus = onCall(async (request) => {
   const { auth: contextAuth, data } = request;
-  // 暫時移除權限檢查
   // await ensureIsAdmin(contextAuth?.uid);
 
   // --- ** 修正點：加入明確的類型檢查 ** ---
@@ -106,7 +105,6 @@ export const updatePurchaseOrderStatus = onCall(async (request) => {
 
 export const receivePurchaseOrderItems = onCall(async (request) => {
   const { auth: contextAuth, data } = request;
-  // 暫時移除權限檢查
   // await ensureIsAdmin(contextAuth?.uid);
 
   // --- ** 修正點：加入明確的類型檢查 ** ---

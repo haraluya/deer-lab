@@ -28,8 +28,9 @@ interface FragranceData {
 }
 
 export const createFragrance = onCall<FragranceData>(async (request) => {
+  const { data, auth: contextAuth } = request;
   try {
-    const { data } = request;
+    // await ensureIsAdmin(contextAuth?.uid);
     const { code, name, fragranceType, fragranceStatus, supplierRef, safetyStockLevel, costPerUnit, percentage, pgRatio, vgRatio, description, notes, remarks, status, unit } = data;
 
     // 驗證必要欄位
@@ -68,14 +69,13 @@ export const createFragrance = onCall<FragranceData>(async (request) => {
     
     return { success: true, fragranceId: docRef.id };
   } catch (error) {
-    console.error('Error creating fragrance:', error);
+    logger.error('Error creating fragrance:', error);
     throw new HttpsError('internal', '建立香精失敗');
   }
 });
 
 export const updateFragrance = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  // 暫時移除權限檢查
   // await ensureIsAdmin(contextAuth?.uid);
   const { fragranceId, code, name, status, fragranceType, fragranceStatus, supplierId, safetyStockLevel, costPerUnit, percentage, pgRatio, vgRatio, unit } = data;
   if (!fragranceId || !code || !name) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (ID, 代號、名稱)。"); }
@@ -114,7 +114,6 @@ export const updateFragrance = onCall(async (request) => {
 
 export const updateFragranceByCode = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  // 暫時移除權限檢查
   // await ensureIsAdmin(contextAuth?.uid);
   const { code, name, status, fragranceType, fragranceStatus, supplierId, safetyStockLevel, costPerUnit, percentage, pgRatio, vgRatio, unit } = data;
   if (!code || !name) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (代號、名稱)。"); }
@@ -166,7 +165,6 @@ export const updateFragranceByCode = onCall(async (request) => {
 
 export const deleteFragrance = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  // 暫時移除權限檢查
   // await ensureIsAdmin(contextAuth?.uid);
   const { fragranceId } = data;
   if (!fragranceId) { throw new HttpsError("invalid-argument", "請求缺少 fragranceId。"); }

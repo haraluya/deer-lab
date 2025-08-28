@@ -10,7 +10,6 @@ const auth = getAuth();
 
 export const createUser = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  // 暫時移除權限檢查
   // await ensureIsAdmin(contextAuth?.uid);
   const { employeeId, password, name, roleId, phone, status } = data;
   if (!employeeId || !password || !name || !roleId || !phone || !status) { 
@@ -85,7 +84,6 @@ export const updateUser = onCall(async (request) => {
 
 export const setUserStatus = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  // 暫時移除權限檢查
   // await ensureIsAdmin(contextAuth?.uid);
   const { uid, status } = data;
   if (!uid || (status !== "active" && status !== "inactive")) { throw new HttpsError("invalid-argument", "請求缺少 UID 或狀態無效 (必須是 'active' 或 'inactive')。"); }

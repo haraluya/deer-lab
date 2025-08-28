@@ -7,8 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "deploy": "npm run build && Copy-Item -Path \"public\\*\" -Destination \".next\\\" -Recurse -Force && firebase deploy --only hosting",
-    "deploy-full": "npm run build && Copy-Item -Path \"public\\*\" -Destination \".next\\\" -Recurse -Force && Copy-Item -Path \".next\" -Destination \"functions\\\" -Recurse -Force && Copy-Item -Path \"public\\*\" -Destination \"functions\\\" -Recurse -Force && firebase deploy",
+    "lint:functions": "cd functions && npm run lint",
+    "install:functions": "cd functions && npm install",
+    "deploy": "npm run build && ncp public .next && firebase deploy --only hosting",
+    "deploy-full": "npm run build && ncp public .next && ncp .next functions && ncp public functions && firebase deploy",
     "deploy-only": "firebase deploy --only hosting"
   },
   "dependencies": {
@@ -49,6 +51,7 @@
     "autoprefixer": "^10.4.21",
     "eslint": "^8",
     "eslint-config-next": "14.2.5",
+    "ncp": "^2.0.0",
     "postcss": "^8",
     "tailwindcss": "^3.4.6",
     "tailwindcss-animate": "^1.0.7",

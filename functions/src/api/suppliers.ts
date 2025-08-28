@@ -8,7 +8,6 @@ const db = getFirestore();
 
 export const createSupplier = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  // 暫時移除權限檢查
   // await ensureIsAdmin(contextAuth?.uid);
   const { name, products, contactWindow, contactMethod, liaisonPersonId, notes } = data;
   if (!name) { 
@@ -40,7 +39,6 @@ export const createSupplier = onCall(async (request) => {
 
 export const updateSupplier = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  // 暫時移除權限檢查
   // await ensureIsAdmin(contextAuth?.uid);
   const { supplierId, name, products, contactWindow, contactMethod, liaisonPersonId, notes } = data;
   if (!supplierId || !name) { 
@@ -71,7 +69,6 @@ export const updateSupplier = onCall(async (request) => {
 
 export const deleteSupplier = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  // 暫時移除權限檢查
   // await ensureIsAdmin(contextAuth?.uid);
   const { supplierId } = data;
   if (!supplierId) { 

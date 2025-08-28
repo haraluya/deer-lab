@@ -18,7 +18,6 @@ interface StocktakeItemPayload {
  */
 export const performStocktake = onCall(async (request) => {
   const { auth: contextAuth, data } = request;
-  // 暫時移除權限檢查
   // await ensureIsAdmin(contextAuth?.uid);
 
   if (!contextAuth) {
