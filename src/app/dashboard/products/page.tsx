@@ -44,6 +44,7 @@ function ProductsPageContent() {
   const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ProductWithDetails | null>(null);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
+  const [isBatchDeleteOpen, setIsBatchDeleteOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredProducts, setFilteredProducts] = useState<ProductWithDetails[]>([]);
   const [selectedProductTypes, setSelectedProductTypes] = useState<Set<string>>(new Set());
@@ -204,6 +205,33 @@ function ProductsPageContent() {
     }
   };
 
+  const handleBatchDelete = async () => {
+    if (selectedProducts.size === 0) return;
+    const toastId = toast.loading(`正在刪除 ${selectedProducts.size} 個產品...`);
+    try {
+      const functions = getFunctions();
+      const deleteProduct = httpsCallable(functions, 'deleteProduct');
+      
+      const deletePromises = Array.from(selectedProducts).map(productId => 
+        deleteProduct({ productId })
+      );
+      
+      await Promise.all(deletePromises);
+      toast.success(`已成功刪除 ${selectedProducts.size} 個產品。`, { id: toastId });
+      setSelectedProducts(new Set());
+      loadData();
+    } catch (error) {
+      console.error("批次刪除產品失敗:", error);
+      let errorMessage = "批次刪除產品時發生錯誤。";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      toast.error(errorMessage, { id: toastId });
+    } finally {
+      setIsBatchDeleteOpen(false);
+    }
+  };
+
   // 匯入/匯出處理函式
   const handleImport = async (data: any[]) => {
     const functions = getFunctions();
@@ -244,6 +272,18 @@ function ProductsPageContent() {
 
       {/* 手機版功能按鈕區域 */}
       <div className="lg:hidden mb-6">
+        {selectedProducts.size > 0 && (
+          <div className="mb-3">
+            <Button 
+              variant="destructive" 
+              onClick={() => setIsBatchDeleteOpen(true)}
+              className="w-full bg-red-600 hover:bg-red-700 text-white"
+            >
+              <Package className="mr-2 h-4 w-4" />
+              批次刪除 ({selectedProducts.size} 個產品)
+            </Button>
+          </div>
+        )}
         <div className="grid grid-cols-3 gap-3">
           <Button 
             variant="outline" 
@@ -270,6 +310,16 @@ function ProductsPageContent() {
       {/* 桌面版功能按鈕區域 */}
       <div className="hidden lg:block mb-6">
         <div className="flex flex-wrap items-center gap-2 justify-end">
+          {selectedProducts.size > 0 && (
+            <Button 
+              variant="destructive" 
+              onClick={() => setIsBatchDeleteOpen(true)}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              <Package className="mr-2 h-4 w-4" />
+              批次刪除 ({selectedProducts.size})
+            </Button>
+          )}
           <Button 
             variant="outline" 
             onClick={handleSeriesManagement}
@@ -517,17 +567,20 @@ function ProductsPageContent() {
                 filteredProducts.map((product) => (
                   <TableRow 
                     key={product.id} 
-                    className="hover:bg-purple-50/50 transition-colors duration-200 cursor-pointer"
-                    onClick={() => handleViewDetail(product)}
+                    className="hover:bg-purple-50/50 transition-colors duration-200"
                   >
                     <TableCell className="text-center">
                       <Checkbox
                         checked={selectedProducts.has(product.id)}
                         onCheckedChange={(checked) => handleSelectProduct(product.id, checked as boolean)}
+                        onClick={(e) => e.stopPropagation()}
                       />
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-3">
+                      <div 
+                        className="flex items-center gap-3 cursor-pointer"
+                        onClick={() => handleViewDetail(product)}
+                      >
                         <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center">
                           <Package className="h-5 w-5 text-white" />
                         </div>
@@ -632,6 +685,14 @@ function ProductsPageContent() {
           description={`您確定要永久刪除產品「${selectedProduct.name}」嗎？此操作無法復原。`}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={isBatchDeleteOpen}
+        onOpenChange={setIsBatchDeleteOpen}
+        onConfirm={handleBatchDelete}
+        title={`確認批次刪除`}
+        description={`您確定要永久刪除選中的 ${selectedProducts.size} 個產品嗎？此操作無法復原。`}
+      />
 
       <FragranceChangeDialog
         isOpen={isFragranceDialogOpen}
