@@ -425,17 +425,7 @@ function ProductsPageContent() {
                           </div>
                           <span className="text-sm text-gray-700">{product.fragranceName}</span>
                         </div>
-                        <div>
-                          <div className="flex items-center gap-1 mb-1">
-                            <span className="text-gray-500">狀態</span>
-                          </div>
-                          <Badge 
-                            variant={product.status === 'active' ? 'default' : 'secondary'}
-                            className={product.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}
-                          >
-                            {product.status === 'active' ? '啟用' : '停用'}
-                          </Badge>
-                        </div>
+
                         <div>
                           <div className="flex items-center gap-1 mb-1">
                             <Calendar className="h-3 w-3 text-muted-foreground" />
@@ -506,7 +496,6 @@ function ProductsPageContent() {
                 <TableHead className="text-left">產品資訊</TableHead>
                 <TableHead className="text-left">系列</TableHead>
                 <TableHead className="text-left">香精</TableHead>
-                <TableHead className="text-left">狀態</TableHead>
                 <TableHead className="text-left">建立時間</TableHead>
                 <TableHead className="text-right">操作</TableHead>
               </TableRow>
@@ -514,7 +503,7 @@ function ProductsPageContent() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-16">
+                  <TableCell colSpan={6} className="text-center py-16">
                     <div className="flex flex-col items-center justify-center">
                       <div className="relative">
                         <div className="w-12 h-12 border-4 border-purple-200 rounded-full animate-spin"></div>
@@ -554,14 +543,7 @@ function ProductsPageContent() {
                     <TableCell>
                       <span className="text-sm font-medium text-foreground">{product.fragranceName}</span>
                     </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={product.status === 'active' ? 'default' : 'secondary'}
-                        className={product.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}
-                      >
-                        {product.status === 'active' ? '啟用' : '停用'}
-                      </Badge>
-                    </TableCell>
+
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-gray-400" />
@@ -609,7 +591,7 @@ function ProductsPageContent() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-16">
+                  <TableCell colSpan={6} className="text-center py-16">
                     <div className="flex flex-col items-center justify-center">
                       <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
                         <Package className="h-8 w-8 text-muted-foreground" />

@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { collection, getDocs, DocumentReference, DocumentData, query, where } from 'firebase/firestore';
+import { collection, getDocs, DocumentReference, DocumentData, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
 
@@ -24,9 +24,8 @@ const formSchema = z.object({
   seriesId: z.string({ required_error: '必須選擇一個產品系列' }),
   fragranceId: z.string({ required_error: '必須選擇一個香精' }),
   nicotineMg: z.coerce.number().min(0, { message: '尼古丁濃度不能為負數' }).default(0),
-  concentration: z.coerce.number().min(0, { message: '濃度不能為負數' }).default(0),
+  targetProduction: z.coerce.number().min(0.1, { message: '目標產量至少需要 0.1 KG' }).default(1),
   specificMaterialIds: z.array(z.string()).optional().default([]),
-  status: z.enum(['active', 'inactive']),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -36,12 +35,12 @@ export interface ProductData extends DocumentData {
   id: string;
   name: string;
   code: string;
+  productNumber: string;
   seriesRef: DocumentReference;
   currentFragranceRef: DocumentReference;
   specificMaterials: DocumentReference[];
   nicotineMg: number;
-  concentration: number;
-  status: 'active' | 'inactive';
+  targetProduction: number;
 }
 
 // 下拉選單選項的介面
@@ -61,6 +60,8 @@ interface ProductDialogProps {
 export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productData }: ProductDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [options, setOptions] = useState<SelectOptions>({ series: [], fragrances: [], materials: [] });
+  const [selectedFragrance, setSelectedFragrance] = useState<any>(null);
+  const [fragranceFormula, setFragranceFormula] = useState({ percentage: 0, pgRatio: 0, vgRatio: 0 });
   const isEditMode = !!productData;
 
   const form = useForm<FormData>({
@@ -70,9 +71,8 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
       seriesId: undefined,
       fragranceId: undefined,
       nicotineMg: 0,
-      concentration: 0,
+      targetProduction: 1,
       specificMaterialIds: [],
-      status: 'active',
     },
   });
 
@@ -86,7 +86,7 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
           }
           // 查詢所有系列、啟用中的香精、啟用中的物料
           const seriesQuery = getDocs(collection(db, 'productSeries'));
-          const fragrancesQuery = getDocs(query(collection(db, 'fragrances'), where('status', '==', 'active')));
+          const fragrancesQuery = getDocs(query(collection(db, 'fragrances'), where('fragranceStatus', '==', '啟用')));
           const materialsQuery = getDocs(collection(db, 'materials'));
 
           const [seriesSnapshot, fragrancesSnapshot, materialsSnapshot] = await Promise.all([seriesQuery, fragrancesQuery, materialsQuery]);
@@ -105,6 +105,30 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
     }
   }, [isOpen]);
 
+  // 當香精選擇改變時，獲取香精配方資訊
+  const handleFragranceChange = async (fragranceId: string) => {
+    if (!fragranceId) {
+      setSelectedFragrance(null);
+      setFragranceFormula({ percentage: 0, pgRatio: 0, vgRatio: 0 });
+      return;
+    }
+
+    try {
+      const fragranceDoc = await getDoc(doc(db, 'fragrances', fragranceId));
+      if (fragranceDoc.exists()) {
+        const fragranceData = fragranceDoc.data();
+        setSelectedFragrance(fragranceData);
+        setFragranceFormula({
+          percentage: fragranceData.percentage || 0,
+          pgRatio: fragranceData.pgRatio || 0,
+          vgRatio: fragranceData.vgRatio || 0,
+        });
+      }
+    } catch (error) {
+      console.error('獲取香精配方失敗:', error);
+    }
+  };
+
   // 當處於編輯模式時，用傳入的 productData 填充表單
   useEffect(() => {
     if (isOpen && productData) {
@@ -113,19 +137,22 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
         seriesId: productData.seriesRef?.id || undefined,
         fragranceId: productData.currentFragranceRef?.id || undefined,
         nicotineMg: productData.nicotineMg || 0,
-        concentration: productData.concentration || 0,
+        targetProduction: productData.targetProduction || 1,
         specificMaterialIds: productData.specificMaterials?.map(ref => ref.id) || [],
-        status: productData.status || 'active',
       });
+      
+      // 如果編輯模式，載入香精配方資訊
+      if (productData.currentFragranceRef?.id) {
+        handleFragranceChange(productData.currentFragranceRef.id);
+      }
     } else if (isOpen && !productData) {
       form.reset({
         name: '',
         seriesId: undefined,
         fragranceId: undefined,
         nicotineMg: 0,
-        concentration: 0,
+        targetProduction: 1,
         specificMaterialIds: [],
-        status: 'active',
       });
     }
   }, [isOpen, productData, form]);
@@ -183,161 +210,209 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
                 基本資料
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-semibold text-gray-700">產品名稱 *</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="例如：茉莉綠茶香精" 
-                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <FormField
+                   control={form.control}
+                   name="name"
+                   render={({ field }) => (
+                     <FormItem>
+                       <FormLabel className="text-sm font-semibold text-gray-700">產品名稱 *</FormLabel>
+                       <FormControl>
+                         <Input 
+                           placeholder="例如：茉莉綠茶香精" 
+                           className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                           {...field} 
+                         />
+                       </FormControl>
+                       <FormMessage />
+                     </FormItem>
+                   )}
+                 />
 
-                <FormField
-                  control={form.control}
-                  name="nicotineMg"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-semibold text-gray-700">尼古丁濃度 (mg)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="0"
-                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                 <FormField
+                   control={form.control}
+                   name="seriesId"
+                   render={({ field }) => (
+                     <FormItem>
+                       <FormLabel className="text-sm font-semibold text-gray-700">所屬系列 *</FormLabel>
+                       <Select onValueChange={field.onChange} defaultValue={field.value}>
+                         <FormControl>
+                           <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                             <SelectValue placeholder="選擇一個產品系列" />
+                           </SelectTrigger>
+                         </FormControl>
+                         <SelectContent>
+                           {options.series.map(option => (
+                             <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                           ))}
+                         </SelectContent>
+                       </Select>
+                       <FormMessage />
+                     </FormItem>
+                   )}
+                 />
 
-                <FormField
-                  control={form.control}
-                  name="concentration"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-semibold text-gray-700">濃度 (MG)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="0"
-                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="seriesId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-semibold text-gray-700">所屬系列 *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isEditMode}>
-                        <FormControl>
-                          <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                            <SelectValue placeholder="選擇一個產品系列" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {options.series.map(option => (
-                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-semibold text-gray-700">狀態 *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                            <SelectValue placeholder="設定狀態" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="active">啟用中</SelectItem>
-                          <SelectItem value="inactive">已停用</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                 <FormField
+                   control={form.control}
+                   name="nicotineMg"
+                   render={({ field }) => (
+                     <FormItem>
+                       <FormLabel className="text-sm font-semibold text-gray-700">丁鹽濃度 (MG)</FormLabel>
+                       <FormControl>
+                         <Input 
+                           type="number" 
+                           placeholder="0"
+                           className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                           {...field} 
+                         />
+                       </FormControl>
+                       <FormMessage />
+                     </FormItem>
+                   )}
+                 />
+               </div>
             </div>
 
-            {/* 配方設定 */}
-            <div className="space-y-6 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200 shadow-sm">
-              <h3 className="text-xl font-bold flex items-center gap-3 text-green-800">
-                <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                  <FlaskConical className="h-4 w-4 text-green-600" />
-                </div>
-                配方設定
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="fragranceId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-semibold text-gray-700">專屬香精 *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="border-gray-300 focus:border-green-500 focus:ring-green-500">
-                            <SelectValue placeholder="選擇一個香精" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {options.fragrances.map(option => (
-                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                         {/* 使用香精 */}
+             <div className="space-y-6 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200 shadow-sm">
+               <h3 className="text-xl font-bold flex items-center gap-3 text-green-800">
+                 <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                   <FlaskConical className="h-4 w-4 text-green-600" />
+                 </div>
+                 使用香精
+               </h3>
+               
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <FormField
+                   control={form.control}
+                   name="fragranceId"
+                   render={({ field }) => (
+                     <FormItem>
+                       <FormLabel className="text-sm font-semibold text-gray-700">選擇香精 *</FormLabel>
+                       <Select 
+                         onValueChange={(value) => {
+                           field.onChange(value);
+                           handleFragranceChange(value);
+                         }} 
+                         defaultValue={field.value}
+                       >
+                         <FormControl>
+                           <SelectTrigger className="border-gray-300 focus:border-green-500 focus:ring-green-500">
+                             <SelectValue placeholder="選擇一個香精" />
+                           </SelectTrigger>
+                         </FormControl>
+                         <SelectContent>
+                           {options.fragrances.map(option => (
+                             <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                           ))}
+                         </SelectContent>
+                       </Select>
+                       <FormMessage />
+                     </FormItem>
+                   )}
+                 />
 
-                <FormField
-                  control={form.control}
-                  name="specificMaterialIds"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-semibold text-gray-700">專屬材料</FormLabel>
-                      <MultiSelect
-                        options={options.materials}
-                        selected={field.value || []}
-                        onChange={field.onChange}
-                        placeholder="選擇專屬材料..."
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
+                 <FormField
+                   control={form.control}
+                   name="targetProduction"
+                   render={({ field }) => (
+                     <FormItem>
+                       <FormLabel className="text-sm font-semibold text-gray-700">產品目標產量 (KG)</FormLabel>
+                       <FormControl>
+                         <Input 
+                           type="number" 
+                           step="0.1"
+                           placeholder="1"
+                           className="border-gray-300 focus:border-green-500 focus:ring-green-500"
+                           {...field} 
+                         />
+                       </FormControl>
+                       <FormMessage />
+                     </FormItem>
+                   )}
+                 />
+               </div>
+
+               {/* 香精資訊顯示 */}
+               {selectedFragrance && (
+                 <div className="bg-white rounded-lg p-4 border border-green-200">
+                   <h4 className="font-semibold text-green-800 mb-3">香精配方資訊</h4>
+                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                     <div>
+                       <span className="text-gray-600">香精名稱：</span>
+                       <span className="font-medium">{selectedFragrance.name}</span>
+                     </div>
+                     <div>
+                       <span className="text-gray-600">香精代號：</span>
+                       <span className="font-medium">{selectedFragrance.code}</span>
+                     </div>
+                     <div>
+                       <span className="text-gray-600">香精比例：</span>
+                       <span className="font-medium">{fragranceFormula.percentage}%</span>
+                     </div>
+                     <div>
+                       <span className="text-gray-600">PG比例：</span>
+                       <span className="font-medium">{fragranceFormula.pgRatio}%</span>
+                     </div>
+                     <div>
+                       <span className="text-gray-600">VG比例：</span>
+                       <span className="font-medium">{fragranceFormula.vgRatio}%</span>
+                     </div>
+                     <div>
+                       <span className="text-gray-600">目標產量：</span>
+                       <span className="font-medium">{form.watch('targetProduction')} KG</span>
+                     </div>
+                     <div>
+                       <span className="text-gray-600">需要香精：</span>
+                       <span className="font-medium text-green-600">
+                         {((form.watch('targetProduction') || 1) * (fragranceFormula.percentage / 100)).toFixed(2)} KG
+                       </span>
+                     </div>
+                     <div>
+                       <span className="text-gray-600">需要PG：</span>
+                       <span className="font-medium text-blue-600">
+                         {((form.watch('targetProduction') || 1) * (fragranceFormula.pgRatio / 100)).toFixed(2)} KG
+                       </span>
+                     </div>
+                     <div>
+                       <span className="text-gray-600">需要VG：</span>
+                       <span className="font-medium text-purple-600">
+                         {((form.watch('targetProduction') || 1) * (fragranceFormula.vgRatio / 100)).toFixed(2)} KG
+                       </span>
+                     </div>
+                   </div>
+                 </div>
+               )}
+             </div>
+
+             {/* 專屬材料 */}
+             <div className="space-y-6 p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200 shadow-sm">
+               <h3 className="text-xl font-bold flex items-center gap-3 text-purple-800">
+                 <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                   <Package className="h-4 w-4 text-purple-600" />
+                 </div>
+                 專屬材料
+               </h3>
+               
+               <div className="grid grid-cols-1 gap-6">
+                 <FormField
+                   control={form.control}
+                   name="specificMaterialIds"
+                   render={({ field }) => (
+                     <FormItem>
+                       <FormLabel className="text-sm font-semibold text-gray-700">選擇專屬材料</FormLabel>
+                       <MultiSelect
+                         options={options.materials}
+                         selected={field.value || []}
+                         onChange={field.onChange}
+                         placeholder="選擇該產品專屬使用的材料..."
+                       />
+                       <FormMessage />
+                     </FormItem>
+                   )}
+                 />
+               </div>
+             </div>
 
             <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
               <Button

@@ -9,14 +9,37 @@ const db = getFirestore();
 export const createProduct = onCall(async (request) => {
   const { auth: contextAuth, data } = request;
   // await ensureCanManageProducts(contextAuth?.uid);
-  const { name, seriesId, fragranceId, nicotineMg, concentration, specificMaterialIds, status } = data;
-  if (!name || !seriesId || !fragranceId || !status) { throw new HttpsError("invalid-argument", "請求缺少產品名稱、系列、香精或狀態。"); }
+  const { name, seriesId, fragranceId, nicotineMg, targetProduction, specificMaterialIds } = data;
+  if (!name || !seriesId || !fragranceId) { throw new HttpsError("invalid-argument", "請求缺少產品名稱、系列或香精。"); }
   const seriesRef = db.doc(`productSeries/${seriesId}`);
   const seriesDoc = await seriesRef.get();
   if (!seriesDoc.exists) { throw new HttpsError("not-found", "指定的產品系列不存在"); }
   const seriesData = seriesDoc.data();
   const seriesCode = seriesData?.code;
   const productType = seriesData?.productType;
+  // 生成產品編號（4位數字，確保不重複）
+  const generateProductNumber = async (seriesId: string): Promise<string> => {
+    const maxAttempts = 100;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const randomNumber = Math.floor(1000 + Math.random() * 9000); // 1000-9999
+      const productNumber = String(randomNumber);
+      
+      // 檢查該系列中是否已存在此編號
+      const existingProduct = await db.collection('products')
+        .where('seriesRef', '==', seriesRef)
+        .where('productNumber', '==', productNumber)
+        .limit(1)
+        .get();
+      
+      if (existingProduct.empty) {
+        return productNumber;
+      }
+    }
+    throw new HttpsError("internal", "無法生成唯一的產品編號，請重試。");
+  };
+
+  const productNumber = await generateProductNumber(seriesId);
+  
   const productCode = await db.runTransaction(async (transaction) => {
     const counterRef = db.doc(`counters/product_${seriesId}`);
     const counterDoc = await transaction.get(counterRef);
@@ -28,19 +51,36 @@ export const createProduct = onCall(async (request) => {
   });
   const fragranceRef = db.doc(`fragrances/${fragranceId}`);
   const materialRefs = (specificMaterialIds || []).map((id: string) => db.doc(`materials/${id}`));
-  await db.collection("products").add({ name, code: productCode, seriesRef, currentFragranceRef: fragranceRef, nicotineMg: Number(nicotineMg) || 0, concentration: Number(concentration) || 0, specificMaterials: materialRefs, status, createdAt: FieldValue.serverTimestamp(), });
+  await db.collection("products").add({ 
+    name, 
+    code: productCode, 
+    productNumber,
+    seriesRef, 
+    currentFragranceRef: fragranceRef, 
+    nicotineMg: Number(nicotineMg) || 0, 
+    targetProduction: Number(targetProduction) || 1, 
+    specificMaterials: materialRefs, 
+    createdAt: FieldValue.serverTimestamp(), 
+  });
   return { success: true, code: productCode };
 });
 
 export const updateProduct = onCall(async (request) => {
   const { auth: contextAuth, data } = request;
   // await ensureCanManageProducts(contextAuth?.uid);
-  const { productId, name, fragranceId, nicotineMg, concentration, specificMaterialIds, status } = data;
+  const { productId, name, fragranceId, nicotineMg, targetProduction, specificMaterialIds } = data;
   if (!productId) { throw new HttpsError("invalid-argument", "缺少 productId"); }
   const productRef = db.doc(`products/${productId}`);
   const fragranceRef = db.doc(`fragrances/${fragranceId}`);
   const materialRefs = (specificMaterialIds || []).map((id: string) => db.doc(`materials/${id}`));
-  await productRef.update({ name, currentFragranceRef: fragranceRef, nicotineMg: Number(nicotineMg) || 0, concentration: Number(concentration) || 0, specificMaterials: materialRefs, status, updatedAt: FieldValue.serverTimestamp(), });
+  await productRef.update({ 
+    name, 
+    currentFragranceRef: fragranceRef, 
+    nicotineMg: Number(nicotineMg) || 0, 
+    targetProduction: Number(targetProduction) || 1, 
+    specificMaterials: materialRefs, 
+    updatedAt: FieldValue.serverTimestamp(), 
+  });
   return { success: true };
 });
 

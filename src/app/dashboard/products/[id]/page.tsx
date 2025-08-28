@@ -15,12 +15,13 @@ interface Product {
   id: string;
   code: string;
   name: string;
+  productNumber?: string;
   seriesRef?: DocumentReference;
   seriesName?: string;
   currentFragranceRef?: DocumentReference;
   fragranceName?: string;
   nicotineMg?: number;
-  status: 'active' | 'inactive' | 'discontinued';
+  targetProduction?: number;
   description?: string;
   notes?: string;
   createdAt: Date;
@@ -103,13 +104,13 @@ export default function ProductDetailPage() {
           id: productDoc.id,
           code: data.code,
           name: data.name,
+          productNumber: data.productNumber,
           seriesRef: data.seriesRef,
           seriesName,
           currentFragranceRef: data.currentFragranceRef,
           fragranceName,
           nicotineMg: data.nicotineMg || 0,
-          concentration: data.concentration || 0,
-          status: data.status,
+          targetProduction: data.targetProduction || 1,
           description: data.description,
           notes: data.notes,
           createdAt: data.createdAt?.toDate() || new Date(),
@@ -227,16 +228,16 @@ export default function ProductDetailPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* 產品編號 */}
-            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                <Tag className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-blue-600 font-medium">產品編號</p>
-                <p className="text-lg font-semibold text-blue-800">{product.code}</p>
-              </div>
-            </div>
+                         {/* 產品編號 */}
+             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg">
+               <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                 <Tag className="h-5 w-5 text-white" />
+               </div>
+               <div>
+                 <p className="text-sm text-blue-600 font-medium">產品編號</p>
+                 <p className="text-lg font-semibold text-blue-800">{product.productNumber || 'N/A'}</p>
+               </div>
+             </div>
 
             {/* 產品系列 */}
             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg">
@@ -301,10 +302,10 @@ export default function ProductDetailPage() {
                 <span className="text-muted-foreground">丁鹽濃度</span>
                 <span className="font-medium">{product.nicotineMg || 0} MG</span>
               </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">濃度</span>
-                <span className="font-medium">{product.concentration || 0} MG</span>
-              </div>
+                             <div className="flex justify-between items-center py-2 border-b">
+                 <span className="text-muted-foreground">目標產量</span>
+                 <span className="font-medium">{product.targetProduction || 1} KG</span>
+               </div>
             </div>
           </CardContent>
         </Card>
