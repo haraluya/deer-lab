@@ -359,40 +359,42 @@ function FragrancesPageContent() {
               }
             }
             
-            // 處理香精種類（從中文轉換為英文）
+            // 處理香精種類（保持中文，不轉換為英文）
             let fragranceType = item.fragranceType;
             if (fragranceType) {
+              // 如果輸入的是英文，轉換為中文
               switch (fragranceType) {
-                case '棉芯':
-                  fragranceType = 'cotton';
+                case 'cotton':
+                  fragranceType = '棉芯';
                   break;
-                case '陶瓷芯':
-                  fragranceType = 'ceramic';
+                case 'ceramic':
+                  fragranceType = '陶瓷芯';
                   break;
-                case '棉陶芯通用':
-                  fragranceType = 'universal';
+                case 'universal':
+                  fragranceType = '棉陶芯通用';
                   break;
                 default:
-                  // 如果已經是英文，保持不變
+                  // 如果已經是中文，保持不變
                   break;
               }
             }
 
-            // 處理啟用狀態（從中文轉換為英文）
+            // 處理啟用狀態（保持中文，不轉換為英文）
             let fragranceStatus = item.fragranceStatus;
             if (fragranceStatus) {
+              // 如果輸入的是英文，轉換為中文
               switch (fragranceStatus) {
-                case '啟用':
-                  fragranceStatus = 'active';
+                case 'active':
+                  fragranceStatus = '啟用';
                   break;
-                case '備用':
-                  fragranceStatus = 'standby';
+                case 'standby':
+                  fragranceStatus = '備用';
                   break;
-                case '棄用':
-                  fragranceStatus = 'discontinued';
+                case 'discontinued':
+                  fragranceStatus = '棄用';
                   break;
                 default:
-                  // 如果已經是英文，保持不變
+                  // 如果已經是中文，保持不變
                   break;
               }
             }
@@ -469,7 +471,7 @@ function FragrancesPageContent() {
 
   const handleExport = async () => {
     return fragrances.map(fragrance => {
-      // 將英文的香精種類轉換為中文
+      // 將英文的香精種類轉換為中文（如果資料庫中還是英文的話）
       const getFragranceTypeText = (type: string) => {
         switch (type) {
           case 'cotton':
@@ -479,11 +481,11 @@ function FragrancesPageContent() {
           case 'universal':
             return '棉陶芯通用';
           default:
-            return type;
+            return type; // 如果已經是中文，直接返回
         }
       };
 
-      // 將英文的啟用狀態轉換為中文
+      // 將英文的啟用狀態轉換為中文（如果資料庫中還是英文的話）
       const getFragranceStatusText = (status: string) => {
         switch (status) {
           case 'active':
@@ -493,7 +495,7 @@ function FragrancesPageContent() {
           case 'discontinued':
             return '棄用';
           default:
-            return status;
+            return status; // 如果已經是中文，直接返回
         }
       };
 
@@ -669,15 +671,15 @@ function FragrancesPageContent() {
             const isSelected = selectedFragranceTypes.has(type);
             const getTypeColor = (type: string) => {
               switch (type) {
-                case 'cotton':
+                case '棉芯':
                   return isSelected 
                     ? "bg-blue-600 hover:bg-blue-700 text-white" 
                     : "bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300";
-                case 'ceramic':
+                case '陶瓷芯':
                   return isSelected 
                     ? "bg-green-600 hover:bg-green-700 text-white" 
                     : "bg-green-100 hover:bg-green-200 text-green-800 border-green-300";
-                case 'universal':
+                case '棉陶芯通用':
                   return isSelected 
                     ? "bg-purple-600 hover:bg-purple-700 text-white" 
                     : "bg-purple-100 hover:bg-purple-200 text-purple-800 border-purple-300";
@@ -705,7 +707,7 @@ function FragrancesPageContent() {
                   });
                 }}
               >
-                {type === 'cotton' ? '棉芯' : type === 'ceramic' ? '陶瓷芯' : type === 'universal' ? '棉陶芯通用' : type}
+                {type}
               </Badge>
             );
           })}
