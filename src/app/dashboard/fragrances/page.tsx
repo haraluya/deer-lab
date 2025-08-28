@@ -404,13 +404,13 @@ function FragrancesPageContent() {
               }
             }
 
-            // 處理數值欄位，四捨五入到小數點第二位
+            // 處理數值欄位
             const percentage = item.percentage ? roundToTwoDecimals(Number(item.percentage)) : 0;
-            const pgRatio = item.pgRatio ? roundToTwoDecimals(Number(item.pgRatio)) : 0;
-            const vgRatio = item.vgRatio ? roundToTwoDecimals(Number(item.vgRatio)) : 0;
-            const currentStock = item.currentStock ? roundToTwoDecimals(Number(item.currentStock)) : 0;
-            const safetyStockLevel = item.safetyStockLevel ? roundToTwoDecimals(Number(item.safetyStockLevel)) : 0;
-            const costPerUnit = item.costPerUnit ? roundToTwoDecimals(Number(item.costPerUnit)) : 0;
+            let pgRatio = item.pgRatio ? roundToTwoDecimals(Number(item.pgRatio)) : 0;
+            let vgRatio = item.vgRatio ? roundToTwoDecimals(Number(item.vgRatio)) : 0;
+            const currentStock = item.currentStock ? Number(item.currentStock) : 0;
+            const safetyStockLevel = item.safetyStockLevel ? Number(item.safetyStockLevel) : 0;
+            const costPerUnit = item.costPerUnit ? Number(item.costPerUnit) : 0;
             
             // 如果提供了香精比例但沒有提供 PG/VG 比例，則自動計算
             if (percentage > 0 && (pgRatio === 0 || vgRatio === 0)) {
