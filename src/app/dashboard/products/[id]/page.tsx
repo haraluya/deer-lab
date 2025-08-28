@@ -44,6 +44,7 @@ export default function ProductDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [targetProduction, setTargetProduction] = useState<number>(1);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -131,7 +132,7 @@ export default function ProductDetailPage() {
           }
         }
 
-        setProduct({
+        const productData = {
           id: productDoc.id,
           code: data.code,
           name: data.name,
@@ -151,7 +152,10 @@ export default function ProductDetailPage() {
           createdAt: data.createdAt?.toDate() || new Date(),
           createdBy: data.createdBy,
           createdByName,
-        });
+        };
+        
+        setProduct(productData);
+        setTargetProduction(data.targetProduction || 1);
       } catch (error) {
         console.error('Failed to fetch product:', error);
         setError('讀取產品資料失敗');
@@ -367,68 +371,85 @@ export default function ProductDetailPage() {
          </Card>
        </div>
 
-       {/* 使用香精 */}
-       <Card className="mt-6 border-0 shadow-lg bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
-         <CardHeader>
-           <CardTitle className="text-lg text-green-700">使用香精</CardTitle>
-         </CardHeader>
-         <CardContent className="space-y-4">
-           {product.fragranceName && product.fragranceName !== '未指定' ? (
-             <div className="bg-white rounded-lg p-4 border border-green-200">
-               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                 <div>
-                   <span className="text-gray-600 text-sm">香精名稱：</span>
-                   <div className="font-medium text-green-800">{product.fragranceName}</div>
-                 </div>
-                 <div>
-                   <span className="text-gray-600 text-sm">香精代號：</span>
-                   <div className="font-medium text-green-800">{product.fragranceCode || 'N/A'}</div>
-                 </div>
-                 <div>
-                   <span className="text-gray-600 text-sm">香精比例：</span>
-                   <div className="font-medium text-green-600">{product.fragranceFormula?.percentage || 0}%</div>
-                 </div>
-                 <div>
-                   <span className="text-gray-600 text-sm">PG比例：</span>
-                   <div className="font-medium text-blue-600">{product.fragranceFormula?.pgRatio || 0}%</div>
-                 </div>
-                 <div>
-                   <span className="text-gray-600 text-sm">VG比例：</span>
-                   <div className="font-medium text-purple-600">{product.fragranceFormula?.vgRatio || 0}%</div>
-                 </div>
-                 <div>
-                   <span className="text-gray-600 text-sm">目標產量：</span>
-                   <div className="font-medium">{product.targetProduction || 1} KG</div>
-                 </div>
-                 <div>
-                   <span className="text-gray-600 text-sm">需要香精：</span>
-                   <div className="font-medium text-green-600">
-                     {((product.targetProduction || 1) * ((product.fragranceFormula?.percentage || 0) / 100)).toFixed(2)} KG
-                   </div>
-                 </div>
-                 <div>
-                   <span className="text-gray-600 text-sm">需要PG：</span>
-                   <div className="font-medium text-blue-600">
-                     {((product.targetProduction || 1) * ((product.fragranceFormula?.pgRatio || 0) / 100)).toFixed(2)} KG
-                   </div>
-                 </div>
-                 <div>
-                   <span className="text-gray-600 text-sm">需要VG：</span>
-                   <div className="font-medium text-purple-600">
-                     {((product.targetProduction || 1) * ((product.fragranceFormula?.vgRatio || 0) / 100)).toFixed(2)} KG
-                   </div>
-                 </div>
-               </div>
-             </div>
-           ) : (
-             <div className="text-center py-8">
-               <div className="text-muted-foreground">
-                 尚未選擇香精
-               </div>
-             </div>
-           )}
-         </CardContent>
-       </Card>
+               {/* 使用香精 */}
+        <Card className="mt-6 border-0 shadow-lg bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+          <CardHeader>
+            <CardTitle className="text-lg text-green-700">使用香精</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {product.fragranceName && product.fragranceName !== '未指定' ? (
+              <div className="bg-white rounded-lg p-4 border border-green-200">
+                {/* 目標產量輸入 */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    產品目標產量 (KG)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    value={targetProduction}
+                    onChange={(e) => setTargetProduction(Number(e.target.value) || 1)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="輸入目標產量"
+                  />
+                </div>
+                
+                {/* 配方計算結果 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div>
+                    <span className="text-gray-600 text-sm">香精名稱：</span>
+                    <div className="font-medium text-green-800">{product.fragranceName}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 text-sm">香精代號：</span>
+                    <div className="font-medium text-green-800">{product.fragranceCode || 'N/A'}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 text-sm">香精比例：</span>
+                    <div className="font-medium text-green-600">{product.fragranceFormula?.percentage || 0}%</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 text-sm">PG比例：</span>
+                    <div className="font-medium text-blue-600">{product.fragranceFormula?.pgRatio || 0}%</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 text-sm">VG比例：</span>
+                    <div className="font-medium text-purple-600">{product.fragranceFormula?.vgRatio || 0}%</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 text-sm">目標產量：</span>
+                    <div className="font-medium">{targetProduction} KG</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 text-sm">需要香精：</span>
+                    <div className="font-medium text-green-600">
+                      {(targetProduction * ((product.fragranceFormula?.percentage || 0) / 100)).toFixed(2)} KG
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 text-sm">需要PG：</span>
+                    <div className="font-medium text-blue-600">
+                      {(targetProduction * ((product.fragranceFormula?.pgRatio || 0) / 100)).toFixed(2)} KG
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 text-sm">需要VG：</span>
+                    <div className="font-medium text-purple-600">
+                      {(targetProduction * ((product.fragranceFormula?.vgRatio || 0) / 100)).toFixed(2)} KG
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-muted-foreground">
+                  尚未選擇香精
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
       {/* 描述和備註 */}
       {(product.description || product.notes) && (

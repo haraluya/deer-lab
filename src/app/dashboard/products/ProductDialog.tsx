@@ -24,7 +24,6 @@ const formSchema = z.object({
   seriesId: z.string({ required_error: '必須選擇一個產品系列' }),
   fragranceId: z.string({ required_error: '必須選擇一個香精' }),
   nicotineMg: z.coerce.number().min(0, { message: '尼古丁濃度不能為負數' }).default(0),
-  targetProduction: z.coerce.number().min(0.1, { message: '目標產量至少需要 0.1 KG' }).default(1),
   specificMaterialIds: z.array(z.string()).optional().default([]),
 });
 
@@ -40,7 +39,6 @@ export interface ProductData extends DocumentData {
   currentFragranceRef: DocumentReference;
   specificMaterials: DocumentReference[];
   nicotineMg: number;
-  targetProduction: number;
 }
 
 // 下拉選單選項的介面
@@ -71,7 +69,6 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
       seriesId: undefined,
       fragranceId: undefined,
       nicotineMg: 0,
-      targetProduction: 1,
       specificMaterialIds: [],
     },
   });
@@ -93,7 +90,10 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
           
           setOptions({
             series: seriesSnapshot.docs.map(doc => ({ value: doc.id, label: doc.data().name })),
-            fragrances: fragrancesSnapshot.docs.map(doc => ({ value: doc.id, label: doc.data().name })),
+            fragrances: fragrancesSnapshot.docs.map(doc => ({ 
+              value: doc.id, 
+              label: `${doc.data().code}(${doc.data().name})` 
+            })),
             materials: materialsSnapshot.docs.map(doc => ({ value: doc.id, label: doc.data().name })),
           });
         } catch (error) {
@@ -137,7 +137,6 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
         seriesId: productData.seriesRef?.id || undefined,
         fragranceId: productData.currentFragranceRef?.id || undefined,
         nicotineMg: productData.nicotineMg || 0,
-        targetProduction: productData.targetProduction || 1,
         specificMaterialIds: productData.specificMaterials?.map(ref => ref.id) || [],
       });
       
@@ -151,7 +150,6 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
         seriesId: undefined,
         fragranceId: undefined,
         nicotineMg: 0,
-        targetProduction: 1,
         specificMaterialIds: [],
       });
     }
@@ -282,107 +280,65 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
                  使用香精
                </h3>
                
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <FormField
-                   control={form.control}
-                   name="fragranceId"
-                   render={({ field }) => (
-                     <FormItem>
-                       <FormLabel className="text-sm font-semibold text-gray-700">選擇香精 *</FormLabel>
-                       <Select 
-                         onValueChange={(value) => {
-                           field.onChange(value);
-                           handleFragranceChange(value);
-                         }} 
-                         defaultValue={field.value}
-                       >
-                         <FormControl>
-                           <SelectTrigger className="border-gray-300 focus:border-green-500 focus:ring-green-500">
-                             <SelectValue placeholder="選擇一個香精" />
-                           </SelectTrigger>
-                         </FormControl>
-                         <SelectContent>
-                           {options.fragrances.map(option => (
-                             <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                           ))}
-                         </SelectContent>
-                       </Select>
-                       <FormMessage />
-                     </FormItem>
-                   )}
-                 />
+                               <div className="grid grid-cols-1 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="fragranceId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-semibold text-gray-700">選擇香精 *</FormLabel>
+                        <Select 
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            handleFragranceChange(value);
+                          }} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="border-gray-300 focus:border-green-500 focus:ring-green-500">
+                              <SelectValue placeholder="選擇一個香精" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {options.fragrances.map(option => (
+                              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-                 <FormField
-                   control={form.control}
-                   name="targetProduction"
-                   render={({ field }) => (
-                     <FormItem>
-                       <FormLabel className="text-sm font-semibold text-gray-700">產品目標產量 (KG)</FormLabel>
-                       <FormControl>
-                         <Input 
-                           type="number" 
-                           step="0.1"
-                           placeholder="1"
-                           className="border-gray-300 focus:border-green-500 focus:ring-green-500"
-                           {...field} 
-                         />
-                       </FormControl>
-                       <FormMessage />
-                     </FormItem>
-                   )}
-                 />
-               </div>
-
-               {/* 香精資訊顯示 */}
-               {selectedFragrance && (
-                 <div className="bg-white rounded-lg p-4 border border-green-200">
-                   <h4 className="font-semibold text-green-800 mb-3">香精配方資訊</h4>
-                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                     <div>
-                       <span className="text-gray-600">香精名稱：</span>
-                       <span className="font-medium">{selectedFragrance.name}</span>
-                     </div>
-                     <div>
-                       <span className="text-gray-600">香精代號：</span>
-                       <span className="font-medium">{selectedFragrance.code}</span>
-                     </div>
-                     <div>
-                       <span className="text-gray-600">香精比例：</span>
-                       <span className="font-medium">{fragranceFormula.percentage}%</span>
-                     </div>
-                     <div>
-                       <span className="text-gray-600">PG比例：</span>
-                       <span className="font-medium">{fragranceFormula.pgRatio}%</span>
-                     </div>
-                     <div>
-                       <span className="text-gray-600">VG比例：</span>
-                       <span className="font-medium">{fragranceFormula.vgRatio}%</span>
-                     </div>
-                     <div>
-                       <span className="text-gray-600">目標產量：</span>
-                       <span className="font-medium">{form.watch('targetProduction')} KG</span>
-                     </div>
-                     <div>
-                       <span className="text-gray-600">需要香精：</span>
-                       <span className="font-medium text-green-600">
-                         {((form.watch('targetProduction') || 1) * (fragranceFormula.percentage / 100)).toFixed(2)} KG
-                       </span>
-                     </div>
-                     <div>
-                       <span className="text-gray-600">需要PG：</span>
-                       <span className="font-medium text-blue-600">
-                         {((form.watch('targetProduction') || 1) * (fragranceFormula.pgRatio / 100)).toFixed(2)} KG
-                       </span>
-                     </div>
-                     <div>
-                       <span className="text-gray-600">需要VG：</span>
-                       <span className="font-medium text-purple-600">
-                         {((form.watch('targetProduction') || 1) * (fragranceFormula.vgRatio / 100)).toFixed(2)} KG
-                       </span>
-                     </div>
-                   </div>
-                 </div>
-               )}
+                               {/* 香精資訊顯示 */}
+                {selectedFragrance && (
+                  <div className="bg-white rounded-lg p-4 border border-green-200">
+                    <h4 className="font-semibold text-green-800 mb-3">香精配方資訊</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-600">香精名稱：</span>
+                        <span className="font-medium">{selectedFragrance.name}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">香精代號：</span>
+                        <span className="font-medium">{selectedFragrance.code}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">香精比例：</span>
+                        <span className="font-medium text-green-600">{fragranceFormula.percentage}%</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">PG比例：</span>
+                        <span className="font-medium text-blue-600">{fragranceFormula.pgRatio}%</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">VG比例：</span>
+                        <span className="font-medium text-purple-600">{fragranceFormula.vgRatio}%</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
              </div>
 
              {/* 專屬材料 */}
