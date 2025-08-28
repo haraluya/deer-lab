@@ -40,15 +40,17 @@ export const createProduct = onCall(async (request) => {
 
   const productNumber = await generateProductNumber(seriesId);
   
-  const productCode = await db.runTransaction(async (transaction) => {
-    const counterRef = db.doc(`counters/product_${seriesId}`);
-    const counterDoc = await transaction.get(counterRef);
-    let newCount = 1;
-    if (counterDoc.exists) { newCount = (counterDoc.data()?.count || 0) + 1; }
-    transaction.set(counterRef, { count: newCount }, { merge: true });
-    const sequenceNumber = String(newCount).padStart(3, '0');
-    return `${productType}-${seriesCode}-${productNumber}`;
-  });
+  // 將產品類型名稱轉換為代碼
+  const productTypeCodeMap: { [key: string]: string } = {
+    '罐裝油(BOT)': 'BOT',
+    '一代棉芯煙彈(OMP)': 'OMP',
+    '一代陶瓷芯煙彈(OTP)': 'OTP',
+    '五代陶瓷芯煙彈(FTP)': 'FTP',
+    '其他(ETC)': 'ETC',
+  };
+  
+  const productTypeCode = productTypeCodeMap[productType] || 'ETC';
+  const productCode = `${productTypeCode}-${seriesCode}-${productNumber}`;
   const fragranceRef = db.doc(`fragrances/${fragranceId}`);
   const materialRefs = (specificMaterialIds || []).map((id: string) => db.doc(`materials/${id}`));
   await db.collection("products").add({ 

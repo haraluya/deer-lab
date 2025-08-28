@@ -363,48 +363,69 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="nicotineMg"
-                    render={({ field }) => (
-                                             <FormItem className="space-y-2">
-                         <FormLabel className="text-sm font-semibold text-gray-700">丁鹽濃度 (MG)</FormLabel>
-                         <FormControl>
-                           <Input 
-                             type="number" 
-                             placeholder="0"
-                             className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                             {...field} 
-                           />
-                         </FormControl>
-                         <FormMessage />
-                       </FormItem>
-                    )}
-                  />
-
-                                                                           {/* 產品編號和代碼預覽（僅在新增模式下顯示） */}
-                    {!isEditMode && form.watch('seriesId') && (
-                      <>
-                                                 <FormItem className="space-y-2">
-                           <FormLabel className="text-sm font-semibold text-gray-700">產品編號</FormLabel>
-                           <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md">
-                             <span className="text-sm font-mono text-gray-700">{generatedProductNumber || '載入中...'}</span>
-                           </div>
-                           <p className="text-xs text-gray-500">4位數隨機編號，系統自動生成</p>
-                           {!generatedProductNumber && (
-                             <p className="text-xs text-red-500">如果持續載入中，請重新選擇系列</p>
-                           )}
-                         </FormItem>
-
-                        <FormItem className="space-y-2">
-                          <FormLabel className="text-sm font-semibold text-gray-700">產品代碼預覽</FormLabel>
-                          <div className="px-3 py-2 bg-blue-50 border border-blue-300 rounded-md">
-                            <span className="text-sm font-mono text-blue-700">{generatedProductCode || '載入中...'}</span>
-                          </div>
-                          <p className="text-xs text-blue-500">格式：[系列類型]-[系列代號]-[隨機編號]</p>
+                                     <FormField
+                     control={form.control}
+                     name="nicotineMg"
+                     render={({ field }) => (
+                                              <FormItem className="space-y-2">
+                          <FormLabel className="text-sm font-semibold text-gray-700">丁鹽濃度 (MG)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="0"
+                              className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
                         </FormItem>
-                      </>
-                    )}
+                     )}
+                   />
+
+                   {/* 產品編號和代碼預覽（新增模式）或顯示（編輯模式） */}
+                   {!isEditMode && form.watch('seriesId') && (
+                     <>
+                       <FormItem className="space-y-2">
+                         <FormLabel className="text-sm font-semibold text-gray-700">產品編號</FormLabel>
+                         <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md">
+                           <span className="text-sm font-mono text-gray-700">{generatedProductNumber || '載入中...'}</span>
+                         </div>
+                         <p className="text-xs text-gray-500">4位數隨機編號，系統自動生成</p>
+                         {!generatedProductNumber && (
+                           <p className="text-xs text-red-500">如果持續載入中，請重新選擇系列</p>
+                         )}
+                       </FormItem>
+
+                       <FormItem className="space-y-2">
+                         <FormLabel className="text-sm font-semibold text-gray-700">產品代碼預覽</FormLabel>
+                         <div className="px-3 py-2 bg-blue-50 border border-blue-300 rounded-md">
+                           <span className="text-sm font-mono text-blue-700">{generatedProductCode || '載入中...'}</span>
+                         </div>
+                         <p className="text-xs text-blue-500">格式：[系列類型]-[系列代號]-[隨機編號]</p>
+                       </FormItem>
+                     </>
+                   )}
+
+                   {/* 編輯模式顯示產品代號（不可修改） */}
+                   {isEditMode && productData && (
+                     <>
+                       <FormItem className="space-y-2">
+                         <FormLabel className="text-sm font-semibold text-gray-700">產品編號</FormLabel>
+                         <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md">
+                           <span className="text-sm font-mono text-gray-700">{productData.productNumber || 'N/A'}</span>
+                         </div>
+                         <p className="text-xs text-gray-500">產品編號不可修改</p>
+                       </FormItem>
+
+                       <FormItem className="space-y-2">
+                         <FormLabel className="text-sm font-semibold text-gray-700">產品代號</FormLabel>
+                         <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md">
+                           <span className="text-sm font-mono text-gray-700">{productData.code || 'N/A'}</span>
+                         </div>
+                         <p className="text-xs text-gray-500">產品代號不可修改</p>
+                       </FormItem>
+                     </>
+                   )}
                 </div>
             </div>
 
