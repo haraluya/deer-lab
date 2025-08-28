@@ -138,8 +138,6 @@ export const updateFragranceByCode = onCall(async (request) => {
       code, 
       name, 
       status: finalStatus, 
-      fragranceType: finalFragranceType,
-      fragranceStatus: finalFragranceStatus,
       safetyStockLevel: Number(safetyStockLevel) || 0, 
       costPerUnit: Number(costPerUnit) || 0, 
       percentage: Number(percentage) || 0, 
@@ -148,6 +146,16 @@ export const updateFragranceByCode = onCall(async (request) => {
       unit: unit || 'KG',
       updatedAt: FieldValue.serverTimestamp(), 
     };
+    
+    // 只有當 fragranceType 有實際值時才更新
+    if (fragranceType !== undefined && fragranceType !== null && fragranceType !== '') {
+      updateData.fragranceType = fragranceType;
+    }
+    
+    // 只有當 fragranceStatus 有實際值時才更新
+    if (fragranceStatus !== undefined && fragranceStatus !== null && fragranceStatus !== '') {
+      updateData.fragranceStatus = fragranceStatus;
+    }
     
     // 如果提供了 currentStock，則更新庫存
     if (currentStock !== undefined && currentStock !== null && currentStock !== '') {

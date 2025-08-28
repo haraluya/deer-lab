@@ -417,7 +417,7 @@ function FragrancesPageContent() {
             
             // 處理香精種類（保持中文，不轉換為英文）
             let fragranceType = item.fragranceType;
-            if (fragranceType) {
+            if (fragranceType !== undefined && fragranceType !== null && fragranceType !== '') {
               // 如果輸入的是英文，轉換為中文
               switch (fragranceType) {
                 case 'cotton':
@@ -437,7 +437,7 @@ function FragrancesPageContent() {
 
             // 處理啟用狀態（保持中文，不轉換為英文）
             let fragranceStatus = item.fragranceStatus;
-            if (fragranceStatus) {
+            if (fragranceStatus !== undefined && fragranceStatus !== null && fragranceStatus !== '') {
               // 如果輸入的是英文，轉換為中文
               switch (fragranceStatus) {
                 case 'active':
@@ -507,8 +507,8 @@ function FragrancesPageContent() {
               unit: processedItem.unit
             });
 
-            // 調試日誌：檢查處理後的資料
-            console.log(`處理香精 ${item.name} 的資料:`, {
+            // 調試日誌：檢查原始和處理後的資料對比
+            console.log(`處理香精 ${item.name} 的資料對比:`, {
               originalFragranceType: item.fragranceType,
               processedFragranceType: fragranceType,
               originalFragranceStatus: item.fragranceStatus,
@@ -519,7 +519,12 @@ function FragrancesPageContent() {
               originalCurrentStock: item.currentStock,
               processedCurrentStock: currentStock,
               originalPercentage: item.percentage,
-              processedPercentage: percentage
+              processedPercentage: percentage,
+              // 添加更詳細的調試信息
+              fragranceTypeExists: !!item.fragranceType,
+              fragranceStatusExists: !!item.fragranceStatus,
+              fragranceTypeLength: item.fragranceType?.length || 0,
+              fragranceStatusLength: item.fragranceStatus?.length || 0
             });
             
             // 智能匹配邏輯：檢查香精代號是否存在
