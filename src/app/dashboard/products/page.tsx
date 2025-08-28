@@ -114,7 +114,8 @@ function ProductsPageContent() {
           product.code?.toLowerCase().includes(searchLower) ||
           product.name?.toLowerCase().includes(searchLower) ||
           product.seriesName?.toLowerCase().includes(searchLower) ||
-          product.fragranceName?.toLowerCase().includes(searchLower)
+          product.fragranceName?.toLowerCase().includes(searchLower) ||
+          product.fragranceCode?.toLowerCase().includes(searchLower)
         );
         if (!matchesSearch) return false;
       }
