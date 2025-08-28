@@ -8,7 +8,6 @@ const db = getFirestore();
 
 export const createProduct = onCall(async (request) => {
   const { auth: contextAuth, data } = request;
-  // 暫時移除權限檢查
   // await ensureCanManageProducts(contextAuth?.uid);
   const { name, seriesId, fragranceId, nicotineMg, specificMaterialIds, status } = data;
   if (!name || !seriesId || !fragranceId || !status) { throw new HttpsError("invalid-argument", "請求缺少產品名稱、系列、香精或狀態。"); }
@@ -33,7 +32,6 @@ export const createProduct = onCall(async (request) => {
 
 export const updateProduct = onCall(async (request) => {
   const { auth: contextAuth, data } = request;
-  // 暫時移除權限檢查
   // await ensureCanManageProducts(contextAuth?.uid);
   const { productId, name, fragranceId, nicotineMg, specificMaterialIds, status } = data;
   if (!productId) { throw new HttpsError("invalid-argument", "缺少 productId"); }
@@ -46,7 +44,6 @@ export const updateProduct = onCall(async (request) => {
 
 export const deleteProduct = onCall(async (request) => {
   const { auth: contextAuth, data } = request;
-  // 暫時移除權限檢查
   // await ensureCanManageProducts(contextAuth?.uid);
   const { productId } = data;
   if (!productId) { throw new HttpsError("invalid-argument", "缺少 productId"); }
@@ -56,7 +53,6 @@ export const deleteProduct = onCall(async (request) => {
 
 export const changeProductFragrance = onCall(async (request) => {
     const { auth: contextAuth, data } = request;
-    // 暫時移除權限檢查
     // await ensureCanManageProducts(contextAuth?.uid);
     const { productId, newFragranceId, reason } = data;
     if (!productId || !newFragranceId || !reason) { throw new HttpsError("invalid-argument", "請求缺少 productId, newFragranceId, 或 reason。"); }

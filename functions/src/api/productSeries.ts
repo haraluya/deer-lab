@@ -8,7 +8,6 @@ const db = getFirestore();
 
 export const createProductSeries = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  // 暫時移除權限檢查
   // await ensureIsAdmin(contextAuth?.uid);
   const { name, code, commonMaterialIds } = data;
   if (!name || !code) { throw new HttpsError("invalid-argument", "請求缺少系列名稱或系列代號。"); }
@@ -23,7 +22,6 @@ export const createProductSeries = onCall(async (request) => {
 
 export const updateProductSeries = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  // 暫時移除權限檢查
   // await ensureIsAdmin(contextAuth?.uid);
   const { seriesId, name, code, commonMaterialIds } = data;
   if (!seriesId || !name || !code) { throw new HttpsError("invalid-argument", "請求缺少系列 ID、名稱或代號。"); }
@@ -38,7 +36,6 @@ export const updateProductSeries = onCall(async (request) => {
 
 export const deleteProductSeries = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  // 暫時移除權限檢查
   // await ensureIsAdmin(contextAuth?.uid);
   const { seriesId } = data;
   if (!seriesId) { throw new HttpsError("invalid-argument", "請求缺少 seriesId。"); }

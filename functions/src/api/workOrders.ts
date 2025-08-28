@@ -19,7 +19,6 @@ interface MaterialInfo {
  */
 export const createWorkOrder = onCall(async (request) => {
   const { auth: contextAuth, data } = request;
-  // 暫時移除權限檢查
   // await ensureIsAdminOrForeman(contextAuth?.uid);
 
   if (!contextAuth) {
