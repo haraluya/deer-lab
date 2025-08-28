@@ -171,15 +171,18 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
       if (productData.currentFragranceRef?.id) {
         handleFragranceChange(productData.currentFragranceRef.id);
       }
-    } else if (isOpen && !productData) {
-      form.reset({
-        name: '',
-        seriesId: undefined,
-        fragranceId: undefined,
-        nicotineMg: 0,
-        specificMaterialIds: [],
-      });
-    }
+         } else if (isOpen && !productData) {
+       form.reset({
+         name: '',
+         seriesId: undefined,
+         fragranceId: undefined,
+         nicotineMg: 0,
+         specificMaterialIds: [],
+       });
+       // 重置產品編號和代碼預覽
+       setGeneratedProductNumber('');
+       setGeneratedProductCode('');
+     }
   }, [isOpen, productData, form]);
 
   // 點擊外部關閉下拉選單
@@ -204,8 +207,12 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
   // 當系列選擇改變時，預覽產品代碼
   useEffect(() => {
     const seriesId = form.watch('seriesId');
+    console.log('系列選擇改變:', { seriesId, isEditMode, seriesInfoLength: seriesInfo.length }); // 調試用
+    
     if (seriesId && !isEditMode) {
       const selectedSeriesInfo = seriesInfo.find(s => s.id === seriesId);
+      console.log('找到的系列信息:', selectedSeriesInfo); // 調試用
+      
       if (selectedSeriesInfo && selectedSeriesInfo.productType) {
         // 生成隨機4位數編號
         const randomNumber = Math.floor(1000 + Math.random() * 9000);
@@ -213,10 +220,12 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
         
         // 預覽產品代碼格式
         setGeneratedProductCode(`${selectedSeriesInfo.productType}-${selectedSeriesInfo.code}-${randomNumber}`);
+        console.log('生成的產品代碼:', `${selectedSeriesInfo.productType}-${selectedSeriesInfo.code}-${randomNumber}`); // 調試用
       } else {
         // 如果沒有找到系列信息或產品類型，清空預覽
         setGeneratedProductNumber('');
         setGeneratedProductCode('');
+        console.log('未找到系列信息或產品類型'); // 調試用
       }
     } else {
       setGeneratedProductNumber('');
@@ -338,26 +347,26 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
                     )}
                   />
 
-                                     {/* 產品編號和代碼預覽（僅在新增模式下顯示） */}
-                   {!isEditMode && generatedProductNumber && (
-                     <>
-                       <FormItem className="space-y-2">
-                         <FormLabel className="text-sm font-semibold text-gray-700">產品編號</FormLabel>
-                         <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md">
-                           <span className="text-sm font-mono text-gray-700">{generatedProductNumber}</span>
-                         </div>
-                         <p className="text-xs text-gray-500">4位數隨機編號，系統自動生成</p>
-                       </FormItem>
+                                                                           {/* 產品編號和代碼預覽（僅在新增模式下顯示） */}
+                    {!isEditMode && form.watch('seriesId') && (
+                      <>
+                        <FormItem className="space-y-2">
+                          <FormLabel className="text-sm font-semibold text-gray-700">產品編號</FormLabel>
+                          <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md">
+                            <span className="text-sm font-mono text-gray-700">{generatedProductNumber || '載入中...'}</span>
+                          </div>
+                          <p className="text-xs text-gray-500">4位數隨機編號，系統自動生成</p>
+                        </FormItem>
 
-                       <FormItem className="space-y-2">
-                         <FormLabel className="text-sm font-semibold text-gray-700">產品代碼預覽</FormLabel>
-                         <div className="px-3 py-2 bg-blue-50 border border-blue-300 rounded-md">
-                           <span className="text-sm font-mono text-blue-700">{generatedProductCode}</span>
-                         </div>
-                         <p className="text-xs text-blue-500">格式：[系列類型]-[系列代號]-[隨機編號]</p>
-                       </FormItem>
-                     </>
-                   )}
+                        <FormItem className="space-y-2">
+                          <FormLabel className="text-sm font-semibold text-gray-700">產品代碼預覽</FormLabel>
+                          <div className="px-3 py-2 bg-blue-50 border border-blue-300 rounded-md">
+                            <span className="text-sm font-mono text-blue-700">{generatedProductCode || '載入中...'}</span>
+                          </div>
+                          <p className="text-xs text-blue-500">格式：[系列類型]-[系列代號]-[隨機編號]</p>
+                        </FormItem>
+                      </>
+                    )}
                 </div>
             </div>
 
