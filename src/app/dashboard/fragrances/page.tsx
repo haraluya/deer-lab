@@ -350,13 +350,34 @@ function FragrancesPageContent() {
           try {
             // 處理供應商ID
             let supplierId = undefined;
-            if (item.supplierName) {
-              supplierId = suppliersMap.get(item.supplierName);
+            if (item.supplierName && item.supplierName.trim() !== '') {
+              supplierId = suppliersMap.get(item.supplierName.trim());
               if (!supplierId) {
                 console.warn(`找不到供應商: ${item.supplierName}`);
+                // 如果找不到供應商，可以選擇創建新的供應商或跳過
+                // 這裡我們先跳過，讓用戶手動處理
               }
             }
             
+            // 處理香精種類（從中文轉換為英文）
+            let fragranceType = item.fragranceType;
+            if (fragranceType) {
+              switch (fragranceType) {
+                case '棉芯':
+                  fragranceType = 'cotton';
+                  break;
+                case '陶瓷芯':
+                  fragranceType = 'ceramic';
+                  break;
+                case '棉陶芯通用':
+                  fragranceType = 'universal';
+                  break;
+                default:
+                  // 如果已經是英文，保持不變
+                  break;
+              }
+            }
+
             // 處理啟用狀態（從中文轉換為英文）
             let fragranceStatus = item.fragranceStatus;
             if (fragranceStatus) {
@@ -396,11 +417,23 @@ function FragrancesPageContent() {
             const processedItem = {
               ...item,
               supplierId,
+              fragranceType,
               fragranceStatus,
               pgRatio,
               vgRatio,
               unit: 'KG' // 固定單位為KG
             };
+
+            // 調試日誌：檢查處理後的資料
+            console.log(`處理香精 ${item.name} 的資料:`, {
+              originalFragranceType: item.fragranceType,
+              processedFragranceType: fragranceType,
+              originalFragranceStatus: item.fragranceStatus,
+              processedFragranceStatus: fragranceStatus,
+              originalSupplierName: item.supplierName,
+              processedSupplierId: supplierId,
+              hasSupplierId: !!supplierId
+            });
             
             if (options?.updateMode) {
               // 更新模式：根據香精編號更新現有資料
