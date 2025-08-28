@@ -101,13 +101,25 @@ export function ImportExportDialog({
       parsedData = parsedData.map((row, index) => {
         const cleanedRow: any = {}
         fields.forEach(field => {
-          // 優先使用 field.key，如果沒有則使用 field.label
-          let value = row[field.key]
+          // 嘗試多種方式匹配欄位值
+          let value = row[field.key] || row[field.label]
+          
+          // 如果還是沒有找到，嘗試模糊匹配
           if (value === undefined || value === null || value === '') {
-            value = row[field.label]
+            const rowKeys = Object.keys(row)
+            const matchedKey = rowKeys.find(key => 
+              key.toLowerCase().includes(field.key.toLowerCase()) ||
+              key.toLowerCase().includes(field.label.toLowerCase())
+            )
+            if (matchedKey) {
+              value = row[matchedKey]
+            }
           }
           
-          if (value !== undefined && value !== null && value !== '') {
+          // 處理空值：將 undefined、null、空字串統一為空字串
+          if (value === undefined || value === null || value === '') {
+            cleanedRow[field.key] = ''
+          } else {
             if (field.type === 'number') {
               cleanedRow[field.key] = Number(value)
             } else if (field.type === 'boolean') {
@@ -115,18 +127,21 @@ export function ImportExportDialog({
             } else {
               cleanedRow[field.key] = String(value).trim()
             }
-          } else {
-            cleanedRow[field.key] = value
           }
         })
         
-        // 調試日誌：檢查供應商欄位
+        // 調試日誌：檢查所有重要欄位
         if (index < 3) { // 只記錄前3筆資料的調試資訊
           console.log(`第 ${index + 1} 筆資料解析結果:`, {
             originalRow: row,
             cleanedRow: cleanedRow,
             supplierName: cleanedRow.supplierName,
-            hasSupplierName: !!cleanedRow.supplierName
+            hasSupplierName: !!cleanedRow.supplierName,
+            fragranceType: cleanedRow.fragranceType,
+            hasFragranceType: !!cleanedRow.fragranceType,
+            fragranceStatus: cleanedRow.fragranceStatus,
+            hasFragranceStatus: !!cleanedRow.fragranceStatus,
+            originalKeys: Object.keys(row)
           })
         }
         

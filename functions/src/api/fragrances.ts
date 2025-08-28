@@ -12,6 +12,7 @@ interface FragranceData {
   fragranceType?: string;
   fragranceStatus?: string;
   supplierRef?: DocumentReference;
+  supplierId?: string;
   safetyStockLevel?: number;
   costPerUnit?: number;
   percentage?: number;
@@ -22,6 +23,7 @@ interface FragranceData {
   remarks?: string;
   status?: string;
   unit?: string;
+  currentStock?: number;
   updatedAt?: FieldValue;
   createdAt?: FieldValue;
   lastStockUpdate?: FieldValue;
@@ -39,9 +41,9 @@ export const createFragrance = onCall<FragranceData>(async (request) => {
     }
 
     // 處理向後相容性
-    const finalFragranceType = fragranceType || status || 'cotton';
+    const finalFragranceType = fragranceType || status || '棉芯';
     const finalStatus = status || fragranceType || 'active';
-    const finalFragranceStatus = fragranceStatus || 'active';
+    const finalFragranceStatus = fragranceStatus || '啟用';
 
     const fragranceData = {
       code,
@@ -81,9 +83,9 @@ export const updateFragrance = onCall(async (request) => {
   if (!fragranceId || !code || !name) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (ID, 代號、名稱)。"); }
   
   // 處理 fragranceType 和 status 的相容性
-  const finalFragranceType = fragranceType !== undefined && fragranceType !== null && fragranceType !== '' ? fragranceType : (status || 'cotton');
+  const finalFragranceType = fragranceType !== undefined && fragranceType !== null && fragranceType !== '' ? fragranceType : (status || '棉芯');
   const finalStatus = status !== undefined && status !== null && status !== '' ? status : (fragranceType || 'active');
-  const finalFragranceStatus = fragranceStatus !== undefined && fragranceStatus !== null && fragranceStatus !== '' ? fragranceStatus : (status || 'active');
+  const finalFragranceStatus = fragranceStatus !== undefined && fragranceStatus !== null && fragranceStatus !== '' ? fragranceStatus : (status || '啟用');
   
   try {
     const fragranceRef = db.collection("fragrances").doc(fragranceId);
@@ -131,9 +133,9 @@ export const updateFragranceByCode = onCall(async (request) => {
   });
   
   // 處理 fragranceType 和 status 的相容性
-  const finalFragranceType = fragranceType !== undefined && fragranceType !== null && fragranceType !== '' ? fragranceType : (status || 'cotton');
+  const finalFragranceType = fragranceType !== undefined && fragranceType !== null && fragranceType !== '' ? fragranceType : (status || '棉芯');
   const finalStatus = status !== undefined && status !== null && status !== '' ? status : (fragranceType || 'active');
-  const finalFragranceStatus = fragranceStatus !== undefined && fragranceStatus !== null && fragranceStatus !== '' ? fragranceStatus : (status || 'active');
+  const finalFragranceStatus = fragranceStatus !== undefined && fragranceStatus !== null && fragranceStatus !== '' ? fragranceStatus : (status || '啟用');
   
   try {
     // 根據香精編號查找現有的香精
@@ -159,20 +161,24 @@ export const updateFragranceByCode = onCall(async (request) => {
       updatedAt: FieldValue.serverTimestamp(), 
     };
     
-    // 只有當 fragranceType 有實際值時才更新
+    // 處理香精種類 - 如果為空則使用預設值
     if (fragranceType !== undefined && fragranceType !== null && fragranceType !== '') {
       updateData.fragranceType = fragranceType;
       logger.info(`更新香精 ${code} 的 fragranceType: ${fragranceType}`);
     } else {
-      logger.info(`跳過更新香精 ${code} 的 fragranceType，值為: ${fragranceType}`);
+      // 如果沒有提供香精種類，使用預設值
+      updateData.fragranceType = '棉芯';
+      logger.info(`香精 ${code} 的 fragranceType 設置為預設值: ${updateData.fragranceType}`);
     }
     
-    // 只有當 fragranceStatus 有實際值時才更新
+    // 處理啟用狀態 - 如果為空則使用預設值
     if (fragranceStatus !== undefined && fragranceStatus !== null && fragranceStatus !== '') {
       updateData.fragranceStatus = fragranceStatus;
       logger.info(`更新香精 ${code} 的 fragranceStatus: ${fragranceStatus}`);
     } else {
-      logger.info(`跳過更新香精 ${code} 的 fragranceStatus，值為: ${fragranceStatus}`);
+      // 如果沒有提供啟用狀態，使用預設值
+      updateData.fragranceStatus = '啟用';
+      logger.info(`香精 ${code} 的 fragranceStatus 設置為預設值: ${updateData.fragranceStatus}`);
     }
     
     // 如果提供了 currentStock，則更新庫存

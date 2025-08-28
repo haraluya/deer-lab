@@ -51,35 +51,46 @@ function FragrancesPageContent() {
     setIsLoading(true);
     try {
       if (!db) {
-        throw new Error("Firebase 未初始化")
+        throw new Error("Firebase 未初始化");
       }
       
-      const suppliersMap = new Map<string, string>();
-      const supplierSnapshot = await getDocs(collection(db, "suppliers"));
-      supplierSnapshot.forEach(doc => suppliersMap.set(doc.id, doc.data().name));
+      // 載入供應商資料
+      const suppliersSnapshot = await getDocs(collection(db, 'suppliers'));
+      const suppliersMap = new Map();
+      suppliersSnapshot.docs.forEach(doc => {
+        suppliersMap.set(doc.id, doc.data().name);
+      });
 
+      // 載入香精資料
       const fragrancesSnapshot = await getDocs(collection(db, 'fragrances'));
       const fragrancesList = fragrancesSnapshot.docs.map(doc => {
         const data = doc.data();
         const supplierRef = data.supplierRef as DocumentReference | undefined;
         const supplierName = supplierRef ? suppliersMap.get(supplierRef.id) || 'N/A' : '未指定';
         
-        // 調試：檢查資料庫中的原始值
-        console.log(`資料庫中的香精 ${data.name} (${data.code}):`, {
-          fragranceType: data.fragranceType,
-          fragranceStatus: data.fragranceStatus,
-          status: data.status,
-          currentStock: data.currentStock,
-          supplierRef: data.supplierRef
-        });
+        // 詳細調試：檢查資料庫中的原始值
+        console.log(`=== 香精 ${data.name} (${data.code}) 的詳細資料 ===`);
+        console.log('原始資料庫資料:', data);
+        console.log('fragranceType 原始值:', data.fragranceType, '類型:', typeof data.fragranceType);
+        console.log('fragranceStatus 原始值:', data.fragranceStatus, '類型:', typeof data.fragranceStatus);
+        console.log('status 原始值:', data.status, '類型:', typeof data.status);
+        console.log('所有欄位名稱:', Object.keys(data));
+        
+        // 確保正確讀取 fragranceType 和 fragranceStatus
+        const fragranceType = data.fragranceType || '未指定';
+        const fragranceStatus = data.fragranceStatus || '未指定';
+        
+        console.log('處理後的 fragranceType:', fragranceType);
+        console.log('處理後的 fragranceStatus:', fragranceStatus);
+        console.log('=====================================');
         
         return {
           id: doc.id,
           code: data.code,
           name: data.name,
           status: data.status,
-          fragranceType: data.fragranceType !== undefined && data.fragranceType !== null && data.fragranceType !== '' ? data.fragranceType : (data.status || '未指定'),
-          fragranceStatus: data.fragranceStatus !== undefined && data.fragranceStatus !== null && data.fragranceStatus !== '' ? data.fragranceStatus : (data.status || '未指定'),
+          fragranceType: fragranceType,
+          fragranceStatus: fragranceStatus,
           supplierRef: data.supplierRef,
           safetyStockLevel: data.safetyStockLevel,
           costPerUnit: data.costPerUnit,
@@ -442,6 +453,9 @@ function FragrancesPageContent() {
                   // 如果已經是中文，保持不變
                   break;
               }
+            } else {
+              // 如果為空，設置為空字串
+              fragranceType = '';
             }
 
             // 處理啟用狀態（保持中文，不轉換為英文）
@@ -462,6 +476,9 @@ function FragrancesPageContent() {
                   // 如果已經是中文，保持不變
                   break;
               }
+            } else {
+              // 如果為空，設置為空字串
+              fragranceStatus = '';
             }
 
             // 處理數值欄位
@@ -485,7 +502,7 @@ function FragrancesPageContent() {
               });
             }
             
-            const processedItem = {
+            const processedItem: any = {
               code: item.code,
               name: item.name,
               supplierId,
@@ -498,15 +515,11 @@ function FragrancesPageContent() {
               unit: 'KG' // 固定單位為KG
             };
             
-            // 只有當 fragranceType 有實際值時才添加到 processedItem
-            if (fragranceType !== undefined && fragranceType !== null && fragranceType !== '') {
-              processedItem.fragranceType = fragranceType;
-            }
+            // 處理香精種類 - 即使為空也要傳遞，讓後端處理預設值
+            processedItem.fragranceType = fragranceType;
             
-            // 只有當 fragranceStatus 有實際值時才添加到 processedItem
-            if (fragranceStatus !== undefined && fragranceStatus !== null && fragranceStatus !== '') {
-              processedItem.fragranceStatus = fragranceStatus;
-            }
+            // 處理啟用狀態 - 即使為空也要傳遞，讓後端處理預設值
+            processedItem.fragranceStatus = fragranceStatus;
 
             // 調試日誌：檢查處理後的資料
             console.log(`處理香精 ${item.name} 的完整資料:`, {
@@ -896,7 +909,12 @@ function FragrancesPageContent() {
                             </div>
                             <div>
                               <div className="font-medium text-gray-900 text-sm">{fragrance.name}</div>
-                              <div className="text-xs text-gray-500">代號: {fragrance.code}</div>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-xs text-gray-500">代號:</span>
+                                <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                                  {fragrance.code}
+                                </span>
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -944,15 +962,27 @@ function FragrancesPageContent() {
                                 <span className="text-gray-500">香精種類</span>
                               </div>
                               <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                                fragrance.fragranceType === 'cotton' ? 'bg-blue-100 text-blue-800' :
-                                fragrance.fragranceType === 'ceramic' ? 'bg-green-100 text-green-800' :
-                                fragrance.fragranceType === 'universal' ? 'bg-purple-100 text-purple-800' :
+                                fragrance.fragranceType === '棉芯' ? 'bg-blue-100 text-blue-800' :
+                                fragrance.fragranceType === '陶瓷芯' ? 'bg-green-100 text-green-800' :
+                                fragrance.fragranceType === '棉陶芯通用' ? 'bg-purple-100 text-purple-800' :
                                 'bg-gray-100 text-gray-800'
                               }`}>
-                                {fragrance.fragranceType === 'cotton' ? '棉芯' :
-                                 fragrance.fragranceType === 'ceramic' ? '陶瓷芯' :
-                                 fragrance.fragranceType === 'universal' ? '棉陶芯通用' :
-                                 '未指定'}
+                                {fragrance.fragranceType || '未指定'}
+                              </span>
+                            </div>
+                          )}
+                          {!isStocktakeMode && (
+                            <div>
+                              <div className="flex items-center gap-1 mb-1">
+                                <span className="text-gray-500">啟用狀態</span>
+                              </div>
+                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                                fragrance.fragranceStatus === '啟用' ? 'bg-green-100 text-green-800' :
+                                fragrance.fragranceStatus === '備用' ? 'bg-yellow-100 text-yellow-800' :
+                                fragrance.fragranceStatus === '棄用' ? 'bg-red-100 text-red-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {fragrance.fragranceStatus || '未指定'}
                               </span>
                             </div>
                           )}
@@ -1118,37 +1148,36 @@ function FragrancesPageContent() {
                           </div>
                           <div>
                             <div className="font-medium text-foreground">{fragrance.name}</div>
-                            <div className="text-xs text-muted-foreground">代號: {fragrance.code}</div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-muted-foreground">代號:</span>
+                              <Badge className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
+                                {fragrance.code}
+                              </Badge>
+                            </div>
                           </div>
                         </div>
                       </TableCell>
                       {!isStocktakeMode && (
                         <TableCell>
                           <Badge className={`status-badge ${
-                            fragrance.fragranceType === 'cotton' ? 'bg-blue-100 text-blue-800' :
-                            fragrance.fragranceType === 'ceramic' ? 'bg-green-100 text-green-800' :
-                            fragrance.fragranceType === 'universal' ? 'bg-purple-100 text-purple-800' :
+                            fragrance.fragranceType === '棉芯' ? 'bg-blue-100 text-blue-800' :
+                            fragrance.fragranceType === '陶瓷芯' ? 'bg-green-100 text-green-800' :
+                            fragrance.fragranceType === '棉陶芯通用' ? 'bg-purple-100 text-purple-800' :
                             'bg-gray-100 text-gray-800'
                           }`}>
-                            {fragrance.fragranceType === 'cotton' ? '棉芯' :
-                             fragrance.fragranceType === 'ceramic' ? '陶瓷芯' :
-                             fragrance.fragranceType === 'universal' ? '棉陶芯通用' :
-                             '未指定'}
+                            {fragrance.fragranceType || '未指定'}
                           </Badge>
                         </TableCell>
                       )}
                       {!isStocktakeMode && (
                         <TableCell>
                           <Badge className={`status-badge ${
-                            fragrance.fragranceStatus === 'active' ? 'bg-green-100 text-green-800' :
-                            fragrance.fragranceStatus === 'standby' ? 'bg-yellow-100 text-yellow-800' :
-                            fragrance.fragranceStatus === 'discontinued' ? 'bg-red-100 text-red-800' :
+                            fragrance.fragranceStatus === '啟用' ? 'bg-green-100 text-green-800' :
+                            fragrance.fragranceStatus === '備用' ? 'bg-yellow-100 text-yellow-800' :
+                            fragrance.fragranceStatus === '棄用' ? 'bg-red-100 text-red-800' :
                             'bg-gray-100 text-gray-800'
                           }`}>
-                            {fragrance.fragranceStatus === 'active' ? '啟用' :
-                             fragrance.fragranceStatus === 'standby' ? '備用' :
-                             fragrance.fragranceStatus === 'discontinued' ? '棄用' :
-                             '未指定'}
+                            {fragrance.fragranceStatus || '未指定'}
                           </Badge>
                         </TableCell>
                       )}
