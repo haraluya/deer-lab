@@ -31,7 +31,7 @@ export const createFragrance = onCall<FragranceData>(async (request) => {
   const { data, auth: contextAuth } = request;
   try {
     // await ensureIsAdmin(contextAuth?.uid);
-    const { code, name, fragranceType, fragranceStatus, supplierRef, safetyStockLevel, costPerUnit, percentage, pgRatio, vgRatio, description, notes, remarks, status, unit } = data;
+    const { code, name, fragranceType, fragranceStatus, supplierRef, supplierId, safetyStockLevel, costPerUnit, percentage, pgRatio, vgRatio, description, notes, remarks, status, unit, currentStock } = data;
 
     // 驗證必要欄位
     if (!code || !name) {
@@ -49,10 +49,10 @@ export const createFragrance = onCall<FragranceData>(async (request) => {
       fragranceType: finalFragranceType,
       fragranceStatus: finalFragranceStatus,
       status: finalStatus,
-      supplierRef: supplierRef || null,
+      supplierRef: supplierRef || (supplierId ? db.collection("suppliers").doc(supplierId) : null),
       safetyStockLevel: safetyStockLevel || 0,
       costPerUnit: costPerUnit || 0,
-      currentStock: 0,
+      currentStock: currentStock || 0,
       percentage: percentage || 0,
       pgRatio: pgRatio || 0,
       vgRatio: vgRatio || 0,

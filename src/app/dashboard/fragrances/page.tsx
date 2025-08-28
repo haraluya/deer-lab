@@ -366,7 +366,13 @@ function FragrancesPageContent() {
         throw new Error("Firebase 未初始化");
       }
       const supplierSnapshot = await getDocs(collection(db, "suppliers"));
-      supplierSnapshot.forEach(doc => suppliersMap.set(doc.data().name, doc.id));
+      supplierSnapshot.forEach(doc => {
+        const supplierData = doc.data();
+        suppliersMap.set(supplierData.name, doc.id);
+        console.log(`供應商映射: ${supplierData.name} -> ${doc.id}`);
+      });
+      
+      console.log('供應商映射表:', Array.from(suppliersMap.entries()));
       
       // 獲取現有香精代號映射表
       const existingFragrancesMap = new Map<string, string>();
@@ -396,9 +402,11 @@ function FragrancesPageContent() {
             // 處理供應商ID
             let supplierId = undefined;
             if (item.supplierName && item.supplierName.trim() !== '') {
-              supplierId = suppliersMap.get(item.supplierName.trim());
+              const trimmedSupplierName = item.supplierName.trim();
+              supplierId = suppliersMap.get(trimmedSupplierName);
+              console.log(`尋找供應商: "${trimmedSupplierName}" -> ${supplierId || '未找到'}`);
               if (!supplierId) {
-                console.warn(`找不到供應商: ${item.supplierName}`);
+                console.warn(`找不到供應商: "${trimmedSupplierName}"`);
               }
             }
             
@@ -464,7 +472,8 @@ function FragrancesPageContent() {
             }
             
             const processedItem = {
-              ...item,
+              code: item.code,
+              name: item.name,
               supplierId,
               fragranceType,
               fragranceStatus,
