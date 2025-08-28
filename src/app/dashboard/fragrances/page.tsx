@@ -487,6 +487,22 @@ function FragrancesPageContent() {
             };
 
             // 調試日誌：檢查處理後的資料
+            console.log(`處理香精 ${item.name} 的完整資料:`, {
+              code: processedItem.code,
+              name: processedItem.name,
+              supplierId: processedItem.supplierId,
+              fragranceType: processedItem.fragranceType,
+              fragranceStatus: processedItem.fragranceStatus,
+              percentage: processedItem.percentage,
+              pgRatio: processedItem.pgRatio,
+              vgRatio: processedItem.vgRatio,
+              currentStock: processedItem.currentStock,
+              safetyStockLevel: processedItem.safetyStockLevel,
+              costPerUnit: processedItem.costPerUnit,
+              unit: processedItem.unit
+            });
+
+            // 調試日誌：檢查處理後的資料
             console.log(`處理香精 ${item.name} 的資料:`, {
               originalFragranceType: item.fragranceType,
               processedFragranceType: fragranceType,
