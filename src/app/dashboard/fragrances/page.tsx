@@ -939,7 +939,23 @@ function FragrancesPageContent() {
           <Table className="table-enhanced">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[60px] text-center"></TableHead>
+                <TableHead className="w-[60px] text-center">
+                  {!isStocktakeMode && (
+                    <div className="flex items-center gap-2" title="全選所有香精">
+                      <Checkbox
+                        checked={purchaseCart.size === filteredFragrances.length && filteredFragrances.length > 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setPurchaseCart(new Set(filteredFragrances.map(f => f.id)));
+                          } else {
+                            setPurchaseCart(new Set());
+                          }
+                        }}
+                      />
+                      <span className="text-xs text-muted-foreground">全選</span>
+                    </div>
+                  )}
+                </TableHead>
                 <TableHead className="text-left">香精資訊</TableHead>
                 {!isStocktakeMode && <TableHead className="text-left">香精種類</TableHead>}
                 {!isStocktakeMode && <TableHead className="text-left">啟用狀態</TableHead>}
