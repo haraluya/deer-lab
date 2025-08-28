@@ -64,6 +64,15 @@ function FragrancesPageContent() {
         const supplierRef = data.supplierRef as DocumentReference | undefined;
         const supplierName = supplierRef ? suppliersMap.get(supplierRef.id) || 'N/A' : '未指定';
         
+        // 調試：檢查資料庫中的原始值
+        console.log(`資料庫中的香精 ${data.name} (${data.code}):`, {
+          fragranceType: data.fragranceType,
+          fragranceStatus: data.fragranceStatus,
+          status: data.status,
+          currentStock: data.currentStock,
+          supplierRef: data.supplierRef
+        });
+        
         return {
           id: doc.id,
           code: data.code,
@@ -480,8 +489,6 @@ function FragrancesPageContent() {
               code: item.code,
               name: item.name,
               supplierId,
-              fragranceType,
-              fragranceStatus,
               percentage,
               pgRatio,
               vgRatio,
@@ -490,6 +497,16 @@ function FragrancesPageContent() {
               costPerUnit,
               unit: 'KG' // 固定單位為KG
             };
+            
+            // 只有當 fragranceType 有實際值時才添加到 processedItem
+            if (fragranceType !== undefined && fragranceType !== null && fragranceType !== '') {
+              processedItem.fragranceType = fragranceType;
+            }
+            
+            // 只有當 fragranceStatus 有實際值時才添加到 processedItem
+            if (fragranceStatus !== undefined && fragranceStatus !== null && fragranceStatus !== '') {
+              processedItem.fragranceStatus = fragranceStatus;
+            }
 
             // 調試日誌：檢查處理後的資料
             console.log(`處理香精 ${item.name} 的完整資料:`, {

@@ -118,6 +118,18 @@ export const updateFragranceByCode = onCall(async (request) => {
   const { code, name, status, fragranceType, fragranceStatus, supplierId, safetyStockLevel, costPerUnit, percentage, pgRatio, vgRatio, unit, currentStock } = data;
   if (!code || !name) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (代號、名稱)。"); }
   
+  // 調試：記錄接收到的參數
+  logger.info(`更新香精 ${code} 的參數:`, {
+    fragranceType,
+    fragranceStatus,
+    currentStock,
+    supplierId,
+    hasFragranceType: !!fragranceType,
+    hasFragranceStatus: !!fragranceStatus,
+    fragranceTypeLength: fragranceType?.length || 0,
+    fragranceStatusLength: fragranceStatus?.length || 0
+  });
+  
   // 處理 fragranceType 和 status 的相容性
   const finalFragranceType = fragranceType !== undefined && fragranceType !== null && fragranceType !== '' ? fragranceType : (status || 'cotton');
   const finalStatus = status !== undefined && status !== null && status !== '' ? status : (fragranceType || 'active');
@@ -150,11 +162,17 @@ export const updateFragranceByCode = onCall(async (request) => {
     // 只有當 fragranceType 有實際值時才更新
     if (fragranceType !== undefined && fragranceType !== null && fragranceType !== '') {
       updateData.fragranceType = fragranceType;
+      logger.info(`更新香精 ${code} 的 fragranceType: ${fragranceType}`);
+    } else {
+      logger.info(`跳過更新香精 ${code} 的 fragranceType，值為: ${fragranceType}`);
     }
     
     // 只有當 fragranceStatus 有實際值時才更新
     if (fragranceStatus !== undefined && fragranceStatus !== null && fragranceStatus !== '') {
       updateData.fragranceStatus = fragranceStatus;
+      logger.info(`更新香精 ${code} 的 fragranceStatus: ${fragranceStatus}`);
+    } else {
+      logger.info(`跳過更新香精 ${code} 的 fragranceStatus，值為: ${fragranceStatus}`);
     }
     
     // 如果提供了 currentStock，則更新庫存
