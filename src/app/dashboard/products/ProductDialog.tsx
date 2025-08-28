@@ -114,15 +114,19 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
                .sort((a, b) => a.label.localeCompare(b.label, 'zh-TW')),
            });
            
-                       // 保存系列詳細資訊
-            const seriesData = seriesSnapshot.docs.map(doc => ({
-              id: doc.id,
-              name: doc.data().name,
-              code: doc.data().code,
-              productType: doc.data().productType,
-            }));
-            console.log('系列資訊:', seriesData); // 調試用
-            setSeriesInfo(seriesData);
+                                   // 保存系列詳細資訊
+             const seriesData = seriesSnapshot.docs.map(doc => {
+               const data = doc.data();
+               console.log('單個系列資料:', { id: doc.id, data }); // 調試用
+               return {
+                 id: doc.id,
+                 name: data.name,
+                 code: data.code,
+                 productType: data.productType,
+               };
+             });
+             console.log('完整系列資訊:', seriesData); // 調試用
+             setSeriesInfo(seriesData);
         } catch (error) {
           console.error("讀取下拉選單資料失敗:", error);
           toast.error("讀取下拉選單資料失敗。");
@@ -209,11 +213,11 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
     const seriesId = form.watch('seriesId');
     console.log('系列選擇改變:', { seriesId, isEditMode, seriesInfoLength: seriesInfo.length }); // 調試用
     
-    if (seriesId && !isEditMode) {
+    if (seriesId && !isEditMode && seriesInfo.length > 0) {
       const selectedSeriesInfo = seriesInfo.find(s => s.id === seriesId);
       console.log('找到的系列信息:', selectedSeriesInfo); // 調試用
       
-      if (selectedSeriesInfo && selectedSeriesInfo.productType) {
+      if (selectedSeriesInfo && selectedSeriesInfo.productType && selectedSeriesInfo.code) {
         // 生成隨機4位數編號
         const randomNumber = Math.floor(1000 + Math.random() * 9000);
         setGeneratedProductNumber(String(randomNumber));
@@ -225,11 +229,18 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
         // 如果沒有找到系列信息或產品類型，清空預覽
         setGeneratedProductNumber('');
         setGeneratedProductCode('');
-        console.log('未找到系列信息或產品類型'); // 調試用
+        console.log('未找到系列信息或產品類型:', { 
+          hasSelectedSeriesInfo: !!selectedSeriesInfo, 
+          productType: selectedSeriesInfo?.productType, 
+          code: selectedSeriesInfo?.code 
+        }); // 調試用
       }
     } else {
       setGeneratedProductNumber('');
       setGeneratedProductCode('');
+      if (seriesId && !isEditMode && seriesInfo.length === 0) {
+        console.log('系列資訊尚未載入完成'); // 調試用
+      }
     }
   }, [form.watch('seriesId'), seriesInfo, isEditMode]);
 
@@ -350,13 +361,16 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
                                                                            {/* 產品編號和代碼預覽（僅在新增模式下顯示） */}
                     {!isEditMode && form.watch('seriesId') && (
                       <>
-                        <FormItem className="space-y-2">
-                          <FormLabel className="text-sm font-semibold text-gray-700">產品編號</FormLabel>
-                          <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md">
-                            <span className="text-sm font-mono text-gray-700">{generatedProductNumber || '載入中...'}</span>
-                          </div>
-                          <p className="text-xs text-gray-500">4位數隨機編號，系統自動生成</p>
-                        </FormItem>
+                                                 <FormItem className="space-y-2">
+                           <FormLabel className="text-sm font-semibold text-gray-700">產品編號</FormLabel>
+                           <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md">
+                             <span className="text-sm font-mono text-gray-700">{generatedProductNumber || '載入中...'}</span>
+                           </div>
+                           <p className="text-xs text-gray-500">4位數隨機編號，系統自動生成</p>
+                           {!generatedProductNumber && (
+                             <p className="text-xs text-red-500">如果持續載入中，請重新選擇系列</p>
+                           )}
+                         </FormItem>
 
                         <FormItem className="space-y-2">
                           <FormLabel className="text-sm font-semibold text-gray-700">產品代碼預覽</FormLabel>
