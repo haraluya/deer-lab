@@ -267,16 +267,16 @@ export default function ProductDetailPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                         {/* 產品編號 */}
-             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg">
-               <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                 <Tag className="h-5 w-5 text-white" />
-               </div>
-               <div>
-                 <p className="text-sm text-blue-600 font-medium">產品編號</p>
-                 <p className="text-lg font-semibold text-blue-800">{product.productNumber || 'N/A'}</p>
-               </div>
-             </div>
+            {/* 產品名稱 */}
+            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <Package className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-blue-600 font-medium">產品名稱</p>
+                <p className="text-lg font-semibold text-blue-800">{product.name}</p>
+              </div>
+            </div>
 
             {/* 產品系列 */}
             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg">
@@ -289,27 +289,25 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            {/* 建立人員 */}
+            {/* 使用香精 */}
             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg">
               <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <User className="h-5 w-5 text-white" />
+                <Droplets className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-sm text-purple-600 font-medium">建立人員</p>
-                <p className="text-lg font-semibold text-purple-800">{product.createdByName}</p>
+                <p className="text-sm text-purple-600 font-medium">使用香精</p>
+                <p className="text-lg font-semibold text-purple-800">{product.fragranceName || '未指定'}</p>
               </div>
             </div>
 
-            {/* 建立時間 */}
+            {/* 丁鹽濃度 */}
             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg">
               <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-                <Calendar className="h-5 w-5 text-white" />
+                <Tag className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-sm text-orange-600 font-medium">建立時間</p>
-                <p className="text-lg font-semibold text-orange-800">
-                  {product.createdAt.toLocaleDateString('zh-TW')}
-                </p>
+                <p className="text-sm text-orange-600 font-medium">丁鹽濃度</p>
+                <p className="text-lg font-semibold text-orange-800">{product.nicotineMg || 0} MG</p>
               </div>
             </div>
           </div>

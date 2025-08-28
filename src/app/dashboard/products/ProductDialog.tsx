@@ -90,10 +90,12 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
           
                      setOptions({
              series: seriesSnapshot.docs.map(doc => ({ value: doc.id, label: doc.data().name })),
-             fragrances: fragrancesSnapshot.docs.map(doc => ({ 
-               value: doc.id, 
-               label: `${doc.data().code}(${doc.data().name})` 
-             })),
+             fragrances: fragrancesSnapshot.docs
+               .map(doc => ({ 
+                 value: doc.id, 
+                 label: `${doc.data().code}(${doc.data().name})` 
+               }))
+               .sort((a, b) => a.label.localeCompare(b.label, 'zh-TW')),
              materials: materialsSnapshot.docs
                .map(doc => ({ value: doc.id, label: doc.data().name }))
                .sort((a, b) => a.label.localeCompare(b.label, 'zh-TW')),
