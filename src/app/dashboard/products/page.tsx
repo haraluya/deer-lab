@@ -428,7 +428,7 @@ function ProductsPageContent() {
                   {filteredProducts.map((product) => (
                     <div 
                       key={product.id} 
-                      className="p-4 hover:bg-purple-50/50 transition-colors duration-200"
+                      className="p-4 hover:bg-purple-100/60 transition-all duration-200 border border-transparent hover:border-purple-200 hover:shadow-sm rounded-lg"
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div 
@@ -584,7 +584,7 @@ function ProductsPageContent() {
                 filteredProducts.map((product) => (
                   <TableRow 
                     key={product.id} 
-                    className="hover:bg-purple-50/50 transition-colors duration-200 cursor-pointer"
+                    className="hover:bg-purple-100/60 transition-all duration-200 cursor-pointer"
                     onClick={() => handleViewDetail(product)}
                   >
                     <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
