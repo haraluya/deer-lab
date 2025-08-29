@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import { usePurchaseCart } from '@/hooks/usePurchaseCart';
 import {
   Home, Users, Building, Package, FlaskConical, Library, Box,
   ShoppingCart, Factory, Calculator, ClipboardList, LogOut, ChevronDown,
@@ -54,6 +55,7 @@ const navLinks: NavItem[] = [
 
 function SidebarNav() {
   const pathname = usePathname();
+  const cartItemCount = usePurchaseCart();
   
   // 添加調試信息
   useEffect(() => {
@@ -99,7 +101,7 @@ function SidebarNav() {
             href={link.href}
             onClick={handleNavClick}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-all duration-200",
+              "flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-all duration-200 relative",
               isActive
                 ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -107,6 +109,12 @@ function SidebarNav() {
           >
             <Icon className={cn("h-4 w-4", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
             <span className="truncate">{link.label}</span>
+            {/* 採購管理數量氣泡 */}
+            {link.href === '/dashboard/purchase-orders' && cartItemCount > 0 && (
+              <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                {cartItemCount > 99 ? '99+' : cartItemCount}
+              </div>
+            )}
           </Link>
         );
       })}

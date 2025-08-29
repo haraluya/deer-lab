@@ -487,14 +487,106 @@ function MaterialsPageContent() {
     });
   };
   
-  const handleCreatePurchaseOrder = () => {
+  // 添加到採購車
+  const addToPurchaseCart = (material: MaterialWithSupplier) => {
+    try {
+      const cartItem = {
+        id: material.id,
+        name: material.name,
+        code: material.code,
+        type: 'material' as const,
+        supplierId: material.supplierRef?.id || '',
+        supplierName: material.supplierName || '未指定',
+        unit: material.unit || '',
+        quantity: 1,
+        costPerUnit: material.costPerUnit || 0,
+      };
+
+      // 從 localStorage 讀取現有採購車
+      const existingCart = localStorage.getItem('purchaseCart');
+      let currentCart: any[] = [];
+      if (existingCart) {
+        try {
+          currentCart = JSON.parse(existingCart);
+        } catch (error) {
+          console.error("解析採購車資料失敗:", error);
+        }
+      }
+
+      // 檢查是否已存在
+      const existingIndex = currentCart.findIndex(item => 
+        item.id === material.id && item.type === 'material'
+      );
+
+      if (existingIndex >= 0) {
+        // 如果已存在，增加數量
+        currentCart[existingIndex].quantity += 1;
+        toast.success(`已增加 ${material.name} 的數量`);
+      } else {
+        // 新增項目
+        currentCart.push(cartItem);
+        toast.success(`已將 ${material.name} 加入採購車`);
+      }
+
+      // 保存到 localStorage
+      localStorage.setItem('purchaseCart', JSON.stringify(currentCart));
+    } catch (error) {
+      console.error("添加到採購車失敗:", error);
+      toast.error("添加到採購車失敗");
+    }
+  };
+  
+  const handleAddToPurchaseCart = () => {
     if (purchaseCart.size === 0) {
-      toast.info("請至少選擇一個物料加入採購單。");
+      toast.info("請至少選擇一個物料加入採購車。");
       return;
     }
-    const itemIds = Array.from(purchaseCart).join(',');
-    const itemType = 'material';
-    router.push(`/dashboard/purchase-orders/create?type=${itemType}&ids=${itemIds}`);
+    
+    try {
+      // 從 localStorage 讀取現有的採購車
+      const existingCart = localStorage.getItem('purchaseCart');
+      const cartItems = existingCart ? JSON.parse(existingCart) : [];
+      
+      // 獲取選中的物料資料
+      const selectedMaterials = materials.filter(m => purchaseCart.has(m.id));
+      
+      // 將選中的物料加入採購車
+      selectedMaterials.forEach(material => {
+        const existingItem = cartItems.find((item: any) => 
+          item.id === material.id && item.type === 'material'
+        );
+        
+        if (existingItem) {
+          // 如果已存在，增加數量
+          existingItem.quantity += 1;
+        } else {
+          // 新增項目
+          cartItems.push({
+            id: material.id,
+            name: material.name,
+            code: material.code,
+            type: 'material',
+            supplierId: material.supplierRef?.id || '',
+            supplierName: material.supplierName,
+            unit: material.unit || '個',
+            quantity: 1,
+            costPerUnit: material.costPerUnit || 0,
+          });
+        }
+      });
+      
+      // 保存到 localStorage
+      localStorage.setItem('purchaseCart', JSON.stringify(cartItems));
+      
+      // 觸發自定義事件，通知其他組件採購車已更新
+      window.dispatchEvent(new CustomEvent('purchaseCartUpdated'));
+      
+      toast.success(`已將 ${selectedMaterials.length} 個物料加入採購車`);
+      setPurchaseCart(new Set()); // 清空選中的項目
+    } catch (error) {
+      console.error("加入採購車失敗:", error);
+      toast.error("加入採購車失敗");
+    }
   };
 
   // 盤點功能相關函式
@@ -752,11 +844,11 @@ function MaterialsPageContent() {
              <Button
                variant="outline"
                size="sm"
-               onClick={handleCreatePurchaseOrder}
+               onClick={handleAddToPurchaseCart}
                className="flex items-center gap-2"
              >
                <ShoppingCart className="h-4 w-4" />
-               建立採購單 ({purchaseCart.size})
+               加入採購車 ({purchaseCart.size})
              </Button>
              <Button
                variant="destructive"
@@ -907,6 +999,15 @@ function MaterialsPageContent() {
                             checked={purchaseCart.has(material.id)}
                             onCheckedChange={() => handleCartToggle(material.id)}
                           />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => addToPurchaseCart(material)}
+                            className="h-8 px-2 text-xs border-amber-200 text-amber-600 hover:bg-amber-50"
+                          >
+                            <ShoppingCart className="h-3 w-3 mr-1" />
+                            加入採購車
+                          </Button>
                         </div>
                         <div className="text-sm text-muted-foreground">
                           ${material.costPerUnit || 0}
@@ -1060,6 +1161,10 @@ function MaterialsPageContent() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>操作</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => addToPurchaseCart(material)}>
+                              <ShoppingCart className="mr-2 h-4 w-4" />
+                              加入採購車
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleViewDetail(material)}>
                               <Eye className="mr-2 h-4 w-4" />
                               查看詳情
