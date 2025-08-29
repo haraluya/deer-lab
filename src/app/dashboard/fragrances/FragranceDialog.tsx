@@ -163,22 +163,14 @@ export function FragranceDialog({
       
       let finalValues;
       
-      if (isEditMode) {
-        // 編輯模式：使用實際儲存的值，不重新計算
-        finalValues = {
-          ...values,
-          unit: 'KG', // 固定單位為KG
-        };
-      } else {
-        // 新增模式：自動計算PG和VG比例
-        const { pgRatio, vgRatio } = calculateRatios(values.percentage || 0);
-        finalValues = {
-          ...values,
-          pgRatio,
-          vgRatio,
-          unit: 'KG', // 固定單位為KG
-        };
-      }
+      // 無論是新增還是編輯模式，都自動計算PG和VG比例
+      const { pgRatio, vgRatio } = calculateRatios(values.percentage || 0);
+      finalValues = {
+        ...values,
+        pgRatio,
+        vgRatio,
+        unit: 'KG', // 固定單位為KG
+      };
       
       if (isEditMode) {
         const updateFragrance = httpsCallable(functions, 'updateFragrance');
