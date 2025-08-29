@@ -70,18 +70,41 @@ export const createProduct = onCall(async (request) => {
 export const updateProduct = onCall(async (request) => {
   const { auth: contextAuth, data } = request;
   // await ensureCanManageProducts(contextAuth?.uid);
-  const { productId, name, fragranceId, nicotineMg, specificMaterialIds } = data;
+  const { productId, name, seriesId, fragranceId, nicotineMg, specificMaterialIds } = data;
   if (!productId) { throw new HttpsError("invalid-argument", "缺少 productId"); }
+  
   const productRef = db.doc(`products/${productId}`);
-  const fragranceRef = db.doc(`fragrances/${fragranceId}`);
-  const materialRefs = (specificMaterialIds || []).map((id: string) => db.doc(`materials/${id}`));
-  await productRef.update({ 
-    name, 
-    currentFragranceRef: fragranceRef, 
-    nicotineMg: Number(nicotineMg) || 0, 
-    specificMaterials: materialRefs, 
-    updatedAt: FieldValue.serverTimestamp(), 
-  });
+  
+  // 準備更新數據
+  const updateData: any = {
+    name,
+    nicotineMg: Number(nicotineMg) || 0,
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+
+  // 如果提供了系列ID，更新系列引用
+  if (seriesId) {
+    const seriesRef = db.doc(`productSeries/${seriesId}`);
+    const seriesDoc = await seriesRef.get();
+    if (!seriesDoc.exists) {
+      throw new HttpsError("not-found", "指定的產品系列不存在");
+    }
+    updateData.seriesRef = seriesRef;
+  }
+
+  // 如果提供了香精ID，更新香精引用
+  if (fragranceId) {
+    const fragranceRef = db.doc(`fragrances/${fragranceId}`);
+    updateData.currentFragranceRef = fragranceRef;
+  }
+
+  // 如果提供了專屬材料ID，更新材料引用
+  if (specificMaterialIds) {
+    const materialRefs = specificMaterialIds.map((id: string) => db.doc(`materials/${id}`));
+    updateData.specificMaterials = materialRefs;
+  }
+
+  await productRef.update(updateData);
   return { success: true };
 });
 

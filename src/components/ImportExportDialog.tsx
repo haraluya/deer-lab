@@ -51,6 +51,7 @@ export function ImportExportDialog({
   const [validationErrors, setValidationErrors] = useState<string[]>([])
   const [updateMode, setUpdateMode] = useState(false)
   const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(null)
+  const [importResults, setImportResults] = useState<{ success: number; failed: number; failedItems: any[] }>({ success: 0, failed: 0, failedItems: [] })
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -189,20 +190,58 @@ export function ImportExportDialog({
     setIsImporting(true)
     setImportProgress({ current: 0, total: importData.length })
     
+    const results: { success: number; failed: number; failedItems: any[] } = { success: 0, failed: 0, failedItems: [] }
+
     try {
       await onImport(importData, {}, (current, total) => {
         setImportProgress({ current, total })
       })
       
+      // 如果沒有拋出異常，表示全部成功
+      results.success = importData.length
+      setImportResults(results)
+      
       toast.success(`資料匯入成功！共處理 ${importData.length} 筆資料`)
-      onOpenChange(false)
-      setImportData([])
-      setValidationErrors([])
-      setUpdateMode(false)
-      setImportProgress(null)
     } catch (error) {
       console.error("匯入失敗:", error)
-      toast.error("資料匯入失敗")
+      
+      // 嘗試解析錯誤信息
+      const errorMessage = error instanceof Error ? error.message : '未知錯誤'
+      
+      // 檢查是否有詳細的結果信息
+      if ((error as any).results) {
+        // 使用詳細的結果信息
+        const detailedResults = (error as any).results;
+        results.success = detailedResults.success;
+        results.failed = detailedResults.failed;
+        results.failedItems = detailedResults.failedItems;
+      } else if (errorMessage.includes('匯入產品')) {
+        // 單個項目錯誤
+        results.failed = 1
+        results.success = importData.length - 1
+        results.failedItems.push({
+          item: importData[importProgress?.current || 0],
+          error: errorMessage,
+          row: (importProgress?.current || 0) + 1
+        })
+      } else {
+        // 其他錯誤，標記所有項目為失敗
+        results.failed = importData.length
+        results.success = 0
+        results.failedItems.push({
+          item: null,
+          error: errorMessage,
+          row: 0
+        })
+      }
+      
+      setImportResults(results)
+      
+      if (results.success > 0) {
+        toast.success(`資料匯入完成！成功 ${results.success} 筆，失敗 ${results.failed} 筆`)
+      } else {
+        toast.error("資料匯入失敗")
+      }
     } finally {
       setIsImporting(false)
       setImportProgress(null)
@@ -325,9 +364,11 @@ export function ImportExportDialog({
          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-6">
            <h4 className="font-semibold text-blue-800 mb-2">匯入/匯出規則</h4>
            <div className="text-sm text-blue-700 space-y-1">
-             <p>• <strong>智能匹配模式</strong>：系統會根據香精代號自動判斷是新增還是更新</p>
-             <p>• <strong>新增邏輯</strong>：如果香精代號不存在，系統會建立新的香精項目</p>
-             <p>• <strong>更新邏輯</strong>：如果香精代號已存在，系統會更新覆蓋有填入的欄位</p>
+             <p>• <strong>智能匹配模式</strong>：系統會根據產品代號自動判斷是新增還是更新</p>
+             <p>• <strong>新增邏輯</strong>：如果產品代號不存在，系統會建立新的產品項目</p>
+             <p>• <strong>更新邏輯</strong>：如果產品代號已存在，系統會更新覆蓋有填入的欄位</p>
+             <p>• <strong>必填欄位</strong>：產品名稱、產品代號、系列名稱、香精名稱為必填項目</p>
+             <p>• <strong>注意事項</strong>：系列名稱和香精名稱必須在系統中已存在</p>
              <p>• <strong>支援格式</strong>：Excel (.xlsx) 和 CSV 檔案格式</p>
            </div>
          </div>
@@ -423,6 +464,30 @@ export function ImportExportDialog({
                     </div>
                   )}
 
+                                      {(importResults.success > 0 || importResults.failed > 0) && (
+                     <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                       <h5 className="font-semibold text-blue-800 mb-2">匯入結果</h5>
+                       <div className="text-sm text-blue-700 space-y-1">
+                         <p>✅ 成功匯入: {importResults.success} 筆</p>
+                         <p>❌ 失敗匯入: {importResults.failed} 筆</p>
+                         {importResults.failedItems.length > 0 && (
+                           <>
+                             <p className="font-semibold text-red-800 mt-2">失敗項目詳情:</p>
+                             <div className="max-h-32 overflow-y-auto">
+                               <ul className="text-xs text-red-700 space-y-1">
+                                 {importResults.failedItems.map((item, index) => (
+                                   <li key={index} className="border-l-2 border-red-300 pl-2">
+                                     <span className="font-medium">第 {item.row} 行:</span> {item.error}
+                                   </li>
+                                 ))}
+                               </ul>
+                             </div>
+                           </>
+                         )}
+                       </div>
+                     </div>
+                   )}
+
                                      {importProgress && (
                      <div className="space-y-2">
                        <div className="flex justify-between text-sm">
@@ -445,6 +510,16 @@ export function ImportExportDialog({
                    >
                      {isImporting ? "匯入中..." : "確認匯入"}
                    </Button>
+                   
+                   {(importResults.success > 0 || importResults.failed > 0) && (
+                     <Button 
+                       onClick={() => onOpenChange(false)}
+                       variant="outline"
+                       className="w-full"
+                     >
+                       關閉
+                     </Button>
+                   )}
                 </div>
               )}
             </CardContent>

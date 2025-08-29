@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { collection, getDocs, DocumentReference } from 'firebase/firestore';
+import { collection, getDocs, DocumentReference, query, where } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 
@@ -243,18 +243,127 @@ function ProductsPageContent() {
   };
 
   // 匯入/匯出處理函式
-  const handleImport = async (data: any[]) => {
+  const handleImport = async (data: any[], options?: { updateMode?: boolean }, onProgress?: (current: number, total: number) => void) => {
+    if (!db) {
+      throw new Error('Firebase 未初始化');
+    }
+
     const functions = getFunctions();
     const createProduct = httpsCallable(functions, 'createProduct');
+    const updateProduct = httpsCallable(functions, 'updateProduct');
+    
+    let current = 0;
+    const total = data.length;
+    const results = {
+      success: 0,
+      failed: 0,
+      failedItems: [] as Array<{ item: any; error: string; row: number }>
+    };
     
     for (const item of data) {
       try {
-        await createProduct(item);
+        // 查找系列ID
+        let seriesId = null;
+        if (item.seriesName) {
+          const seriesQuery = query(
+            collection(db, 'productSeries'),
+            where('name', '==', item.seriesName)
+          );
+          const seriesSnapshot = await getDocs(seriesQuery);
+          if (!seriesSnapshot.empty) {
+            seriesId = seriesSnapshot.docs[0].id;
+          } else {
+            throw new Error(`系列名稱 "${item.seriesName}" 不存在於系統中`);
+          }
+        }
+
+        // 查找香精ID
+        let fragranceId = null;
+        if (item.fragranceName) {
+          const fragranceQuery = query(
+            collection(db, 'fragrances'),
+            where('name', '==', item.fragranceName)
+          );
+          const fragranceSnapshot = await getDocs(fragranceQuery);
+          if (!fragranceSnapshot.empty) {
+            fragranceId = fragranceSnapshot.docs[0].id;
+          } else {
+            throw new Error(`香精名稱 "${item.fragranceName}" 不存在於系統中`);
+          }
+        }
+
+        // 檢查產品是否已存在（根據產品代號）
+        let existingProductId = null;
+        if (item.code) {
+          const productQuery = query(
+            collection(db, 'products'),
+            where('code', '==', item.code)
+          );
+          const productSnapshot = await getDocs(productQuery);
+          if (!productSnapshot.empty) {
+            existingProductId = productSnapshot.docs[0].id;
+          }
+        }
+
+        // 準備產品數據
+        const productData = {
+          name: item.name,
+          seriesId: seriesId,
+          fragranceId: fragranceId,
+          nicotineMg: item.nicotineMg || 0,
+          targetProduction: item.targetProduction || 1,
+          specificMaterialIds: item.specificMaterialIds || []
+        };
+
+        if (existingProductId && options?.updateMode) {
+          // 更新現有產品
+          await updateProduct({
+            productId: existingProductId,
+            ...productData
+          });
+        } else if (!existingProductId) {
+          // 創建新產品
+          await createProduct(productData);
+        } else {
+          // 產品已存在但沒有啟用更新模式
+          console.warn(`產品代號 "${item.code}" 已存在，跳過創建`);
+        }
+
+        results.success++;
+        current++;
+        if (onProgress) {
+          onProgress(current, total);
+        }
       } catch (error) {
         console.error('匯入產品失敗:', error);
-        throw error;
+        const errorMessage = error instanceof Error ? error.message : '未知錯誤';
+        results.failed++;
+        results.failedItems.push({
+          item: item,
+          error: errorMessage,
+          row: current + 1
+        });
+        
+        // 如果啟用了更新模式，繼續處理其他項目
+        if (!options?.updateMode) {
+          throw new Error(`匯入產品 "${item.name}" 失敗: ${errorMessage}`);
+        }
+        
+        current++;
+        if (onProgress) {
+          onProgress(current, total);
+        }
       }
     }
+    
+    // 如果有失敗項目，拋出包含詳細信息的錯誤
+    if (results.failed > 0) {
+      const errorMessage = `匯入完成，成功 ${results.success} 筆，失敗 ${results.failed} 筆`;
+      const error = new Error(errorMessage);
+      (error as any).results = results;
+      throw error;
+    }
+    
     loadData();
   };
 
@@ -263,9 +372,10 @@ function ProductsPageContent() {
       name: product.name,
       code: product.code,
       seriesName: product.seriesName,
-      fragranceName: product.fragranceName,
-      nicotineMg: product.nicotineMg,
-      status: product.status
+              fragranceName: product.fragranceName,
+        nicotineMg: product.nicotineMg,
+        targetProduction: product.targetProduction || 1,
+        status: product.status
     }));
   };
 
@@ -735,6 +845,7 @@ function ProductsPageContent() {
             seriesName: "示例系列",
             fragranceName: "示例香精",
             nicotineMg: 3,
+            targetProduction: 100,
             status: "active"
           }
         ]}
@@ -742,9 +853,10 @@ function ProductsPageContent() {
           { key: "name", label: "產品名稱", required: true, type: "string" },
           { key: "code", label: "產品代號", required: true, type: "string" },
           { key: "seriesName", label: "系列名稱", required: true, type: "string" },
-          { key: "fragranceName", label: "香精名稱", required: true, type: "string" },
-          { key: "nicotineMg", label: "尼古丁濃度", required: false, type: "number" },
-          { key: "status", label: "狀態", required: false, type: "string" }
+                      { key: "fragranceName", label: "香精名稱", required: true, type: "string" },
+            { key: "nicotineMg", label: "尼古丁濃度", required: false, type: "number" },
+            { key: "targetProduction", label: "目標產量", required: false, type: "number" },
+            { key: "status", label: "狀態", required: false, type: "string" }
         ]}
       />
     </div>

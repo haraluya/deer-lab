@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, updateDoc, DocumentReference } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, DocumentReference, collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { ArrowLeft, Loader2, Package, Building, User, Calendar, Tag, DollarSign, ShoppingCart, Edit, Droplets } from 'lucide-react';
 import { toast } from 'sonner';
@@ -33,11 +33,14 @@ interface Product {
   targetProduction?: number;
   specificMaterials?: DocumentReference[];
   specificMaterialNames?: string[];
+  specificMaterialStocks?: { [key: string]: number };
+  specificMaterialUnits?: { [key: string]: string };
   description?: string;
   notes?: string;
   createdAt: Date;
   createdBy: string;
   createdByName?: string;
+  fragranceStock?: number;
 }
 
 export default function ProductDetailPage() {
@@ -88,10 +91,11 @@ export default function ProductDetailPage() {
           }
         }
 
-        // 獲取香精資訊
+        // 獲取香精資訊和庫存
         let fragranceName = '未指定';
         let fragranceCode = '';
         let fragranceFormula = { percentage: 0, pgRatio: 0, vgRatio: 0 };
+        let fragranceStock = 0;
         if (data.currentFragranceRef) {
           try {
             const fragranceDoc = await getDoc(data.currentFragranceRef);
@@ -104,14 +108,17 @@ export default function ProductDetailPage() {
                 pgRatio: fragranceData?.pgRatio || 0,
                 vgRatio: fragranceData?.vgRatio || 0,
               };
+              fragranceStock = fragranceData?.currentStock || 0;
             }
           } catch (error) {
             console.error('Failed to fetch fragrance info:', error);
           }
         }
 
-        // 獲取專屬材料名稱
+        // 獲取專屬材料名稱、庫存和單位
         let specificMaterialNames: string[] = [];
+        let specificMaterialStocks: { [key: string]: number } = {};
+        let specificMaterialUnits: { [key: string]: string } = {};
         if (data.specificMaterials && data.specificMaterials.length > 0) {
           try {
             const materialDocs = await Promise.all(
@@ -119,7 +126,12 @@ export default function ProductDetailPage() {
             );
             specificMaterialNames = materialDocs
               .filter(doc => doc.exists())
-              .map(doc => doc.data()?.name || '未知材料');
+              .map(doc => {
+                const materialData = doc.data() as any;
+                specificMaterialStocks[doc.id] = materialData?.currentStock || 0;
+                specificMaterialUnits[doc.id] = materialData?.unit || '個';
+                return materialData?.name || '未知材料';
+              });
           } catch (error) {
             console.error('Failed to fetch specific materials:', error);
           }
@@ -151,10 +163,13 @@ export default function ProductDetailPage() {
           fragranceName,
           fragranceCode,
           fragranceFormula,
+          fragranceStock,
           nicotineMg: data.nicotineMg || 0,
           targetProduction: data.targetProduction || 1,
           specificMaterials: data.specificMaterials || [],
           specificMaterialNames,
+          specificMaterialStocks,
+          specificMaterialUnits,
           description: data.description,
           notes: data.notes,
           createdAt: data.createdAt?.toDate() || new Date(),
@@ -204,6 +219,22 @@ export default function ProductDetailPage() {
       console.error('更新備註失敗:', error);
       toast.error('更新備註失敗');
     }
+  };
+
+  const handleSeriesClick = () => {
+    if (product?.seriesRef) {
+      router.push(`/dashboard/product-series/${product.seriesRef.id}`);
+    }
+  };
+
+  const handleFragranceClick = () => {
+    if (product?.currentFragranceRef) {
+      router.push(`/dashboard/fragrances/${product.currentFragranceRef.id}`);
+    }
+  };
+
+  const handleMaterialClick = (materialRef: DocumentReference) => {
+    router.push(`/dashboard/materials/${materialRef.id}`);
   };
 
   const getStatusColor = (status: string) => {
@@ -308,29 +339,41 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-                         {/* 產品系列 */}
-             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg">
-               <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
-                 <ShoppingCart className="h-5 w-5 text-white" />
-               </div>
-               <div>
-                 <p className="text-sm text-green-600 font-medium">產品系列</p>
-                 <p className="text-lg font-semibold text-green-800">{product.seriesName}</p>
-                 <p className="text-xs text-gray-500">{product.seriesType || '未指定'}</p>
-               </div>
-             </div>
+            {/* 產品系列 - 可點擊 */}
+            <div 
+              className={`flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg ${product.seriesRef ? 'cursor-pointer hover:from-green-100 hover:to-green-200 transition-all duration-200' : ''}`}
+              onClick={product.seriesRef ? handleSeriesClick : undefined}
+            >
+              <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                <ShoppingCart className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-green-600 font-medium">產品系列</p>
+                <p className="text-lg font-semibold text-green-800">
+                  {product.seriesName}
+                  {product.seriesType && product.seriesType !== '未指定' && (
+                    <span className="text-sm font-normal text-green-600 ml-2">
+                      ({product.seriesType})
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
 
-                         {/* 使用香精 */}
-             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg">
-               <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
-                 <Droplets className="h-5 w-5 text-white" />
-               </div>
-               <div>
-                 <p className="text-sm text-purple-600 font-medium">使用香精</p>
-                 <p className="text-lg font-semibold text-purple-800">{product.fragranceCode || '未指定'}</p>
-                 <p className="text-xs text-gray-500">{product.fragranceName && product.fragranceName !== '未指定' ? product.fragranceName : '未指定'}</p>
-               </div>
-             </div>
+            {/* 使用香精 - 可點擊 */}
+            <div 
+              className={`flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg ${product.currentFragranceRef ? 'cursor-pointer hover:from-purple-100 hover:to-purple-200 transition-all duration-200' : ''}`}
+              onClick={product.currentFragranceRef ? handleFragranceClick : undefined}
+            >
+              <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <Droplets className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-purple-600 font-medium">使用香精</p>
+                <p className="text-lg font-semibold text-purple-800">{product.fragranceCode || '未指定'}</p>
+                <p className="text-xs text-gray-500">庫存: {product.fragranceStock || 0} KG</p>
+              </div>
+            </div>
 
             {/* 丁鹽濃度 */}
             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg">
@@ -346,158 +389,185 @@ export default function ProductDetailPage() {
         </CardContent>
       </Card>
 
-             {/* 產品詳細資訊 */}
-       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-         {/* 基本資訊 */}
-         <Card className="border-0 shadow-lg">
-           <CardHeader>
-             <CardTitle className="text-lg text-primary">基本資訊</CardTitle>
-           </CardHeader>
-                       <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div className="flex justify-between items-center py-2 border-b">
-                  <span className="text-muted-foreground">產品名稱</span>
-                  <span className="font-medium">{product.name}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b">
-                  <span className="text-muted-foreground">產品系列</span>
-                  <span className="font-medium">{product.seriesName}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b">
-                  <span className="text-muted-foreground">使用香精</span>
-                  <div className="text-right">
-                    <div className="font-medium">
-                      {product.fragranceCode && product.fragranceName && product.fragranceName !== '未指定'
-                        ? `${product.fragranceCode}(${product.fragranceName})`
-                        : product.fragranceCode || '未指定'
-                      }
-                    </div>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b">
-                  <span className="text-muted-foreground">丁鹽濃度</span>
-                  <span className="font-medium">{product.nicotineMg || 0} MG</span>
-                </div>
-              </div>
-            </CardContent>
-         </Card>
-
-         {/* 專屬材料 */}
-         <Card className="border-0 shadow-lg bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
-           <CardHeader>
-             <CardTitle className="text-lg text-purple-700">專屬材料</CardTitle>
-           </CardHeader>
-           <CardContent className="space-y-4">
-             {product.specificMaterialNames && product.specificMaterialNames.length > 0 ? (
-               <div className="space-y-2">
-                 {product.specificMaterialNames.map((materialName, index) => (
-                   <div key={index} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-purple-200">
-                     <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                     <span className="text-sm font-medium text-purple-800">{materialName}</span>
-                   </div>
-                 ))}
-               </div>
-             ) : (
-               <div className="text-center py-8">
-                 <div className="text-muted-foreground">
-                   尚未選擇專屬材料
-                 </div>
-               </div>
-             )}
-           </CardContent>
-         </Card>
-       </div>
-
-               {/* 使用香精 */}
-        <Card className="mt-6 border-0 shadow-lg bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+      {/* 產品詳細資訊 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* 基本資訊 */}
+        <Card className="border-0 shadow-lg">
           <CardHeader>
-            <CardTitle className="text-lg text-green-700">使用香精</CardTitle>
+            <CardTitle className="text-lg text-primary">基本資訊</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {product.fragranceName && product.fragranceName !== '未指定' ? (
-              <div className="bg-white rounded-lg p-4 border border-green-200">
-                {/* 目標產量輸入 */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    產品目標產量 (KG)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0.1"
-                    value={targetProduction}
-                    onChange={(e) => setTargetProduction(Number(e.target.value) || 1)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="輸入目標產量"
-                  />
+            <div className="space-y-3">
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-muted-foreground">產品名稱</span>
+                <span className="font-medium">{product.name}</span>
+              </div>
+              <div 
+                className={`flex justify-between items-center py-2 border-b ${product.seriesRef ? 'cursor-pointer hover:bg-green-50 transition-colors duration-200' : ''}`}
+                onClick={product.seriesRef ? handleSeriesClick : undefined}
+              >
+                <span className="text-muted-foreground">產品系列</span>
+                <span className="font-medium">
+                  {product.seriesName}
+                  {product.seriesType && product.seriesType !== '未指定' && (
+                    <span className="text-sm text-gray-500 ml-2">
+                      ({product.seriesType})
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div 
+                className={`flex justify-between items-center py-2 border-b ${product.currentFragranceRef ? 'cursor-pointer hover:bg-purple-50 transition-colors duration-200' : ''}`}
+                onClick={product.currentFragranceRef ? handleFragranceClick : undefined}
+              >
+                <span className="text-muted-foreground">使用香精</span>
+                <div className="text-right">
+                  <div className="font-medium">
+                    {product.fragranceCode && product.fragranceName && product.fragranceName !== '未指定'
+                      ? `${product.fragranceCode}(${product.fragranceName})`
+                      : product.fragranceCode || '未指定'
+                    }
+                  </div>
+                  <div className="text-xs text-gray-500">庫存: {product.fragranceStock || 0} KG</div>
                 </div>
-                
-                                 {/* 配方計算結果 */}
-                 <div className="space-y-4">
-                   {/* 第一排：產品目標產量、香精編號、香精名稱 */}
-                   <div className="grid grid-cols-3 gap-4">
-                     <div>
-                       <span className="text-gray-600 text-sm">產品目標產量 (KG)：</span>
-                       <div className="font-medium">{targetProduction} KG</div>
-                     </div>
-                     <div>
-                       <span className="text-gray-600 text-sm">香精編號：</span>
-                       <div className="font-medium text-green-800">{product.fragranceCode || 'N/A'}</div>
-                     </div>
-                     <div>
-                       <span className="text-gray-600 text-sm">香精名稱：</span>
-                       <div className="font-medium text-green-800">{product.fragranceName}</div>
-                     </div>
-                   </div>
-                   
-                   {/* 第二排：香精比例、PG比例、VG比例 */}
-                   <div className="grid grid-cols-3 gap-4">
-                     <div>
-                       <span className="text-gray-600 text-sm">香精比例：</span>
-                       <div className="font-medium text-green-600">{product.fragranceFormula?.percentage || 0}%</div>
-                     </div>
-                     <div>
-                       <span className="text-gray-600 text-sm">PG比例：</span>
-                       <div className="font-medium text-blue-600">{product.fragranceFormula?.pgRatio || 0}%</div>
-                     </div>
-                     <div>
-                       <span className="text-gray-600 text-sm">VG比例：</span>
-                       <div className="font-medium text-purple-600">{product.fragranceFormula?.vgRatio || 0}%</div>
-                     </div>
-                   </div>
-                   
-                   {/* 第三排：需要香精、需要PG、需要VG */}
-                   <div className="grid grid-cols-3 gap-4">
-                     <div>
-                       <span className="text-gray-600 text-sm">需要香精：</span>
-                       <div className="font-medium text-green-600">
-                         {(targetProduction * ((product.fragranceFormula?.percentage || 0) / 100)).toFixed(2)} KG
-                       </div>
-                     </div>
-                     <div>
-                       <span className="text-gray-600 text-sm">需要PG：</span>
-                       <div className="font-medium text-blue-600">
-                         {(targetProduction * ((product.fragranceFormula?.pgRatio || 0) / 100)).toFixed(2)} KG
-                       </div>
-                     </div>
-                     <div>
-                       <span className="text-gray-600 text-sm">需要VG：</span>
-                       <div className="font-medium text-purple-600">
-                         {(targetProduction * ((product.fragranceFormula?.vgRatio || 0) / 100)).toFixed(2)} KG
-                       </div>
-                     </div>
-                   </div>
-                 </div>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-muted-foreground">丁鹽濃度</span>
+                <span className="font-medium">{product.nicotineMg || 0} MG</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 專屬材料 */}
+        <Card className="border-0 shadow-lg bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
+          <CardHeader>
+            <CardTitle className="text-lg text-purple-700">專屬材料</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {product.specificMaterialNames && product.specificMaterialNames.length > 0 ? (
+              <div className="space-y-2">
+                {product.specificMaterialNames.map((materialName, index) => {
+                  const materialRef = product.specificMaterials?.[index];
+                  const materialId = materialRef?.id;
+                  const stock = materialId ? product.specificMaterialStocks?.[materialId] || 0 : 0;
+                  const unit = materialId ? product.specificMaterialUnits?.[materialId] || '個' : '個';
+                  return (
+                    <div 
+                      key={index} 
+                      className={`flex items-center justify-between p-2 bg-white rounded-lg border border-purple-200 ${materialRef ? 'cursor-pointer hover:bg-purple-50 transition-colors duration-200' : ''}`}
+                      onClick={materialRef ? () => handleMaterialClick(materialRef) : undefined}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                        <span className="text-sm font-medium text-purple-800">{materialName}</span>
+                      </div>
+                      <span className="text-xs text-gray-500">庫存: {stock} {unit}</span>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-8">
                 <div className="text-muted-foreground">
-                  尚未選擇香精
+                  尚未選擇專屬材料
                 </div>
               </div>
             )}
           </CardContent>
         </Card>
+      </div>
+
+      {/* 使用香精 */}
+      <Card className="mt-6 border-0 shadow-lg bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+        <CardHeader>
+          <CardTitle className="text-lg text-green-700">使用香精</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {product.fragranceName && product.fragranceName !== '未指定' ? (
+            <div className="bg-white rounded-lg p-4 border border-green-200">
+              {/* 目標產量輸入 */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  產品目標產量 (KG)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0.1"
+                  value={targetProduction}
+                  onChange={(e) => setTargetProduction(Number(e.target.value) || 1)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="輸入目標產量"
+                />
+              </div>
+              
+              {/* 配方計算結果 */}
+              <div className="space-y-4">
+                {/* 第一排：產品目標產量、香精編號、香精名稱 */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <span className="text-gray-600 text-sm">產品目標產量 (KG)：</span>
+                    <div className="font-medium">{targetProduction} KG</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 text-sm">香精編號：</span>
+                    <div className="font-medium text-green-800">{product.fragranceCode || 'N/A'}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 text-sm">香精名稱：</span>
+                    <div className="font-medium text-green-800">{product.fragranceName}</div>
+                  </div>
+                </div>
+                
+                {/* 第二排：香精比例、PG比例、VG比例 */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <span className="text-gray-600 text-sm">香精比例：</span>
+                    <div className="font-medium text-green-600">{product.fragranceFormula?.percentage || 0}%</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 text-sm">PG比例：</span>
+                    <div className="font-medium text-blue-600">{product.fragranceFormula?.pgRatio || 0}%</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 text-sm">VG比例：</span>
+                    <div className="font-medium text-purple-600">{product.fragranceFormula?.vgRatio || 0}%</div>
+                  </div>
+                </div>
+                
+                {/* 第三排：需要香精、需要PG、需要VG */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <span className="text-gray-600 text-sm">需要香精：</span>
+                    <div className="font-medium text-green-600">
+                      {(targetProduction * ((product.fragranceFormula?.percentage || 0) / 100)).toFixed(2)} KG
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 text-sm">需要PG：</span>
+                    <div className="font-medium text-blue-600">
+                      {(targetProduction * ((product.fragranceFormula?.pgRatio || 0) / 100)).toFixed(2)} KG
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 text-sm">需要VG：</span>
+                    <div className="font-medium text-purple-600">
+                      {(targetProduction * ((product.fragranceFormula?.vgRatio || 0) / 100)).toFixed(2)} KG
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="text-muted-foreground">
+                尚未選擇香精
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* 備註區塊 */}
       <Card className="mt-6 border-0 shadow-lg">
