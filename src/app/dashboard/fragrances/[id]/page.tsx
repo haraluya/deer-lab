@@ -103,7 +103,7 @@ export default function FragranceDetailPage() {
         // 獲取使用該香精的產品數量
         const productsQuery = query(
           collection(db, 'products'),
-          where('fragranceRef', '==', doc(db, 'fragrances', params.id))
+          where('currentFragranceRef', '==', doc(db, 'fragrances', params.id))
         );
         const productsSnapshot = await getDocs(productsQuery);
         const productsList = productsSnapshot.docs.map(doc => ({
@@ -204,7 +204,7 @@ export default function FragranceDetailPage() {
       // 獲取使用該香精的產品數量
       const productsQuery = query(
         collection(db, 'products'),
-        where('fragranceRef', '==', doc(db, 'fragrances', params.id))
+        where('currentFragranceRef', '==', doc(db, 'fragrances', params.id))
       );
       const productsSnapshot = await getDocs(productsQuery);
       const productsList = productsSnapshot.docs.map(doc => ({

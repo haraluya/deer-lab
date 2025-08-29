@@ -146,12 +146,14 @@ export default function ProductDetailPage() {
         let commonMaterialNames: string[] = [];
         let commonMaterialStocks: { [key: string]: number } = {};
         let commonMaterialUnits: { [key: string]: string } = {};
+        let commonMaterialRefs: DocumentReference[] = [];
         if (data.seriesRef) {
           try {
             const seriesDoc = await getDoc(data.seriesRef);
             if (seriesDoc.exists()) {
               const seriesData = seriesDoc.data() as any;
               if (seriesData.commonMaterials && seriesData.commonMaterials.length > 0) {
+                commonMaterialRefs = seriesData.commonMaterials;
                 const materialDocs = await Promise.all(
                   seriesData.commonMaterials.map((ref: DocumentReference) => getDoc(ref))
                 );
@@ -203,7 +205,7 @@ export default function ProductDetailPage() {
           specificMaterialNames,
           specificMaterialStocks,
           specificMaterialUnits,
-          commonMaterials: [],
+          commonMaterials: commonMaterialRefs,
           commonMaterialNames,
           commonMaterialStocks,
           commonMaterialUnits,
@@ -492,12 +494,15 @@ export default function ProductDetailPage() {
             {product.commonMaterialNames && product.commonMaterialNames.length > 0 ? (
               <div className="space-y-2">
                 {product.commonMaterialNames.map((materialName, index) => {
-                  const stock = product.commonMaterialStocks?.[Object.keys(product.commonMaterialStocks || {})[index]] || 0;
-                  const unit = product.commonMaterialUnits?.[Object.keys(product.commonMaterialUnits || {})[index]] || '個';
+                  const materialRef = product.commonMaterials?.[index];
+                  const materialId = materialRef?.id;
+                  const stock = materialId ? product.commonMaterialStocks?.[materialId] || 0 : 0;
+                  const unit = materialId ? product.commonMaterialUnits?.[materialId] || '個' : '個';
                   return (
                     <div 
                       key={index} 
-                      className="flex items-center justify-between p-2 bg-white rounded-lg border border-blue-200"
+                      className={`flex items-center justify-between p-2 bg-white rounded-lg border border-blue-200 ${materialRef ? 'cursor-pointer hover:bg-blue-50 transition-colors duration-200' : ''}`}
+                      onClick={materialRef ? () => handleMaterialClick(materialRef) : undefined}
                     >
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
