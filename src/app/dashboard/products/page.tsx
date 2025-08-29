@@ -603,7 +603,7 @@ function ProductsPageContent() {
                             <span className="text-gray-500">使用香精</span>
                           </div>
                           <div>
-                            <span className="text-sm text-gray-700">{product.fragranceCode || '未指定'}</span>
+                            <span className="text-sm text-green-600">{product.fragranceCode || '未指定'}</span>
                             <div className="text-xs text-gray-500">{product.fragranceName}</div>
                           </div>
                         </div>
@@ -733,7 +733,7 @@ function ProductsPageContent() {
                     </TableCell>
                     <TableCell>
                       <div>
-                        <span className="text-sm font-medium text-foreground">{product.fragranceCode || '未指定'}</span>
+                        <span className="text-sm font-medium text-green-600">{product.fragranceCode || '未指定'}</span>
                         <div className="text-xs text-gray-500">{product.fragranceName}</div>
                       </div>
                     </TableCell>
