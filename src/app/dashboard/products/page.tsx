@@ -135,7 +135,18 @@ function ProductsPageContent() {
       return true;
     });
 
-    setFilteredProducts(filtered);
+    // 排序：先按系列名稱升序，再按產品名稱升序
+    const sorted = filtered.sort((a, b) => {
+      // 首先按系列名稱排序
+      const seriesComparison = (a.seriesName || '').localeCompare(b.seriesName || '');
+      if (seriesComparison !== 0) {
+        return seriesComparison;
+      }
+      // 如果系列相同，再按產品名稱排序
+      return (a.name || '').localeCompare(b.name || '');
+    });
+
+    setFilteredProducts(sorted);
   }, [products, searchTerm, selectedProductTypes, selectedSeries]);
 
   // 處理 URL 查詢參數
