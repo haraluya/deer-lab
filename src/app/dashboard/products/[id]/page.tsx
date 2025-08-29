@@ -35,6 +35,10 @@ interface Product {
   specificMaterialNames?: string[];
   specificMaterialStocks?: { [key: string]: number };
   specificMaterialUnits?: { [key: string]: string };
+  commonMaterials?: DocumentReference[];
+  commonMaterialNames?: string[];
+  commonMaterialStocks?: { [key: string]: number };
+  commonMaterialUnits?: { [key: string]: string };
   description?: string;
   notes?: string;
   status?: '啟用' | '備用' | '棄用';
@@ -138,6 +142,34 @@ export default function ProductDetailPage() {
           }
         }
 
+        // 獲取通用材料名稱、庫存和單位
+        let commonMaterialNames: string[] = [];
+        let commonMaterialStocks: { [key: string]: number } = {};
+        let commonMaterialUnits: { [key: string]: string } = {};
+        if (data.seriesRef) {
+          try {
+            const seriesDoc = await getDoc(data.seriesRef);
+            if (seriesDoc.exists()) {
+              const seriesData = seriesDoc.data() as any;
+              if (seriesData.commonMaterials && seriesData.commonMaterials.length > 0) {
+                const materialDocs = await Promise.all(
+                  seriesData.commonMaterials.map((ref: DocumentReference) => getDoc(ref))
+                );
+                commonMaterialNames = materialDocs
+                  .filter(doc => doc.exists())
+                  .map(doc => {
+                    const materialData = doc.data() as any;
+                    commonMaterialStocks[doc.id] = materialData?.currentStock || 0;
+                    commonMaterialUnits[doc.id] = materialData?.unit || '個';
+                    return materialData?.name || '未知材料';
+                  });
+              }
+            }
+          } catch (error) {
+            console.error('Failed to fetch common materials:', error);
+          }
+        }
+
         // 獲取創建者名稱
         let createdByName = '未知';
         if (data.createdBy) {
@@ -171,6 +203,10 @@ export default function ProductDetailPage() {
           specificMaterialNames,
           specificMaterialStocks,
           specificMaterialUnits,
+          commonMaterials: [],
+          commonMaterialNames,
+          commonMaterialStocks,
+          commonMaterialUnits,
           description: data.description,
           notes: data.notes,
           status: data.status || '啟用',
@@ -387,25 +423,12 @@ export default function ProductDetailPage() {
                 <p className="text-lg font-semibold text-orange-800">{product.nicotineMg || 0} MG</p>
               </div>
             </div>
-
-            {/* 產品狀態 */}
-            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg">
-              <div className="w-10 h-10 bg-gradient-to-r from-gray-500 to-gray-600 rounded-lg flex items-center justify-center">
-                <Tag className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 font-medium">產品狀態</p>
-                <div className={`inline-flex items-center px-2 py-1 rounded-full text-sm font-medium ${getStatusColor(product.status || '啟用')}`}>
-                  {getStatusText(product.status || '啟用')}
-                </div>
-              </div>
-            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* 產品詳細資訊 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 基本資訊 */}
         <Card className="border-0 shadow-lg">
           <CardHeader>
@@ -450,7 +473,48 @@ export default function ProductDetailPage() {
                 <span className="text-muted-foreground">丁鹽濃度</span>
                 <span className="font-medium">{product.nicotineMg || 0} MG</span>
               </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-muted-foreground">產品狀態</span>
+                <div className={`inline-flex items-center px-2 py-1 rounded-full text-sm font-medium ${getStatusColor(product.status || '啟用')}`}>
+                  {getStatusText(product.status || '啟用')}
+                </div>
+              </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* 通用材料 */}
+        <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+          <CardHeader>
+            <CardTitle className="text-lg text-blue-700">通用材料</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {product.commonMaterialNames && product.commonMaterialNames.length > 0 ? (
+              <div className="space-y-2">
+                {product.commonMaterialNames.map((materialName, index) => {
+                  const stock = product.commonMaterialStocks?.[Object.keys(product.commonMaterialStocks || {})[index]] || 0;
+                  const unit = product.commonMaterialUnits?.[Object.keys(product.commonMaterialUnits || {})[index]] || '個';
+                  return (
+                    <div 
+                      key={index} 
+                      className="flex items-center justify-between p-2 bg-white rounded-lg border border-blue-200"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <span className="text-sm font-medium text-blue-800">{materialName}</span>
+                      </div>
+                      <span className="text-xs text-gray-500">庫存: {stock} {unit}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-muted-foreground">
+                  該系列尚未設定通用材料
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
