@@ -360,18 +360,19 @@ export function ImportExportDialog({
            <DialogDescription className="text-muted-foreground mt-2" id="import-export-dialog-description">{description}</DialogDescription>
          </DialogHeader>
 
-         {/* 匯入/匯出規則說明 */}
-         <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-6">
-           <h4 className="font-semibold text-blue-800 mb-2">匯入/匯出規則</h4>
-           <div className="text-sm text-blue-700 space-y-1">
-             <p>• <strong>智能匹配模式</strong>：系統會根據產品代號自動判斷是新增還是更新</p>
-             <p>• <strong>新增邏輯</strong>：如果產品代號不存在，系統會建立新的產品項目</p>
-             <p>• <strong>更新邏輯</strong>：如果產品代號已存在，系統會更新覆蓋有填入的欄位</p>
-             <p>• <strong>必填欄位</strong>：產品名稱、產品代號、系列名稱、香精名稱為必填項目</p>
-             <p>• <strong>注意事項</strong>：系列名稱和香精名稱必須在系統中已存在</p>
-             <p>• <strong>支援格式</strong>：Excel (.xlsx) 和 CSV 檔案格式</p>
-           </div>
-         </div>
+                   {/* 匯入/匯出規則說明 */}
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-6">
+            <h4 className="font-semibold text-blue-800 mb-2">匯入/匯出規則</h4>
+            <div className="text-sm text-blue-700 space-y-1">
+              <p>• <strong>智能匹配模式</strong>：系統會根據產品代號自動判斷是新增還是更新</p>
+              <p>• <strong>新增邏輯</strong>：如果產品代號不存在，系統會建立新的產品項目</p>
+              <p>• <strong>更新邏輯</strong>：如果產品代號已存在，系統會更新覆蓋有填入的欄位</p>
+              <p>• <strong>必填欄位</strong>：產品名稱、系列名稱、香精編號為必填項目</p>
+              <p>• <strong>產品代號</strong>：如果未提供，系統會自動生成</p>
+              <p>• <strong>注意事項</strong>：系列名稱和香精編號必須在系統中已存在</p>
+              <p>• <strong>支援格式</strong>：Excel (.xlsx) 和 CSV 檔案格式</p>
+            </div>
+          </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* 匯入區塊 */}

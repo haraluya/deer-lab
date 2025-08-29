@@ -280,22 +280,22 @@ function ProductsPageContent() {
 
         // 查找香精ID
         let fragranceId = null;
-        if (item.fragranceName) {
+        if (item.fragranceCode) {
           const fragranceQuery = query(
             collection(db, 'fragrances'),
-            where('name', '==', item.fragranceName)
+            where('code', '==', item.fragranceCode)
           );
           const fragranceSnapshot = await getDocs(fragranceQuery);
           if (!fragranceSnapshot.empty) {
             fragranceId = fragranceSnapshot.docs[0].id;
           } else {
-            throw new Error(`香精名稱 "${item.fragranceName}" 不存在於系統中`);
+            throw new Error(`香精編號 "${item.fragranceCode}" 不存在於系統中`);
           }
         }
 
         // 檢查產品是否已存在（根據產品代號）
         let existingProductId = null;
-        if (item.code) {
+        if (item.code && item.code.trim() !== '') {
           const productQuery = query(
             collection(db, 'products'),
             where('code', '==', item.code)
@@ -316,6 +316,11 @@ function ProductsPageContent() {
           status: item.status || '啟用'
         };
 
+        // 如果有產品代號，加入產品代號（如果沒有，後端會自動生成）
+        if (item.code && item.code.trim() !== '') {
+          (productData as any).code = item.code;
+        }
+
         if (existingProductId && options?.updateMode) {
           // 更新現有產品
           await updateProduct({
@@ -323,7 +328,7 @@ function ProductsPageContent() {
             ...productData
           });
         } else if (!existingProductId) {
-          // 創建新產品
+          // 創建新產品（如果沒有產品代號，後端會自動生成）
           await createProduct(productData);
         } else {
           // 產品已存在但沒有啟用更新模式
@@ -373,7 +378,7 @@ function ProductsPageContent() {
       name: product.name,
       code: product.code,
       seriesName: product.seriesName,
-      fragranceName: product.fragranceName,
+      fragranceCode: product.fragranceCode,
       nicotineMg: product.nicotineMg,
       status: product.status || '啟用'
     }));
@@ -840,18 +845,18 @@ function ProductsPageContent() {
         sampleData={[
           {
             name: "示例產品",
-            code: "PROD001",
+            code: "",
             seriesName: "示例系列",
-            fragranceName: "示例香精",
+            fragranceCode: "FRAG001",
             nicotineMg: 3,
             status: "啟用"
           }
         ]}
                 fields={[
           { key: "name", label: "產品名稱", required: true, type: "string" },
-          { key: "code", label: "產品代號", required: true, type: "string" },
+          { key: "code", label: "產品代號", required: false, type: "string" },
           { key: "seriesName", label: "系列名稱", required: true, type: "string" },
-          { key: "fragranceName", label: "香精名稱", required: true, type: "string" },
+          { key: "fragranceCode", label: "香精編號", required: true, type: "string" },
           { key: "nicotineMg", label: "尼古丁濃度", required: false, type: "number" },
           { key: "status", label: "狀態", required: false, type: "string" }
         ]}
