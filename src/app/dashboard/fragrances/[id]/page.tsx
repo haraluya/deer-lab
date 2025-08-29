@@ -106,13 +106,16 @@ export default function FragranceDetailPage() {
           where('currentFragranceRef', '==', doc(db, 'fragrances', params.id))
         );
         const productsSnapshot = await getDocs(productsQuery);
-        const productsList = productsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          code: doc.data().code,
-          name: doc.data().name,
-          status: doc.data().status,
-          createdAt: doc.data().createdAt?.toDate() || new Date(),
-        }));
+        const productsList = productsSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            code: data.code,
+            name: data.name,
+            status: data.status || '啟用', // 確保狀態有預設值
+            createdAt: data.createdAt?.toDate() || new Date(),
+          };
+        });
 
         setProducts(productsList);
 
@@ -207,13 +210,16 @@ export default function FragranceDetailPage() {
         where('currentFragranceRef', '==', doc(db, 'fragrances', params.id))
       );
       const productsSnapshot = await getDocs(productsQuery);
-      const productsList = productsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        code: doc.data().code,
-        name: doc.data().name,
-        status: doc.data().status,
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-      }));
+      const productsList = productsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          code: data.code,
+          name: data.name,
+          status: data.status || '啟用', // 確保狀態有預設值
+          createdAt: data.createdAt?.toDate() || new Date(),
+        };
+      });
 
       setProducts(productsList);
 
@@ -400,7 +406,7 @@ export default function FragranceDetailPage() {
 
 
       {/* 香精詳細資訊 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 基本資訊 */}
         <Card className="border-0 shadow-lg">
           <CardHeader>
@@ -483,6 +489,47 @@ export default function FragranceDetailPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* 使用產品列表 */}
+        <Card className="border-0 shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-lg text-primary">使用產品 ({fragrance.productCount})</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {products.length > 0 ? (
+              <div className="space-y-2">
+                {products.map((product) => (
+                  <div 
+                    key={product.id}
+                    className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors duration-200"
+                    onClick={() => router.push(`/dashboard/products/${product.id}`)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                      <div>
+                        <span className="text-sm font-medium text-gray-800">{product.name}</span>
+                        <div className="text-xs text-gray-500">代號: {product.code}</div>
+                      </div>
+                    </div>
+                    <Badge className={
+                      product.status === '啟用' ? 'bg-green-100 text-green-800 border-green-300' :
+                      product.status === '備用' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                      product.status === '棄用' ? 'bg-red-100 text-red-800 border-red-300' :
+                      'bg-gray-100 text-gray-800 border-gray-300'
+                    }>
+                      {product.status || '未指定'}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-muted-foreground">暫無產品使用此香精</div>
+                <div className="text-sm text-muted-foreground mt-1">在產品管理中為產品分配此香精</div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* 備註 */}
@@ -533,72 +580,7 @@ export default function FragranceDetailPage() {
         </Card>
       )}
 
-      {/* 使用產品列表 */}
-      <Card className="mt-6 border-0 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-primary">
-            <div className="w-6 h-6 bg-gradient-to-r from-primary to-primary/80 rounded-lg flex items-center justify-center">
-              <Package className="h-3 w-3 text-white" />
-            </div>
-            使用產品 ({fragrance.productCount})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {products.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>產品資訊</TableHead>
-                  <TableHead>狀態</TableHead>
-                  <TableHead>建立時間</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {products.map((product) => (
-                  <TableRow 
-                    key={product.id}
-                    className="hover:bg-primary/5 transition-colors duration-200 cursor-pointer"
-                    onClick={() => router.push(`/dashboard/products/${product.id}`)}
-                  >
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gradient-to-r from-primary to-primary/80 rounded-lg flex items-center justify-center">
-                          <Package className="h-4 w-4 text-white" />
-                        </div>
-                        <div>
-                          <div className="font-medium text-foreground">{product.name}</div>
-                          <div className="text-xs text-muted-foreground">代號: {product.code}</div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={product.status === 'active' ? 'success' : 'destructive'}>
-                        {product.status === 'active' ? '啟用' : '停用'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
-                          {product.createdAt.toLocaleDateString('zh-TW')}
-                        </span>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Package className="h-8 w-8 text-gray-400" />
-              </div>
-              <p className="text-muted-foreground">暫無產品使用此香精</p>
-              <p className="text-sm text-muted-foreground mt-1">在產品管理中為產品分配此香精</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+
 
       {/* 編輯香精對話框 */}
       {fragrance && (
