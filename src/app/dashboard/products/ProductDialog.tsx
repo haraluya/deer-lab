@@ -25,6 +25,7 @@ const formSchema = z.object({
   fragranceId: z.string({ required_error: '必須選擇一個香精' }),
   nicotineMg: z.coerce.number().min(0, { message: '尼古丁濃度不能為負數' }).default(0),
   specificMaterialIds: z.array(z.string()).optional().default([]),
+  status: z.enum(['啟用', '備用', '棄用']).default('啟用'),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -39,6 +40,7 @@ export interface ProductData extends DocumentData {
   currentFragranceRef: DocumentReference;
   specificMaterials: DocumentReference[];
   nicotineMg: number;
+  status?: '啟用' | '備用' | '棄用';
 }
 
 // 下拉選單選項的介面
@@ -83,6 +85,7 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
       fragranceId: undefined,
       nicotineMg: 0,
       specificMaterialIds: [],
+      status: '啟用',
     },
   });
 
@@ -195,6 +198,7 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
         fragranceId: productData.currentFragranceRef?.id || undefined,
         nicotineMg: productData.nicotineMg || 0,
         specificMaterialIds: productData.specificMaterials?.map(ref => ref.id) || [],
+        status: productData.status || '啟用',
       });
       
       // 如果編輯模式，載入香精配方資訊
@@ -208,6 +212,7 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
         fragranceId: undefined,
         nicotineMg: 0,
         specificMaterialIds: [],
+        status: '啟用',
       });
       // 重置產品編號和代碼預覽
       setGeneratedProductNumber('');
@@ -554,6 +559,56 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
                     </div>
                   </div>
                 )}
+             </div>
+
+             {/* 產品狀態 */}
+             <div className="space-y-6 p-6 bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl border border-gray-200 shadow-sm">
+               <h3 className="text-xl font-bold flex items-center gap-3 text-gray-800">
+                 <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                   <Tag className="h-4 w-4 text-gray-600" />
+                 </div>
+                 產品狀態
+               </h3>
+               
+               <div className="grid grid-cols-1 gap-6">
+                 <FormField
+                   control={form.control}
+                   name="status"
+                   render={({ field }) => (
+                     <FormItem>
+                       <FormLabel className="text-sm font-semibold text-gray-700">產品狀態</FormLabel>
+                       <Select onValueChange={field.onChange} defaultValue={field.value}>
+                         <FormControl>
+                           <SelectTrigger>
+                             <SelectValue placeholder="選擇產品狀態" />
+                           </SelectTrigger>
+                         </FormControl>
+                         <SelectContent>
+                           <SelectItem value="啟用">
+                             <div className="flex items-center gap-2">
+                               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                               啟用
+                             </div>
+                           </SelectItem>
+                           <SelectItem value="備用">
+                             <div className="flex items-center gap-2">
+                               <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                               備用
+                             </div>
+                           </SelectItem>
+                           <SelectItem value="棄用">
+                             <div className="flex items-center gap-2">
+                               <div className="w-3 h-3 bg-pink-500 rounded-full"></div>
+                               棄用
+                             </div>
+                           </SelectItem>
+                         </SelectContent>
+                       </Select>
+                       <FormMessage />
+                     </FormItem>
+                   )}
+                 />
+               </div>
              </div>
 
              {/* 專屬材料 */}

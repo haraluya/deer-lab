@@ -29,6 +29,7 @@ interface ProductWithDetails extends ProductData {
   seriesName: string;
   fragranceName: string;
   fragranceCode: string;
+  status?: '啟用' | '備用' | '棄用';
 }
 
 function ProductsPageContent() {
@@ -312,7 +313,8 @@ function ProductsPageContent() {
           fragranceId: fragranceId,
           nicotineMg: item.nicotineMg || 0,
           targetProduction: item.targetProduction || 1,
-          specificMaterialIds: item.specificMaterialIds || []
+          specificMaterialIds: item.specificMaterialIds || [],
+          status: item.status || '啟用'
         };
 
         if (existingProductId && options?.updateMode) {
@@ -367,15 +369,15 @@ function ProductsPageContent() {
     loadData();
   };
 
-  const handleExport = async () => {
+    const handleExport = async () => {
     return products.map(product => ({
       name: product.name,
       code: product.code,
       seriesName: product.seriesName,
-              fragranceName: product.fragranceName,
-        nicotineMg: product.nicotineMg,
-        targetProduction: product.targetProduction || 1,
-        status: product.status
+      fragranceName: product.fragranceName,
+      nicotineMg: product.nicotineMg,
+      targetProduction: product.targetProduction || 1,
+      status: product.status || '啟用'
     }));
   };
 
@@ -605,14 +607,15 @@ function ProductsPageContent() {
 
                         <div>
                           <div className="flex items-center gap-1 mb-1">
-                            <Calendar className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-muted-foreground">建立時間</span>
+                            <Tag className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-muted-foreground">狀態</span>
                           </div>
-                          <span className="text-xs text-muted-foreground">
-                            {product.createdAt ? 
-                              new Date(product.createdAt.toDate()).toLocaleDateString('zh-TW') : 
-                              '未知'
-                            }
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            product.status === '備用' ? 'bg-yellow-100 text-yellow-800' :
+                            product.status === '棄用' ? 'bg-pink-100 text-pink-800' :
+                            'bg-green-100 text-green-800'
+                          }`}>
+                            {product.status || '啟用'}
                           </span>
                         </div>
                       </div>
@@ -673,7 +676,7 @@ function ProductsPageContent() {
                 <TableHead className="text-left">產品資訊</TableHead>
                 <TableHead className="text-left">系列</TableHead>
                 <TableHead className="text-left">使用香精</TableHead>
-                <TableHead className="text-left">建立時間</TableHead>
+                <TableHead className="text-left">狀態</TableHead>
                 <TableHead className="text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
@@ -725,14 +728,12 @@ function ProductsPageContent() {
                     </TableCell>
 
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-gray-600">
-                          {product.createdAt ? 
-                            new Date(product.createdAt.toDate()).toLocaleDateString('zh-TW') : 
-                            '未知'
-                          }
-                        </span>
+                      <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        product.status === '備用' ? 'bg-yellow-100 text-yellow-800' :
+                        product.status === '棄用' ? 'bg-pink-100 text-pink-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {product.status || '啟用'}
                       </div>
                     </TableCell>
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
@@ -846,7 +847,7 @@ function ProductsPageContent() {
             fragranceName: "示例香精",
             nicotineMg: 3,
             targetProduction: 100,
-            status: "active"
+            status: "啟用"
           }
         ]}
         fields={[

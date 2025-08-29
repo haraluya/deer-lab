@@ -37,6 +37,7 @@ interface Product {
   specificMaterialUnits?: { [key: string]: string };
   description?: string;
   notes?: string;
+  status?: '啟用' | '備用' | '棄用';
   createdAt: Date;
   createdBy: string;
   createdByName?: string;
@@ -172,6 +173,7 @@ export default function ProductDetailPage() {
           specificMaterialUnits,
           description: data.description,
           notes: data.notes,
+          status: data.status || '啟用',
           createdAt: data.createdAt?.toDate() || new Date(),
           createdBy: data.createdBy,
           createdByName,
@@ -239,11 +241,11 @@ export default function ProductDetailPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active':
+      case '啟用':
         return 'bg-green-100 text-green-800 border-green-300';
-      case 'inactive':
-        return 'bg-gray-100 text-gray-800 border-gray-300';
-      case 'discontinued':
+      case '備用':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+      case '棄用':
         return 'bg-red-100 text-red-800 border-red-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300';
@@ -252,12 +254,12 @@ export default function ProductDetailPage() {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'active':
+      case '啟用':
         return '啟用';
-      case 'inactive':
-        return '停用';
-      case 'discontinued':
-        return '停產';
+      case '備用':
+        return '備用';
+      case '棄用':
+        return '棄用';
       default:
         return '未知';
     }
@@ -383,6 +385,19 @@ export default function ProductDetailPage() {
               <div>
                 <p className="text-sm text-orange-600 font-medium">丁鹽濃度</p>
                 <p className="text-lg font-semibold text-orange-800">{product.nicotineMg || 0} MG</p>
+              </div>
+            </div>
+
+            {/* 產品狀態 */}
+            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg">
+              <div className="w-10 h-10 bg-gradient-to-r from-gray-500 to-gray-600 rounded-lg flex items-center justify-center">
+                <Tag className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 font-medium">產品狀態</p>
+                <div className={`inline-flex items-center px-2 py-1 rounded-full text-sm font-medium ${getStatusColor(product.status || '啟用')}`}>
+                  {getStatusText(product.status || '啟用')}
+                </div>
               </div>
             </div>
           </div>

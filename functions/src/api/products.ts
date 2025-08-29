@@ -9,7 +9,7 @@ const db = getFirestore();
 export const createProduct = onCall(async (request) => {
   const { auth: contextAuth, data } = request;
   // await ensureCanManageProducts(contextAuth?.uid);
-  const { name, seriesId, fragranceId, nicotineMg, targetProduction, specificMaterialIds } = data;
+  const { name, seriesId, fragranceId, nicotineMg, targetProduction, specificMaterialIds, status } = data;
   if (!name || !seriesId || !fragranceId) { throw new HttpsError("invalid-argument", "請求缺少產品名稱、系列或香精。"); }
   const seriesRef = db.doc(`productSeries/${seriesId}`);
   const seriesDoc = await seriesRef.get();
@@ -62,6 +62,7 @@ export const createProduct = onCall(async (request) => {
     nicotineMg: Number(nicotineMg) || 0, 
     targetProduction: Number(targetProduction) || 1, 
     specificMaterials: materialRefs, 
+    status: status || '啟用',
     createdAt: FieldValue.serverTimestamp(), 
   });
   return { success: true, code: productCode };
@@ -70,7 +71,7 @@ export const createProduct = onCall(async (request) => {
 export const updateProduct = onCall(async (request) => {
   const { auth: contextAuth, data } = request;
   // await ensureCanManageProducts(contextAuth?.uid);
-  const { productId, name, seriesId, fragranceId, nicotineMg, specificMaterialIds } = data;
+  const { productId, name, seriesId, fragranceId, nicotineMg, specificMaterialIds, status } = data;
   if (!productId) { throw new HttpsError("invalid-argument", "缺少 productId"); }
   
   const productRef = db.doc(`products/${productId}`);
@@ -79,6 +80,7 @@ export const updateProduct = onCall(async (request) => {
   const updateData: any = {
     name,
     nicotineMg: Number(nicotineMg) || 0,
+    status: status || '啟用',
     updatedAt: FieldValue.serverTimestamp(),
   };
 
