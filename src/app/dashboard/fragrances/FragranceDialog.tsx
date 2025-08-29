@@ -144,12 +144,12 @@ export function FragranceDialog({
     
     if (fragrancePercentage <= 60) {
       // 香精+PG補滿60%，VG為40%
-      pgRatio = 60 - fragrancePercentage;
+      pgRatio = Math.round((60 - fragrancePercentage) * 100) / 100;
       vgRatio = 40;
     } else {
       // 香精超過60%，PG為0，VG補滿
       pgRatio = 0;
-      vgRatio = 100 - fragrancePercentage;
+      vgRatio = Math.round((100 - fragrancePercentage) * 100) / 100;
     }
     
     return { pgRatio, vgRatio };
