@@ -389,16 +389,19 @@ export default function FragranceDetailPage() {
               </div>
             </div>
 
-            {/* 供應商 */}
-            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg">
-              <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-                <Building className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-orange-600 font-medium">供應商</p>
-                <p className="text-lg font-semibold text-orange-800">{fragrance.supplierName}</p>
-              </div>
-            </div>
+                         {/* 供應商 */}
+             <div 
+               className="flex items-center gap-3 p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg cursor-pointer hover:from-orange-100 hover:to-orange-200 transition-all duration-200"
+               onClick={() => fragrance.supplierRef && router.push(`/dashboard/suppliers/${fragrance.supplierRef.id}`)}
+             >
+               <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                 <Building className="h-5 w-5 text-white" />
+               </div>
+               <div>
+                 <p className="text-sm text-orange-600 font-medium">供應商</p>
+                 <p className="text-lg font-semibold text-orange-800">{fragrance.supplierName}</p>
+               </div>
+             </div>
           </div>
         </CardContent>
       </Card>
@@ -455,81 +458,81 @@ export default function FragranceDetailPage() {
           </CardContent>
         </Card>
 
-        {/* 配方欄位 */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-lg text-primary">配方欄位</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">香精比例</span>
-                <span className="font-medium text-blue-600">
-                  {fragrance.percentage || 0}%
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">PG比例</span>
-                <span className="font-medium text-green-600">
-                  {fragrance.pgRatio || 0}%
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">VG比例</span>
-                <span className="font-medium text-purple-600">
-                  {fragrance.vgRatio || 0}%
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">總比例</span>
-                <span className="font-medium text-orange-600">
-                  {((fragrance.percentage || 0) + (fragrance.pgRatio || 0) + (fragrance.vgRatio || 0))}%
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                 {/* 配方欄位 */}
+         <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-50 to-indigo-50">
+           <CardHeader>
+             <CardTitle className="text-lg text-primary">配方欄位</CardTitle>
+           </CardHeader>
+           <CardContent className="space-y-4">
+             <div className="space-y-3">
+               <div className="flex justify-between items-center py-2 border-b border-blue-200">
+                 <span className="text-muted-foreground">香精比例</span>
+                 <span className="font-medium text-blue-600">
+                   {fragrance.percentage || 0}%
+                 </span>
+               </div>
+               <div className="flex justify-between items-center py-2 border-b border-blue-200">
+                 <span className="text-muted-foreground">PG比例</span>
+                 <span className="font-medium text-green-600">
+                   {fragrance.pgRatio || 0}%
+                 </span>
+               </div>
+               <div className="flex justify-between items-center py-2 border-b border-blue-200">
+                 <span className="text-muted-foreground">VG比例</span>
+                 <span className="font-medium text-purple-600">
+                   {fragrance.vgRatio || 0}%
+                 </span>
+               </div>
+               <div className="flex justify-between items-center py-2 border-b border-blue-200">
+                 <span className="text-muted-foreground">總比例</span>
+                 <span className="font-medium text-orange-600">
+                   {((fragrance.percentage || 0) + (fragrance.pgRatio || 0) + (fragrance.vgRatio || 0))}%
+                 </span>
+               </div>
+             </div>
+           </CardContent>
+         </Card>
 
-        {/* 使用產品列表 */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-lg text-primary">使用產品 ({fragrance.productCount})</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {products.length > 0 ? (
-              <div className="space-y-2">
-                {products.map((product) => (
-                  <div 
-                    key={product.id}
-                    className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors duration-200"
-                    onClick={() => router.push(`/dashboard/products/${product.id}`)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                      <div>
-                        <span className="text-sm font-medium text-gray-800">{product.name}</span>
-                        <div className="text-xs text-gray-500">代號: {product.code}</div>
-                      </div>
-                    </div>
-                    <Badge className={
-                      product.status === '啟用' ? 'bg-green-100 text-green-800 border-green-300' :
-                      product.status === '備用' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
-                      product.status === '棄用' ? 'bg-red-100 text-red-800 border-red-300' :
-                      'bg-gray-100 text-gray-800 border-gray-300'
-                    }>
-                      {product.status || '未指定'}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <div className="text-muted-foreground">暫無產品使用此香精</div>
-                <div className="text-sm text-muted-foreground mt-1">在產品管理中為產品分配此香精</div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                 {/* 使用產品列表 */}
+         <Card className="border-0 shadow-lg bg-gradient-to-r from-purple-50 to-pink-50">
+           <CardHeader>
+             <CardTitle className="text-lg text-primary">使用產品 ({fragrance.productCount})</CardTitle>
+           </CardHeader>
+           <CardContent className="space-y-4">
+             {products.length > 0 ? (
+               <div className="space-y-2">
+                 {products.map((product) => (
+                   <div 
+                     key={product.id}
+                     className="flex items-center justify-between p-2 bg-white rounded-lg border border-purple-200 cursor-pointer hover:bg-purple-50 transition-colors duration-200"
+                     onClick={() => router.push(`/dashboard/products/${product.id}`)}
+                   >
+                     <div className="flex items-center gap-2">
+                       <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                       <div>
+                         <span className="text-sm font-medium text-gray-800">{product.name}</span>
+                         <div className="text-xs text-gray-500">代號: {product.code}</div>
+                       </div>
+                     </div>
+                     <Badge className={
+                       product.status === '啟用' ? 'bg-green-100 text-green-800 border-green-300' :
+                       product.status === '備用' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                       product.status === '棄用' ? 'bg-red-100 text-red-800 border-red-300' :
+                       'bg-gray-100 text-gray-800 border-gray-300'
+                     }>
+                       {product.status || '未指定'}
+                     </Badge>
+                   </div>
+                 ))}
+               </div>
+             ) : (
+               <div className="text-center py-8">
+                 <div className="text-muted-foreground">暫無產品使用此香精</div>
+                 <div className="text-sm text-muted-foreground mt-1">在產品管理中為產品分配此香精</div>
+               </div>
+             )}
+           </CardContent>
+         </Card>
       </div>
 
       {/* 備註 */}
