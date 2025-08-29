@@ -2,12 +2,12 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { collection, getDocs, QueryDocumentSnapshot, DocumentData, doc as firestoreDoc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, QueryDocumentSnapshot, DocumentData, doc as firestoreDoc, getDoc, query, where, doc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 import { SupplierDialog, SupplierData } from './SupplierDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { MoreHorizontal, Eye, Edit, Building, Package, Phone, Plus, User } from 'lucide-react';
+import { MoreHorizontal, Eye, Edit, Building, Package, Phone, Plus, User, Droplets } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -536,6 +536,9 @@ function SuppliersPageContent() {
                   </div>
                 </div>
               )}
+
+              {/* 相關物料和香精 */}
+              <SupplierRelatedItems supplierId={selectedDetailSupplier.id} />
             </div>
 
             {/* 操作按鈕 */}
@@ -562,6 +565,154 @@ function SuppliersPageContent() {
             </div>
           </DialogContent>
         </Dialog>
+      )}
+    </div>
+  );
+}
+
+// 供應商相關物料和香精組件
+interface SupplierRelatedItemsProps {
+  supplierId: string;
+}
+
+function SupplierRelatedItems({ supplierId }: SupplierRelatedItemsProps) {
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [fragrances, setFragrances] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRelatedItems = async () => {
+      setIsLoading(true);
+      try {
+        if (!db) {
+          throw new Error("Firebase 未初始化");
+        }
+
+        // 獲取相關物料
+        const materialsRef = collection(db, 'materials');
+        const materialsQuery = query(materialsRef, where('supplierRef', '==', doc(db, 'suppliers', supplierId)));
+        const materialsSnapshot = await getDocs(materialsQuery);
+        const materialsList = materialsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...(doc.data() as any)
+        }));
+
+        // 獲取相關香精
+        const fragrancesRef = collection(db, 'fragrances');
+        const fragrancesQuery = query(fragrancesRef, where('supplierRef', '==', doc(db, 'suppliers', supplierId)));
+        const fragrancesSnapshot = await getDocs(fragrancesQuery);
+        const fragrancesList = fragrancesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...(doc.data() as any)
+        }));
+
+        setMaterials(materialsList);
+        setFragrances(fragrancesList);
+      } catch (error) {
+        console.error('獲取相關物料和香精失敗:', error);
+        toast.error('獲取相關物料和香精失敗');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (supplierId) {
+      fetchRelatedItems();
+    }
+  }, [supplierId]);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 p-6 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl border border-orange-200 shadow-sm">
+        <h3 className="text-xl font-bold flex items-center gap-3 text-orange-800">
+          <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+            <Package className="h-4 w-4 text-orange-600" />
+          </div>
+          相關物料和香精
+        </h3>
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
+          <span className="ml-2 text-orange-600">載入中...</span>
+        </div>
+      </div>
+    );
+  }
+
+  const hasItems = materials.length > 0 || fragrances.length > 0;
+
+  return (
+    <div className="space-y-6 p-6 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl border border-orange-200 shadow-sm">
+      <h3 className="text-xl font-bold flex items-center gap-3 text-orange-800">
+        <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+          <Package className="h-4 w-4 text-orange-600" />
+        </div>
+        相關物料和香精
+      </h3>
+      
+      {!hasItems ? (
+        <div className="text-center py-8 text-orange-600">
+          <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>目前沒有相關的物料或香精</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* 相關物料 */}
+          {materials.length > 0 && (
+            <div className="space-y-3">
+              <h4 className="text-lg font-semibold text-orange-700 flex items-center gap-2">
+                <Building className="h-4 w-4" />
+                相關物料 ({materials.length})
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {materials.map((material) => (
+                  <div key={material.id} className="bg-white p-4 rounded-lg border border-orange-200 shadow-sm">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="font-medium text-gray-900">{material.name}</div>
+                      <Badge variant="outline" className="text-xs">
+                        {material.code}
+                      </Badge>
+                    </div>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <div>分類: {material.category} / {material.subCategory}</div>
+                      <div>庫存: {material.currentStock || 0} {material.unit}</div>
+                      <div>成本: NT$ {material.costPerUnit || 0}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 相關香精 */}
+          {fragrances.length > 0 && (
+            <div className="space-y-3">
+              <h4 className="text-lg font-semibold text-orange-700 flex items-center gap-2">
+                <Droplets className="h-4 w-4" />
+                相關香精 ({fragrances.length})
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {fragrances.map((fragrance) => (
+                  <div key={fragrance.id} className="bg-white p-4 rounded-lg border border-orange-200 shadow-sm">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="font-medium text-gray-900">{fragrance.name}</div>
+                      <Badge variant="outline" className="text-xs">
+                        {fragrance.code}
+                      </Badge>
+                    </div>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <div>種類: {fragrance.fragranceType || fragrance.status}</div>
+                      <div>庫存: {fragrance.currentStock || 0} {fragrance.unit || 'KG'}</div>
+                      <div>成本: NT$ {fragrance.costPerUnit || 0}</div>
+                      {fragrance.percentage && (
+                        <div>濃度: {fragrance.percentage}%</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

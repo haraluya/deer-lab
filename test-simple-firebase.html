@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>簡單 Firebase 測試</title>
+</head>
+<body>
+    <h1>簡單 Firebase Functions 測試</h1>
+    <button onclick="testUpdate()">測試分類更新</button>
+    <div id="result"></div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA5eVBsq9wJ9W5yEyZ2LmK8oP4kV7Qr3Ns",
+            authDomain: "deer-lab.firebaseapp.com",
+            projectId: "deer-lab",
+            storageBucket: "deer-lab.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abcdef123456789"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const functions = getFunctions(app);
+
+        window.testUpdate = async function() {
+            console.log('開始測試...');
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '測試中...';
+
+            try {
+                const updateMaterialCategory = httpsCallable(functions, 'updateMaterialCategory');
+                console.log('準備調用函數...');
+                
+                const result = await updateMaterialCategory({
+                    oldName: '紙盒/彩盒',
+                    newName: '紙盒',
+                    type: 'category'
+                });
+                
+                console.log('函數調用成功:', result);
+                resultDiv.innerHTML = `成功！結果: ${JSON.stringify(result.data)}`;
+            } catch (error) {
+                console.error('測試失敗:', error);
+                resultDiv.innerHTML = `失敗！錯誤: ${error.message}`;
+            }
+        };
+    </script>
+</body>
+</html>
+

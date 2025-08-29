@@ -73,7 +73,7 @@
 - **`materials/page.tsx`** - 物料列表頁面
 - **`materials/MaterialDialog.tsx`** - 物料編輯對話框
 - **`material-categories/page.tsx`** - 物料分類頁面
-- **`material-categories/CategoryDetailDialog.tsx`** - 分類詳細對話框
+- **`materials/MaterialCategoryDialog.tsx`** - 物料分類管理對話框（包含詳情檢視）
 
 ### 香精管理模組
 

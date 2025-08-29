@@ -4,12 +4,13 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { ArrowLeft, Loader2, Package, Building, User, Calendar, Tag, Droplets, Edit, FlaskConical } from 'lucide-react';
+import { ArrowLeft, Loader2, Package, Building, User, Calendar, Tag, Droplets, Edit, FlaskConical, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FragranceDialog, FragranceData } from '../FragranceDialog';
+import { DetailViewDialog } from '@/components/DetailViewDialog';
 
 interface Fragrance {
   id: string;
@@ -51,6 +52,8 @@ export default function FragranceDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isEditRemarksOpen, setIsEditRemarksOpen] = useState(false); // 新增備註編輯對話框狀態
+  const [isSupplierDetailOpen, setIsSupplierDetailOpen] = useState(false);
+  const [supplierData, setSupplierData] = useState<any>(null);
 
   useEffect(() => {
     const fetchFragrance = async () => {
@@ -154,6 +157,45 @@ export default function FragranceDetailPage() {
 
   const handleEdit = () => {
     setIsEditDialogOpen(true);
+  };
+
+  const handleSupplierClick = async () => {
+    if (!fragrance?.supplierRef) return;
+    
+    try {
+      const supplierDoc = await getDoc(fragrance.supplierRef);
+      if (supplierDoc.exists()) {
+        const data = supplierDoc.data() as any;
+        
+        // 獲取對接人員資訊
+        let liaisonPersonName = '未指定';
+        if (data.liaisonPersonId && db) {
+          try {
+            const liaisonDoc = await getDoc(doc(db, 'users', data.liaisonPersonId));
+            if (liaisonDoc.exists()) {
+              const liaisonData = liaisonDoc.data();
+              liaisonPersonName = liaisonData.name || '未指定';
+            }
+          } catch (error) {
+            console.error('獲取對接人員資訊失敗:', error);
+          }
+        }
+        
+        setSupplierData({
+          id: supplierDoc.id,
+          name: data.name || '未指定',
+          products: data.products || '未指定',
+          contactWindow: data.contactWindow || '未指定',
+          contactMethod: data.contactMethod || '未指定',
+          liaisonPersonName,
+          notes: data.notes || '',
+          createdAt: data.createdAt?.toDate() || new Date(),
+        });
+        setIsSupplierDetailOpen(true);
+      }
+    } catch (error) {
+      console.error('Failed to fetch supplier data:', error);
+    }
   };
 
   const handleFragranceUpdate = async () => {
@@ -412,7 +454,7 @@ export default function FragranceDetailPage() {
                          {/* 供應商 */}
              <div 
                className="flex items-center gap-3 p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg cursor-pointer hover:from-orange-100 hover:to-orange-200 transition-all duration-200"
-               onClick={() => fragrance.supplierRef && router.push(`/dashboard/suppliers/${fragrance.supplierRef.id}`)}
+               onClick={handleSupplierClick}
              >
                <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
                  <Building className="h-5 w-5 text-white" />
@@ -626,6 +668,74 @@ export default function FragranceDetailPage() {
            } as FragranceData}
          />
       )}
+
+      {/* 供應商詳情對話框 */}
+      <DetailViewDialog
+        isOpen={isSupplierDetailOpen}
+        onOpenChange={setIsSupplierDetailOpen}
+        title="供應商詳情"
+        subtitle={supplierData ? `查看供應商「${supplierData.name}」的詳細資訊` : ''}
+        sections={supplierData ? [
+          {
+            title: "基本資訊",
+            icon: <Building className="h-4 w-4" />,
+            color: "blue",
+            fields: [
+              {
+                label: "供應商名稱",
+                value: supplierData.name || '-',
+                icon: <Building className="h-3 w-3" />
+              },
+              {
+                label: "供應商品",
+                value: supplierData.products || '未指定',
+                icon: <Package className="h-3 w-3" />
+              }
+            ]
+          },
+          {
+            title: "聯絡資訊",
+            icon: <User className="h-4 w-4" />,
+            color: "green",
+            fields: [
+              {
+                label: "聯絡窗口",
+                value: supplierData.contactWindow || '未指定',
+                icon: <User className="h-3 w-3" />
+              },
+              {
+                label: "對接人員",
+                value: supplierData.liaisonPersonName || '未指定',
+                icon: <User className="h-3 w-3" />
+              },
+              {
+                label: "聯絡方式",
+                value: supplierData.contactMethod || '未指定',
+                icon: <Phone className="h-3 w-3" />
+              }
+            ]
+          }
+        ] : []}
+        actions={
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsSupplierDetailOpen(false)}>
+              關閉
+            </Button>
+            {supplierData && (
+              <Button 
+                onClick={() => {
+                  setIsSupplierDetailOpen(false)
+                  // 這裡可以添加編輯供應商的邏輯
+                  // 或者導航到供應商編輯頁面
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                編輯供應商
+              </Button>
+            )}
+          </div>
+        }
+      />
     </div>
   );
 }
