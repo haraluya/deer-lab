@@ -38,6 +38,7 @@ interface Product {
   code: string;
   name: string;
   status: string;
+  seriesName?: string;
   createdAt: Date;
 }
 
@@ -210,16 +211,32 @@ export default function FragranceDetailPage() {
         where('currentFragranceRef', '==', doc(db, 'fragrances', params.id))
       );
       const productsSnapshot = await getDocs(productsQuery);
-      const productsList = productsSnapshot.docs.map(doc => {
+      const productsList = await Promise.all(productsSnapshot.docs.map(async doc => {
         const data = doc.data();
+        
+        // 獲取系列名稱
+        let seriesName = '未指定';
+        if (data.seriesRef) {
+          try {
+            const seriesDoc = await getDoc(data.seriesRef);
+            if (seriesDoc.exists()) {
+              const seriesData = seriesDoc.data() as any;
+              seriesName = seriesData?.name || '未指定';
+            }
+          } catch (error) {
+            console.error('Failed to fetch series name:', error);
+          }
+        }
+        
         return {
           id: doc.id,
           code: data.code,
           name: data.name,
           status: data.status || '啟用', // 確保狀態有預設值
+          seriesName,
           createdAt: data.createdAt?.toDate() || new Date(),
         };
-      });
+      }));
 
       setProducts(productsList);
 
@@ -284,11 +301,11 @@ export default function FragranceDetailPage() {
       return '暫無產品使用';
     }
     
-    const productNames = products.slice(0, 3).map(p => p.name);
+    const productNames = products.slice(0, 3).map(p => `${p.seriesName || '未指定'}-${p.name}`);
     if (products.length <= 3) {
-      return productNames.join('、');
+      return productNames.join('\n');
     } else {
-      return productNames.join('、') + '...';
+      return productNames.join('\n') + '\n...';
     }
   };
 
@@ -376,18 +393,21 @@ export default function FragranceDetailPage() {
               </div>
             </div>
 
-            {/* 使用產品列表 */}
-            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg">
-              <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <Package className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-purple-600 font-medium">使用產品列表</p>
-                <p className="text-lg font-semibold text-purple-800">
-                  {formatProductList(products)}
-                </p>
-              </div>
-            </div>
+                         {/* 使用產品列表 */}
+             <div 
+               className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg cursor-pointer hover:from-purple-100 hover:to-purple-200 transition-all duration-200"
+               onClick={() => products.length > 0 && router.push(`/dashboard/products/${products[0].id}`)}
+             >
+               <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                 <Package className="h-5 w-5 text-white" />
+               </div>
+               <div>
+                 <p className="text-sm text-purple-600 font-medium">使用產品列表</p>
+                 <p className="text-sm font-semibold text-purple-800 whitespace-pre-line leading-tight">
+                   {formatProductList(products)}
+                 </p>
+               </div>
+             </div>
 
                          {/* 供應商 */}
              <div 
@@ -448,12 +468,7 @@ export default function FragranceDetailPage() {
                   ${fragrance.costPerUnit?.toFixed(2) || '0.00'} / KG
                 </span>
               </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">使用產品數</span>
-                <span className="font-medium text-purple-600">
-                  {fragrance.productCount} 個產品
-                </span>
-              </div>
+              
             </div>
           </CardContent>
         </Card>
