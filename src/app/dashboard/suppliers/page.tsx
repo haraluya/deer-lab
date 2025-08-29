@@ -606,8 +606,12 @@ function SupplierRelatedItems({ supplierId }: SupplierRelatedItemsProps) {
           ...(doc.data() as any)
         }));
 
-        setMaterials(materialsList);
-        setFragrances(fragrancesList);
+        // 按名稱排序物料和香精
+        const sortedMaterials = materialsList.sort((a, b) => a.name.localeCompare(b.name, 'zh-TW'));
+        const sortedFragrances = fragrancesList.sort((a, b) => a.name.localeCompare(b.name, 'zh-TW'));
+
+        setMaterials(sortedMaterials);
+        setFragrances(sortedFragrances);
       } catch (error) {
         console.error('獲取相關物料和香精失敗:', error);
         toast.error('獲取相關物料和香精失敗');
