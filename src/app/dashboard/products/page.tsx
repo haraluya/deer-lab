@@ -312,7 +312,6 @@ function ProductsPageContent() {
           seriesId: seriesId,
           fragranceId: fragranceId,
           nicotineMg: item.nicotineMg || 0,
-          targetProduction: item.targetProduction || 1,
           specificMaterialIds: item.specificMaterialIds || [],
           status: item.status || '啟用'
         };
@@ -376,7 +375,6 @@ function ProductsPageContent() {
       seriesName: product.seriesName,
       fragranceName: product.fragranceName,
       nicotineMg: product.nicotineMg,
-      targetProduction: product.targetProduction || 1,
       status: product.status || '啟用'
     }));
   };
@@ -846,18 +844,16 @@ function ProductsPageContent() {
             seriesName: "示例系列",
             fragranceName: "示例香精",
             nicotineMg: 3,
-            targetProduction: 100,
             status: "啟用"
           }
         ]}
-        fields={[
+                fields={[
           { key: "name", label: "產品名稱", required: true, type: "string" },
           { key: "code", label: "產品代號", required: true, type: "string" },
           { key: "seriesName", label: "系列名稱", required: true, type: "string" },
-                      { key: "fragranceName", label: "香精名稱", required: true, type: "string" },
-            { key: "nicotineMg", label: "尼古丁濃度", required: false, type: "number" },
-            { key: "targetProduction", label: "目標產量", required: false, type: "number" },
-            { key: "status", label: "狀態", required: false, type: "string" }
+          { key: "fragranceName", label: "香精名稱", required: true, type: "string" },
+          { key: "nicotineMg", label: "尼古丁濃度", required: false, type: "number" },
+          { key: "status", label: "狀態", required: false, type: "string" }
         ]}
       />
     </div>
