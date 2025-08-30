@@ -114,36 +114,49 @@ export default function WorkOrderDetailPage() {
 
   // 載入工單資料
   const fetchWorkOrder = useCallback(async () => {
+    if (!id || !db) return;
+    
+    setIsLoading(true);
     try {
-      if (!db) {
-        throw new Error("Firebase 未初始化")
-      }
-      const docRef = doc(db, "workOrders", workOrderId)
-      const docSnap = await getDoc(docRef)
-      
-      if (docSnap.exists()) {
-        const data = docSnap.data() as WorkOrderData
-        console.log('工單資料:', data);
-        console.log('產品快照:', data.productSnapshot);
-        setWorkOrder({ ...data, id: docSnap.id })
-        setEditData({
-          status: data.status,
-          qcStatus: data.qcStatus,
-          actualQuantity: data.actualQuantity,
-          targetQuantity: data.targetQuantity,
-          notes: data.notes || ""
-        })
+      const workOrderDoc = await getDoc(doc(db, 'workOrders', id));
+      if (workOrderDoc.exists()) {
+        const data = workOrderDoc.data();
+        console.log('工單資料:', data); // 調試日誌
+        console.log('產品快照:', data.productSnapshot); // 調試日誌
+        
+        setWorkOrder({
+          id: workOrderDoc.id,
+          code: data.code,
+          productSnapshot: {
+            code: data.productSnapshot?.code || '',
+            name: data.productSnapshot?.name || '',
+            seriesName: data.productSnapshot?.seriesName || '未指定',
+            fragranceName: data.productSnapshot?.fragranceName || '未指定',
+            fragranceCode: data.productSnapshot?.fragranceCode || '未指定',
+            nicotineMg: data.productSnapshot?.nicotineMg || 0,
+          },
+          billOfMaterials: data.billOfMaterials || [],
+          targetQuantity: data.targetQuantity || 0,
+          actualQuantity: data.actualQuantity || 0,
+          status: data.status || '未確認',
+          qcStatus: data.qcStatus || '未檢驗',
+          createdAt: data.createdAt,
+          createdByRef: data.createdByRef,
+          createdByName: data.createdByName || '',
+          notes: data.notes || '',
+          timeRecords: data.timeRecords || [],
+        });
       } else {
-        toast.error("工單不存在")
-        router.push("/dashboard/work-orders")
+        toast.error('找不到工單');
+        router.push('/dashboard/work-orders');
       }
     } catch (error) {
-      console.error("讀取工單資料失敗:", error)
-      toast.error("讀取工單資料失敗")
+      console.error('載入工單失敗:', error);
+      toast.error('載入工單失敗');
     } finally {
-      setLoading(false)
+      setIsLoading(false);
     }
-  }, [workOrderId, router])
+  }, [id, db, router]);
 
   // 載入人員資料
   const fetchPersonnel = useCallback(async () => {

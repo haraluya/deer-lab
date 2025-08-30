@@ -146,16 +146,32 @@ export function RecipeCalculatorDialog({
 
   // 計算配方
   const calculateRecipe = useCallback(() => {
+    console.log('開始計算配方...'); // 調試日誌
+    console.log('selectedProductId:', selectedProductId);
+    console.log('targetQuantity:', targetQuantity);
+    console.log('products:', products);
+    console.log('fragrances:', fragrances);
+    console.log('materials:', materials);
+
     if (!selectedProductId || targetQuantity <= 0) {
+      console.log('條件不滿足，清空BOM表');
       setBomItems([]);
       return;
     }
 
     const selectedProduct = products.find(p => p.id === selectedProductId);
-    if (!selectedProduct) return;
+    console.log('選中的產品:', selectedProduct);
+    if (!selectedProduct) {
+      console.log('找不到選中的產品');
+      return;
+    }
 
     const selectedFragrance = fragrances.find(f => f.code === selectedProduct.fragranceCode);
-    if (!selectedFragrance) return;
+    console.log('選中的香精:', selectedFragrance);
+    if (!selectedFragrance) {
+      console.log('找不到選中的香精');
+      return;
+    }
 
     const newBomItems: BomItem[] = [];
 
@@ -176,6 +192,7 @@ export function RecipeCalculatorDialog({
         isCalculated: true,
         category: 'fragrance',
       });
+      console.log('添加香精:', selectedFragrance.name, fragranceQuantity);
     }
 
     // 2. PG (丙二醇)
@@ -196,6 +213,9 @@ export function RecipeCalculatorDialog({
           isCalculated: true,
           category: 'pg',
         });
+        console.log('添加PG:', pgMaterial.name, pgQuantity);
+      } else {
+        console.log('找不到PG物料');
       }
     }
 
@@ -217,6 +237,9 @@ export function RecipeCalculatorDialog({
           isCalculated: true,
           category: 'vg',
         });
+        console.log('添加VG:', vgMaterial.name, vgQuantity);
+      } else {
+        console.log('找不到VG物料');
       }
     }
 
@@ -242,6 +265,9 @@ export function RecipeCalculatorDialog({
           isCalculated: true,
           category: 'nicotine',
         });
+        console.log('添加尼古丁:', nicotineMaterial.name, nicotineQuantity);
+      } else {
+        console.log('找不到尼古丁物料');
       }
     }
 
@@ -263,6 +289,7 @@ export function RecipeCalculatorDialog({
       }
     });
 
+    console.log('最終BOM表:', newBomItems);
     setBomItems(newBomItems);
   }, [selectedProductId, targetQuantity, products, fragrances, materials]);
 
