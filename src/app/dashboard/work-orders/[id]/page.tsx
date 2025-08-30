@@ -1134,7 +1134,7 @@ export default function WorkOrderDetailPage() {
                           <TableCell>
                             {item.ratio ? `${item.ratio}%` : '-'}
                           </TableCell>
-                          <TableCell className="font-medium">{item.quantity.toFixed(2)}</TableCell>
+                          <TableCell className="font-medium">{item.quantity.toFixed(3)}</TableCell>
                           <TableCell>
                             {isEditingQuantity ? (
                               <Input

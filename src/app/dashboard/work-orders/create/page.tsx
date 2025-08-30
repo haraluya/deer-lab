@@ -755,7 +755,7 @@ export default function CreateWorkOrderPage() {
                                   <TableCell className="font-semibold text-gray-800">{material.materialCode}</TableCell>
                                   <TableCell className="font-medium text-gray-700">{material.materialName}</TableCell>
                                   <TableCell className="font-bold text-blue-600 text-lg">
-                                    {material.requiredQuantity.toFixed(2)}
+                                    {material.requiredQuantity.toFixed(3)}
                                   </TableCell>
                                   <TableCell className="text-gray-600">{material.currentStock}</TableCell>
                                   <TableCell>

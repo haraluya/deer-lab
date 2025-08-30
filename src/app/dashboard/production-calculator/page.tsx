@@ -459,7 +459,7 @@ function ProductionCalculatorPageContent() {
                       </TableCell>
                       <TableCell className="text-right">
                         <span className="number-display number-positive font-semibold">
-                          {item.quantity.toFixed(2)}
+                          {item.quantity.toFixed(3)}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
@@ -531,7 +531,7 @@ function ProductionCalculatorPageContent() {
                           <span className="text-gray-500">需求數量</span>
                         </div>
                         <span className="number-display number-positive font-semibold text-sm">
-                          {item.quantity.toFixed(2)}
+                          {item.quantity.toFixed(3)}
                         </span>
                       </div>
                       <div>

@@ -631,19 +631,19 @@ export default function ProductDetailPage() {
                   <div>
                     <span className="text-gray-600 text-sm">需要香精：</span>
                     <div className="font-medium text-green-600">
-                      {(targetProduction * ((product.fragranceFormula?.percentage || 0) / 100)).toFixed(2)} KG
+                      {(targetProduction * ((product.fragranceFormula?.percentage || 0) / 100)).toFixed(3)} KG
                     </div>
                   </div>
                   <div>
                     <span className="text-gray-600 text-sm">需要PG：</span>
                     <div className="font-medium text-blue-600">
-                      {(targetProduction * ((product.fragranceFormula?.pgRatio || 0) / 100)).toFixed(2)} KG
+                      {(targetProduction * ((product.fragranceFormula?.pgRatio || 0) / 100)).toFixed(3)} KG
                     </div>
                   </div>
                   <div>
                     <span className="text-gray-600 text-sm">需要VG：</span>
                     <div className="font-medium text-purple-600">
-                      {(targetProduction * ((product.fragranceFormula?.vgRatio || 0) / 100)).toFixed(2)} KG
+                      {(targetProduction * ((product.fragranceFormula?.vgRatio || 0) / 100)).toFixed(3)} KG
                     </div>
                   </div>
                 </div>
