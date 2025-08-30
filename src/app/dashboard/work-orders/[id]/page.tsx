@@ -673,26 +673,100 @@ export default function WorkOrderDetailPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="startTime">開始時間 (24小時制)</Label>
-                <Input
-                  id="startTime"
-                  type="time"
-                  value={newTimeRecord.startTime}
-                  onChange={(e) => setNewTimeRecord(prev => ({ ...prev, startTime: e.target.value }))}
-                  className="mt-1"
-                  placeholder="HH:MM"
-                />
+                <div className="flex gap-2 mt-1">
+                  <Select 
+                    value={newTimeRecord.startTime.split(':')[0] || ''} 
+                    onValueChange={(hour) => {
+                      const currentMinute = newTimeRecord.startTime.split(':')[1] || '00'
+                      setNewTimeRecord(prev => ({ 
+                        ...prev, 
+                        startTime: `${hour.padStart(2, '0')}:${currentMinute}` 
+                      }))
+                    }}
+                  >
+                    <SelectTrigger className="w-20">
+                      <SelectValue placeholder="時" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <SelectItem key={i} value={i.toString()}>
+                          {i.toString().padStart(2, '0')}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="flex items-center text-gray-500">:</span>
+                  <Select 
+                    value={newTimeRecord.startTime.split(':')[1] || ''} 
+                    onValueChange={(minute) => {
+                      const currentHour = newTimeRecord.startTime.split(':')[0] || '00'
+                      setNewTimeRecord(prev => ({ 
+                        ...prev, 
+                        startTime: `${currentHour}:${minute.padStart(2, '0')}` 
+                      }))
+                    }}
+                  >
+                    <SelectTrigger className="w-20">
+                      <SelectValue placeholder="分" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 60 }, (_, i) => (
+                        <SelectItem key={i} value={i.toString()}>
+                          {i.toString().padStart(2, '0')}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <p className="text-xs text-gray-500 mt-1">格式：HH:MM (例如：09:30, 14:00)</p>
               </div>
               <div>
                 <Label htmlFor="endTime">結束時間 (24小時制)</Label>
-                <Input
-                  id="endTime"
-                  type="time"
-                  value={newTimeRecord.endTime}
-                  onChange={(e) => setNewTimeRecord(prev => ({ ...prev, endTime: e.target.value }))}
-                  className="mt-1"
-                  placeholder="HH:MM"
-                />
+                <div className="flex gap-2 mt-1">
+                  <Select 
+                    value={newTimeRecord.endTime.split(':')[0] || ''} 
+                    onValueChange={(hour) => {
+                      const currentMinute = newTimeRecord.endTime.split(':')[1] || '00'
+                      setNewTimeRecord(prev => ({ 
+                        ...prev, 
+                        endTime: `${hour.padStart(2, '0')}:${currentMinute}` 
+                      }))
+                    }}
+                  >
+                    <SelectTrigger className="w-20">
+                      <SelectValue placeholder="時" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <SelectItem key={i} value={i.toString()}>
+                          {i.toString().padStart(2, '0')}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="flex items-center text-gray-500">:</span>
+                  <Select 
+                    value={newTimeRecord.endTime.split(':')[1] || ''} 
+                    onValueChange={(minute) => {
+                      const currentHour = newTimeRecord.endTime.split(':')[0] || '00'
+                      setNewTimeRecord(prev => ({ 
+                        ...prev, 
+                        endTime: `${currentHour}:${minute.padStart(2, '0')}` 
+                      }))
+                    }}
+                  >
+                    <SelectTrigger className="w-20">
+                      <SelectValue placeholder="分" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 60 }, (_, i) => (
+                        <SelectItem key={i} value={i.toString()}>
+                          {i.toString().padStart(2, '0')}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <p className="text-xs text-gray-500 mt-1">格式：HH:MM (例如：17:30, 18:00)</p>
               </div>
             </div>
