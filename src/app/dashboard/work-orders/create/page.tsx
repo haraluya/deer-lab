@@ -90,6 +90,11 @@ export default function CreateWorkOrderPage() {
   const calculateMaterialRequirements = () => {
     if (!selectedProduct) return []
 
+    // 如果產品沒有billOfMaterials，返回空陣列
+    if (!selectedProduct.billOfMaterials || !Array.isArray(selectedProduct.billOfMaterials)) {
+      return []
+    }
+
     return selectedProduct.billOfMaterials.map(bom => {
       const material = materials.find(m => m.id === bom.materialId)
       const requiredQuantity = (bom.quantity / 1000) * targetQuantity // 假設配方是基於1000g

@@ -105,7 +105,7 @@ function ProductionCalculatorPageContent() {
                     name: fragranceData.name,
                     code: fragranceData.code,
                     quantity: (targetQuantity * fragranceData.percentage) / 100,
-                    unit: 'ml'
+                    unit: 'kg'
                 });
             }
         }
@@ -115,23 +115,23 @@ function ProductionCalculatorPageContent() {
             name: 'PG (Propylene Glycol)',
             code: 'PG001',
             quantity: targetQuantity * 0.7, // 70% PG
-            unit: 'ml'
+            unit: 'kg'
         });
 
         bom.push({
             name: 'VG (Vegetable Glycerin)',
             code: 'VG001',
             quantity: targetQuantity * 0.3, // 30% VG
-            unit: 'ml'
+            unit: 'kg'
         });
 
         // Nicotine (if applicable)
         if (productData.nicotineMg && productData.nicotineMg > 0) {
             bom.push({
-                name: '尼古丁',
+                name: 'Nicotine Salt',
                 code: 'NIC001',
-                quantity: (targetQuantity * productData.nicotineMg) / 1000, // Convert mg to g
-                unit: 'g'
+                quantity: (targetQuantity * productData.nicotineMg) / 250, // Convert mg to kg
+                unit: 'kg'
             });
         }
 
