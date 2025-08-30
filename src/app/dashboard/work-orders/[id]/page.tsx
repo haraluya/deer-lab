@@ -19,7 +19,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
-import { TimeTrackingDialog } from "./TimeTrackingDialog"
 
 interface WorkOrderData {
   id: string
@@ -96,7 +95,6 @@ export default function WorkOrderDetailPage() {
   const [loading, setLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [isTimeTrackingOpen, setIsTimeTrackingOpen] = useState(false)
   const [isAddTimeRecordOpen, setIsAddTimeRecordOpen] = useState(false)
   const [editData, setEditData] = useState({
     status: "",
@@ -148,11 +146,19 @@ export default function WorkOrderDetailPage() {
     try {
       if (!db) return
       
-      const personnelSnapshot = await getDocs(collection(db, 'personnel'))
-      const personnelList = personnelSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Personnel[]
+      // 從 users 集合載入人員資料
+      const usersSnapshot = await getDocs(collection(db, 'users'))
+      const personnelList = usersSnapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        .filter((person: any) => person.status === 'active') // 只顯示啟用狀態的人員
+        .map((person: any) => ({
+          id: person.id,
+          name: person.name,
+          employeeId: person.employeeId,
+        })) as Personnel[]
       
       setPersonnel(personnelList)
     } catch (error) {
@@ -165,9 +171,22 @@ export default function WorkOrderDetailPage() {
     fetchPersonnel()
   }, [fetchWorkOrder, fetchPersonnel])
 
+  // 初始化新增工時紀錄表單
+  useEffect(() => {
+    if (isAddTimeRecordOpen) {
+      const today = new Date().toISOString().split('T')[0]
+      setNewTimeRecord({
+        personnelId: "",
+        workDate: today, // 預設今天
+        startTime: "",
+        endTime: ""
+      })
+    }
+  }, [isAddTimeRecordOpen])
+
   // 儲存編輯資料
   const handleSave = async () => {
-    if (!workOrder) return
+    if (!workOrder || !db) return
 
     setIsSaving(true)
     try {
@@ -207,7 +226,19 @@ export default function WorkOrderDetailPage() {
       return
     }
 
+    if (!db) {
+      toast.error("資料庫連線錯誤")
+      return
+    }
+
     try {
+      // 驗證時間格式
+      const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/
+      if (!timeRegex.test(newTimeRecord.startTime) || !timeRegex.test(newTimeRecord.endTime)) {
+        toast.error("請輸入正確的時間格式 (HH:MM)")
+        return
+      }
+
       // 計算工時
       const startDateTime = new Date(`${newTimeRecord.workDate}T${newTimeRecord.startTime}`)
       const endDateTime = new Date(`${newTimeRecord.workDate}T${newTimeRecord.endTime}`)
@@ -255,7 +286,7 @@ export default function WorkOrderDetailPage() {
       // 重置表單
       setNewTimeRecord({
         personnelId: "",
-        workDate: "",
+        workDate: new Date().toISOString().split('T')[0], // 重置為今天
         startTime: "",
         endTime: ""
       })
@@ -635,36 +666,79 @@ export default function WorkOrderDetailPage() {
                 type="date"
                 value={newTimeRecord.workDate}
                 onChange={(e) => setNewTimeRecord(prev => ({ ...prev, workDate: e.target.value }))}
+                className="mt-1"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="startTime">開始時間</Label>
+                <Label htmlFor="startTime">開始時間 (24小時制)</Label>
                 <Input
                   id="startTime"
                   type="time"
                   value={newTimeRecord.startTime}
                   onChange={(e) => setNewTimeRecord(prev => ({ ...prev, startTime: e.target.value }))}
+                  className="mt-1"
+                  placeholder="HH:MM"
                 />
+                <p className="text-xs text-gray-500 mt-1">格式：HH:MM (例如：09:30, 14:00)</p>
               </div>
               <div>
-                <Label htmlFor="endTime">結束時間</Label>
+                <Label htmlFor="endTime">結束時間 (24小時制)</Label>
                 <Input
                   id="endTime"
                   type="time"
                   value={newTimeRecord.endTime}
                   onChange={(e) => setNewTimeRecord(prev => ({ ...prev, endTime: e.target.value }))}
+                  className="mt-1"
+                  placeholder="HH:MM"
                 />
+                <p className="text-xs text-gray-500 mt-1">格式：HH:MM (例如：17:30, 18:00)</p>
               </div>
             </div>
+
+            {/* 預覽工時計算 */}
+            {newTimeRecord.startTime && newTimeRecord.endTime && (
+              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="text-sm text-blue-800">
+                  <div className="font-medium mb-1">工時預覽：</div>
+                  <div>開始：{newTimeRecord.startTime}</div>
+                  <div>結束：{newTimeRecord.endTime}</div>
+                  {(() => {
+                    try {
+                      const startDateTime = new Date(`${newTimeRecord.workDate}T${newTimeRecord.startTime}`)
+                      const endDateTime = new Date(`${newTimeRecord.workDate}T${newTimeRecord.endTime}`)
+                      if (endDateTime > startDateTime) {
+                        const diffMs = endDateTime.getTime() - startDateTime.getTime()
+                        const totalMinutes = Math.floor(diffMs / (1000 * 60))
+                        const hours = Math.floor(totalMinutes / 60)
+                        const minutes = totalMinutes % 60
+                        return (
+                          <div className="font-semibold text-green-700 mt-1">
+                            工時：{hours} 小時 {minutes} 分鐘
+                          </div>
+                        )
+                      } else {
+                        return <div className="text-red-600 mt-1">⚠️ 結束時間必須晚於開始時間</div>
+                      }
+                    } catch (error) {
+                      return <div className="text-red-600 mt-1">⚠️ 時間格式錯誤</div>
+                    }
+                  })()}
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddTimeRecordOpen(false)}>
               取消
             </Button>
-            <Button onClick={handleAddTimeRecord} className="bg-orange-600 hover:bg-orange-700">
+            <Button 
+              onClick={handleAddTimeRecord} 
+              className="bg-orange-600 hover:bg-orange-700"
+              disabled={!newTimeRecord.personnelId || !newTimeRecord.workDate || !newTimeRecord.startTime || !newTimeRecord.endTime}
+            >
               <Plus className="mr-2 h-4 w-4" />
               新增紀錄
             </Button>
