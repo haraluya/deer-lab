@@ -72,16 +72,16 @@ export function MultiSelect({
     // 搜尋邏輯：搜尋物料名稱、主分類、細分分類
     if (!inputValue.trim()) return true;
     
-    const searchTerm = inputValue.toLowerCase();
-    const materialName = (option.materialName || option.label).toLowerCase();
-    const category = (option.category || '').toLowerCase();
-    const subCategory = (option.subCategory || '').toLowerCase();
+    const searchTerm = inputValue.trim();
+    const materialName = option.materialName || option.label;
+    const category = option.category || '';
+    const subCategory = option.subCategory || '';
     
     // 搜尋邏輯：優先搜尋物料名稱，然後是分類
     return materialName.includes(searchTerm) || 
            category.includes(searchTerm) || 
            subCategory.includes(searchTerm) ||
-           option.label.toLowerCase().includes(searchTerm);
+           option.label.includes(searchTerm);
   }).sort((a, b) => {
     // 搜尋結果優先按照物料名稱排序
     const materialNameA = (a.materialName || a.label).toLowerCase();
