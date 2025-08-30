@@ -131,6 +131,10 @@ export default function WorkOrderDetailPage() {
   const [isEditingQuantity, setIsEditingQuantity] = useState(false)
   const [editingQuantities, setEditingQuantities] = useState<{[key: string]: number}>({})
 
+  // 新增狀態：完工確認對話框
+  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false)
+  const [isCompleting, setIsCompleting] = useState(false)
+
   // 格式化數值顯示，智能去除尾隨的0
   const formatNumber = (value: number) => {
     if (value % 1 === 0) {
@@ -180,6 +184,157 @@ export default function WorkOrderDetailPage() {
       console.error("更新使用數量失敗:", error);
       toast.error("更新使用數量失敗");
     }
+  };
+
+  // 根據目標產量重新計算BOM表需求數量
+  const recalculateBOMQuantities = (newTargetQuantity: number) => {
+    if (!workOrder) return [];
+
+    return workOrder.billOfMaterials.map(item => {
+      if (['fragrance', 'pg', 'vg', 'nicotine'].includes(item.category) && item.ratio) {
+        // 重新計算核心配方物料的需求數量
+        const newQuantity = newTargetQuantity * (item.ratio / 100);
+        return {
+          ...item,
+          quantity: newQuantity,
+          usedQuantity: item.usedQuantity || newQuantity // 如果沒有使用數量，預設為需求數量
+        };
+      }
+      return item;
+    });
+  };
+
+  // 處理目標產量變更
+  const handleTargetQuantityChange = (newTargetQuantity: number) => {
+    setEditData(prev => ({ ...prev, targetQuantity: newTargetQuantity }));
+    
+    // 同時更新BOM表的需求數量
+    const updatedBOM = recalculateBOMQuantities(newTargetQuantity);
+    setWorkOrder(prev => prev ? {
+      ...prev,
+      billOfMaterials: updatedBOM
+    } : null);
+  };
+
+  // 處理工單狀態變更
+  const handleStatusChange = (newStatus: string) => {
+    // 只允許在預報和進行之間切換
+    if (workOrder?.status === '預報' && newStatus === '進行') {
+      setEditData(prev => ({ ...prev, status: newStatus }));
+    } else if (workOrder?.status === '進行' && newStatus === '預報') {
+      setEditData(prev => ({ ...prev, status: newStatus }));
+    } else {
+      toast.error("工單狀態只能在預報和進行之間切換");
+    }
+  };
+
+  // 處理完工操作
+  const handleComplete = () => {
+    setIsCompleteDialogOpen(true);
+  };
+
+  // 確認完工
+  const handleConfirmComplete = async () => {
+    if (!workOrder || !db) return;
+    
+    setIsCompleting(true);
+    try {
+      const docRef = doc(db, "workOrders", workOrderId);
+      await updateDoc(docRef, {
+        status: "完工",
+        updatedAt: Timestamp.now()
+      });
+
+      setWorkOrder(prev => prev ? {
+        ...prev,
+        status: "完工"
+      } : null);
+
+      setIsCompleteDialogOpen(false);
+      setIsEditing(false);
+      toast.success("工單已完工");
+    } catch (error) {
+      console.error("完工操作失敗:", error);
+      toast.error("完工操作失敗");
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+
+  // 處理入庫操作
+  const handleWarehouse = async () => {
+    if (!workOrder || !db) return;
+    
+    try {
+      const docRef = doc(db, "workOrders", workOrderId);
+      await updateDoc(docRef, {
+        status: "入庫",
+        updatedAt: Timestamp.now()
+      });
+
+      setWorkOrder(prev => prev ? {
+        ...prev,
+        status: "入庫"
+      } : null);
+
+      toast.success("工單已入庫");
+    } catch (error) {
+      console.error("入庫操作失敗:", error);
+      toast.error("入庫操作失敗");
+    }
+  };
+
+  // 獲取頂部按鈕文字
+  const getTopButtonText = () => {
+    if (!workOrder) return "完工";
+    
+    if (workOrder.status === "預報" || workOrder.status === "進行") {
+      return "完工";
+    } else if (workOrder.status === "完工") {
+      return "入庫";
+    }
+    return "完工";
+  };
+
+  // 獲取頂部按鈕點擊處理函數
+  const getTopButtonHandler = () => {
+    if (!workOrder) return () => {};
+    
+    if (workOrder.status === "預報" || workOrder.status === "進行") {
+      return handleComplete;
+    } else if (workOrder.status === "完工") {
+      return handleWarehouse;
+    }
+    return () => {};
+  };
+
+  // 檢查是否顯示頂部按鈕
+  const shouldShowTopButton = () => {
+    if (!workOrder) return false;
+    return workOrder.status === "預報" || workOrder.status === "進行" || workOrder.status === "完工";
+  };
+
+  // 檢查是否可以編輯
+  const canEdit = () => {
+    if (!workOrder) return false;
+    return workOrder.status === "預報" || workOrder.status === "進行";
+  };
+
+  // 檢查是否可以編輯數量
+  const canEditQuantity = () => {
+    if (!workOrder) return false;
+    return workOrder.status === "預報" || workOrder.status === "進行";
+  };
+
+  // 檢查是否可以新增工時
+  const canAddTimeRecord = () => {
+    if (!workOrder) return false;
+    return workOrder.status !== "入庫";
+  };
+
+  // 檢查是否可以新增留言
+  const canAddComment = () => {
+    return true; // 任何狀態都可以新增留言
   };
 
   // 載入工單資料
@@ -803,6 +958,9 @@ export default function WorkOrderDetailPage() {
 
     setIsSaving(true)
     try {
+      // 重新計算BOM表需求數量
+      const updatedBOM = recalculateBOMQuantities(editData.targetQuantity);
+      
       const docRef = doc(db, "workOrders", workOrderId)
       await updateDoc(docRef, {
         status: editData.status,
@@ -810,6 +968,7 @@ export default function WorkOrderDetailPage() {
         actualQuantity: editData.actualQuantity,
         targetQuantity: editData.targetQuantity,
         notes: editData.notes,
+        billOfMaterials: updatedBOM,
         updatedAt: Timestamp.now()
       })
 
@@ -819,7 +978,8 @@ export default function WorkOrderDetailPage() {
         qcStatus: editData.qcStatus,
         actualQuantity: editData.actualQuantity,
         targetQuantity: editData.targetQuantity,
-        notes: editData.notes
+        notes: editData.notes,
+        billOfMaterials: updatedBOM
       } : null)
 
       setIsEditing(false)
@@ -1413,6 +1573,16 @@ export default function WorkOrderDetailPage() {
               <Printer className="mr-2 h-4 w-4" />
               列印工單
             </Button>
+            {shouldShowTopButton() && (
+              <Button 
+                variant="outline"
+                onClick={getTopButtonHandler()}
+                className="bg-green-600 hover:bg-green-700 text-white border-green-600"
+              >
+                <Check className="mr-2 h-4 w-4" />
+                {getTopButtonText()}
+              </Button>
+            )}
             <Button 
               variant="destructive" 
               onClick={() => setIsDeleteDialogOpen(true)}
@@ -1467,6 +1637,16 @@ export default function WorkOrderDetailPage() {
           <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Calculator className="h-5 w-5" />
             工單詳細資料
+            {workOrder?.status === "入庫" && (
+              <Badge variant="secondary" className="ml-2 bg-purple-100 text-purple-800 border-purple-200">
+                已入庫 - 僅可查看
+              </Badge>
+            )}
+            {workOrder?.status === "完工" && (
+              <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800 border-green-200">
+                已完工 - 僅可編輯工時
+              </Badge>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -1474,16 +1654,21 @@ export default function WorkOrderDetailPage() {
             <div>
               <Label className="text-sm text-gray-600">目前工單狀態</Label>
               {isEditing ? (
-                <Select value={editData.status} onValueChange={(value) => setEditData(prev => ({ ...prev, status: value }))}>
+                <Select value={editData.status} onValueChange={handleStatusChange}>
                   <SelectTrigger className="mt-1">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {statusOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
+                    {statusOptions
+                      .filter(option => {
+                        // 只顯示預報和進行狀態
+                        return option.value === '預報' || option.value === '進行';
+                      })
+                      .map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               ) : (
@@ -1513,7 +1698,7 @@ export default function WorkOrderDetailPage() {
                   min="0.1"
                   step="0.1"
                   value={editData.targetQuantity}
-                  onChange={(e) => setEditData(prev => ({ ...prev, targetQuantity: parseFloat(e.target.value) || 0 }))}
+                  onChange={(e) => handleTargetQuantityChange(parseFloat(e.target.value) || 0)}
                   className="mt-1"
                 />
               ) : (
@@ -1555,7 +1740,9 @@ export default function WorkOrderDetailPage() {
             ) : (
               <Button
                 onClick={handleStartEditing}
+                disabled={!canEdit()}
                 className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
+                title={!canEdit() ? "完工或入庫狀態無法編輯" : "點擊編輯工單詳細資料"}
               >
                 <Edit className="mr-2 h-4 w-4" />
                 編輯
@@ -1572,6 +1759,16 @@ export default function WorkOrderDetailPage() {
             <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
               <Droplets className="h-5 w-5" />
               香精物料清單 (BOM表)
+              {workOrder?.status === "入庫" && (
+                <Badge variant="secondary" className="ml-2 bg-purple-100 text-purple-800 border-purple-200">
+                  已入庫 - 僅可查看
+                </Badge>
+              )}
+              {workOrder?.status === "完工" && (
+                <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800 border-green-200">
+                  已完工 - 僅可編輯工時
+                </Badge>
+              )}
             </CardTitle>
             <div className="flex gap-2">
               <Button
@@ -1613,15 +1810,17 @@ export default function WorkOrderDetailPage() {
                   </Button>
                 </>
               ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditingQuantity(true)}
-                  className="text-purple-700 border-purple-300 hover:bg-purple-50"
-                >
-                  <Edit className="h-4 w-4 mr-1" />
-                  編輯數量
-                </Button>
+                              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditingQuantity(true)}
+                disabled={!canEditQuantity()}
+                className="text-purple-700 border-purple-300 hover:bg-purple-50"
+                title={!canEditQuantity() ? "完工或入庫狀態無法編輯數量" : "點擊編輯物料使用數量"}
+              >
+                <Edit className="h-4 w-4 mr-1" />
+                編輯數量
+              </Button>
               )}
             </div>
           </div>
@@ -1799,10 +1998,22 @@ export default function WorkOrderDetailPage() {
             <CardTitle className="text-orange-800 flex items-center gap-2 text-lg sm:text-xl">
               <Clock className="h-5 w-5" />
               工時申報
+              {workOrder?.status === "入庫" && (
+                <Badge variant="secondary" className="ml-2 bg-purple-100 text-purple-800 border-purple-200">
+                  已入庫 - 無法新增
+                </Badge>
+              )}
+              {workOrder?.status === "完工" && (
+                <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800 border-green-200">
+                  已完工 - 仍可新增
+                </Badge>
+              )}
             </CardTitle>
             <Button
               onClick={() => setIsAddTimeRecordOpen(true)}
+              disabled={!canAddTimeRecord()}
               className="bg-orange-600 hover:bg-orange-700 w-full sm:w-auto"
+              title={!canAddTimeRecord() ? "入庫狀態無法新增工時紀錄" : "點擊新增工時紀錄"}
             >
               <Plus className="mr-2 h-4 w-4" />
               新增工時紀錄
@@ -2058,6 +2269,11 @@ export default function WorkOrderDetailPage() {
             <Badge variant="secondary" className="ml-2">
               {comments.length} 則留言
             </Badge>
+            {workOrder?.status === "入庫" && (
+              <Badge variant="secondary" className="ml-2 bg-purple-100 text-purple-800 border-purple-200">
+                僅可留言
+              </Badge>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -2225,6 +2441,164 @@ export default function WorkOrderDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* 完工確認對話框 */}
+      <Dialog open={isCompleteDialogOpen} onOpenChange={setIsCompleteDialogOpen}>
+        <DialogContent className="w-[95vw] max-w-4xl sm:max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-green-600 text-lg sm:text-xl">確認完工</DialogTitle>
+            <DialogDescription>
+              請確認以下資訊後點擊完工按鈕。完工後將無法再修改目標產量和使用數量，但仍可新增工時記錄。
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* 已填寫使用數量的物料 */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">已填寫使用數量的物料</h3>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="text-gray-700 font-bold">物料名稱</TableHead>
+                      <TableHead className="text-gray-700 font-bold">料件代號</TableHead>
+                      <TableHead className="text-gray-700 font-bold">使用數量</TableHead>
+                      <TableHead className="text-gray-700 font-bold">單位</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {workOrder?.billOfMaterials
+                      .filter(item => (item.usedQuantity || 0) > 0)
+                      .map((item, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">{item.name}</TableCell>
+                          <TableCell className="font-mono">{item.code}</TableCell>
+                          <TableCell className="font-medium">{formatNumber(item.usedQuantity || 0)}</TableCell>
+                          <TableCell>{item.unit}</TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </div>
+              {workOrder?.billOfMaterials.filter(item => (item.usedQuantity || 0) > 0).length === 0 && (
+                <div className="text-center py-4 text-red-500 bg-red-50 rounded-lg border border-red-200">
+                  <AlertCircle className="h-6 w-6 mx-auto mb-2" />
+                  <p className="font-medium">警告：尚無填寫使用數量的物料</p>
+                  <p className="text-sm">請先填寫至少一個物料的使用數量才能完工</p>
+                </div>
+              )}
+            </div>
+
+            {/* 工時記錄 */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">工時記錄</h3>
+              {workOrder?.timeRecords && workOrder.timeRecords.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50">
+                        <TableHead className="text-gray-700 font-bold">人員</TableHead>
+                        <TableHead className="text-gray-700 font-bold">工作日期</TableHead>
+                        <TableHead className="text-gray-700 font-bold">開始時間</TableHead>
+                        <TableHead className="text-gray-700 font-bold">結束時間</TableHead>
+                        <TableHead className="text-gray-700 font-bold">工時小計</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {workOrder.timeRecords.map((record, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">{record.personnelName}</TableCell>
+                          <TableCell>{record.workDate}</TableCell>
+                          <TableCell>{record.startTime}</TableCell>
+                          <TableCell>{record.endTime}</TableCell>
+                          <TableCell className="font-medium">
+                            {record.hours} 小時 {record.minutes} 分鐘
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                    <div className="text-center">
+                      <div className="text-sm text-gray-600">總人工小時</div>
+                      <div className="text-lg font-bold text-blue-600">
+                        {Math.floor(totalWorkHours / 60)} 小時 {totalWorkHours % 60} 分鐘
+                      </div>
+                      <div className="text-xs text-gray-500">共 {workOrder.timeRecords.length} 筆紀錄</div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-4 text-orange-500 bg-orange-50 rounded-lg border border-orange-200">
+                  <AlertCircle className="h-6 w-6 mx-auto mb-2" />
+                  <p className="font-medium">注意：尚無工時記錄</p>
+                  <p className="text-sm">建議先新增工時記錄再完工，但非必要</p>
+                </div>
+              )}
+            </div>
+
+            {/* 完工總結 */}
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <h3 className="text-lg font-semibold text-blue-800 mb-3">完工總結</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm text-blue-600 mb-1">已填寫使用數量的物料</div>
+                  <div className="text-lg font-bold text-blue-800">
+                    {workOrder?.billOfMaterials.filter(item => (item.usedQuantity || 0) > 0).length || 0} 項
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-blue-600 mb-1">總工時記錄</div>
+                  <div className="text-lg font-bold text-blue-800">
+                    {workOrder?.timeRecords?.length || 0} 筆
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-blue-600 mb-1">總人工小時</div>
+                  <div className="text-lg font-bold text-blue-800">
+                    {Math.floor(totalWorkHours / 60)} 小時 {totalWorkHours % 60} 分鐘
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-blue-600 mb-1">目標產量</div>
+                  <div className="text-lg font-bold text-blue-800">
+                    {workOrder?.targetQuantity} KG
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsCompleteDialogOpen(false)} 
+              className="w-full sm:w-auto"
+              title="取消完工操作"
+            >
+              取消
+            </Button>
+            <Button
+              onClick={handleConfirmComplete}
+              disabled={isCompleting || (workOrder?.billOfMaterials.filter(item => (item.usedQuantity || 0) > 0).length === 0)}
+              className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
+              title={workOrder?.billOfMaterials.filter(item => (item.usedQuantity || 0) > 0).length === 0 ? "請先填寫至少一個物料的使用數量" : "確認將工單狀態設為完工"}
+            >
+              {isCompleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  完工中...
+                </>
+              ) : (
+                <>
+                  <Check className="mr-2 h-4 w-4" />
+                  確認完工
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 刪除工單確認對話框 */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
