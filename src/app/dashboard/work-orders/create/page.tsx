@@ -19,6 +19,7 @@ interface Product {
   id: string
   code: string
   name: string
+  seriesName?: string
   fragranceName: string
   nicotineMg: number
   billOfMaterials: Array<{
