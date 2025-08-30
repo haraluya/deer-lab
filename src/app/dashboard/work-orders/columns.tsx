@@ -13,27 +13,27 @@ const StatusBadge = ({ status }: { status: string }) => {
     switch (status) {
       case "預報":
         return {
-          className: "bg-gradient-to-r from-orange-100 to-amber-100 text-orange-800 border border-orange-200 shadow-sm",
+          className: "bg-gradient-to-r from-orange-400 to-red-500 text-white border border-orange-300 shadow-lg",
           icon: "⏳"
         }
       case "進行":
         return {
-          className: "bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-800 border border-blue-200 shadow-sm",
+          className: "bg-gradient-to-r from-green-400 to-emerald-500 text-white border border-green-300 shadow-lg",
           icon: "🔄"
         }
       case "完工":
         return {
-          className: "bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border border-green-200 shadow-sm",
+          className: "bg-gradient-to-r from-emerald-400 to-teal-500 text-white border border-emerald-300 shadow-lg",
           icon: "✅"
         }
       case "入庫":
         return {
-          className: "bg-gradient-to-r from-purple-100 to-violet-100 text-purple-800 border border-purple-200 shadow-sm",
+          className: "bg-gradient-to-r from-purple-400 to-pink-500 text-white border border-purple-300 shadow-lg",
           icon: "📦"
         }
       default:
         return {
-          className: "bg-gradient-to-r from-slate-100 to-gray-100 text-slate-800 border border-slate-200 shadow-sm",
+          className: "bg-gradient-to-r from-gray-400 to-gray-500 text-white border border-gray-300 shadow-lg",
           icon: "❓"
         }
     }
@@ -53,6 +53,7 @@ export type WorkOrderColumn = {
   id: string
   code: string
   productName: string
+  seriesName: string
   targetQuantity: number
   status: string
   createdAt: string
@@ -99,14 +100,14 @@ export const columns: ColumnDef<WorkOrderColumn>[] = [
       <Button
         variant="ghost"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        className="font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-all duration-200"
+        className="font-semibold text-purple-700 hover:text-purple-900 hover:bg-pink-50 transition-all duration-200"
       >
         工單號碼
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
     cell: ({ row }: CellContext<WorkOrderColumn, unknown>) => (
-      <div className="font-mono font-semibold text-slate-800 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+      <div className="font-mono font-semibold text-purple-700 bg-gradient-to-r from-pink-50 to-purple-50 px-3 py-1.5 rounded-lg border border-pink-200">
         {row.getValue("code")}
       </div>
     ),
@@ -114,25 +115,25 @@ export const columns: ColumnDef<WorkOrderColumn>[] = [
   {
     accessorKey: "productName",
     header: () => (
-      <div className="font-semibold text-slate-700">產品名稱</div>
+      <div className="font-semibold text-purple-700">產品名稱</div>
     ),
     cell: ({ row }: CellContext<WorkOrderColumn, unknown>) => (
-      <div className="font-medium text-slate-800 max-w-xs truncate" title={row.getValue("productName")}>
-        {row.getValue("productName")}
+      <div className="font-medium text-slate-800 max-w-xs truncate" title={`${row.getValue("seriesName")} - ${row.getValue("productName")}`}>
+        <span className="text-blue-600 font-semibold">[{row.getValue("seriesName")}]</span> {row.getValue("productName")}
       </div>
     ),
   },
   {
     accessorKey: "targetQuantity",
     header: () => (
-      <div className="text-right font-semibold text-slate-700">目標產量</div>
+      <div className="text-right font-semibold text-purple-700">目標產量</div>
     ),
     cell: ({ row }: CellContext<WorkOrderColumn, unknown>) => {
       const amount = parseFloat(row.getValue("targetQuantity"))
       return (
         <div className="text-right">
-          <div className="font-bold text-blue-600 text-lg">{amount}</div>
-          <div className="text-xs text-slate-500 font-medium">克 (g)</div>
+          <div className="font-bold text-purple-600 text-lg">{amount}</div>
+          <div className="text-xs text-pink-600 font-medium">公斤 (KG)</div>
         </div>
       )
     },
@@ -140,7 +141,7 @@ export const columns: ColumnDef<WorkOrderColumn>[] = [
   {
     accessorKey: "status",
     header: () => (
-      <div className="font-semibold text-slate-700">狀態</div>
+      <div className="font-semibold text-purple-700">狀態</div>
     ),
     cell: ({ row }: CellContext<WorkOrderColumn, unknown>) => (
       <StatusBadge status={row.getValue("status")} />
@@ -152,23 +153,17 @@ export const columns: ColumnDef<WorkOrderColumn>[] = [
       <Button
         variant="ghost"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        className="font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-all duration-200"
+        className="font-semibold text-purple-700 hover:text-purple-900 hover:bg-pink-50 transition-all duration-200"
       >
         建立日期
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
     cell: ({ row }: CellContext<WorkOrderColumn, unknown>) => (
-      <div className="text-slate-600 font-medium">
+      <div className="text-purple-600 font-medium">
         {row.getValue("createdAt")}
       </div>
     ),
   },
-  {
-    id: "actions",
-    header: () => (
-      <div className="text-right font-semibold text-slate-700">操作</div>
-    ),
-    cell: ActionsCell,
-  },
+
 ]
