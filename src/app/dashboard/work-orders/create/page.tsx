@@ -54,12 +54,21 @@ export default function CreateWorkOrderPage() {
   const [creating, setCreating] = useState(false)
   const [searchTerm, setSearchTerm] = useState('') // 搜尋功能
 
-  // 過濾產品列表
+  // 過濾產品列表並按系列排序
   const filteredProducts = products.filter(product => 
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (product.seriesName && product.seriesName.toLowerCase().includes(searchTerm.toLowerCase()))
-  )
+  ).sort((a, b) => {
+    // 先按系列名稱排序
+    const seriesA = a.seriesName || '未指定'
+    const seriesB = b.seriesName || '未指定'
+    if (seriesA !== seriesB) {
+      return seriesA.localeCompare(seriesB)
+    }
+    // 同系列內按產品名稱排序
+    return a.name.localeCompare(b.name)
+  })
 
   useEffect(() => {
     const loadData = async () => {
@@ -533,18 +542,16 @@ export default function CreateWorkOrderPage() {
                     <SelectTrigger className="h-12 border-2 border-gray-200 hover:border-blue-300 focus:border-blue-500 transition-colors">
                       <SelectValue placeholder="選擇要生產的產品" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {filteredProducts.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          <div className="flex flex-col">
-                            <span className="font-medium">{product.code} - {product.name}</span>
-                            {product.seriesName && (
-                              <span className="text-xs text-muted-foreground">{product.seriesName}</span>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
+                                         <SelectContent>
+                       {filteredProducts.map((product) => (
+                         <SelectItem key={product.id} value={product.id}>
+                           <div className="flex flex-col">
+                             <span className="font-medium">[{product.seriesName || '未指定'}] - {product.name}</span>
+                             <span className="text-xs text-muted-foreground">{product.code}</span>
+                           </div>
+                         </SelectItem>
+                       ))}
+                     </SelectContent>
                   </Select>
                 </div>
 
@@ -555,28 +562,28 @@ export default function CreateWorkOrderPage() {
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                       產品資訊
                     </h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="font-medium text-gray-600">產品代號：</span>
-                        <span className="font-semibold text-gray-800">{selectedProduct.code}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-medium text-gray-600">產品名稱：</span>
-                        <span className="font-semibold text-gray-800">{selectedProduct.name}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-medium text-gray-600">產品系列：</span>
-                        <span className="font-semibold text-gray-800">{selectedProduct.seriesName}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-medium text-gray-600">香精：</span>
-                        <span className="font-semibold text-gray-800">{selectedProduct.fragranceName}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-medium text-gray-600">尼古丁濃度：</span>
-                        <span className="font-semibold text-gray-800">{selectedProduct.nicotineMg} mg/ml</span>
-                      </div>
-                    </div>
+                                         <div className="space-y-2 text-sm">
+                       <div className="flex justify-between">
+                         <span className="font-medium text-gray-600">產品系列：</span>
+                         <span className="font-semibold text-gray-800">{selectedProduct.seriesName}</span>
+                       </div>
+                       <div className="flex justify-between">
+                         <span className="font-medium text-gray-600">產品名稱：</span>
+                         <span className="font-semibold text-gray-800">{selectedProduct.name}</span>
+                       </div>
+                       <div className="flex justify-between">
+                         <span className="font-medium text-gray-600">產品代號：</span>
+                         <span className="font-semibold text-gray-800">{selectedProduct.code}</span>
+                       </div>
+                       <div className="flex justify-between">
+                         <span className="font-medium text-gray-600">香精：</span>
+                         <span className="font-semibold text-gray-800">{selectedProduct.fragranceName}</span>
+                       </div>
+                       <div className="flex justify-between">
+                         <span className="font-medium text-gray-600">尼古丁濃度：</span>
+                         <span className="font-semibold text-gray-800">{selectedProduct.nicotineMg} mg/ml</span>
+                       </div>
+                     </div>
                   </div>
                 )}
 
