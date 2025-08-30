@@ -55,6 +55,11 @@ function ProductionCalculatorPageContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // 格式化數值顯示，整數不顯示小數點
+  const formatNumber = (value: number) => {
+    return value % 1 === 0 ? value.toString() : value.toFixed(3);
+  };
+
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -459,7 +464,7 @@ function ProductionCalculatorPageContent() {
                       </TableCell>
                       <TableCell className="text-right">
                         <span className="number-display number-positive font-semibold">
-                          {item.quantity.toFixed(3)}
+                          {formatNumber(item.quantity)}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
@@ -531,7 +536,7 @@ function ProductionCalculatorPageContent() {
                           <span className="text-gray-500">需求數量</span>
                         </div>
                         <span className="number-display number-positive font-semibold text-sm">
-                          {item.quantity.toFixed(3)}
+                          {formatNumber(item.quantity)}
                         </span>
                       </div>
                       <div>

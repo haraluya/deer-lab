@@ -60,6 +60,11 @@ export default function ProductDetailPage() {
   const [isRemarksDialogOpen, setIsRemarksDialogOpen] = useState(false);
   const [remarks, setRemarks] = useState<string>('');
 
+  // 格式化數值顯示，整數不顯示小數點
+  const formatNumber = (value: number) => {
+    return value % 1 === 0 ? value.toString() : value.toFixed(3);
+  };
+
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -598,7 +603,7 @@ export default function ProductDetailPage() {
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <span className="text-gray-600 text-sm">產品目標產量 (KG)：</span>
-                    <div className="font-medium">{targetProduction} KG</div>
+                    <div className="font-medium">{formatNumber(targetProduction)} KG</div>
                   </div>
                   <div>
                     <span className="text-gray-600 text-sm">香精編號：</span>
@@ -631,19 +636,19 @@ export default function ProductDetailPage() {
                   <div>
                     <span className="text-gray-600 text-sm">需要香精：</span>
                     <div className="font-medium text-green-600">
-                      {(targetProduction * ((product.fragranceFormula?.percentage || 0) / 100)).toFixed(3)} KG
+                      {formatNumber(targetProduction * ((product.fragranceFormula?.percentage || 0) / 100))} KG
                     </div>
                   </div>
                   <div>
                     <span className="text-gray-600 text-sm">需要PG：</span>
                     <div className="font-medium text-blue-600">
-                      {(targetProduction * ((product.fragranceFormula?.pgRatio || 0) / 100)).toFixed(3)} KG
+                      {formatNumber(targetProduction * ((product.fragranceFormula?.pgRatio || 0) / 100))} KG
                     </div>
                   </div>
                   <div>
                     <span className="text-gray-600 text-sm">需要VG：</span>
                     <div className="font-medium text-purple-600">
-                      {(targetProduction * ((product.fragranceFormula?.vgRatio || 0) / 100)).toFixed(3)} KG
+                      {formatNumber(targetProduction * ((product.fragranceFormula?.vgRatio || 0) / 100))} KG
                     </div>
                   </div>
                 </div>

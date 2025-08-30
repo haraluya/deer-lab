@@ -128,6 +128,54 @@ export default function WorkOrderDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isReloading, setIsReloading] = useState(false)
   const [isEditingQuantity, setIsEditingQuantity] = useState(false)
+  const [editingQuantities, setEditingQuantities] = useState<{[key: string]: number}>({})
+
+  // 格式化數值顯示，整數不顯示小數點
+  const formatNumber = (value: number) => {
+    return value % 1 === 0 ? value.toString() : value.toFixed(3);
+  };
+
+  // 處理使用數量更新
+  const handleQuantityChange = (itemId: string, value: string) => {
+    const numValue = parseFloat(value) || 0;
+    setEditingQuantities(prev => ({
+      ...prev,
+      [itemId]: numValue
+    }));
+  };
+
+  // 保存使用數量更新
+  const handleSaveQuantities = async () => {
+    if (!workOrder || !db) return;
+    
+    try {
+      const updatedBillOfMaterials = workOrder.billOfMaterials.map(item => ({
+        ...item,
+        usedQuantity: editingQuantities[item.id] !== undefined ? editingQuantities[item.id] : item.usedQuantity
+      }));
+
+      const docRef = doc(db, "workOrders", workOrderId);
+      await updateDoc(docRef, {
+        billOfMaterials: updatedBillOfMaterials,
+        updatedAt: Timestamp.now()
+      });
+
+      // 更新本地狀態
+      setWorkOrder(prev => prev ? {
+        ...prev,
+        billOfMaterials: updatedBillOfMaterials
+      } : null);
+
+      // 清空編輯狀態
+      setEditingQuantities({});
+      setIsEditingQuantity(false);
+      
+      toast.success("使用數量已更新");
+    } catch (error) {
+      console.error("更新使用數量失敗:", error);
+      toast.error("更新使用數量失敗");
+    }
+  };
 
   // 載入工單資料
   const fetchWorkOrder = useCallback(async () => {
@@ -279,13 +327,15 @@ export default function WorkOrderDetailPage() {
     
     setIsReloading(true);
     try {
-      // 優先使用工單中的產品快照資料，確保香精資料的完整性
+      // 1. 獲取工單中的產品快照資料
       const productSnapshotData = workOrder.productSnapshot;
       console.log('重新載入BOM表 - 工單中的產品快照:', productSnapshotData);
       
-      // 嘗試從香精集合中獲取完整的香精配方資料
+      // 2. 從香精集合中獲取完整的香精配方資料
       let fragranceFormulaData = null;
       if (productSnapshotData.fragranceCode && productSnapshotData.fragranceCode !== '未指定') {
+        console.log('重新載入BOM表 - 開始查詢香精:', productSnapshotData.fragranceCode);
+        
         const fragranceQuery = query(
           collection(db, "fragrances"),
           where("code", "==", productSnapshotData.fragranceCode)
@@ -294,37 +344,45 @@ export default function WorkOrderDetailPage() {
         
         if (!fragranceSnapshot.empty) {
           fragranceFormulaData = fragranceSnapshot.docs[0].data();
-          console.log('重新載入BOM表 - 從香精集合獲取的配方資料:', fragranceFormulaData);
+          console.log('重新載入BOM表 - 成功獲取香精配方資料:', {
+            code: fragranceFormulaData.code,
+            name: fragranceFormulaData.name,
+            percentage: fragranceFormulaData.percentage,
+            pgRatio: fragranceFormulaData.pgRatio,
+            vgRatio: fragranceFormulaData.vgRatio
+          });
         } else {
           console.log('重新載入BOM表 - 在香精集合中找不到對應的香精:', productSnapshotData.fragranceCode);
         }
+      } else {
+        console.log('重新載入BOM表 - 香精代號未指定或為空');
       }
       
-      // 構建完整的產品資料，優先使用工單快照
+      // 3. 構建完整的產品資料
       const productData = {
         name: productSnapshotData.name,
         fragranceName: productSnapshotData.fragranceName,
         fragranceCode: productSnapshotData.fragranceCode,
         nicotineMg: productSnapshotData.nicotineMg,
-        fragranceFormula: fragranceFormulaData?.fragranceFormula || null
+        fragranceFormula: fragranceFormulaData || null
       };
       
       console.log('重新載入BOM表 - 最終使用的產品資料:', productData);
       
-      // 重新計算BOM表（使用與建立工單相同的邏輯）
+      // 4. 重新計算BOM表
       const materialRequirements = await calculateMaterialRequirements(
         productData,
         workOrder.targetQuantity
       );
       
-      // 更新工單的BOM表
+      // 5. 更新工單的BOM表
       const docRef = doc(db, "workOrders", workOrderId);
       await updateDoc(docRef, {
         billOfMaterials: materialRequirements,
         updatedAt: Timestamp.now()
       });
       
-      // 重新載入工單資料
+      // 6. 重新載入工單資料
       await fetchWorkOrder();
       
       toast.success("BOM表已重新載入");
@@ -407,14 +465,10 @@ export default function WorkOrderDetailPage() {
     if (productData.fragranceName && productData.fragranceName !== '未指定') {
       const fragranceQuantity = targetQuantity * (fragranceRatios.fragrance / 100); // 35.7% = 0.357
       
-      // 查找香精的實際庫存 - 更寬鬆的匹配條件
+      // 查找香精的實際庫存 - 使用精確匹配
       const fragranceMaterial = allMaterials.find((m: any) => 
         m.code === productData.fragranceCode || 
-        m.name === productData.fragranceName ||
-        m.name?.includes(productData.fragranceName) ||
-        (productData.fragranceCode && m.code?.includes(productData.fragranceCode)) ||
-        m.name?.includes('皇家康普茶') || // 額外的匹配條件
-        m.code?.includes('HYP') // 額外的匹配條件
+        m.name === productData.fragranceName
       );
       
       console.log('重新載入BOM表 - 香精匹配結果:', {
@@ -1075,24 +1129,41 @@ export default function WorkOrderDetailPage() {
                 )}
                 重新載入
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsEditingQuantity(!isEditingQuantity)}
-                className="text-purple-700 border-purple-300 hover:bg-purple-50"
-              >
-                {isEditingQuantity ? (
-                  <>
-                    <Check className="h-4 w-4 mr-1" />
-                    完成編輯
-                  </>
-                ) : (
-                  <>
-                    <Edit className="h-4 w-4 mr-1" />
-                    編輯數量
-                  </>
-                )}
-              </Button>
+              {isEditingQuantity ? (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setEditingQuantities({});
+                      setIsEditingQuantity(false);
+                    }}
+                    className="text-red-700 border-red-300 hover:bg-red-50"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    取消
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSaveQuantities}
+                    className="text-purple-700 border-purple-300 hover:bg-purple-50"
+                  >
+                    <Save className="h-4 w-4 mr-1" />
+                    保存數量
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditingQuantity(true)}
+                  className="text-purple-700 border-purple-300 hover:bg-purple-50"
+                >
+                  <Edit className="h-4 w-4 mr-1" />
+                  編輯數量
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -1134,22 +1205,21 @@ export default function WorkOrderDetailPage() {
                           <TableCell>
                             {item.ratio ? `${item.ratio}%` : '-'}
                           </TableCell>
-                          <TableCell className="font-medium">{item.quantity.toFixed(3)}</TableCell>
+                          <TableCell className="font-medium">{formatNumber(item.quantity)}</TableCell>
                           <TableCell>
                             {isEditingQuantity ? (
                               <Input
                                 type="number"
                                 min="0"
                                 step="0.001"
-                                value={item.usedQuantity || 0}
+                                value={editingQuantities[item.id] !== undefined ? editingQuantities[item.id] : (item.usedQuantity || 0)}
                                 onChange={(e) => {
-                                  // 這裡可以添加更新使用數量的邏輯
-                                  console.log('更新使用數量:', item.id, e.target.value);
+                                  handleQuantityChange(item.id, e.target.value);
                                 }}
                                 className="w-20"
                               />
                             ) : (
-                              <span className="font-medium">{(item.usedQuantity || 0).toFixed(2)}</span>
+                              <span className="font-medium">{formatNumber(item.usedQuantity || 0)}</span>
                             )}
                           </TableCell>
                           <TableCell>{item.unit}</TableCell>
@@ -1191,14 +1261,14 @@ export default function WorkOrderDetailPage() {
                                   type="number"
                                   min="0"
                                   step="1"
-                                  value={item.usedQuantity || 0}
+                                  value={editingQuantities[item.id] !== undefined ? editingQuantities[item.id] : (item.usedQuantity || 0)}
                                   onChange={(e) => {
-                                    console.log('更新使用數量:', item.id, e.target.value);
+                                    handleQuantityChange(item.id, e.target.value);
                                   }}
                                   className="w-20"
                                 />
                               ) : (
-                                <span className="font-medium">{item.usedQuantity || 0}</span>
+                                <span className="font-medium">{formatNumber(item.usedQuantity || 0)}</span>
                               )}
                             </TableCell>
                             <TableCell>{item.unit}</TableCell>
@@ -1241,14 +1311,14 @@ export default function WorkOrderDetailPage() {
                                   type="number"
                                   min="0"
                                   step="1"
-                                  value={item.usedQuantity || 0}
+                                  value={editingQuantities[item.id] !== undefined ? editingQuantities[item.id] : (item.usedQuantity || 0)}
                                   onChange={(e) => {
-                                    console.log('更新使用數量:', item.id, e.target.value);
+                                    handleQuantityChange(item.id, e.target.value);
                                   }}
                                   className="w-20"
                                 />
                               ) : (
-                                <span className="font-medium">{item.usedQuantity || 0}</span>
+                                <span className="font-medium">{formatNumber(item.usedQuantity || 0)}</span>
                               )}
                             </TableCell>
                             <TableCell>{item.unit}</TableCell>

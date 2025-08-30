@@ -54,6 +54,11 @@ export default function CreateWorkOrderPage() {
   const [creating, setCreating] = useState(false)
   const [searchTerm, setSearchTerm] = useState('') // 搜尋功能
 
+  // 格式化數值顯示，整數不顯示小數點
+  const formatNumber = (value: number) => {
+    return value % 1 === 0 ? value.toString() : value.toFixed(3);
+  };
+
   // 過濾產品列表並按系列排序
   const filteredProducts = products.filter(product => 
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -755,7 +760,7 @@ export default function CreateWorkOrderPage() {
                                   <TableCell className="font-semibold text-gray-800">{material.materialCode}</TableCell>
                                   <TableCell className="font-medium text-gray-700">{material.materialName}</TableCell>
                                   <TableCell className="font-bold text-blue-600 text-lg">
-                                    {material.requiredQuantity.toFixed(3)}
+                                    {formatNumber(material.requiredQuantity)}
                                   </TableCell>
                                   <TableCell className="text-gray-600">{material.currentStock}</TableCell>
                                   <TableCell>
