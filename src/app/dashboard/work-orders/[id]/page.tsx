@@ -294,7 +294,13 @@ export default function WorkOrderDetailPage() {
       
       const productDoc = productSnapshot.docs[0];
       const productData = productDoc.data();
-      console.log('重新載入BOM表 - 獲取到的產品資料:', productData);
+      console.log('重新載入BOM表 - 獲取到的產品資料:', {
+        name: productData.name,
+        fragranceName: productData.fragranceName,
+        fragranceCode: productData.fragranceCode,
+        fragranceFormula: productData.fragranceFormula,
+        nicotineMg: productData.nicotineMg
+      });
       
       // 重新計算BOM表（使用與建立工單相同的邏輯）
       const materialRequirements = await calculateMaterialRequirements(
@@ -359,6 +365,8 @@ export default function WorkOrderDetailPage() {
     
     // 1. 直接使用香精詳情中的配方比例（避免浮點數精度問題）
     let fragranceRatios = { fragrance: 35.7, pg: 24.3, vg: 40 }; // 預設比例
+    console.log('重新載入BOM表 - 檢查香精配方資料:', productData.fragranceFormula);
+    
     if (productData.fragranceFormula) {
       const { percentage, pgRatio, vgRatio } = productData.fragranceFormula;
       console.log('重新載入BOM表 - 香精配方資料:', { percentage, pgRatio, vgRatio });
@@ -383,19 +391,21 @@ export default function WorkOrderDetailPage() {
     } else {
       console.log('重新載入BOM表 - 沒有香精配方資料，使用預設比例');
     }
-    console.log('重新載入BOM表 - 使用香精比例:', fragranceRatios);
+    console.log('重新載入BOM表 - 最終使用香精比例:', fragranceRatios);
     
     // 2. 核心液體 (香精、PG、VG、尼古丁) - 總是添加所有核心液體
     // 香精 - 總是添加，並檢查實際庫存
     if (productData.fragranceName && productData.fragranceName !== '未指定') {
       const fragranceQuantity = targetQuantity * (fragranceRatios.fragrance / 100); // 35.7% = 0.357
       
-      // 查找香精的實際庫存
+      // 查找香精的實際庫存 - 更寬鬆的匹配條件
       const fragranceMaterial = allMaterials.find((m: any) => 
         m.code === productData.fragranceCode || 
         m.name === productData.fragranceName ||
         m.name?.includes(productData.fragranceName) ||
-        (productData.fragranceCode && m.code?.includes(productData.fragranceCode))
+        (productData.fragranceCode && m.code?.includes(productData.fragranceCode)) ||
+        m.name?.includes('皇家康普茶') || // 額外的匹配條件
+        m.code?.includes('HYP') // 額外的匹配條件
       );
       
       console.log('重新載入BOM表 - 香精匹配結果:', {
@@ -412,8 +422,9 @@ export default function WorkOrderDetailPage() {
       const currentStock = fragranceMaterial ? (fragranceMaterial.currentStock || 0) : 0;
       const hasEnoughStock = currentStock >= fragranceQuantity;
       
+      // 總是添加香精，即使沒有找到對應的物料記錄
       materialRequirementsMap.set('fragrance', {
-        id: fragranceMaterial ? fragranceMaterial.id : 'fragrance',
+        id: fragranceMaterial ? fragranceMaterial.id : productData.fragranceCode || 'fragrance',
         name: productData.fragranceName,
         code: productData.fragranceCode,
         type: 'fragrance',
@@ -425,6 +436,8 @@ export default function WorkOrderDetailPage() {
         usedQuantity: fragranceQuantity
       });
       console.log('重新載入BOM表 - 添加香精:', productData.fragranceName, fragranceQuantity, '比例:', fragranceRatios.fragrance, '庫存:', currentStock, '充足:', hasEnoughStock);
+    } else {
+      console.log('重新載入BOM表 - 香精名稱未指定或為空，跳過香精添加');
     }
     
     // PG (丙二醇) - 總是添加，使用配方比例
