@@ -350,6 +350,22 @@ export default function WorkOrderDetailPage() {
         console.log('工單資料:', data); // 調試日誌
         console.log('產品快照:', data.productSnapshot); // 調試日誌
         
+        // 載入物料和香精的當前庫存資訊
+        const materialsSnapshot = await getDocs(collection(db, "materials"));
+        const fragrancesSnapshot = await getDocs(collection(db, "fragrances"));
+        
+        const materialsList = materialsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as any[];
+        const fragrancesList = fragrancesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as any[];
+        
+        // 合併物料和香精資料
+        const allMaterials: any[] = [...materialsList, ...fragrancesList];
+        
         setWorkOrder({
           id: workOrderDoc.id,
           code: data.code,
@@ -362,6 +378,13 @@ export default function WorkOrderDetailPage() {
             nicotineMg: data.productSnapshot?.nicotineMg || 0,
           },
           billOfMaterials: (data.billOfMaterials || []).map((item: any) => {
+            // 查找對應的物料或香精，獲取當前庫存
+            const material = allMaterials.find((m: any) => 
+              m.id === item.id || 
+              m.code === item.code || 
+              m.name === item.name
+            );
+            
             // 處理舊的資料結構，確保向後相容
             return {
               id: item.id || item.materialId || '',
@@ -374,7 +397,7 @@ export default function WorkOrderDetailPage() {
               isCalculated: item.isCalculated !== undefined ? item.isCalculated : true,
               category: item.category || 'other',
               usedQuantity: item.usedQuantity || item.quantity || item.requiredQuantity || 0,
-              currentStock: item.currentStock || 0
+              currentStock: material ? (material.currentStock || 0) : 0
             };
           }),
           targetQuantity: data.targetQuantity || 0,
@@ -548,9 +571,37 @@ export default function WorkOrderDetailPage() {
         };
       });
 
+      // 重新載入庫存資訊
+      const materialsSnapshot = await getDocs(collection(db, "materials"));
+      const fragrancesSnapshot = await getDocs(collection(db, "fragrances"));
+      
+      const materialsList = materialsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as any[];
+      const fragrancesList = fragrancesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as any[];
+      
+      const allMaterials: any[] = [...materialsList, ...fragrancesList];
+      
+      // 更新庫存資訊
+      const finalBOM = updatedBOM.map(item => {
+        const material = allMaterials.find((m: any) => 
+          m.id === item.id || 
+          m.code === item.code || 
+          m.name === item.name
+        );
+        return {
+          ...item,
+          currentStock: material ? (material.currentStock || 0) : item.currentStock || 0
+        };
+      });
+
       const docRef = doc(db, "workOrders", workOrderId);
       await updateDoc(docRef, {
-        billOfMaterials: updatedBOM,
+        billOfMaterials: finalBOM,
         updatedAt: Timestamp.now()
       });
       
@@ -652,9 +703,10 @@ export default function WorkOrderDetailPage() {
         foundMaterial: fragranceMaterial ? {
           id: fragranceMaterial.id,
           code: fragranceMaterial.code,
-          name: fragranceMaterial.name
+          name: fragranceMaterial.name,
+          currentStock: fragranceMaterial.currentStock
         } : null,
-        allMaterials: allMaterials.map((m: any) => ({ code: m.code, name: m.name }))
+        allMaterials: allMaterials.map((m: any) => ({ code: m.code, name: m.name, currentStock: m.currentStock }))
       });
       
       const currentStock = fragranceMaterial ? (fragranceMaterial.currentStock || 0) : 0;
@@ -696,7 +748,7 @@ export default function WorkOrderDetailPage() {
         usedQuantity: pgQuantity,
         currentStock: pgMaterial.currentStock || 0
       });
-      console.log('重新載入BOM表 - 添加PG:', pgMaterial.name, pgQuantity, '比例:', fragranceRatios.pg);
+      console.log('重新載入BOM表 - 添加PG:', pgMaterial.name, pgQuantity, '比例:', fragranceRatios.pg, '庫存:', pgMaterial.currentStock);
     } else {
       console.warn('重新載入BOM表 - 找不到PG物料');
     }
@@ -718,7 +770,7 @@ export default function WorkOrderDetailPage() {
         usedQuantity: vgQuantity,
         currentStock: vgMaterial.currentStock || 0
       });
-      console.log('重新載入BOM表 - 添加VG:', vgMaterial.name, vgQuantity, '比例:', fragranceRatios.vg);
+      console.log('重新載入BOM表 - 添加VG:', vgMaterial.name, vgQuantity, '比例:', fragranceRatios.vg, '庫存:', vgMaterial.currentStock);
     } else {
       console.warn('重新載入BOM表 - 找不到VG物料');
     }
@@ -742,7 +794,7 @@ export default function WorkOrderDetailPage() {
         usedQuantity: nicotineQuantity,
         currentStock: nicotineMaterial.currentStock || 0
       });
-      console.log('重新載入BOM表 - 添加尼古丁:', nicotineMaterial.name, nicotineQuantity, '濃度:', productData.nicotineMg);
+      console.log('重新載入BOM表 - 添加尼古丁:', nicotineMaterial.name, nicotineQuantity, '濃度:', productData.nicotineMg, '庫存:', nicotineMaterial.currentStock);
     }
     
     // 3. 其他材料（專屬材料和通用材料）- 根據實際需求計算
@@ -750,26 +802,40 @@ export default function WorkOrderDetailPage() {
       console.log('重新載入BOM表 - 專屬材料名稱:', workOrder?.billOfMaterials?.filter(item => item.category === 'specific').map(item => item.name));
       const existingSpecificMaterials = workOrder?.billOfMaterials?.filter(item => item.category === 'specific') || [];
       existingSpecificMaterials.forEach(item => {
+        // 查找對應的物料，獲取當前庫存
+        const material = allMaterials.find((m: any) => 
+          m.id === item.id || 
+          m.code === item.code || 
+          m.name === item.name
+        );
+        
         materialRequirementsMap.set(item.id, {
           ...item,
           quantity: 0, // 專屬材料不配置需求量
           usedQuantity: item.usedQuantity || 0,
-          currentStock: item.currentStock || 0
+          currentStock: material ? (material.currentStock || 0) : (item.currentStock || 0)
         });
-        console.log('重新載入BOM表 - 保持專屬材料:', item.name, '需求量: 0', item.unit);
+        console.log('重新載入BOM表 - 保持專屬材料:', item.name, '需求量: 0', item.unit, '庫存:', material ? material.currentStock : item.currentStock);
       });
       
       // 通用材料 - 保持原有的通用材料，但不配置需求量
       console.log('重新載入BOM表 - 通用材料名稱:', workOrder?.billOfMaterials?.filter(item => item.category === 'common').map(item => item.name));
       const existingCommonMaterials = workOrder?.billOfMaterials?.filter(item => item.category === 'common') || [];
       existingCommonMaterials.forEach(item => {
+        // 查找對應的物料，獲取當前庫存
+        const material = allMaterials.find((m: any) => 
+          m.id === item.id || 
+          m.code === item.code || 
+          m.name === item.name
+        );
+        
         materialRequirementsMap.set(item.id, {
           ...item,
           quantity: 0, // 通用材料不配置需求量
           usedQuantity: item.usedQuantity || 0,
-          currentStock: item.currentStock || 0
+          currentStock: material ? (material.currentStock || 0) : (item.currentStock || 0)
         });
-        console.log('重新載入BOM表 - 保持通用材料:', item.name, '需求量: 0', item.unit);
+        console.log('重新載入BOM表 - 保持通用材料:', item.name, '需求量: 0', item.unit, '庫存:', material ? material.currentStock : item.currentStock);
       });
     
     // 轉換為陣列並排序
@@ -2468,6 +2534,17 @@ export default function WorkOrderDetailPage() {
             <DialogDescription>
               請確認以下資訊後點擊完工按鈕。完工後將無法再修改目標產量和使用數量，但仍可新增工時記錄。系統會顯示庫存扣除後的剩餘數量。
             </DialogDescription>
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchWorkOrder}
+                className="text-blue-600 border-blue-300 hover:bg-blue-50"
+              >
+                <RefreshCw className="h-4 w-4 mr-1" />
+                重新載入庫存
+              </Button>
+            </div>
           </DialogHeader>
           
           <div className="space-y-6">
@@ -2480,6 +2557,12 @@ export default function WorkOrderDetailPage() {
                 <span className="text-red-600">紅色</span>為使用數量，
                 <span className="text-green-600">綠色</span>為剩餘數量，
                 <span className="text-red-600">紅色</span>表示庫存不足。
+                {loading && (
+                  <span className="ml-2 text-blue-600">
+                    <Loader2 className="h-3 w-3 inline animate-spin mr-1" />
+                    載入庫存中...
+                  </span>
+                )}
               </p>
               <div className="overflow-x-auto">
                 <Table>
@@ -2544,6 +2627,16 @@ export default function WorkOrderDetailPage() {
                 </div>
               </div>
               
+              {/* 庫存載入提示 */}
+              {workOrder?.billOfMaterials.some(item => (item.currentStock || 0) === 0 && (item.usedQuantity || 0) > 0) && (
+                <div className="mt-3 p-2 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <div className="text-xs text-yellow-700">
+                    <AlertCircle className="h-3 w-3 inline mr-1" />
+                    部分物料的庫存資訊可能未正確載入，請點擊「重新載入庫存」按鈕更新
+                  </div>
+                </div>
+              )}
+              
               {/* 庫存充足項目統計 */}
               {workOrder?.billOfMaterials.filter(item => {
                 const currentStock = item.currentStock || 0;
@@ -2560,6 +2653,16 @@ export default function WorkOrderDetailPage() {
                         return (currentStock - usedQuantity) >= 0 && usedQuantity > 0;
                       }).length || 0} 項
                     </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* 庫存載入成功提示 */}
+              {workOrder?.billOfMaterials.every(item => (item.currentStock || 0) > 0 || (item.usedQuantity || 0) === 0) && (
+                <div className="mt-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="text-xs text-blue-700">
+                    <Check className="h-3 w-3 inline mr-1" />
+                    庫存資訊已正確載入
                   </div>
                 </div>
               )}
