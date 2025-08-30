@@ -242,12 +242,59 @@ export default function WorkOrderDetailPage() {
     
     setIsCompleting(true);
     try {
+      // 1. 更新工單狀態
       const docRef = doc(db, "workOrders", workOrderId);
       await updateDoc(docRef, {
         status: "完工",
         updatedAt: Timestamp.now()
       });
 
+      // 2. 扣除物料和香精庫存
+      const materialsToUpdate = workOrder.billOfMaterials.filter(item => (item.usedQuantity || 0) > 0);
+      
+      for (const item of materialsToUpdate) {
+        const usedQuantity = item.usedQuantity || 0;
+        
+        if (item.category === 'fragrance') {
+          // 更新香精庫存
+          const fragranceRef = doc(db, "fragrances", item.id);
+          try {
+            const fragranceDoc = await getDoc(fragranceRef);
+            if (fragranceDoc.exists()) {
+              const currentStock = fragranceDoc.data().currentStock || 0;
+              const newStock = Math.max(0, currentStock - usedQuantity);
+              await updateDoc(fragranceRef, {
+                currentStock: newStock,
+                updatedAt: Timestamp.now()
+              });
+              console.log(`香精 ${item.name} 庫存已扣除: ${currentStock} -> ${newStock} (使用: ${usedQuantity})`);
+            }
+          } catch (error) {
+            console.error(`更新香精 ${item.name} 庫存失敗:`, error);
+            toast.error(`更新香精 ${item.name} 庫存失敗`);
+          }
+        } else {
+          // 更新物料庫存
+          const materialRef = doc(db, "materials", item.id);
+          try {
+            const materialDoc = await getDoc(materialRef);
+            if (materialDoc.exists()) {
+              const currentStock = materialDoc.data().currentStock || 0;
+              const newStock = Math.max(0, currentStock - usedQuantity);
+              await updateDoc(materialRef, {
+                currentStock: newStock,
+                updatedAt: Timestamp.now()
+              });
+              console.log(`物料 ${item.name} 庫存已扣除: ${currentStock} -> ${newStock} (使用: ${usedQuantity})`);
+            }
+          } catch (error) {
+            console.error(`更新物料 ${item.name} 庫存失敗:`, error);
+            toast.error(`更新物料 ${item.name} 庫存失敗`);
+          }
+        }
+      }
+
+      // 3. 更新本地狀態
       setWorkOrder(prev => prev ? {
         ...prev,
         status: "完工"
@@ -255,7 +302,7 @@ export default function WorkOrderDetailPage() {
 
       setIsCompleteDialogOpen(false);
       setIsEditing(false);
-      toast.success("工單已完工");
+      toast.success("工單已完工，庫存已扣除");
     } catch (error) {
       console.error("完工操作失敗:", error);
       toast.error("完工操作失敗");
@@ -2570,7 +2617,7 @@ export default function WorkOrderDetailPage() {
           <DialogHeader>
             <DialogTitle className="text-green-600 text-lg sm:text-xl">確認完工</DialogTitle>
             <DialogDescription>
-              請確認以下資訊後點擊完工按鈕。完工後將無法再修改目標產量和使用數量，但仍可新增工時記錄。系統會顯示庫存扣除後的剩餘數量。
+              請確認以下資訊後點擊完工按鈕。完工後將無法再修改目標產量和使用數量，但仍可新增工時記錄。系統會顯示庫存扣除後的剩餘數量，並實際扣除相應的庫存。
             </DialogDescription>
             <div className="flex justify-end">
               <Button
@@ -2702,6 +2749,19 @@ export default function WorkOrderDetailPage() {
                   </div>
                 </div>
               )}
+              
+              {/* 庫存扣除警告 */}
+              <div className="mt-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-orange-800 mb-1">庫存扣除提醒</p>
+                    <p className="text-xs text-orange-700">
+                      確認完工後，系統將實際扣除上述物料的使用數量，此操作無法復原。
+                    </p>
+                  </div>
+                </div>
+              </div>
               
               {workOrder?.billOfMaterials.filter(item => (item.usedQuantity || 0) > 0).length === 0 && (
                 <div className="text-center py-4 text-red-500 bg-red-50 rounded-lg border border-red-200">
@@ -2940,8 +3000,8 @@ export default function WorkOrderDetailPage() {
                       const usedQuantity = item.usedQuantity || 0;
                       return (currentStock - usedQuantity) < 0;
                     })
-                    ? "有庫存不足的物料，但仍可完工"
-                    : "確認將工單狀態設為完工"
+                    ? "有庫存不足的物料，但仍可完工並扣除庫存"
+                    : "確認將工單狀態設為完工並扣除庫存"
               }
             >
                               {isCompleting ? (
@@ -2956,7 +3016,7 @@ export default function WorkOrderDetailPage() {
                       const currentStock = item.currentStock || 0;
                       const usedQuantity = item.usedQuantity || 0;
                       return (currentStock - usedQuantity) < 0;
-                    }) ? "確認完工 (有庫存不足)" : "確認完工"}
+                    }) ? "確認完工並扣除庫存 (有庫存不足)" : "確認完工並扣除庫存"}
                   </>
                 )}
             </Button>
