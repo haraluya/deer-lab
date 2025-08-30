@@ -113,8 +113,28 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
                }))
                .sort((a, b) => a.label.localeCompare(b.label, 'zh-TW')),
              materials: materialsSnapshot.docs
-               .map(doc => ({ value: doc.id, label: doc.data().name }))
-               .sort((a, b) => a.label.localeCompare(b.label, 'zh-TW')),
+               .map(doc => {
+                 const data = doc.data();
+                 const category = data.category || '未分類';
+                 const subCategory = data.subCategory || '未分類';
+                 return {
+                   value: doc.id,
+                   label: `${data.name} [${category}] [${subCategory}]`,
+                   category: category,
+                   subCategory: subCategory,
+                   materialName: data.name
+                 };
+               })
+               .sort((a, b) => {
+                 // 先按主分類排序，再按細分分類排序，最後按物料名稱排序
+                 if (a.category !== b.category) {
+                   return a.category.localeCompare(b.category, 'zh-TW');
+                 }
+                 if (a.subCategory !== b.subCategory) {
+                   return a.subCategory.localeCompare(b.subCategory, 'zh-TW');
+                 }
+                 return a.materialName.localeCompare(b.materialName, 'zh-TW');
+               }),
            });
            
                                    // 保存系列詳細資訊

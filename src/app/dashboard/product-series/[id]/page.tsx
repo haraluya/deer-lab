@@ -552,10 +552,18 @@ export default function ProductSeriesDetailPage() {
                     .map((material) => (
                       <SelectItem key={material.id} value={material.id}>
                         <div className="flex flex-col">
-                          <span>{material.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            代號: {material.code}
-                          </span>
+                          <span className="font-medium">{material.name}</span>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-800">
+                              {material.category || '未分類'}
+                            </span>
+                            <span className="text-xs px-2 py-0.5 rounded bg-green-100 text-green-800">
+                              {material.subCategory || '未分類'}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              代號: {material.code}
+                            </span>
+                          </div>
                         </div>
                       </SelectItem>
                     ))}
