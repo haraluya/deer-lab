@@ -45,7 +45,7 @@ const navLinks: NavItem[] = [
   { href: '/dashboard/products', label: '產品管理', icon: Box },
   { isSeparator: true, label: '生產作業管理' },
   { href: '/dashboard/purchase-orders', label: '採購管理', icon: ShoppingCart },
-  { href: '/dashboard/production-calculator', label: '配方計算機', icon: Calculator },
+
   { href: '/dashboard/work-orders', label: '工單管理', icon: ClipboardList },
   { href: '/dashboard/inventory', label: '庫存管理', icon: Warehouse },
   { isSeparator: true, label: '數據分析' },
