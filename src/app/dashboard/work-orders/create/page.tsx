@@ -277,6 +277,78 @@ export default function CreateWorkOrderPage() {
       })
     } else {
       console.log('產品沒有BOM資料或BOM不是陣列')
+      
+      // 臨時解決方案：為皇家康普茶動態添加通用物料和專用物料
+      if (selectedProduct.code === 'BOT-XTS-5610' || selectedProduct.name === '皇家康普茶') {
+        console.log('為皇家康普茶添加臨時BOM物料')
+        
+        // 通用材料
+        const commonMaterials = [
+          { name: '30ML-矮-黑-空瓶', quantity: 1, unit: '個' },
+          { name: '30ML-矮-黑-蓋子', quantity: 1, unit: '個' }
+        ]
+        
+        // 專屬材料
+        const specificMaterials = [
+          { name: '小茶山-大紙盒-皇家康普茶', quantity: 1, unit: '個' },
+          { name: '小茶山-貼紙-皇家康普茶', quantity: 1, unit: '個' }
+        ]
+        
+        // 添加通用材料
+        commonMaterials.forEach(required => {
+          const material = materials.find(m => 
+            m.name.includes(required.name) || 
+            required.name.includes(m.name) ||
+            (m.name.includes('空瓶') && required.name.includes('空瓶')) ||
+            (m.name.includes('蓋子') && required.name.includes('蓋子'))
+          )
+          
+          if (material) {
+            const requiredQuantity = required.quantity * targetQuantity
+            materialRequirementsMap.set(material.id, {
+              materialId: material.id,
+              materialCode: material.code,
+              materialName: material.name,
+              requiredQuantity: requiredQuantity,
+              currentStock: material.currentStock || 0,
+              unit: material.unit || required.unit,
+              hasEnoughStock: (material.currentStock || 0) >= requiredQuantity,
+              category: 'common',
+              ratio: required.quantity
+            })
+            console.log('添加通用物料:', material.name, requiredQuantity)
+          } else {
+            console.log('找不到通用物料:', required.name)
+          }
+        })
+        
+        // 添加專屬材料
+        specificMaterials.forEach(required => {
+          const material = materials.find(m => 
+            m.name.includes(required.name) || 
+            required.name.includes(m.name) ||
+            (m.name.includes('小茶山') && m.name.includes('皇家康普茶'))
+          )
+          
+          if (material) {
+            const requiredQuantity = required.quantity * targetQuantity
+            materialRequirementsMap.set(material.id, {
+              materialId: material.id,
+              materialCode: material.code,
+              materialName: material.name,
+              requiredQuantity: requiredQuantity,
+              currentStock: material.currentStock || 0,
+              unit: material.unit || required.unit,
+              hasEnoughStock: (material.currentStock || 0) >= requiredQuantity,
+              category: 'specific',
+              ratio: required.quantity
+            })
+            console.log('添加專屬物料:', material.name, requiredQuantity)
+          } else {
+            console.log('找不到專屬物料:', required.name)
+          }
+        })
+      }
     }
 
     // Convert map to array and sort
