@@ -221,21 +221,32 @@ export default function CreateWorkOrderPage() {
     console.log('使用香精比例:', fragranceRatios)
 
     // 2. 核心液體 (香精、PG、VG、尼古丁) - 總是添加所有核心液體
-    // 香精 - 總是添加
+    // 香精 - 總是添加，並檢查實際庫存
     if (selectedProduct.fragranceCode && selectedProduct.fragranceCode !== '未指定') {
       const fragranceQuantity = targetQuantity * fragranceRatios.fragrance
+      
+      // 查找香精的實際庫存
+      const fragranceMaterial = materials.find(m => 
+        m.code === selectedProduct.fragranceCode || 
+        m.name === selectedProduct.fragranceName ||
+        m.name.includes(selectedProduct.fragranceName)
+      )
+      
+      const currentStock = fragranceMaterial ? (fragranceMaterial.currentStock || 0) : 0
+      const hasEnoughStock = currentStock >= fragranceQuantity
+      
       materialRequirementsMap.set('fragrance', {
-        materialId: 'fragrance',
+        materialId: fragranceMaterial ? fragranceMaterial.id : 'fragrance',
         materialCode: selectedProduct.fragranceCode,
         materialName: selectedProduct.fragranceName,
         requiredQuantity: fragranceQuantity,
-        currentStock: 0,
+        currentStock: currentStock,
         unit: 'KG',
-        hasEnoughStock: true,
+        hasEnoughStock: hasEnoughStock,
         category: 'fragrance',
         ratio: fragranceRatios.fragrance
       })
-      console.log('添加香精:', selectedProduct.fragranceName, fragranceQuantity, '比例:', fragranceRatios.fragrance)
+      console.log('添加香精:', selectedProduct.fragranceName, fragranceQuantity, '比例:', fragranceRatios.fragrance, '庫存:', currentStock, '充足:', hasEnoughStock)
     }
 
     // PG (丙二醇) - 總是添加
