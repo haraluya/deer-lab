@@ -74,7 +74,21 @@ export const createWorkOrder = onCall(async (request) => {
       }
     }
 
-    // 4. Build Bill of Materials (BOM) from provided bomItems
+    // 4. Fetch series data for seriesName
+    let seriesName = '未指定';
+    if (productData.seriesRef) {
+      try {
+        const seriesSnap = await productData.seriesRef.get();
+        if (seriesSnap.exists) {
+          const seriesData = seriesSnap.data()!;
+          seriesName = seriesData.name || '未指定';
+        }
+      } catch (error) {
+        logger.warn(`無法載入產品系列資料:`, error);
+      }
+    }
+
+    // 5. Build Bill of Materials (BOM) from provided bomItems
     const billOfMaterials: MaterialInfo[] = [];
 
     if (bomItems && Array.isArray(bomItems)) {
@@ -103,7 +117,7 @@ export const createWorkOrder = onCall(async (request) => {
       }
     }
 
-    // 5. Create the work order document
+    // 6. Create the work order document
     const workOrderRef = db.collection("workOrders").doc();
     await workOrderRef.set({
       code: woCode,
@@ -111,7 +125,7 @@ export const createWorkOrder = onCall(async (request) => {
       productSnapshot: {
         code: productData.code,
         name: productData.name,
-        seriesName: productData.seriesName,
+        seriesName: seriesName,
         fragranceName: fragranceData?.name || productData.fragranceName || '未指定',
         fragranceCode: fragranceData?.code || productData.fragranceCode || '未指定',
         nicotineMg: nicotineMg || productData.nicotineMg || 0,

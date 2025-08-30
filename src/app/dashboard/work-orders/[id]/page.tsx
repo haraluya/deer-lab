@@ -320,44 +320,6 @@ export default function WorkOrderDetailPage() {
           </h1>
           <p className="text-gray-600 font-mono">{workOrder.code}</p>
         </div>
-        <div className="flex items-center gap-2">
-          {isEditing ? (
-            <>
-              <Button
-                variant="outline"
-                onClick={() => setIsEditing(false)}
-                disabled={isSaving}
-              >
-                取消
-              </Button>
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    儲存中...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    儲存
-                  </>
-                )}
-              </Button>
-            </>
-          ) : (
-            <Button
-              onClick={() => setIsEditing(true)}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Edit className="mr-2 h-4 w-4" />
-              編輯
-            </Button>
-          )}
-        </div>
       </div>
 
       {/* 工單基本資料 */}
@@ -456,6 +418,46 @@ export default function WorkOrderDetailPage() {
                 <div className="mt-1 font-medium text-gray-900">{workOrder.targetQuantity} KG</div>
               )}
             </div>
+          </div>
+
+          {/* 編輯按鈕 */}
+          <div className="mt-4 flex justify-end">
+            {isEditing ? (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditing(false)}
+                  disabled={isSaving}
+                >
+                  取消
+                </Button>
+                <Button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      儲存中...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      儲存
+                    </>
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <Button
+                onClick={() => setIsEditing(true)}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Edit className="mr-2 h-4 w-4" />
+                編輯
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

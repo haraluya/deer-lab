@@ -312,7 +312,8 @@ export function RecipeCalculatorDialog({
         })),
       };
 
-      await createWorkOrderFunction(payload);
+      const result = await createWorkOrderFunction(payload);
+      const responseData = result.data as any;
       
       toast.success("工單建立成功");
       onWorkOrderCreated();
@@ -322,6 +323,11 @@ export function RecipeCalculatorDialog({
       setSelectedProductId('');
       setTargetQuantity(1);
       setBomItems([]);
+      
+      // 跳轉到工單詳情頁面
+      if (responseData && responseData.workOrderId) {
+        window.location.href = `/dashboard/work-orders/${responseData.workOrderId}`;
+      }
       
     } catch (error) {
       console.error("建立工單失敗:", error);

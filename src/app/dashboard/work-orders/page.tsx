@@ -12,9 +12,8 @@ import { WorkOrderColumn } from "./columns"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Factory, Calculator, Search, Filter, ChevronLeft, ChevronRight } from "lucide-react"
+import { Plus, Factory, Calculator, Filter, ChevronLeft, ChevronRight } from "lucide-react"
 import { RecipeCalculatorDialog } from "./RecipeCalculatorDialog"
 
 function WorkOrdersPageContent() {
@@ -25,7 +24,6 @@ function WorkOrdersPageContent() {
   
   // 篩選和分頁狀態
   const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(10)
   
@@ -75,17 +73,9 @@ function WorkOrdersPageContent() {
       filtered = filtered.filter(order => order.status === statusFilter)
     }
 
-    // 搜尋篩選
-    if (searchTerm) {
-      filtered = filtered.filter(order =>
-        order.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.productName.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    }
-
     setFilteredWorkOrders(filtered)
     setCurrentPage(1) // 重置到第一頁
-  }, [workOrders, statusFilter, searchTerm])
+  }, [workOrders, statusFilter])
 
   // 分頁計算
   const paginatedWorkOrders = useMemo(() => {
@@ -147,37 +137,74 @@ function WorkOrdersPageContent() {
           </div>
         </CardHeader>
         <CardContent>
-          {/* 篩選和搜尋區域 */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-gray-500" />
-              <span className="text-sm text-gray-600">狀態篩選：</span>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">全部</SelectItem>
-                  <SelectItem value="未確認">未確認</SelectItem>
-                  <SelectItem value="進行中">進行中</SelectItem>
-                  <SelectItem value="待完工確認">待完工確認</SelectItem>
-                  <SelectItem value="待品檢">待品檢</SelectItem>
-                  <SelectItem value="已完工">已完工</SelectItem>
-                  <SelectItem value="已入庫">已入庫</SelectItem>
-                  <SelectItem value="已取消">已取消</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="搜尋工單號碼或產品名稱..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+          {/* 狀態篩選 */}
+          <div className="flex items-center gap-2 mb-4">
+            <Filter className="h-4 w-4 text-gray-500" />
+            <span className="text-sm text-gray-600">狀態篩選：</span>
+            <Button
+              variant={statusFilter === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setStatusFilter('all')}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              全部
+            </Button>
+            <Button
+              variant={statusFilter === '未確認' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setStatusFilter('未確認')}
+              className={statusFilter === '未確認' ? 'bg-gray-600 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}
+            >
+              未確認
+            </Button>
+            <Button
+              variant={statusFilter === '進行中' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setStatusFilter('進行中')}
+              className={statusFilter === '進行中' ? 'bg-blue-600 hover:bg-blue-700' : 'border-blue-200 text-blue-600 hover:bg-blue-50'}
+            >
+              進行中
+            </Button>
+            <Button
+              variant={statusFilter === '待完工確認' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setStatusFilter('待完工確認')}
+              className={statusFilter === '待完工確認' ? 'bg-yellow-600 hover:bg-yellow-700' : 'border-yellow-200 text-yellow-600 hover:bg-yellow-50'}
+            >
+              待完工確認
+            </Button>
+            <Button
+              variant={statusFilter === '待品檢' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setStatusFilter('待品檢')}
+              className={statusFilter === '待品檢' ? 'bg-orange-600 hover:bg-orange-700' : 'border-orange-200 text-orange-600 hover:bg-orange-50'}
+            >
+              待品檢
+            </Button>
+            <Button
+              variant={statusFilter === '已完工' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setStatusFilter('已完工')}
+              className={statusFilter === '已完工' ? 'bg-green-600 hover:bg-green-700' : 'border-green-200 text-green-600 hover:bg-green-50'}
+            >
+              已完工
+            </Button>
+            <Button
+              variant={statusFilter === '已入庫' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setStatusFilter('已入庫')}
+              className={statusFilter === '已入庫' ? 'bg-purple-600 hover:bg-purple-700' : 'border-purple-200 text-purple-600 hover:bg-purple-50'}
+            >
+              已入庫
+            </Button>
+            <Button
+              variant={statusFilter === '已取消' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setStatusFilter('已取消')}
+              className={statusFilter === '已取消' ? 'bg-red-600 hover:bg-red-700' : 'border-red-200 text-red-600 hover:bg-red-50'}
+            >
+              已取消
+            </Button>
           </div>
 
           {/* 統計資訊 */}
