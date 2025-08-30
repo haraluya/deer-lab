@@ -41,7 +41,7 @@ function getFirebaseConfig() {
 function initializeFirebase() {
   if (isInitialized) {
     console.log('✅ Firebase 已經初始化');
-    return { app, auth: authInstance, db: dbInstance, functions: functionsInstance };
+    return { app, auth: authInstance, db: dbInstance, functions: functionsInstance, storage: storageInstance };
   }
 
   try {

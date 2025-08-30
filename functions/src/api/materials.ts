@@ -347,11 +347,10 @@ export const importMaterials = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
   // await ensureCanManageMaterials(contextAuth?.uid);
   
-  const { materials, updateMode = false } = data;
+  const { materials } = data;
   
   logger.info(`開始處理物料匯入:`, {
     totalMaterials: materials?.length || 0,
-    updateMode: updateMode,
   });
   
   if (!materials || !Array.isArray(materials)) {
@@ -394,18 +393,15 @@ export const importMaterials = onCall(async (request) => {
         const originalCode = finalCode;
         let codeChanged = false;
 
-        if (updateMode) {
-          if (!finalCode || !existingMaterialsMap.has(finalCode)) {
-            results.push({
-              name: processedData.name,
-              status: "skipped",
-              reason: `更新模式下找不到物料代號: ${finalCode || '未提供'}`,
-              code: finalCode
-            });
-            continue;
-          }
-        } else { // Create mode
-          if (!finalCode || allCodesInDb.has(finalCode) || allCodesInThisBatch.has(finalCode)) {
+        // 智能匹配邏輯：檢查物料代號是否存在
+        const existingMaterial = finalCode ? existingMaterialsMap.get(finalCode) : null;
+        
+        if (!finalCode || allCodesInDb.has(finalCode) || allCodesInThisBatch.has(finalCode)) {
+          if (existingMaterial) {
+            // 代號已存在，執行更新
+            logger.info(`物料代號 ${finalCode} 已存在，執行更新操作`);
+          } else {
+            // 代號不存在或重複，生成新代號
             finalCode = generateUniqueMaterialCode(mainCategoryId, subCategoryId, new Set([...allCodesInDb, ...allCodesInThisBatch]));
             codeChanged = true;
             logger.warn(`代號 ${originalCode || '未提供'} 重複或無效，已生成新代號: ${finalCode}`);
@@ -449,11 +445,13 @@ export const importMaterials = onCall(async (request) => {
         }
 
         let action = "created";
-        if (updateMode) {
-          const existingMaterial = existingMaterialsMap.get(finalCode);
+        
+        if (existingMaterial) {
+          // 物料代號已存在，執行更新
           batch.update(existingMaterial.docRef, materialDataToSave);
           action = "updated";
         } else {
+          // 物料代號不存在，執行新增
           materialDataToSave.createdAt = FieldValue.serverTimestamp();
           const newDocRef = db.collection("materials").doc();
           batch.set(newDocRef, materialDataToSave);

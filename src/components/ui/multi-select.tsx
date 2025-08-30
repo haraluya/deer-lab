@@ -5,8 +5,6 @@ import * as React from 'react';
 import { X } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
-import { Command, CommandGroup, CommandItem } from '@/components/ui/command';
-import { Command as CommandPrimitive } from 'cmdk';
 
 export type OptionType = {
   label: string;
@@ -55,7 +53,7 @@ export function MultiSelect({
     onChange(selected.filter((s) => s !== value));
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Backspace' && inputValue === '' && selected.length > 0) {
       handleUnselect(selected[selected.length - 1]);
     }
@@ -66,22 +64,24 @@ export function MultiSelect({
   };
 
   const selectedOptions = options.filter(option => selected.includes(option.value));
+  
   const selectableOptions = options.filter(option => {
     if (selected.includes(option.value)) return false;
     
     // 搜尋邏輯：搜尋物料名稱、主分類、細分分類
     if (!inputValue.trim()) return true;
     
-    const searchTerm = inputValue.trim();
-    const materialName = option.materialName || option.label;
-    const category = option.category || '';
-    const subCategory = option.subCategory || '';
+    const searchTerm = inputValue.trim().toLowerCase();
+    const materialName = (option.materialName || option.label).toLowerCase();
+    const category = (option.category || '').toLowerCase();
+    const subCategory = (option.subCategory || '').toLowerCase();
+    const label = option.label.toLowerCase();
     
     // 搜尋邏輯：優先搜尋物料名稱，然後是分類
     return materialName.includes(searchTerm) || 
            category.includes(searchTerm) || 
            subCategory.includes(searchTerm) ||
-           option.label.includes(searchTerm);
+           label.includes(searchTerm);
   }).sort((a, b) => {
     // 搜尋結果優先按照物料名稱排序
     const materialNameA = (a.materialName || a.label).toLowerCase();
@@ -90,7 +90,7 @@ export function MultiSelect({
   });
 
   return (
-    <Command onKeyDown={handleKeyDown} className="overflow-visible bg-transparent">
+    <div className="overflow-visible bg-transparent">
       <div className="group border border-input px-3 py-2 text-sm ring-offset-background rounded-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
         <div className="flex gap-1 flex-wrap">
           {selectedOptions.map(({ value, label, category, subCategory, materialName }) => (
@@ -118,18 +118,30 @@ export function MultiSelect({
               </button>
             </Badge>
           ))}
-          <CommandPrimitive.Input
+          <input
             ref={inputRef}
+            type="text"
             value={inputValue}
-            onValueChange={(value) => {
+            onChange={(e) => {
+              const value = e.target.value;
               setInputValue(value);
               // 當有輸入值時，自動打開下拉選單
               if (value.trim()) {
                 setOpen(true);
+              } else {
+                setOpen(false);
               }
             }}
-            onBlur={() => setOpen(false)}
-            onFocus={() => setOpen(true)}
+            onKeyDown={handleKeyDown}
+            onBlur={() => {
+              // 延遲關閉，讓用戶有時間點擊選項
+              setTimeout(() => setOpen(false), 200);
+            }}
+            onFocus={() => {
+              if (inputValue.trim()) {
+                setOpen(true);
+              }
+            }}
             placeholder={placeholder}
             className="ml-2 bg-transparent outline-none placeholder:text-muted-foreground flex-1"
           />
@@ -138,16 +150,16 @@ export function MultiSelect({
       <div className="relative mt-2">
         {open && (selectableOptions.length > 0 || (allowCreate && inputValue.trim())) ? (
           <div className="absolute w-full z-10 top-0 rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in">
-            <CommandGroup className="h-full overflow-auto">
+            <div className="h-full overflow-auto">
               {selectableOptions.map(({ value, label, category, subCategory, materialName }) => (
-                <CommandItem
+                <div
                   key={value}
                   onMouseDown={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                   }}
-                  onSelect={() => handleSelect(value)}
-                  className="cursor-pointer"
+                  onClick={() => handleSelect(value)}
+                  className="cursor-pointer px-2 py-3 hover:bg-accent hover:text-accent-foreground"
                 >
                   <div className="flex items-center gap-2 w-full">
                     <span className="flex-1 font-medium">{materialName || label}</span>
@@ -162,24 +174,24 @@ export function MultiSelect({
                       </span>
                     )}
                   </div>
-                </CommandItem>
+                </div>
               ))}
               {allowCreate && inputValue.trim() && !selectableOptions.find(opt => opt.label.toLowerCase() === inputValue.toLowerCase()) && (
-                <CommandItem
+                <div
                   onMouseDown={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                   }}
-                  onSelect={handleCreateNew}
-                  className="cursor-pointer text-blue-600"
+                  onClick={handleCreateNew}
+                  className="cursor-pointer text-blue-600 px-2 py-3 hover:bg-accent hover:text-accent-foreground"
                 >
                   新增 &quot;{inputValue.trim()}&quot;
-                </CommandItem>
+                </div>
               )}
-            </CommandGroup>
+            </div>
           </div>
         ) : null}
       </div>
-    </Command>
+    </div>
   );
 }

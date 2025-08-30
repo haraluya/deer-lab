@@ -49,7 +49,6 @@ export function ImportExportDialog({
   const [isExporting, setIsExporting] = useState(false)
   const [importData, setImportData] = useState<any[]>([])
   const [validationErrors, setValidationErrors] = useState<string[]>([])
-  const [updateMode, setUpdateMode] = useState(false)
   const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(null)
   const [importResults, setImportResults] = useState<{ success: number; failed: number; failedItems: any[] }>({ success: 0, failed: 0, failedItems: [] })
 
@@ -364,12 +363,12 @@ export function ImportExportDialog({
           <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-6">
             <h4 className="font-semibold text-blue-800 mb-2">匯入/匯出規則</h4>
             <div className="text-sm text-blue-700 space-y-1">
-              <p>• <strong>智能匹配模式</strong>：系統會根據產品代號自動判斷是新增還是更新</p>
-              <p>• <strong>新增邏輯</strong>：如果產品代號不存在，系統會建立新的產品項目</p>
-              <p>• <strong>更新邏輯</strong>：如果產品代號已存在，系統會更新覆蓋有填入的欄位</p>
-              <p>• <strong>必填欄位</strong>：產品名稱、系列名稱、香精編號為必填項目</p>
-              <p>• <strong>產品代號</strong>：如果未提供，系統會自動生成</p>
-              <p>• <strong>注意事項</strong>：系列名稱和香精編號必須在系統中已存在</p>
+              <p>• <strong>智能匹配模式</strong>：系統會根據物料代號自動判斷是新增還是更新</p>
+              <p>• <strong>新增邏輯</strong>：如果物料代號不存在，系統會建立新的物料項目</p>
+              <p>• <strong>更新邏輯</strong>：如果物料代號已存在，系統會更新覆蓋有填入的欄位</p>
+              <p>• <strong>必填欄位</strong>：物料名稱為必填項目</p>
+              <p>• <strong>物料代號</strong>：如果未提供，系統會自動生成</p>
+              <p>• <strong>注意事項</strong>：供應商名稱如果不存在會自動建立</p>
               <p>• <strong>支援格式</strong>：Excel (.xlsx) 和 CSV 檔案格式</p>
             </div>
           </div>
@@ -398,6 +397,19 @@ export function ImportExportDialog({
                   className="w-full p-2 border border-gray-300 rounded-md"
                 />
               </div>
+
+              {showUpdateOption && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="text-sm text-blue-700">
+                    <strong>智能匹配模式：</strong>系統會根據物料代號自動判斷是新增還是更新
+                    <ul className="mt-1 ml-4 space-y-1">
+                      <li>• 如果物料代號已存在 → 更新現有資料</li>
+                      <li>• 如果物料代號不存在 → 新增新物料</li>
+                      <li>• 如果未提供物料代號 → 自動生成新代號並新增</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
 
 
 

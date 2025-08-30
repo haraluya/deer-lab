@@ -408,39 +408,42 @@ export default function FragranceDetailPage() {
           variant="outline" 
           size="icon" 
           onClick={() => router.back()}
-          className="hover:bg-primary/10 hover:border-primary/20"
+          className="hover:bg-pink-50 hover:border-pink-200 hover:text-pink-600"
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-grow">
-          <h1 className="text-3xl font-bold text-primary">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
             香精詳情
           </h1>
-          <p className="text-muted-foreground font-mono">{fragrance.code}</p>
+          <p className="text-gray-600 mt-2 font-mono">{fragrance.code}</p>
         </div>
-        <Button onClick={handleEdit} className="bg-primary hover:bg-primary/90">
+        <Button 
+          onClick={handleEdit} 
+          className="bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+        >
           <Edit className="mr-2 h-4 w-4" />
           編輯香精
         </Button>
       </div>
 
              {/* 香精基本資訊卡片 */}
-       <Card className="mb-6 border-0 shadow-lg bg-gradient-to-r from-background to-primary/10">
+       <Card className="mb-6 border-0 shadow-lg bg-gradient-to-r from-background to-pink-50/50">
          <CardHeader>
-           <CardTitle className="flex items-center gap-2 text-primary">
+           <CardTitle className="flex items-center gap-2 text-pink-600">
              核心資訊
            </CardTitle>
          </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* 香精名稱 */}
-            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-pink-50 to-rose-50 rounded-lg">
+              <div className="w-10 h-10 bg-gradient-to-r from-pink-600 to-rose-600 rounded-lg flex items-center justify-center">
                 <FlaskConical className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-sm text-blue-600 font-medium">香精名稱</p>
-                <p className="text-lg font-semibold text-blue-800">{fragrance.name}</p>
+                <p className="text-sm text-pink-600 font-medium">香精名稱</p>
+                <p className="text-lg font-semibold text-pink-700">{fragrance.name}</p>
               </div>
             </div>
 

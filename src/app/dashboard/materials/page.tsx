@@ -1305,7 +1305,6 @@ function MaterialsPageContent() {
             // 調試日誌：檢查匯入資料
             console.log('開始匯入資料:', {
               totalRecords: data.length,
-              updateMode: options?.updateMode,
               sampleData: data.slice(0, 3).map(item => ({
                 name: item.name,
                 supplierName: item.supplierName,
@@ -1324,8 +1323,7 @@ function MaterialsPageContent() {
               const batch = data.slice(startIndex, endIndex);
               
               const result = await importMaterials({ 
-                materials: batch,
-                updateMode: options?.updateMode || false
+                materials: batch
               });
               
               processedCount += batch.length;

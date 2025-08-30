@@ -82,10 +82,10 @@ export default function CreateWorkOrderPage() {
     const seriesA = a.seriesName || '未指定'
     const seriesB = b.seriesName || '未指定'
     if (seriesA !== seriesB) {
-      return seriesA.localeCompare(seriesB)
+      return seriesA.localeCompare(seriesB, 'zh-TW')
     }
     // 同系列內按產品名稱排序
-    return a.name.localeCompare(b.name)
+    return a.name.localeCompare(b.name, 'zh-TW')
   })
 
   useEffect(() => {

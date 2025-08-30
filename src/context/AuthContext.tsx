@@ -45,6 +45,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const db = getFirestoreInstance();
       if (!db) {
         console.error('❌ Firestore 未初始化');
+        setAppUser(null);
         return;
       }
       
@@ -130,33 +131,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // 監聽認證狀態
   useEffect(() => {
     console.log('🔧 AuthContext useEffect 開始執行');
-    const auth = getAuthInstance();
-    if (!auth) {
-      console.error('❌ Auth 未初始化，設置 isLoading = false');
-      setIsLoading(false);
-      return;
-    }
-
-    console.log('🔧 設置 onAuthStateChanged 監聽器');
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log('🔧 onAuthStateChanged 觸發，用戶:', firebaseUser ? firebaseUser.uid : 'null');
-      if (firebaseUser) {
-        setUser(firebaseUser);
-        console.log('🔧 開始載入用戶資料');
-        await loadUserData(firebaseUser);
-      } else {
-        setUser(null);
-        setAppUser(null);
-        console.log('🔧 用戶已登出，清除狀態');
+    
+    try {
+      const auth = getAuthInstance();
+      if (!auth) {
+        console.error('❌ Auth 未初始化，設置 isLoading = false');
+        setIsLoading(false);
+        return;
       }
-      setIsLoading(false);
-      console.log('🔧 設置 isLoading = false');
-    });
 
-    return () => {
-      console.log('🔧 清理 onAuthStateChanged 監聽器');
-      unsubscribe();
-    };
+      console.log('🔧 設置 onAuthStateChanged 監聽器');
+      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        try {
+          console.log('🔧 onAuthStateChanged 觸發，用戶:', firebaseUser ? firebaseUser.uid : 'null');
+          if (firebaseUser) {
+            setUser(firebaseUser);
+            console.log('🔧 開始載入用戶資料');
+            await loadUserData(firebaseUser);
+          } else {
+            setUser(null);
+            setAppUser(null);
+            console.log('🔧 用戶已登出，清除狀態');
+          }
+          setIsLoading(false);
+          console.log('🔧 設置 isLoading = false');
+        } catch (error) {
+          console.error('❌ onAuthStateChanged 回調執行失敗:', error);
+          setIsLoading(false);
+        }
+      });
+
+      return () => {
+        console.log('🔧 清理 onAuthStateChanged 監聽器');
+        if (typeof unsubscribe === 'function') {
+          unsubscribe();
+        }
+      };
+    } catch (error) {
+      console.error('❌ AuthContext useEffect 執行失敗:', error);
+      setIsLoading(false);
+    }
   }, []);
 
   const value = {
