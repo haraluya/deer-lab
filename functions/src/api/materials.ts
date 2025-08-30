@@ -252,7 +252,7 @@ export const updateMaterial = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
   // await ensureCanManageMaterials(contextAuth?.uid);
   
-  const { materialId, name, category, subCategory, supplierId, safetyStockLevel, costPerUnit, unit, notes } = data;
+  const { materialId, name, category, subCategory, supplierId, currentStock, safetyStockLevel, costPerUnit, unit, notes } = data;
   
   if (!materialId || !name) { 
     throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (materialId, name)。"); 
@@ -285,6 +285,7 @@ export const updateMaterial = onCall(async (request) => {
       category: category || "",
       subCategory: subCategory || "",
       code: updatedCode,
+      currentStock: Number(currentStock) || 0,
       safetyStockLevel: Number(safetyStockLevel) || 0,
       costPerUnit: Number(costPerUnit) || 0,
       unit: unit || "",

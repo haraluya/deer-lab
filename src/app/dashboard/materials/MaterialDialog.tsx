@@ -45,6 +45,7 @@ const formSchema = z.object({
   category: z.string().min(1, { message: '請選擇主分類' }),
   subCategory: z.string().min(1, { message: '請選擇細分分類' }),
   supplierId: z.string().optional(),
+  currentStock: z.coerce.number().min(0, { message: '現有庫存不能為負數' }).optional(),
   safetyStockLevel: z.coerce.number({ message: '安全庫存必須為數字' }).optional(),
   costPerUnit: z.coerce.number().min(0, { message: '單位成本不能為負數' }).optional(),
   unit: z.string().optional(),
@@ -257,6 +258,7 @@ export function MaterialDialog({
         category: materialData.category || '',
         subCategory: materialData.subCategory || '',
         supplierId: materialData.supplierRef?.id || 'none',
+        currentStock: materialData.currentStock || 0,
         safetyStockLevel: materialData.safetyStockLevel || 0,
         costPerUnit: materialData.costPerUnit || 0,
         unit: materialData.unit || '',
@@ -484,7 +486,27 @@ export function MaterialDialog({
                 庫存與成本
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <FormField
+                  control={form.control}
+                  name="currentStock"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold text-gray-700">現有庫存</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01"
+                          placeholder="0" 
+                          className="border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="safetyStockLevel"
