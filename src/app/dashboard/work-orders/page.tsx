@@ -13,8 +13,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Factory, Calculator, Filter, ChevronLeft, ChevronRight } from "lucide-react"
-import { RecipeCalculatorDialog } from "./RecipeCalculatorDialog"
+import { Plus, Factory, Filter, ChevronLeft, ChevronRight } from "lucide-react"
+
 
 function WorkOrdersPageContent() {
   const router = useRouter()
@@ -27,8 +27,7 @@ function WorkOrdersPageContent() {
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(10)
   
-  // 配方計算機對話框狀態
-  const [isRecipeCalculatorOpen, setIsRecipeCalculatorOpen] = useState(false)
+
 
   const loadWorkOrders = useCallback(async () => {
     setLoading(true)
@@ -95,9 +94,7 @@ function WorkOrdersPageContent() {
     router.push("/dashboard/work-orders/create")
   }
 
-  const handleRecipeCalculator = () => {
-    setIsRecipeCalculatorOpen(true)
-  }
+
 
   return (
     <div className="container mx-auto py-10 work-orders-page">
@@ -118,14 +115,6 @@ function WorkOrdersPageContent() {
               <CardTitle>工單清單</CardTitle>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                onClick={handleRecipeCalculator}
-                variant="outline"
-                className="border-blue-200 text-blue-600 hover:bg-blue-50"
-              >
-                <Calculator className="mr-2 h-4 w-4" />
-                配方計算機
-              </Button>
               <Button 
                 onClick={handleCreateWorkOrder}
                 className="bg-blue-600 hover:bg-blue-700"
@@ -267,12 +256,7 @@ function WorkOrdersPageContent() {
         </CardContent>
       </Card>
 
-      {/* 配方計算機對話框 */}
-      <RecipeCalculatorDialog
-        isOpen={isRecipeCalculatorOpen}
-        onOpenChange={setIsRecipeCalculatorOpen}
-        onWorkOrderCreated={loadWorkOrders}
-      />
+
     </div>
   )
 }

@@ -7,7 +7,7 @@ import { db } from "@/lib/firebase"
 import { toast } from "sonner"
 import { 
   ArrowLeft, Edit, Save, CheckCircle, AlertCircle, Clock, Package, Users, 
-  Droplets, Calculator, MessageSquare, Calendar, User, Plus, X, Loader2
+  Droplets, Calculator, MessageSquare, Calendar, User, Plus, X, Loader2, Upload, Trash2
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -19,6 +19,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+
+interface Comment {
+  id: string
+  text: string
+  images: string[]
+  createdAt: string
+  createdBy: string
+}
 
 interface WorkOrderData {
   id: string
@@ -62,6 +70,7 @@ interface WorkOrderData {
     minutes: number
     totalMinutes: number
   }>
+  comments?: Comment[]
 }
 
 interface Personnel {
@@ -108,6 +117,13 @@ export default function WorkOrderDetailPage() {
     startTime: "",
     endTime: ""
   })
+  
+  // 留言相關狀態
+  const [comments, setComments] = useState<Comment[]>([])
+  const [newComment, setNewComment] = useState('')
+  const [uploadedImages, setUploadedImages] = useState<string[]>([])
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // 載入工單資料
   const fetchWorkOrder = useCallback(async () => {
@@ -142,7 +158,11 @@ export default function WorkOrderDetailPage() {
           createdByName: data.createdByName || '',
           notes: data.notes || '',
           timeRecords: data.timeRecords || [],
+          comments: data.comments || [],
         });
+        
+        // 設置留言狀態
+        setComments(data.comments || []);
       } else {
         toast.error('找不到工單');
         router.push('/dashboard/work-orders');
@@ -179,6 +199,252 @@ export default function WorkOrderDetailPage() {
       console.error("載入人員資料失敗:", error)
     }
   }, [])
+
+  // 圖片壓縮功能
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        // 設定最大尺寸
+        const maxWidth = 800;
+        const maxHeight = 600;
+        
+        let { width, height } = img;
+        
+        // 計算縮放比例
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height;
+            height = maxHeight;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // 繪製壓縮後的圖片
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        // 轉換為 Blob
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const compressedFile = new File([blob], file.name, {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            resolve(compressedFile);
+          } else {
+            resolve(file);
+          }
+        }, 'image/jpeg', 0.8); // 80% 品質
+      };
+      
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  // 上傳圖片到 Firebase Storage
+  const uploadImageToStorage = async (file: File): Promise<string> => {
+    try {
+      const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+      const storage = getStorage();
+      
+      // 使用日期分類的檔案路徑
+      const date = new Date();
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const timestamp = Date.now();
+      
+      const imagePath = `work-orders/${workOrderId}/comments/${year}/${month}/${day}/${timestamp}_${file.name}`;
+      const imageRef = ref(storage, imagePath);
+      
+      await uploadBytes(imageRef, file);
+      const downloadURL = await getDownloadURL(imageRef);
+      
+      return downloadURL;
+    } catch (error) {
+      console.error('圖片上傳失敗:', error);
+      throw new Error('圖片上傳失敗');
+    }
+  };
+
+  // 處理圖片上傳
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      const fileArray = Array.from(files);
+      
+      try {
+        // 顯示上傳中提示
+        const toastId = toast.loading("正在處理圖片...");
+        
+        // 壓縮並上傳每張圖片
+        const uploadPromises = fileArray.map(async (file) => {
+          const compressedFile = await compressImage(file);
+          const downloadURL = await uploadImageToStorage(compressedFile);
+          return downloadURL;
+        });
+        
+        const uploadedURLs = await Promise.all(uploadPromises);
+        
+        // 更新已上傳的圖片列表
+        setUploadedImages(prev => [...prev, ...uploadedURLs]);
+        
+        toast.success(`成功上傳 ${uploadedURLs.length} 張圖片`, { id: toastId });
+      } catch (error) {
+        console.error('圖片處理失敗:', error);
+        toast.error('圖片處理失敗');
+      }
+    }
+    
+    // 清空 input 值，允許重複選擇相同檔案
+    event.target.value = '';
+  };
+
+  // 移除已上傳的圖片
+  const handleRemoveImage = (index: number) => {
+    setUploadedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // 新增留言
+  const handleAddComment = async () => {
+    if (!newComment.trim() && uploadedImages.length === 0) {
+      toast.error("請輸入留言內容或上傳圖片");
+      return;
+    }
+
+    if (!workOrder || !db) return;
+
+    try {
+      const comment: Comment = {
+        id: Date.now().toString(),
+        text: newComment.trim(),
+        images: uploadedImages,
+        createdAt: new Date().toISOString(),
+        createdBy: "當前用戶" // 這裡應該使用實際的用戶名稱
+      };
+
+      // 更新工單文檔
+      const docRef = doc(db, "workOrders", workOrderId);
+      const updatedComments = [...comments, comment];
+      await updateDoc(docRef, {
+        comments: updatedComments,
+        updatedAt: Timestamp.now()
+      });
+
+      // 更新本地狀態
+      setComments(updatedComments);
+      setWorkOrder(prev => prev ? { ...prev, comments: updatedComments } : null);
+      
+      // 清空表單
+      setNewComment('');
+      setUploadedImages([]);
+      
+      toast.success("留言已新增");
+    } catch (error) {
+      console.error("新增留言失敗:", error);
+      toast.error("新增留言失敗");
+    }
+  };
+
+  // 刪除留言
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      const comment = comments.find(c => c.id === commentId);
+      if (!comment) return;
+
+      // 刪除相關圖片
+      if (comment.images.length > 0) {
+        const { getStorage, ref, deleteObject } = await import('firebase/storage');
+        const storage = getStorage();
+        
+        const deletePromises = comment.images.map(async (imageURL) => {
+          try {
+            const imageRef = ref(storage, imageURL);
+            await deleteObject(imageRef);
+          } catch (error) {
+            console.error('刪除圖片失敗:', error);
+          }
+        });
+        
+        await Promise.all(deletePromises);
+      }
+
+      // 從本地狀態中移除留言
+      const updatedComments = comments.filter(c => c.id !== commentId);
+      setComments(updatedComments);
+      
+      // 更新工單文檔
+      if (workOrder && db) {
+        const docRef = doc(db, "workOrders", workOrderId);
+        await updateDoc(docRef, {
+          comments: updatedComments,
+          updatedAt: Timestamp.now()
+        });
+        
+        setWorkOrder(prev => prev ? { ...prev, comments: updatedComments } : null);
+      }
+      
+      toast.success('留言已刪除');
+    } catch (error) {
+      console.error('刪除留言失敗:', error);
+      toast.error('刪除留言失敗');
+    }
+  };
+
+  // 刪除整個工單
+  const handleDeleteWorkOrder = async () => {
+    if (!workOrder || !db) return;
+    
+    setIsDeleting(true);
+    const toastId = toast.loading("正在刪除工單...");
+    
+    try {
+      // 1. 刪除所有留言的圖片
+      const allImages = comments.flatMap(comment => comment.images);
+      if (allImages.length > 0) {
+        const { getStorage, ref, deleteObject } = await import('firebase/storage');
+        const storage = getStorage();
+        
+        const deleteImagePromises = allImages.map(async (imageURL) => {
+          try {
+            const imageRef = ref(storage, imageURL);
+            await deleteObject(imageRef);
+          } catch (error) {
+            console.error('刪除圖片失敗:', error);
+          }
+        });
+        
+        await Promise.all(deleteImagePromises);
+      }
+
+      // 2. 刪除工單文檔
+      const { doc, deleteDoc } = await import('firebase/firestore');
+      const workOrderRef = doc(db, 'workOrders', workOrder.id);
+      await deleteDoc(workOrderRef);
+
+      toast.success("工單已刪除", { id: toastId });
+      
+      // 3. 返回工單列表頁面
+      router.push('/dashboard/work-orders');
+      
+    } catch (error) {
+      console.error("刪除工單失敗:", error);
+      toast.error("刪除工單失敗", { id: toastId });
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
+    }
+  };
 
   useEffect(() => {
     fetchWorkOrder()
@@ -365,6 +631,14 @@ export default function WorkOrderDetailPage() {
           </h1>
           <p className="text-gray-600 font-mono">{workOrder.code}</p>
         </div>
+        <Button 
+          variant="destructive" 
+          onClick={() => setIsDeleteDialogOpen(true)}
+          className="bg-red-600 hover:bg-red-700"
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          刪除工單
+        </Button>
       </div>
 
       {/* 工單基本資料 */}
@@ -972,6 +1246,198 @@ export default function WorkOrderDetailPage() {
             >
               <Plus className="mr-2 h-4 w-4" />
               新增紀錄
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 留言功能 */}
+      <Card className="mb-6 bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200">
+        <CardHeader>
+          <CardTitle className="text-orange-800 flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            留言記錄
+            <Badge variant="secondary" className="ml-2">
+              {comments.length} 則留言
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* 新增留言表單 */}
+          <div className="mb-6 p-4 bg-white rounded-lg border border-yellow-200">
+            <div className="mb-4">
+              <Label htmlFor="comment" className="text-sm font-medium text-gray-700">
+                新增留言
+              </Label>
+              <Textarea
+                id="comment"
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="輸入留言內容..."
+                className="mt-1 min-h-[100px]"
+              />
+            </div>
+
+            {/* 圖片上傳區域 */}
+            <div className="mb-4">
+              <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                上傳圖片
+              </Label>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => document.getElementById('image-upload')?.click()}
+                  className="border-yellow-300 text-yellow-700 hover:bg-yellow-50"
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  選擇圖片
+                </Button>
+                <input
+                  id="image-upload"
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                <span className="text-sm text-gray-500">
+                  可選擇多張圖片
+                </span>
+              </div>
+
+              {/* 已上傳的圖片預覽 */}
+              {uploadedImages.length > 0 && (
+                <div className="mt-3">
+                  <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                    已選擇的圖片 ({uploadedImages.length} 張)
+                  </Label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {uploadedImages.map((imageUrl, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={imageUrl}
+                          alt={`圖片 ${index + 1}`}
+                          className="w-full h-24 object-cover rounded-lg border"
+                        />
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleRemoveImage(index)}
+                          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <Button
+              onClick={handleAddComment}
+              disabled={!newComment.trim() && uploadedImages.length === 0}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              <MessageSquare className="mr-2 h-4 w-4" />
+              新增留言
+            </Button>
+          </div>
+
+          {/* 留言列表 */}
+          <div className="space-y-4">
+            {comments.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <MessageSquare className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p>尚無留言記錄</p>
+              </div>
+            ) : (
+              comments.map((comment) => (
+                <div key={comment.id} className="bg-white rounded-lg border border-yellow-200 p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-gray-500" />
+                      <span className="font-medium text-gray-700">{comment.createdBy}</span>
+                      <span className="text-sm text-gray-500">
+                        {new Date(comment.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteComment(comment.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  {comment.text && (
+                    <div className="mb-3 text-gray-700 whitespace-pre-wrap">
+                      {comment.text}
+                    </div>
+                  )}
+
+                  {comment.images.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {comment.images.map((imageUrl, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={imageUrl}
+                            alt={`留言圖片 ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-lg border cursor-pointer"
+                            onClick={() => window.open(imageUrl, '_blank')}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 刪除工單確認對話框 */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-600">確認刪除工單</DialogTitle>
+            <DialogDescription>
+              此操作將永久刪除工單 "{workOrder.code}" 及其所有相關資料，包括：
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>工單基本資料</li>
+                <li>所有留言記錄</li>
+                <li>所有上傳的圖片</li>
+                <li>工時記錄</li>
+              </ul>
+              <p className="mt-3 font-medium text-red-600">
+                此操作無法復原，請確認是否繼續？
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteWorkOrder}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  刪除中...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  確認刪除
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
