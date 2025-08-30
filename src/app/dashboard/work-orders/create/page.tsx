@@ -143,121 +143,141 @@ export default function CreateWorkOrderPage() {
   }
 
   const calculateMaterialRequirements = () => {
-    if (!selectedProduct) return []
+    if (!selectedProduct || !materials.length) return []
 
     console.log('計算物料需求:', { selectedProduct, materials, targetQuantity })
 
-    const materialRequirements = []
+    const materialRequirementsMap = new Map<string, any>() // Use a map to handle potential duplicates and ensure unique materials
 
-    // 1. 香精
+    // 1. Core Ingredients (Fragrance, PG, VG, Nicotine) - always calculate and add/override
+    // Fragrance
     if (selectedProduct.fragranceCode && selectedProduct.fragranceCode !== '未指定') {
-      const fragranceQuantity = (targetQuantity * 5) / 100 // 5% 香精比例
-      materialRequirements.push({
-        materialId: 'fragrance',
+      const fragranceQuantity = (targetQuantity * 5) / 100 // 5% Fragrance ratio
+      materialRequirementsMap.set('fragrance', { // Use a unique key for fragrance
+        materialId: 'fragrance', // Placeholder ID for fragrance
         materialCode: selectedProduct.fragranceCode,
         materialName: selectedProduct.fragranceName,
         requiredQuantity: fragranceQuantity,
-        currentStock: 0,
+        currentStock: 0, // Needs to be fetched from fragrance stock
         unit: 'KG',
-        hasEnoughStock: true
+        hasEnoughStock: true, // Placeholder
+        category: 'fragrance',
+        ratio: 0.05 // Store ratio for display if needed
       })
+      console.log('添加香精:', selectedProduct.fragranceName, fragranceQuantity)
     }
 
-    // 2. PG (丙二醇)
-    const pgMaterial = materials.find(m => m.name.includes('PG') || m.code.includes('PG'))
+    // PG (Propylene Glycol) - 70% ratio
+    const pgMaterial = materials.find(m => m.name.includes('PG丙二醇') || m.name.includes('PG') || m.code.includes('PG'))
     if (pgMaterial) {
-      const pgQuantity = (targetQuantity * 70) / 100
-      materialRequirements.push({
+      const pgQuantity = (targetQuantity * 70) / 100 // 70% PG ratio
+      materialRequirementsMap.set(pgMaterial.id, {
         materialId: pgMaterial.id,
         materialCode: pgMaterial.code,
         materialName: pgMaterial.name,
         requiredQuantity: pgQuantity,
         currentStock: pgMaterial.currentStock || 0,
         unit: pgMaterial.unit || 'KG',
-        hasEnoughStock: (pgMaterial.currentStock || 0) >= pgQuantity
+        hasEnoughStock: (pgMaterial.currentStock || 0) >= pgQuantity,
+        category: 'pg',
+        ratio: 0.70
       })
+      console.log('添加PG:', pgMaterial.name, pgQuantity)
     }
 
-    // 3. VG (甘油)
-    const vgMaterial = materials.find(m => m.name.includes('VG') || m.code.includes('VG'))
+    // VG (Vegetable Glycerin) - 25% ratio
+    const vgMaterial = materials.find(m => m.name.includes('VG甘油') || m.name.includes('VG') || m.code.includes('VG'))
     if (vgMaterial) {
-      const vgQuantity = (targetQuantity * 25) / 100
-      materialRequirements.push({
+      const vgQuantity = (targetQuantity * 25) / 100 // 25% VG ratio
+      materialRequirementsMap.set(vgMaterial.id, {
         materialId: vgMaterial.id,
         materialCode: vgMaterial.code,
         materialName: vgMaterial.name,
         requiredQuantity: vgQuantity,
         currentStock: vgMaterial.currentStock || 0,
         unit: vgMaterial.unit || 'KG',
-        hasEnoughStock: (vgMaterial.currentStock || 0) >= vgQuantity
+        hasEnoughStock: (vgMaterial.currentStock || 0) >= vgQuantity,
+        category: 'vg',
+        ratio: 0.25
       })
+      console.log('添加VG:', vgMaterial.name, vgQuantity)
     }
 
-    // 4. 尼古丁
+    // Nicotine
+    let nicotineMaterial: Material | undefined
     if (selectedProduct.nicotineMg && selectedProduct.nicotineMg > 0) {
-      const nicotineMaterial = materials.find(m => 
-        m.name.includes('丁鹽') || m.name.includes('尼古丁') || m.code.includes('NIC')
-      )
+      nicotineMaterial = materials.find(m => m.name.includes('丁鹽') || m.name.includes('尼古丁') || m.code.includes('NIC'))
       if (nicotineMaterial) {
-        const nicotineQuantity = (targetQuantity * selectedProduct.nicotineMg) / 250
-        materialRequirements.push({
+        const nicotineQuantity = (targetQuantity * selectedProduct.nicotineMg) / 250 // Formula: target_quantity (KG) * concentration / 250
+        materialRequirementsMap.set(nicotineMaterial.id, {
           materialId: nicotineMaterial.id,
           materialCode: nicotineMaterial.code,
           materialName: nicotineMaterial.name,
           requiredQuantity: nicotineQuantity,
           currentStock: nicotineMaterial.currentStock || 0,
           unit: nicotineMaterial.unit || 'KG',
-          hasEnoughStock: (nicotineMaterial.currentStock || 0) >= nicotineQuantity
+          hasEnoughStock: (nicotineMaterial.currentStock || 0) >= nicotineQuantity,
+          category: 'nicotine',
+          ratio: selectedProduct.nicotineMg / 250 // Store ratio for display if needed
         })
+        console.log('添加尼古丁:', nicotineMaterial.name, nicotineQuantity)
       }
     }
 
-    // 5. 產品專屬物料 (如果有)
-    const specificMaterials = materials.filter(m => 
-      m.name.includes('專用') || 
-      m.name.includes('特殊') ||
-      m.code.includes('SPEC') ||
-      m.name.includes('專屬')
-    )
-    
-    specificMaterials.forEach(material => {
-      materialRequirements.push({
-        materialId: material.id,
-        materialCode: material.code,
-        materialName: material.name,
-        requiredQuantity: 0, // 預設為0，可手動調整
-        currentStock: material.currentStock || 0,
-        unit: material.unit || 'KG',
-        hasEnoughStock: true
+    // 2. Other materials from selectedProduct.billOfMaterials
+    if (selectedProduct.billOfMaterials && Array.isArray(selectedProduct.billOfMaterials)) {
+      selectedProduct.billOfMaterials.forEach(bom => {
+        const material = materials.find(m => m.id === bom.materialId)
+
+        // If this material is one of the core ingredients (PG, VG, Nicotine), we skip it
+        // as we've already calculated it with fixed ratios.
+        const isCoreIngredient = (
+          (pgMaterial && material?.id === pgMaterial.id) ||
+          (vgMaterial && material?.id === vgMaterial.id) ||
+          (nicotineMaterial && material?.id === nicotineMaterial.id)
+        )
+
+        // Also, if the materialId is 'fragrance' (our placeholder), we skip it if fragrance was already added.
+        const isFragrancePlaceholder = bom.materialId === 'fragrance' && materialRequirementsMap.has('fragrance')
+
+        if (!isCoreIngredient && !isFragrancePlaceholder && material) {
+          // Assuming bom.quantity is a ratio or amount per KG of final product
+          const requiredQuantity = bom.quantity * targetQuantity;
+          const currentStock = material?.currentStock || 0;
+
+          materialRequirementsMap.set(material.id, {
+            materialId: material.id,
+            materialCode: material.code,
+            materialName: material.name,
+            requiredQuantity: requiredQuantity,
+            currentStock: currentStock,
+            unit: material.unit || 'KG', // Default to KG, but use material's unit if available
+            hasEnoughStock: currentStock >= requiredQuantity,
+            category: 'common', // Default to common for BOM materials
+            ratio: bom.quantity // Use quantity as ratio
+          })
+          console.log('添加產品BOM物料:', material.name, requiredQuantity)
+        }
       })
+    }
+
+    // Convert map to array and sort
+    const finalRequirements = Array.from(materialRequirementsMap.values())
+
+    // Sort according to user's request: Fragrance, PG, VG, Nicotine first, then others by category and name
+    finalRequirements.sort((a, b) => {
+      const categoryOrder = ['fragrance', 'pg', 'vg', 'nicotine', 'specific', 'common', 'other']
+      const categoryA = categoryOrder.indexOf(a.category || 'other')
+      const categoryB = categoryOrder.indexOf(b.category || 'other')
+
+      if (categoryA !== categoryB) {
+        return categoryA - categoryB
+      }
+      return (a.materialName || '').localeCompare(b.materialName || '')
     })
 
-    // 6. 系列通用物料 (瓶蓋、瓶身、標籤等)
-    const commonMaterials = materials.filter(m => 
-      m.name.includes('瓶蓋') || 
-      m.name.includes('瓶身') || 
-      m.name.includes('標籤') ||
-      m.name.includes('包裝') ||
-      m.name.includes('通用') ||
-      m.name.includes('蓋子') ||
-      m.name.includes('瓶子') ||
-      m.name.includes('貼紙')
-    )
-    
-    commonMaterials.forEach(material => {
-      materialRequirements.push({
-        materialId: material.id,
-        materialCode: material.code,
-        materialName: material.name,
-        requiredQuantity: 0, // 預設為0，可手動調整
-        currentStock: material.currentStock || 0,
-        unit: material.unit || 'KG',
-        hasEnoughStock: true
-      })
-    })
-
-    console.log('最終物料需求:', materialRequirements)
-    return materialRequirements
+    console.log('最終物料需求:', finalRequirements)
+    return finalRequirements
   }
 
   const generateWorkOrderCode = () => {
