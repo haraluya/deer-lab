@@ -212,6 +212,50 @@ export default function CreateWorkOrderPage() {
       }
     }
 
+    // 5. 產品專屬物料 (如果有)
+    const specificMaterials = materials.filter(m => 
+      m.name.includes('專用') || 
+      m.name.includes('特殊') ||
+      m.code.includes('SPEC') ||
+      m.name.includes('專屬')
+    )
+    
+    specificMaterials.forEach(material => {
+      materialRequirements.push({
+        materialId: material.id,
+        materialCode: material.code,
+        materialName: material.name,
+        requiredQuantity: 0, // 預設為0，可手動調整
+        currentStock: material.currentStock || 0,
+        unit: material.unit || 'KG',
+        hasEnoughStock: true
+      })
+    })
+
+    // 6. 系列通用物料 (瓶蓋、瓶身、標籤等)
+    const commonMaterials = materials.filter(m => 
+      m.name.includes('瓶蓋') || 
+      m.name.includes('瓶身') || 
+      m.name.includes('標籤') ||
+      m.name.includes('包裝') ||
+      m.name.includes('通用') ||
+      m.name.includes('蓋子') ||
+      m.name.includes('瓶子') ||
+      m.name.includes('貼紙')
+    )
+    
+    commonMaterials.forEach(material => {
+      materialRequirements.push({
+        materialId: material.id,
+        materialCode: material.code,
+        materialName: material.name,
+        requiredQuantity: 0, // 預設為0，可手動調整
+        currentStock: material.currentStock || 0,
+        unit: material.unit || 'KG',
+        hasEnoughStock: true
+      })
+    })
+
     console.log('最終物料需求:', materialRequirements)
     return materialRequirements
   }
