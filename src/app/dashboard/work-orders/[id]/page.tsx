@@ -10,7 +10,7 @@ import { findMaterialByCategory } from "@/lib/systemConfig"
 import { 
   ArrowLeft, Edit, Save, CheckCircle, AlertCircle, Clock, Package, Users, 
   Droplets, Calculator, MessageSquare, Calendar, User, Plus, X, Loader2, Upload, Trash2,
-  RefreshCw, Check
+  RefreshCw, Check, Printer
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -919,6 +919,443 @@ export default function WorkOrderDetailPage() {
   const totalHours = Math.floor(totalWorkHours / 60)
   const totalMinutes = totalWorkHours % 60
 
+  // 列印功能
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('無法開啟列印視窗，請檢查彈出視窗設定');
+      return;
+    }
+
+    const printContent = generatePrintContent();
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.focus();
+    
+    // 等待內容載入完成後列印
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 500);
+  };
+
+  // 生成列印內容
+  const generatePrintContent = () => {
+    if (!workOrder) return '';
+
+    const formatNumber = (value: number) => {
+      if (value % 1 === 0) {
+        return value.toString();
+      }
+      return parseFloat(value.toFixed(3)).toString();
+    };
+
+    const formatDate = (date: any) => {
+      if (!date) return '';
+      const d = date.toDate ? date.toDate() : new Date(date);
+      return d.toLocaleDateString('zh-TW');
+    };
+
+    const coreMaterials = workOrder.billOfMaterials.filter(item => 
+      ['fragrance', 'pg', 'vg', 'nicotine'].includes(item.category)
+    );
+    const specificMaterials = workOrder.billOfMaterials.filter(item => 
+      item.category === 'specific'
+    );
+    const commonMaterials = workOrder.billOfMaterials.filter(item => 
+      item.category === 'common'
+    );
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>工單列印 - ${workOrder.code}</title>
+        <style>
+          @media print {
+            @page {
+              size: A4;
+              margin: 1cm;
+            }
+          }
+          
+                     body {
+             font-family: 'Microsoft JhengHei', Arial, sans-serif;
+             margin: 0;
+             padding: 15px;
+             font-size: 16px;
+             line-height: 1.3;
+             color: #000;
+           }
+          
+          .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #000;
+            padding-bottom: 10px;
+          }
+          
+                     .title {
+             font-size: 32px;
+             font-weight: bold;
+             margin-bottom: 8px;
+           }
+           
+           .subtitle {
+             font-size: 24px;
+             font-weight: bold;
+             margin-bottom: 12px;
+           }
+          
+                                .top-info {
+             display: grid;
+             grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+             gap: 8px;
+             margin-bottom: 15px;
+           }
+           
+           .top-info-item {
+             border: 3px solid #000;
+             padding: 8px;
+             text-align: center;
+             border-radius: 5px;
+             background-color: #f8f8f8;
+           }
+           
+           .top-info-label {
+             font-size: 16px;
+             font-weight: bold;
+             margin-bottom: 6px;
+             color: #333;
+           }
+           
+           .top-info-value {
+             font-size: 20px;
+             font-weight: bold;
+             color: #000;
+           }
+           
+           .main-content {
+             display: grid;
+             grid-template-columns: 2fr 1fr;
+             gap: 15px;
+             margin-bottom: 15px;
+           }
+           
+           .materials-section {
+             margin-bottom: 15px;
+           }
+           
+           .materials-section h3 {
+             font-size: 18px;
+             font-weight: bold;
+             margin: 0 0 8px 0;
+             text-align: center;
+             background-color: #f0f0f0;
+             padding: 6px;
+             border-radius: 3px;
+           }
+           
+           .comments-section {
+             border: 2px solid #000;
+             padding: 10px;
+             border-radius: 5px;
+             height: 100%;
+             display: flex;
+             flex-direction: column;
+           }
+           
+           .comments-section h3 {
+             font-size: 20px;
+             font-weight: bold;
+             margin: 0 0 8px 0;
+             text-align: center;
+             background-color: #f0f0f0;
+             padding: 6px;
+             border-radius: 3px;
+           }
+          
+                     .materials-section {
+             margin-bottom: 15px;
+           }
+           
+           .materials-section h3 {
+             font-size: 18px;
+             font-weight: bold;
+             margin: 0 0 8px 0;
+             text-align: center;
+             background-color: #f0f0f0;
+             padding: 6px;
+             border-radius: 3px;
+           }
+          
+                     table {
+             width: 100%;
+             border-collapse: collapse;
+             margin-bottom: 12px;
+             font-size: 14px;
+           }
+           
+           th, td {
+             border: 1px solid #000;
+             padding: 8px 6px;
+             text-align: center;
+           }
+           
+           th {
+             background-color: #f0f0f0;
+             font-weight: bold;
+             font-size: 15px;
+           }
+          
+                     .time-section {
+             margin-bottom: 15px;
+           }
+           
+           .time-section h3 {
+             font-size: 20px;
+             font-weight: bold;
+             margin: 0 0 8px 0;
+             text-align: center;
+             background-color: #f0f0f0;
+             padding: 6px;
+             border-radius: 3px;
+           }
+           
+           .time-writing-box {
+             border: 2px solid #000;
+             background-color: #f9f9f9;
+             min-height: 200px;
+             margin-top: 8px;
+           }
+          
+                     .total-time {
+             text-align: center;
+             font-size: 16px;
+             font-weight: bold;
+             margin: 8px 0;
+             padding: 12px;
+             background-color: #f0f0f0;
+             border-radius: 5px;
+           }
+          
+                     .footer {
+             margin-top: 20px;
+             display: grid;
+             grid-template-columns: 1fr 1fr;
+             gap: 15px;
+           }
+           
+           .signature-box {
+             border: 1px solid #000;
+             padding: 8px;
+             text-align: center;
+             height: 70px;
+           }
+           
+           .signature-label {
+             font-size: 13px;
+             font-weight: bold;
+             margin-bottom: 4px;
+           }
+          
+                     .signature-line {
+             border-top: 1px solid #000;
+             margin-top: 40px;
+             padding-top: 4px;
+             font-size: 11px;
+           }
+          
+          .page-break {
+            page-break-before: always;
+          }
+          
+          @media print {
+            .no-print {
+              display: none;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="title">生產工單</div>
+          <div class="subtitle">${workOrder.code}</div>
+          <div>列印日期：${new Date().toLocaleDateString('zh-TW')}</div>
+        </div>
+        
+                 <div class="top-info">
+           <div class="top-info-item">
+             <div class="top-info-label">產品系列</div>
+             <div class="top-info-value">${workOrder.productSnapshot.seriesName || '未指定'}</div>
+           </div>
+           <div class="top-info-item">
+             <div class="top-info-label">產品名稱</div>
+             <div class="top-info-value">${workOrder.productSnapshot.name}</div>
+           </div>
+           <div class="top-info-item">
+             <div class="top-info-label">香精代號</div>
+             <div class="top-info-value">${workOrder.productSnapshot.fragranceCode}</div>
+           </div>
+           <div class="top-info-item">
+             <div class="top-info-label">尼古丁濃度</div>
+             <div class="top-info-value">${workOrder.productSnapshot.nicotineMg} mg</div>
+           </div>
+           <div class="top-info-item">
+             <div class="top-info-label">目標產量</div>
+             <div class="top-info-value">${workOrder.targetQuantity} KG</div>
+           </div>
+         </div>
+        
+                 <div class="main-content">
+           <div class="materials-section">
+             <h3>核心配方物料清單</h3>
+             <table>
+               <thead>
+                 <tr>
+                   <th>物料名稱</th>
+                   <th>料件代號</th>
+                   <th>比例</th>
+                   <th>需求數量</th>
+                   <th>使用數量</th>
+                   <th>單位</th>
+                 </tr>
+               </thead>
+               <tbody>
+                 ${coreMaterials.map(item => `
+                   <tr>
+                                        <td style="font-weight: bold; font-size: 15px;">${item.name}</td>
+                   <td style="font-weight: bold; font-size: 15px;">${item.code}</td>
+                   <td style="font-size: 15px;">${item.ratio ? item.ratio + '%' : '-'}</td>
+                   <td style="font-weight: bold; font-size: 15px;">${formatNumber(item.quantity)}</td>
+                   <td style="border: 2px solid #000; background-color: #f9f9f9; min-width: 60px; height: 30px;"></td>
+                   <td style="font-size: 15px;">${item.unit}</td>
+                   </tr>
+                 `).join('')}
+               </tbody>
+             </table>
+             
+             ${specificMaterials.length > 0 ? `
+             <h3>產品專屬物料</h3>
+             <table>
+               <thead>
+                 <tr>
+                   <th>物料名稱</th>
+                   <th>料件代號</th>
+                   <th>使用數量</th>
+                   <th>單位</th>
+                 </tr>
+               </thead>
+               <tbody>
+                 ${specificMaterials.map(item => `
+                   <tr>
+                     <td style="font-weight: bold; font-size: 15px;">${item.name}</td>
+                     <td style="font-weight: bold; font-size: 15px;">${item.code}</td>
+                     <td style="border: 2px solid #000; background-color: #f9f9f9; min-width: 60px; height: 30px;"></td>
+                     <td style="font-size: 15px;">${item.unit}</td>
+                   </tr>
+                 `).join('')}
+               </tbody>
+             </table>
+             ` : ''}
+             
+             ${commonMaterials.length > 0 ? `
+             <h3>系列通用物料</h3>
+             <table>
+               <thead>
+                 <tr>
+                   <th>物料名稱</th>
+                   <th>料件代號</th>
+                   <th>使用數量</th>
+                   <th>單位</th>
+                 </tr>
+               </thead>
+               <tbody>
+                 ${commonMaterials.map(item => `
+                   <tr>
+                     <td style="font-weight: bold; font-size: 15px;">${item.name}</td>
+                     <td style="font-weight: bold; font-size: 15px;">${item.code}</td>
+                     <td style="border: 2px solid #000; background-color: #f9f9f9; min-width: 60px; height: 30px;"></td>
+                     <td style="font-size: 15px;">${item.unit}</td>
+                   </tr>
+                 `).join('')}
+               </tbody>
+             </table>
+             ` : ''}
+           </div>
+           
+           <div class="comments-section">
+             <h3>留言板</h3>
+             <div style="flex: 1; border: 1px solid #ccc; background-color: #f9f9f9; padding: 8px; min-height: 400px;">
+               <!-- 留言內容會在這裡顯示 -->
+             </div>
+           </div>
+         </div>
+        
+                 <div class="time-section">
+           <h3>工時申報表</h3>
+           ${workOrder.timeRecords && workOrder.timeRecords.length > 0 ? `
+             <table>
+               <thead>
+                 <tr>
+                   <th>人員</th>
+                   <th>工作日期</th>
+                   <th>開始時間</th>
+                   <th>結束時間</th>
+                   <th>工時小計</th>
+                 </tr>
+               </thead>
+               <tbody>
+                 ${workOrder.timeRecords.map(record => `
+                   <tr>
+                     <td>${record.personnelName}</td>
+                     <td>${record.workDate}</td>
+                     <td>${record.startTime}</td>
+                     <td>${record.endTime}</td>
+                     <td>${record.hours}小時${record.minutes}分鐘</td>
+                   </tr>
+                 `).join('')}
+               </tbody>
+             </table>
+             <div class="total-time">
+               總人工小時：${Math.floor(totalWorkHours / 60)} 小時 ${totalWorkHours % 60} 分鐘 (共 ${workOrder.timeRecords.length} 筆紀錄)
+             </div>
+           ` : `
+             <div style="text-align: center; padding: 15px; color: #666; font-size: 16px;">
+               尚無工時紀錄
+             </div>
+           `}
+           <div class="time-writing-box">
+             <!-- 工時申報書寫區域 -->
+           </div>
+         </div>
+        
+        <div class="footer">
+          <div class="signature-box">
+            <div class="signature-label">生產主管簽名</div>
+            <div class="signature-line"></div>
+          </div>
+          
+          <div class="signature-box">
+            <div class="signature-label">倉庫管理簽名</div>
+            <div class="signature-line"></div>
+          </div>
+        </div>
+        
+                 ${workOrder.notes ? `
+         <div style="margin-top: 15px; border: 1px solid #000; padding: 8px;">
+           <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: bold;">備註</h3>
+           <div style="font-size: 13px; white-space: pre-wrap;">${workOrder.notes}</div>
+         </div>
+         ` : ''}
+      </body>
+      </html>
+         `;
+   };
+
+
+
   if (loading) {
     return (
       <div className="container mx-auto py-10">
@@ -967,14 +1404,24 @@ export default function WorkOrderDetailPage() {
               <p className="text-gray-600 font-mono text-sm sm:text-base truncate">{workOrder.code}</p>
             </div>
           </div>
-          <Button 
-            variant="destructive" 
-            onClick={() => setIsDeleteDialogOpen(true)}
-            className="bg-red-500 hover:bg-red-600 flex-shrink-0"
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            刪除工單
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline"
+              onClick={handlePrint}
+              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+            >
+              <Printer className="mr-2 h-4 w-4" />
+              列印工單
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => setIsDeleteDialogOpen(true)}
+              className="bg-red-500 hover:bg-red-600 flex-shrink-0"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              刪除工單
+            </Button>
+          </div>
         </div>
 
       {/* 工單基本資料 */}

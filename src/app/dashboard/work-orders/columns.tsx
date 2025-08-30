@@ -118,7 +118,7 @@ export const columns: ColumnDef<WorkOrderColumn>[] = [
       <div className="font-semibold text-gray-700">產品系列</div>
     ),
     cell: ({ row }: CellContext<WorkOrderColumn, unknown>) => (
-      <div className="font-medium text-blue-600 font-semibold">
+      <div className="text-blue-600 font-semibold">
         {row.getValue("seriesName")}
       </div>
     ),
@@ -129,7 +129,7 @@ export const columns: ColumnDef<WorkOrderColumn>[] = [
       <div className="font-semibold text-gray-700">產品名稱</div>
     ),
     cell: ({ row }: CellContext<WorkOrderColumn, unknown>) => (
-      <div className="font-medium text-gray-800 max-w-xs truncate" title={row.getValue("productName")}>
+      <div className="text-gray-800 max-w-xs truncate" title={row.getValue("productName")}>
         {row.getValue("productName")}
       </div>
     ),
@@ -144,7 +144,7 @@ export const columns: ColumnDef<WorkOrderColumn>[] = [
       return (
         <div className="text-right">
           <div className="font-bold text-gray-700 text-lg">{amount}</div>
-          <div className="text-xs text-gray-500 font-medium">公斤 (KG)</div>
+          <div className="text-xs text-gray-500">公斤 (KG)</div>
         </div>
       )
     },
@@ -171,7 +171,7 @@ export const columns: ColumnDef<WorkOrderColumn>[] = [
       </Button>
     ),
     cell: ({ row }: CellContext<WorkOrderColumn, unknown>) => (
-      <div className="text-gray-600 font-medium">
+      <div className="text-gray-600">
         {row.getValue("createdAt")}
       </div>
     ),
