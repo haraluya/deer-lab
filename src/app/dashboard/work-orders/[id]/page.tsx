@@ -279,28 +279,37 @@ export default function WorkOrderDetailPage() {
     
     setIsReloading(true);
     try {
-      // 重新載入產品資料以獲取最新的配方資訊
-      // 使用產品代號來重新獲取完整的產品資料
-      const productQuery = query(
-        collection(db, "products"),
-        where("code", "==", workOrder.productSnapshot.code)
-      );
-      const productSnapshot = await getDocs(productQuery);
+      // 優先使用工單中的產品快照資料，確保香精資料的完整性
+      const productSnapshotData = workOrder.productSnapshot;
+      console.log('重新載入BOM表 - 工單中的產品快照:', productSnapshotData);
       
-      if (productSnapshot.empty) {
-        toast.error("找不到產品資料");
-        return;
+      // 嘗試從香精集合中獲取完整的香精配方資料
+      let fragranceFormulaData = null;
+      if (productSnapshotData.fragranceCode && productSnapshotData.fragranceCode !== '未指定') {
+        const fragranceQuery = query(
+          collection(db, "fragrances"),
+          where("code", "==", productSnapshotData.fragranceCode)
+        );
+        const fragranceSnapshot = await getDocs(fragranceQuery);
+        
+        if (!fragranceSnapshot.empty) {
+          fragranceFormulaData = fragranceSnapshot.docs[0].data();
+          console.log('重新載入BOM表 - 從香精集合獲取的配方資料:', fragranceFormulaData);
+        } else {
+          console.log('重新載入BOM表 - 在香精集合中找不到對應的香精:', productSnapshotData.fragranceCode);
+        }
       }
       
-      const productDoc = productSnapshot.docs[0];
-      const productData = productDoc.data();
-      console.log('重新載入BOM表 - 獲取到的產品資料:', {
-        name: productData.name,
-        fragranceName: productData.fragranceName,
-        fragranceCode: productData.fragranceCode,
-        fragranceFormula: productData.fragranceFormula,
-        nicotineMg: productData.nicotineMg
-      });
+      // 構建完整的產品資料，優先使用工單快照
+      const productData = {
+        name: productSnapshotData.name,
+        fragranceName: productSnapshotData.fragranceName,
+        fragranceCode: productSnapshotData.fragranceCode,
+        nicotineMg: productSnapshotData.nicotineMg,
+        fragranceFormula: fragranceFormulaData?.fragranceFormula || null
+      };
+      
+      console.log('重新載入BOM表 - 最終使用的產品資料:', productData);
       
       // 重新計算BOM表（使用與建立工單相同的邏輯）
       const materialRequirements = await calculateMaterialRequirements(
