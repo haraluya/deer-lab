@@ -209,6 +209,7 @@ export default function CreateWorkOrderPage() {
     let fragranceRatios = { fragrance: 0.357, pg: 0.4501, vg: 0.1929 } // 預設比例
     if (selectedProduct.fragranceFormula) {
       const { percentage, pgRatio, vgRatio } = selectedProduct.fragranceFormula
+      console.log('香精配方資料:', { percentage, pgRatio, vgRatio })
       if (percentage > 0) {
         fragranceRatios = {
           fragrance: percentage / 100,
@@ -219,8 +220,8 @@ export default function CreateWorkOrderPage() {
     }
     console.log('使用香精比例:', fragranceRatios)
 
-    // 2. 核心液體 (香精、PG、VG、尼古丁)
-    // 香精
+    // 2. 核心液體 (香精、PG、VG、尼古丁) - 使用配方比例
+    // 香精 - 總是添加，即使比例為0
     if (selectedProduct.fragranceCode && selectedProduct.fragranceCode !== '未指定') {
       const fragranceQuantity = targetQuantity * fragranceRatios.fragrance
       materialRequirementsMap.set('fragrance', {
@@ -237,7 +238,7 @@ export default function CreateWorkOrderPage() {
       console.log('添加香精:', selectedProduct.fragranceName, fragranceQuantity, '比例:', fragranceRatios.fragrance)
     }
 
-    // PG (丙二醇)
+    // PG (丙二醇) - 使用配方比例
     const pgMaterial = materials.find(m => m.name.includes('PG丙二醇') || m.name.includes('PG') || m.code.includes('PG'))
     if (pgMaterial) {
       const pgQuantity = targetQuantity * fragranceRatios.pg
@@ -255,7 +256,7 @@ export default function CreateWorkOrderPage() {
       console.log('添加PG:', pgMaterial.name, pgQuantity, '比例:', fragranceRatios.pg)
     }
 
-    // VG (甘油)
+    // VG (甘油) - 使用配方比例
     const vgMaterial = materials.find(m => m.name.includes('VG甘油') || m.name.includes('VG') || m.code.includes('VG'))
     if (vgMaterial) {
       const vgQuantity = targetQuantity * fragranceRatios.vg
@@ -273,7 +274,7 @@ export default function CreateWorkOrderPage() {
       console.log('添加VG:', vgMaterial.name, vgQuantity, '比例:', fragranceRatios.vg)
     }
 
-    // 尼古丁
+    // 尼古丁 - 使用配方比例
     if (selectedProduct.nicotineMg && selectedProduct.nicotineMg > 0) {
       const nicotineMaterial = materials.find(m => m.name.includes('丁鹽') || m.name.includes('尼古丁') || m.code.includes('NIC'))
       if (nicotineMaterial) {
@@ -293,7 +294,8 @@ export default function CreateWorkOrderPage() {
       }
     }
 
-    // 3. 專屬材料
+    // 3. 其他材料（專屬材料和通用材料）- 每個產品1個
+    // 專屬材料
     console.log('專屬材料名稱:', selectedProduct.specificMaterialNames)
     if (selectedProduct.specificMaterialNames && selectedProduct.specificMaterialNames.length > 0) {
       selectedProduct.specificMaterialNames.forEach(materialName => {
@@ -318,7 +320,7 @@ export default function CreateWorkOrderPage() {
       })
     }
 
-    // 4. 通用材料
+    // 通用材料
     console.log('通用材料名稱:', selectedProduct.commonMaterialNames)
     if (selectedProduct.commonMaterialNames && selectedProduct.commonMaterialNames.length > 0) {
       selectedProduct.commonMaterialNames.forEach(materialName => {
@@ -470,7 +472,7 @@ export default function CreateWorkOrderPage() {
                  <Label htmlFor="product">產品</Label>
                  <Select onValueChange={handleProductSelect}>
                    <SelectTrigger>
-                     <SelectValue placeholder="搜尋並選擇要生產的產品" />
+                     <SelectValue placeholder="選擇要生產的產品" />
                    </SelectTrigger>
                    <SelectContent>
                      {filteredProducts.map((product) => (
@@ -485,13 +487,6 @@ export default function CreateWorkOrderPage() {
                      ))}
                    </SelectContent>
                  </Select>
-                 <div className="mt-2">
-                   <Input
-                     placeholder="搜尋產品名稱、代號或系列..."
-                     value={searchTerm}
-                     onChange={(e) => setSearchTerm(e.target.value)}
-                   />
-                 </div>
                </div>
 
               {selectedProduct && (
@@ -544,34 +539,85 @@ export default function CreateWorkOrderPage() {
           <CardContent>
             {selectedProduct ? (
               <div className="space-y-4">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>物料代號</TableHead>
-                      <TableHead>物料名稱</TableHead>
-                      <TableHead>需求量</TableHead>
-                      <TableHead>當前庫存</TableHead>
-                      <TableHead>狀態</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {materialRequirements.map((material, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{material.materialCode}</TableCell>
-                        <TableCell>{material.materialName}</TableCell>
-                        <TableCell>{material.requiredQuantity.toFixed(2)}</TableCell>
-                        <TableCell>{material.currentStock}</TableCell>
-                        <TableCell>
-                          {material.hasEnoughStock ? (
-                            <Badge variant="default">庫存充足</Badge>
-                          ) : (
-                            <Badge variant="destructive">庫存不足</Badge>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                                 <div className="space-y-4">
+                   {/* 核心液體區域 */}
+                   <div>
+                     <h4 className="font-semibold text-lg mb-3 text-blue-600 border-b border-blue-200 pb-2">
+                       核心液體 (按香精配方比例)
+                     </h4>
+                     <Table>
+                       <TableHeader>
+                         <TableRow className="bg-blue-50">
+                           <TableHead className="text-blue-700 font-semibold">物料代號</TableHead>
+                           <TableHead className="text-blue-700 font-semibold">物料名稱</TableHead>
+                           <TableHead className="text-blue-700 font-semibold">需求量 (KG)</TableHead>
+                           <TableHead className="text-blue-700 font-semibold">當前庫存</TableHead>
+                           <TableHead className="text-blue-700 font-semibold">狀態</TableHead>
+                         </TableRow>
+                       </TableHeader>
+                       <TableBody>
+                         {materialRequirements
+                           .filter(m => ['fragrance', 'pg', 'vg', 'nicotine'].includes(m.category))
+                           .map((material, index) => (
+                             <TableRow key={index} className="hover:bg-blue-50">
+                               <TableCell className="font-medium">{material.materialCode}</TableCell>
+                               <TableCell className="font-medium">{material.materialName}</TableCell>
+                               <TableCell className="font-semibold text-blue-600">
+                                 {material.requiredQuantity.toFixed(2)}
+                               </TableCell>
+                               <TableCell>{material.currentStock}</TableCell>
+                               <TableCell>
+                                 {material.hasEnoughStock ? (
+                                   <Badge variant="default" className="bg-green-100 text-green-800">庫存充足</Badge>
+                                 ) : (
+                                   <Badge variant="destructive">庫存不足</Badge>
+                                 )}
+                               </TableCell>
+                             </TableRow>
+                           ))}
+                       </TableBody>
+                     </Table>
+                   </div>
+
+                   {/* 其他材料區域 */}
+                   <div>
+                     <h4 className="font-semibold text-lg mb-3 text-gray-600 border-b border-gray-200 pb-2">
+                       其他材料 (每個產品1個)
+                     </h4>
+                     <Table>
+                       <TableHeader>
+                         <TableRow className="bg-gray-50">
+                           <TableHead className="text-gray-700 font-semibold">物料代號</TableHead>
+                           <TableHead className="text-gray-700 font-semibold">物料名稱</TableHead>
+                           <TableHead className="text-gray-700 font-semibold">需求量 (個)</TableHead>
+                           <TableHead className="text-gray-700 font-semibold">當前庫存</TableHead>
+                           <TableHead className="text-gray-700 font-semibold">狀態</TableHead>
+                         </TableRow>
+                       </TableHeader>
+                       <TableBody>
+                         {materialRequirements
+                           .filter(m => !['fragrance', 'pg', 'vg', 'nicotine'].includes(m.category))
+                           .map((material, index) => (
+                             <TableRow key={index} className="hover:bg-gray-50">
+                               <TableCell className="font-medium">{material.materialCode}</TableCell>
+                               <TableCell className="font-medium">{material.materialName}</TableCell>
+                               <TableCell className="font-semibold text-gray-600">
+                                 {material.requiredQuantity.toFixed(0)}
+                               </TableCell>
+                               <TableCell>{material.currentStock}</TableCell>
+                               <TableCell>
+                                 {material.hasEnoughStock ? (
+                                   <Badge variant="default" className="bg-green-100 text-green-800">庫存充足</Badge>
+                                 ) : (
+                                   <Badge variant="destructive">庫存不足</Badge>
+                                 )}
+                               </TableCell>
+                             </TableRow>
+                           ))}
+                       </TableBody>
+                     </Table>
+                   </div>
+                 </div>
 
                 <Button 
                   onClick={handleCreateWorkOrder}
