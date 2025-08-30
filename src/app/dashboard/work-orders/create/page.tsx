@@ -123,6 +123,7 @@ export default function CreateWorkOrderPage() {
           id: doc.id,
           ...doc.data()
         })) as Material[]
+        console.log('載入的物料列表:', materialsList) // 調試日誌
         setMaterials(materialsList)
 
       } catch (error) {
@@ -144,26 +145,75 @@ export default function CreateWorkOrderPage() {
   const calculateMaterialRequirements = () => {
     if (!selectedProduct) return []
 
-    // 如果產品沒有billOfMaterials，返回空陣列
-    if (!selectedProduct.billOfMaterials || !Array.isArray(selectedProduct.billOfMaterials)) {
-      return []
+    console.log('計算物料需求:', { selectedProduct, materials, targetQuantity })
+
+    const materialRequirements = []
+
+    // 1. 香精
+    if (selectedProduct.fragranceCode && selectedProduct.fragranceCode !== '未指定') {
+      const fragranceQuantity = (targetQuantity * 5) / 100 // 5% 香精比例
+      materialRequirements.push({
+        materialId: 'fragrance',
+        materialCode: selectedProduct.fragranceCode,
+        materialName: selectedProduct.fragranceName,
+        requiredQuantity: fragranceQuantity,
+        currentStock: 0,
+        unit: 'KG',
+        hasEnoughStock: true
+      })
     }
 
-    return selectedProduct.billOfMaterials.map(bom => {
-      const material = materials.find(m => m.id === bom.materialId)
-      const requiredQuantity = (bom.quantity / 1000) * targetQuantity // 假設配方是基於1000g
-      const currentStock = material?.currentStock || 0
-      const shortage = Math.max(0, requiredQuantity - currentStock)
+    // 2. PG (丙二醇)
+    const pgMaterial = materials.find(m => m.name.includes('PG') || m.code.includes('PG'))
+    if (pgMaterial) {
+      const pgQuantity = (targetQuantity * 70) / 100
+      materialRequirements.push({
+        materialId: pgMaterial.id,
+        materialCode: pgMaterial.code,
+        materialName: pgMaterial.name,
+        requiredQuantity: pgQuantity,
+        currentStock: pgMaterial.currentStock || 0,
+        unit: pgMaterial.unit || 'KG',
+        hasEnoughStock: (pgMaterial.currentStock || 0) >= pgQuantity
+      })
+    }
 
-      return {
-        ...bom,
-        materialName: material?.name || bom.materialName,
-        requiredQuantity,
-        currentStock,
-        shortage,
-        hasEnoughStock: currentStock >= requiredQuantity
+    // 3. VG (甘油)
+    const vgMaterial = materials.find(m => m.name.includes('VG') || m.code.includes('VG'))
+    if (vgMaterial) {
+      const vgQuantity = (targetQuantity * 25) / 100
+      materialRequirements.push({
+        materialId: vgMaterial.id,
+        materialCode: vgMaterial.code,
+        materialName: vgMaterial.name,
+        requiredQuantity: vgQuantity,
+        currentStock: vgMaterial.currentStock || 0,
+        unit: vgMaterial.unit || 'KG',
+        hasEnoughStock: (vgMaterial.currentStock || 0) >= vgQuantity
+      })
+    }
+
+    // 4. 尼古丁
+    if (selectedProduct.nicotineMg && selectedProduct.nicotineMg > 0) {
+      const nicotineMaterial = materials.find(m => 
+        m.name.includes('丁鹽') || m.name.includes('尼古丁') || m.code.includes('NIC')
+      )
+      if (nicotineMaterial) {
+        const nicotineQuantity = (targetQuantity * selectedProduct.nicotineMg) / 250
+        materialRequirements.push({
+          materialId: nicotineMaterial.id,
+          materialCode: nicotineMaterial.code,
+          materialName: nicotineMaterial.name,
+          requiredQuantity: nicotineQuantity,
+          currentStock: nicotineMaterial.currentStock || 0,
+          unit: nicotineMaterial.unit || 'KG',
+          hasEnoughStock: (nicotineMaterial.currentStock || 0) >= nicotineQuantity
+        })
       }
-    })
+    }
+
+    console.log('最終物料需求:', materialRequirements)
+    return materialRequirements
   }
 
   const generateWorkOrderCode = () => {
