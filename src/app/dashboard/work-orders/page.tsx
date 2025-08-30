@@ -22,10 +22,8 @@ function WorkOrdersPageContent() {
   const [filteredWorkOrders, setFilteredWorkOrders] = useState<WorkOrderColumn[]>([])
   const [loading, setLoading] = useState(true)
   
-  // 篩選和分頁狀態
+  // 篩選狀態
   const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage] = useState(10)
   
 
 
@@ -73,18 +71,7 @@ function WorkOrdersPageContent() {
     }
 
     setFilteredWorkOrders(filtered)
-    setCurrentPage(1) // 重置到第一頁
   }, [workOrders, statusFilter])
-
-  // 分頁計算
-  const paginatedWorkOrders = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage
-    return filteredWorkOrders.slice(startIndex, startIndex + itemsPerPage)
-  }, [filteredWorkOrders, currentPage, itemsPerPage])
-
-  const totalPages = useMemo(() => {
-    return Math.ceil(filteredWorkOrders.length / itemsPerPage)
-  }, [filteredWorkOrders.length, itemsPerPage])
 
   useEffect(() => {
     loadWorkOrders()
@@ -173,13 +160,10 @@ function WorkOrdersPageContent() {
           </div>
 
           {/* 統計資訊 */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4">
             <div className="text-sm text-gray-600">
               共 {filteredWorkOrders.length} 個工單
               {statusFilter !== "all" && ` (${statusFilter}狀態)`}
-            </div>
-            <div className="text-sm text-gray-600">
-              第 {currentPage} 頁，共 {totalPages} 頁
             </div>
           </div>
 
@@ -197,60 +181,8 @@ function WorkOrdersPageContent() {
           ) : (
             <>
               <div className="overflow-x-auto">
-                <DataTable columns={columns} data={paginatedWorkOrders} />
+                <DataTable columns={columns} data={filteredWorkOrders} />
               </div>
-
-              {/* 分頁控制 */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 mt-6">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                    className="border-blue-200 text-blue-600 hover:bg-blue-50"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = currentPage - 2 + i;
-                      }
-                      
-                      return (
-                        <Button
-                          key={pageNum}
-                          variant={currentPage === pageNum ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setCurrentPage(pageNum)}
-                          className={currentPage === pageNum ? "bg-blue-600 hover:bg-blue-700" : "border-blue-200 text-blue-600 hover:bg-blue-50"}
-                        >
-                          {pageNum}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                    className="border-blue-200 text-blue-600 hover:bg-blue-50"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
             </>
           )}
         </CardContent>
