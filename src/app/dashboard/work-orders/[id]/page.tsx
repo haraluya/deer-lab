@@ -10,7 +10,7 @@ import { findMaterialByCategory } from "@/lib/systemConfig"
 import { 
   ArrowLeft, Edit, Save, CheckCircle, AlertCircle, Clock, Package, Users, 
   Droplets, Calculator, MessageSquare, Calendar, User, Plus, X, Loader2, Upload, Trash2,
-  RefreshCw, Check, Printer
+  RefreshCw, Check, Printer, AlertTriangle
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -135,6 +135,8 @@ export default function WorkOrderDetailPage() {
   // 新增狀態：完工確認對話框
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false)
   const [isCompleting, setIsCompleting] = useState(false)
+  const [isWarehouseDialogOpen, setIsWarehouseDialogOpen] = useState(false)
+  const [isWarehousing, setIsWarehousing] = useState(false)
 
   // 格式化數值顯示，智能去除尾隨的0
   const formatNumber = (value: number) => {
@@ -263,9 +265,15 @@ export default function WorkOrderDetailPage() {
   };
 
   // 處理入庫操作
-  const handleWarehouse = async () => {
+  const handleWarehouse = () => {
+    setIsWarehouseDialogOpen(true);
+  };
+
+  // 確認入庫處理
+  const handleConfirmWarehouse = async () => {
     if (!workOrder || !db) return;
     
+    setIsWarehousing(true);
     try {
       const docRef = doc(db, "workOrders", workOrderId);
       await updateDoc(docRef, {
@@ -278,10 +286,13 @@ export default function WorkOrderDetailPage() {
         status: "入庫"
       } : null);
 
+      setIsWarehouseDialogOpen(false);
       toast.success("工單已入庫");
     } catch (error) {
       console.error("入庫操作失敗:", error);
       toast.error("入庫操作失敗");
+    } finally {
+      setIsWarehousing(false);
     }
   };
 
@@ -2595,12 +2606,11 @@ export default function WorkOrderDetailPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50">
-                      <TableHead className="text-gray-700 font-bold">物料名稱</TableHead>
-                      <TableHead className="text-gray-700 font-bold">料件代號</TableHead>
-                      <TableHead className="text-gray-700 font-bold">現有數量</TableHead>
-                      <TableHead className="text-gray-700 font-bold">使用數量</TableHead>
-                      <TableHead className="text-gray-700 font-bold">扣完剩餘</TableHead>
-                      <TableHead className="text-gray-700 font-bold">單位</TableHead>
+                                                  <TableHead className="text-gray-700 font-bold">物料名稱</TableHead>
+                            <TableHead className="text-gray-700 font-bold">料件代號</TableHead>
+                            <TableHead className="text-gray-700 font-bold">現有數量</TableHead>
+                            <TableHead className="text-gray-700 font-bold">使用數量</TableHead>
+                            <TableHead className="text-gray-700 font-bold">扣完剩餘</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -2614,19 +2624,18 @@ export default function WorkOrderDetailPage() {
                         
                         return (
                           <TableRow key={index}>
-                            <TableCell className="font-medium">{item.name}</TableCell>
-                            <TableCell className="font-mono">{item.code}</TableCell>
-                                                      <TableCell className="font-medium text-blue-600">{formatNumber(currentStock)} {item.unit}</TableCell>
-                          <TableCell className="font-medium text-red-600">-{formatNumber(usedQuantity)} {item.unit}</TableCell>
-                          <TableCell className={`font-medium ${remainingStock < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                            {formatNumber(remainingStock)} {item.unit}
-                            {remainingStock < 0 && (
-                              <span className="ml-1 text-xs bg-red-100 text-red-800 px-1 py-0.5 rounded">
-                                庫存不足
-                              </span>
-                            )}
-                          </TableCell>
-                            <TableCell>{item.unit}</TableCell>
+                                                          <TableCell className="font-medium">{item.name}</TableCell>
+                              <TableCell className="font-mono">{item.code}</TableCell>
+                              <TableCell className="font-medium text-blue-600">{formatNumber(currentStock)} {item.unit}</TableCell>
+                              <TableCell className="font-medium text-red-600">-{formatNumber(usedQuantity)} {item.unit}</TableCell>
+                              <TableCell className={`font-medium ${remainingStock < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                {formatNumber(remainingStock)} {item.unit}
+                                {remainingStock < 0 && (
+                                  <span className="ml-1 text-xs bg-red-100 text-red-800 px-1 py-0.5 rounded">
+                                    庫存不足
+                                  </span>
+                                )}
+                              </TableCell>
                           </TableRow>
                         );
                       })}
@@ -2950,6 +2959,67 @@ export default function WorkOrderDetailPage() {
                     }) ? "確認完工 (有庫存不足)" : "確認完工"}
                   </>
                 )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 入庫確認對話框 */}
+      <Dialog open={isWarehouseDialogOpen} onOpenChange={setIsWarehouseDialogOpen}>
+        <DialogContent className="w-[95vw] max-w-md sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-blue-600 text-lg sm:text-xl">確認入庫</DialogTitle>
+            <div className="text-sm text-gray-600">
+              <p className="mb-3">
+                即將將工單 &quot;{workOrder?.code}&quot; 設為入庫狀態。
+              </p>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium text-yellow-800 mb-1">重要提醒</p>
+                    <p className="text-yellow-700 text-sm">
+                      入庫後將無法再修改任何資料，包括：
+                    </p>
+                    <ul className="list-disc list-inside mt-1 text-sm text-yellow-700 space-y-1">
+                      <li>目標產量和使用數量</li>
+                      <li>工時申報記錄</li>
+                      <li>工單狀態</li>
+                    </ul>
+                    <p className="text-yellow-700 text-sm mt-2">
+                      僅可繼續新增留言和查看資料。
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsWarehouseDialogOpen(false)} 
+              className="w-full sm:w-auto"
+              title="取消入庫操作"
+            >
+              取消
+            </Button>
+            <Button
+              onClick={handleConfirmWarehouse}
+              disabled={isWarehousing}
+              className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+              title="確認將工單狀態設為入庫"
+            >
+              {isWarehousing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  入庫中...
+                </>
+              ) : (
+                <>
+                  <Check className="mr-2 h-4 w-4" />
+                  確認入庫
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
