@@ -121,7 +121,13 @@ export function MultiSelect({
           <CommandPrimitive.Input
             ref={inputRef}
             value={inputValue}
-            onValueChange={setInputValue}
+            onValueChange={(value) => {
+              setInputValue(value);
+              // 當有輸入值時，自動打開下拉選單
+              if (value.trim()) {
+                setOpen(true);
+              }
+            }}
             onBlur={() => setOpen(false)}
             onFocus={() => setOpen(true)}
             placeholder={placeholder}
