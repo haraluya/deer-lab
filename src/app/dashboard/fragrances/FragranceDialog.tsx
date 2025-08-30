@@ -130,12 +130,13 @@ export function FragranceDialog({
 
   // 當香精比例變化時，自動更新PG和VG比例
   useEffect(() => {
-    if (fragrancePercentage >= 0) {
+    // 只在新增模式下自動計算，編輯模式下保持原有比例
+    if (fragrancePercentage >= 0 && !isEditMode) {
       const { pgRatio, vgRatio } = calculateRatios(fragrancePercentage);
       form.setValue("pgRatio", pgRatio);
       form.setValue("vgRatio", vgRatio);
     }
-  }, [fragrancePercentage, form]);
+  }, [fragrancePercentage, form, isEditMode]);
 
   // 自動計算PG和VG比例
   const calculateRatios = (fragrancePercentage: number) => {
@@ -163,12 +164,13 @@ export function FragranceDialog({
       
       let finalValues;
       
-      // 無論是新增還是編輯模式，都自動計算PG和VG比例
-      const { pgRatio, vgRatio } = calculateRatios(values.percentage || 0);
+      // 儲存實際計算出的PG和VG數值，而不是用運算的
+      // 這樣可以避免數字處理問題
       finalValues = {
         ...values,
-        pgRatio,
-        vgRatio,
+        // 使用表單中實際顯示的PG和VG比例（已經過自動計算）
+        pgRatio: values.pgRatio || 0,
+        vgRatio: values.vgRatio || 0,
         unit: 'KG', // 固定單位為KG
       };
       
@@ -384,63 +386,97 @@ export function FragranceDialog({
                 香精比例
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <FormField
-                  control={form.control}
-                  name="percentage"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-semibold text-gray-700">香精比例 (%)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="輸入香精比例，PG和VG將自動計算"
-                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-lg font-semibold text-blue-700">配方比例設定</h4>
+                  {isEditMode && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const currentPercentage = form.getValues("percentage") || 0;
+                        const { pgRatio, vgRatio } = calculateRatios(currentPercentage);
+                        form.setValue("pgRatio", pgRatio);
+                        form.setValue("vgRatio", vgRatio);
+                        toast.success("PG和VG比例已重新計算");
+                      }}
+                      className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                    >
+                      重新計算PG/VG
+                    </Button>
                   )}
-                />
+                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="percentage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-semibold text-gray-700">香精比例 (%)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="輸入香精比例，PG和VG將自動計算"
+                            className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                            {...field} 
+                            onChange={(e) => {
+                              field.onChange(e);
+                              // 在編輯模式下，當香精比例改變時，重新計算PG和VG
+                              if (isEditMode) {
+                                const newPercentage = parseFloat(e.target.value) || 0;
+                                const { pgRatio, vgRatio } = calculateRatios(newPercentage);
+                                form.setValue("pgRatio", pgRatio);
+                                form.setValue("vgRatio", vgRatio);
+                              }
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="pgRatio"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-semibold text-gray-700">PG 比例 (%)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          disabled
-                          className="border-gray-300 bg-gray-50"
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={form.control}
+                    name="pgRatio"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-semibold text-gray-700">PG 比例 (%) - 自動計算</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            disabled
+                            placeholder="根據香精比例自動計算"
+                            className="border-gray-300 bg-gray-50"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="vgRatio"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-semibold text-gray-700">VG 比例 (%)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          disabled
-                          className="border-gray-300 bg-gray-50"
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={form.control}
+                    name="vgRatio"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-semibold text-gray-700">VG 比例 (%) - 自動計算</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            disabled
+                            placeholder="根據香精比例自動計算"
+                            className="border-gray-300 bg-gray-50"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
             </div>
 

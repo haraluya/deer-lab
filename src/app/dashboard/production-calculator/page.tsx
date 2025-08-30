@@ -115,20 +115,32 @@ function ProductionCalculatorPageContent() {
             }
         }
 
-        // Base materials (simplified calculation)
-        bom.push({
-            name: 'PG (Propylene Glycol)',
-            code: 'PG001',
-            quantity: targetQuantity * 0.7, // 70% PG
-            unit: 'kg'
-        });
-
-        bom.push({
-            name: 'VG (Vegetable Glycerin)',
-            code: 'VG001',
-            quantity: targetQuantity * 0.3, // 30% VG
-            unit: 'kg'
-        });
+        // Base materials - 從香精配方中抓取原始數據
+        if (productData.currentFragranceRef) {
+            const fragranceSnap = await getDoc(productData.currentFragranceRef);
+            if(fragranceSnap.exists()) {
+                const fragranceData = fragranceSnap.data() as FragranceDoc;
+                
+                // 使用香精配方中儲存的原始PG和VG比例
+                if (fragranceData.pgRatio && fragranceData.pgRatio > 0) {
+                    bom.push({
+                        name: 'PG (Propylene Glycol)',
+                        code: 'PG001',
+                        quantity: (targetQuantity * fragranceData.pgRatio) / 100,
+                        unit: 'kg'
+                    });
+                }
+                
+                if (fragranceData.vgRatio && fragranceData.vgRatio > 0) {
+                    bom.push({
+                        name: 'VG (Vegetable Glycerin)',
+                        code: 'VG001',
+                        quantity: (targetQuantity * fragranceData.vgRatio) / 100,
+                        unit: 'kg'
+                    });
+                }
+            }
+        }
 
         // Nicotine (if applicable)
         if (productData.nicotineMg && productData.nicotineMg > 0) {

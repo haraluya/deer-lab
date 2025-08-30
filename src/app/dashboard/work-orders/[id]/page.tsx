@@ -6,6 +6,7 @@ import { doc, getDoc, updateDoc, collection, getDocs, addDoc, Timestamp, query, 
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
 import { uploadImage, uploadMultipleImages } from "@/lib/imageUpload"
+import { findMaterialByCategory } from "@/lib/systemConfig"
 import { 
   ArrowLeft, Edit, Save, CheckCircle, AlertCircle, Clock, Package, Users, 
   Droplets, Calculator, MessageSquare, Calendar, User, Plus, X, Loader2, Upload, Trash2,
@@ -434,34 +435,37 @@ export default function WorkOrderDetailPage() {
     
     const materialRequirementsMap = new Map<string, any>();
     
-    // 1. 直接使用香精詳情中的配方比例（避免浮點數精度問題）
-    let fragranceRatios = { fragrance: 35.7, pg: 24.3, vg: 40 }; // 預設比例
+    // 1. 檢查香精配方資料
     console.log('重新載入BOM表 - 檢查香精配方資料:', productData.fragranceFormula);
     
-    if (productData.fragranceFormula) {
-      const { percentage, pgRatio, vgRatio } = productData.fragranceFormula;
-      console.log('重新載入BOM表 - 香精配方資料:', { percentage, pgRatio, vgRatio });
-      
-      if (percentage > 0) {
-        // 直接使用香精詳情中的原始比例，避免浮點數精度問題
-        fragranceRatios = {
-          fragrance: percentage, // 直接使用香精詳情中的percentage（如35.7）
-          pg: pgRatio,          // 直接使用香精詳情中的pgRatio（如24.3）
-          vg: vgRatio           // 直接使用香精詳情中的vgRatio（如40）
-        };
-        
-        console.log('重新載入BOM表 - 直接使用香精詳情中的配方比例（避免浮點數精度問題）:', {
-          香精: percentage + '%',
-          PG: pgRatio + '%',
-          VG: vgRatio + '%',
-          總計: (percentage + pgRatio + vgRatio) + '%'
-        });
-      } else {
-        console.log('重新載入BOM表 - 香精比例為0，使用預設比例');
-      }
-    } else {
-      console.log('重新載入BOM表 - 沒有香精配方資料，使用預設比例');
+    if (!productData.fragranceFormula) {
+      console.error('重新載入BOM表 - 錯誤：沒有香精配方資料');
+      toast.error("抓取錯誤：沒有香精配方資料");
+      return [];
     }
+    
+    const { percentage, pgRatio, vgRatio } = productData.fragranceFormula;
+    console.log('重新載入BOM表 - 香精配方資料:', { percentage, pgRatio, vgRatio });
+    
+    if (!percentage || percentage <= 0) {
+      console.error('重新載入BOM表 - 錯誤：香精比例為0或無效');
+      toast.error("抓取錯誤：香精比例為0或無效");
+      return [];
+    }
+    
+    // 直接使用香精詳情中的原始比例，避免浮點數精度問題
+    const fragranceRatios = {
+      fragrance: percentage, // 直接使用香精詳情中的percentage（如35.7）
+      pg: pgRatio,          // 直接使用香精詳情中的pgRatio（如24.3）
+      vg: vgRatio           // 直接使用香精詳情中的vgRatio（如40）
+    };
+    
+    console.log('重新載入BOM表 - 直接使用香精詳情中的配方比例（避免浮點數精度問題）:', {
+      香精: percentage + '%',
+      PG: pgRatio + '%',
+      VG: vgRatio + '%',
+      總計: (percentage + pgRatio + vgRatio) + '%'
+    });
     console.log('重新載入BOM表 - 最終使用香精比例:', fragranceRatios);
     
     // 2. 核心液體 (香精、PG、VG、尼古丁) - 總是添加所有核心液體
@@ -507,8 +511,8 @@ export default function WorkOrderDetailPage() {
       console.log('重新載入BOM表 - 香精名稱未指定或為空，跳過香精添加');
     }
     
-    // PG (丙二醇) - 總是添加，使用配方比例
-    const pgMaterial = allMaterials.find((m: any) => m.name?.includes('PG丙二醇') || m.name?.includes('PG') || m.code?.includes('PG'));
+    // PG (丙二醇) - 使用系統配置查找
+    const pgMaterial = findMaterialByCategory(allMaterials, 'pg');
     if (pgMaterial) {
       const pgQuantity = targetQuantity * (fragranceRatios.pg / 100); // 24.3% = 0.243
       materialRequirementsMap.set(pgMaterial.id, {
@@ -524,10 +528,12 @@ export default function WorkOrderDetailPage() {
         usedQuantity: pgQuantity
       });
       console.log('重新載入BOM表 - 添加PG:', pgMaterial.name, pgQuantity, '比例:', fragranceRatios.pg);
+    } else {
+      console.warn('重新載入BOM表 - 找不到PG物料');
     }
     
-    // VG (甘油) - 總是添加，使用配方比例
-    const vgMaterial = allMaterials.find((m: any) => m.name?.includes('VG甘油') || m.name?.includes('VG') || m.code?.includes('VG'));
+    // VG (甘油) - 使用系統配置查找
+    const vgMaterial = findMaterialByCategory(allMaterials, 'vg');
     if (vgMaterial) {
       const vgQuantity = targetQuantity * (fragranceRatios.vg / 100); // 40% = 0.4
       materialRequirementsMap.set(vgMaterial.id, {
@@ -543,10 +549,12 @@ export default function WorkOrderDetailPage() {
         usedQuantity: vgQuantity
       });
       console.log('重新載入BOM表 - 添加VG:', vgMaterial.name, vgQuantity, '比例:', fragranceRatios.vg);
+    } else {
+      console.warn('重新載入BOM表 - 找不到VG物料');
     }
     
-    // 尼古丁 - 總是添加，使用產品濃度計算
-    const nicotineMaterial = allMaterials.find((m: any) => m.name?.includes('丁鹽') || m.name?.includes('尼古丁') || m.code?.includes('NIC'));
+    // 尼古丁 - 使用系統配置查找
+    const nicotineMaterial = findMaterialByCategory(allMaterials, 'nicotine');
     if (nicotineMaterial) {
       const nicotineQuantity = productData.nicotineMg && productData.nicotineMg > 0 
         ? (targetQuantity * productData.nicotineMg) / 250 
@@ -558,7 +566,7 @@ export default function WorkOrderDetailPage() {
         type: 'material',
         quantity: nicotineQuantity,
         unit: nicotineMaterial.unit || 'KG',
-        ratio: productData.nicotineMg ? productData.nicotineMg / 250 : 0,
+        ratio: 0, // 尼古丁鹽不算在比例裡面
         isCalculated: true,
         category: 'nicotine',
         usedQuantity: nicotineQuantity

@@ -6,6 +6,7 @@ import { collection, getDocs, addDoc, doc, getDoc, DocumentReference } from "fir
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
 import { ArrowLeft, Plus, Package, Loader2, Calculator, Target, Zap, CheckCircle, AlertTriangle } from "lucide-react"
+import { findMaterialByCategory } from "@/lib/systemConfig"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -199,7 +200,7 @@ export default function CreateWorkOrderPage() {
         const fragrancesList = fragrancesSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
-        })) as Material[]
+        })) as any[]
         
         // 合併物料和香精資料
         const allMaterials = [...materialsList, ...fragrancesList]
@@ -250,46 +251,49 @@ export default function CreateWorkOrderPage() {
 
     const materialRequirementsMap = new Map<string, any>()
 
-    // 1. 直接使用香精詳情中的配方比例（避免浮點數精度問題）
-    let fragranceRatios = { fragrance: 35.7, pg: 24.3, vg: 40 } // 預設比例
-    if (selectedProduct.fragranceFormula) {
-      const { percentage, pgRatio, vgRatio } = selectedProduct.fragranceFormula
-      console.log('香精配方資料:', { percentage, pgRatio, vgRatio })
-      
-      // 直接使用香精詳情中的原始比例，避免浮點數精度問題
-      if (percentage > 0) {
-        // 直接使用原始百分比值，不進行任何計算
-        fragranceRatios = {
-          fragrance: percentage, // 直接使用香精詳情中的percentage（如35.7）
-          pg: pgRatio,          // 直接使用香精詳情中的pgRatio（如24.3）
-          vg: vgRatio           // 直接使用香精詳情中的vgRatio（如40）
-        }
-        
-        console.log('直接使用香精詳情中的配方比例（避免浮點數精度問題）:', {
-          香精: percentage + '%',
-          PG: pgRatio + '%',
-          VG: vgRatio + '%',
-          總計: (percentage + pgRatio + vgRatio) + '%'
-        })
-      } else {
-        console.log('香精比例為0，使用預設比例')
-      }
-    } else {
-      console.log('沒有香精配方資料，使用預設比例')
+    // 1. 檢查香精配方資料
+    if (!selectedProduct.fragranceFormula) {
+      console.error('錯誤：沒有香精配方資料');
+      toast.error("抓取錯誤：沒有香精配方資料");
+      return [];
     }
-    console.log('使用香精比例:', fragranceRatios)
+    
+    const { percentage, pgRatio, vgRatio } = selectedProduct.fragranceFormula;
+    console.log('香精配方資料:', { percentage, pgRatio, vgRatio });
+    
+    if (!percentage || percentage <= 0) {
+      console.error('錯誤：香精比例為0或無效');
+      toast.error("抓取錯誤：香精比例為0或無效");
+      return [];
+    }
+    
+    // 直接使用香精詳情中的原始比例，避免浮點數精度問題
+    const fragranceRatios = {
+      fragrance: percentage, // 直接使用香精詳情中的percentage（如15.76）
+      pg: pgRatio,          // 直接使用香精詳情中的pgRatio（如44.2）
+      vg: vgRatio           // 直接使用香精詳情中的vgRatio（如40）
+    };
+    
+    console.log('直接使用香精詳情中的配方比例（避免浮點數精度問題）:', {
+      香精: percentage + '%',
+      PG: pgRatio + '%',
+      VG: vgRatio + '%',
+      總計: (percentage + pgRatio + vgRatio) + '%'
+    });
+    console.log('使用香精比例:', fragranceRatios);
 
     // 2. 核心液體 (香精、PG、VG、尼古丁) - 總是添加所有核心液體
     // 香精 - 總是添加，並檢查實際庫存
     if (selectedProduct.fragranceName && selectedProduct.fragranceName !== '未指定') {
       const fragranceQuantity = targetQuantity * (fragranceRatios.fragrance / 100) // 35.7% = 0.357
       
-      // 查找香精的實際庫存
+      // 查找香精的實際庫存 - 從香精集合中查找
       const fragranceMaterial = materials.find(m => 
-        m.code === selectedProduct.fragranceCode || 
-        m.name === selectedProduct.fragranceName ||
-        m.name.includes(selectedProduct.fragranceName) ||
-        (selectedProduct.fragranceCode && m.code.includes(selectedProduct.fragranceCode))
+        (m.code === selectedProduct.fragranceCode || 
+         m.name === selectedProduct.fragranceName ||
+         m.name.includes(selectedProduct.fragranceName) ||
+         (selectedProduct.fragranceCode && m.code.includes(selectedProduct.fragranceCode))) &&
+        m.currentStock !== undefined // 確保是香精資料（有 currentStock 欄位）
       )
       
       console.log('香精匹配結果:', {
@@ -320,8 +324,8 @@ export default function CreateWorkOrderPage() {
       console.log('添加香精:', selectedProduct.fragranceName, fragranceQuantity, '比例:', fragranceRatios.fragrance, '庫存:', currentStock, '充足:', hasEnoughStock)
     }
 
-    // PG (丙二醇) - 總是添加，使用配方比例
-    const pgMaterial = materials.find(m => m.name.includes('PG丙二醇') || m.name.includes('PG') || m.code.includes('PG'))
+    // PG (丙二醇) - 使用系統配置查找
+    const pgMaterial = findMaterialByCategory(materials, 'pg')
     if (pgMaterial) {
       const pgQuantity = targetQuantity * (fragranceRatios.pg / 100) // 24.3% = 0.243
       materialRequirementsMap.set(pgMaterial.id, {
@@ -336,10 +340,12 @@ export default function CreateWorkOrderPage() {
         ratio: fragranceRatios.pg
       })
       console.log('添加PG:', pgMaterial.name, pgQuantity, '比例:', fragranceRatios.pg)
+    } else {
+      console.warn('找不到PG物料')
     }
 
-    // VG (甘油) - 總是添加，使用配方比例
-    const vgMaterial = materials.find(m => m.name.includes('VG甘油') || m.name.includes('VG') || m.code.includes('VG'))
+    // VG (甘油) - 使用系統配置查找
+    const vgMaterial = findMaterialByCategory(materials, 'vg')
     if (vgMaterial) {
       const vgQuantity = targetQuantity * (fragranceRatios.vg / 100) // 40% = 0.4
       materialRequirementsMap.set(vgMaterial.id, {
@@ -354,10 +360,12 @@ export default function CreateWorkOrderPage() {
         ratio: fragranceRatios.vg
       })
       console.log('添加VG:', vgMaterial.name, vgQuantity, '比例:', fragranceRatios.vg)
+    } else {
+      console.warn('找不到VG物料')
     }
 
-    // 尼古丁 - 總是添加，使用產品濃度計算
-    const nicotineMaterial = materials.find(m => m.name.includes('丁鹽') || m.name.includes('尼古丁') || m.code.includes('NIC'))
+    // 尼古丁 - 使用系統配置查找
+    const nicotineMaterial = findMaterialByCategory(materials, 'nicotine')
     if (nicotineMaterial) {
       const nicotineQuantity = selectedProduct.nicotineMg && selectedProduct.nicotineMg > 0 
         ? (targetQuantity * selectedProduct.nicotineMg) / 250 
@@ -371,7 +379,7 @@ export default function CreateWorkOrderPage() {
         unit: nicotineMaterial.unit || 'KG',
         hasEnoughStock: (nicotineMaterial.currentStock || 0) >= nicotineQuantity,
         category: 'nicotine',
-        ratio: selectedProduct.nicotineMg ? selectedProduct.nicotineMg / 250 : 0
+        ratio: 0 // 尼古丁鹽不算在比例裡面
       })
       console.log('添加尼古丁:', nicotineMaterial.name, nicotineQuantity, '濃度:', selectedProduct.nicotineMg)
     }

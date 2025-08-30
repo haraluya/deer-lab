@@ -32,6 +32,7 @@ interface Fragrance {
   createdByName?: string;
   productCount: number;
   remarks?: string; // 新增備註欄位
+  currentStock?: number; // 新增庫存數量欄位
 }
 
 interface Product {
@@ -55,28 +56,17 @@ export default function FragranceDetailPage() {
   const [isSupplierDetailOpen, setIsSupplierDetailOpen] = useState(false);
   const [supplierData, setSupplierData] = useState<any>(null);
 
-  // 計算正確的香精配方比例
-  const calculateCorrectRatios = (percentage: number, pgRatio: number, vgRatio: number) => {
+  // 直接使用資料庫中儲存的原始比例
+  const getOriginalRatios = (percentage: number, pgRatio: number, vgRatio: number) => {
     if (percentage <= 0) {
       return { fragrance: 0, pg: 0, vg: 0, total: 0 };
     }
-
-    const fragranceRatio = percentage / 100;
-    
-    // PG比例：如果香精低於60%，PG補滿60%，否則不加PG
-    let pgRatioCalculated = 0;
-    if (fragranceRatio < 0.6) {
-      pgRatioCalculated = 0.6 - fragranceRatio;
-    }
-    
-    // VG比例：剩餘部分
-    const vgRatioCalculated = 1 - fragranceRatio - pgRatioCalculated;
     
     return {
       fragrance: percentage,
-      pg: Math.round(pgRatioCalculated * 100 * 10) / 10,
-      vg: Math.round(vgRatioCalculated * 100 * 10) / 10,
-      total: Math.round((fragranceRatio + pgRatioCalculated + vgRatioCalculated) * 100 * 10) / 10
+      pg: pgRatio,
+      vg: vgRatio,
+      total: percentage + pgRatio + vgRatio
     };
   };
 
@@ -168,6 +158,7 @@ export default function FragranceDetailPage() {
           createdByName,
           productCount: productsList.length,
           remarks: data.remarks, // 獲取備註
+          currentStock: data.currentStock || 0, // 添加庫存數量
         });
       } catch (error) {
         console.error('Failed to fetch fragrance:', error);
@@ -327,6 +318,7 @@ export default function FragranceDetailPage() {
          createdByName,
          productCount: productsList.length,
          remarks: data.remarks, // 更新備註
+         currentStock: data.currentStock || 0, // 更新庫存數量
        });
     } catch (error) {
       console.error('Failed to refresh fragrance data:', error);
@@ -460,21 +452,18 @@ export default function FragranceDetailPage() {
               </div>
             </div>
 
-                         {/* 使用產品列表 */}
-             <div 
-               className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg cursor-pointer hover:from-purple-100 hover:to-purple-200 transition-all duration-200"
-               onClick={() => products.length > 0 && router.push(`/dashboard/products/${products[0].id}`)}
-             >
-               <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
-                 <Package className="h-5 w-5 text-white" />
-               </div>
-               <div>
-                 <p className="text-sm text-purple-600 font-medium">使用產品列表</p>
-                 <p className="text-sm font-semibold text-purple-800 whitespace-pre-line leading-tight">
-                   {formatProductList(products)}
-                 </p>
-               </div>
-             </div>
+                                     {/* 現有庫存 */}
+            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg">
+              <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <Package className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-purple-600 font-medium">現有庫存</p>
+                <p className="text-lg font-semibold text-purple-800">
+                  {fragrance.currentStock || 0} KG
+                </p>
+              </div>
+            </div>
 
                          {/* 供應商 */}
              <div 
@@ -548,7 +537,7 @@ export default function FragranceDetailPage() {
            <CardContent className="space-y-4">
              <div className="space-y-3">
                {(() => {
-                 const correctRatios = calculateCorrectRatios(
+                 const correctRatios = getOriginalRatios(
                    fragrance.percentage || 0,
                    fragrance.pgRatio || 0,
                    fragrance.vgRatio || 0
