@@ -55,6 +55,31 @@ export default function FragranceDetailPage() {
   const [isSupplierDetailOpen, setIsSupplierDetailOpen] = useState(false);
   const [supplierData, setSupplierData] = useState<any>(null);
 
+  // 計算正確的香精配方比例
+  const calculateCorrectRatios = (percentage: number, pgRatio: number, vgRatio: number) => {
+    if (percentage <= 0) {
+      return { fragrance: 0, pg: 0, vg: 0, total: 0 };
+    }
+
+    const fragranceRatio = percentage / 100;
+    
+    // PG比例：如果香精低於60%，PG補滿60%，否則不加PG
+    let pgRatioCalculated = 0;
+    if (fragranceRatio < 0.6) {
+      pgRatioCalculated = 0.6 - fragranceRatio;
+    }
+    
+    // VG比例：剩餘部分
+    const vgRatioCalculated = 1 - fragranceRatio - pgRatioCalculated;
+    
+    return {
+      fragrance: percentage,
+      pg: Math.round(pgRatioCalculated * 100 * 10) / 10,
+      vg: Math.round(vgRatioCalculated * 100 * 10) / 10,
+      total: Math.round((fragranceRatio + pgRatioCalculated + vgRatioCalculated) * 100 * 10) / 10
+    };
+  };
+
   useEffect(() => {
     const fetchFragrance = async () => {
       if (!params.id || typeof params.id !== 'string') {
@@ -518,34 +543,45 @@ export default function FragranceDetailPage() {
                  {/* 配方欄位 */}
          <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-50 to-indigo-50">
            <CardHeader>
-             <CardTitle className="text-lg text-primary">配方欄位</CardTitle>
+             <CardTitle className="text-lg text-primary">配方欄位 (計算後)</CardTitle>
            </CardHeader>
            <CardContent className="space-y-4">
              <div className="space-y-3">
-               <div className="flex justify-between items-center py-2 border-b border-blue-200">
-                 <span className="text-muted-foreground">香精比例</span>
-                 <span className="font-medium text-blue-600">
-                   {fragrance.percentage || 0}%
-                 </span>
-               </div>
-               <div className="flex justify-between items-center py-2 border-b border-blue-200">
-                 <span className="text-muted-foreground">PG比例</span>
-                 <span className="font-medium text-green-600">
-                   {fragrance.pgRatio || 0}%
-                 </span>
-               </div>
-               <div className="flex justify-between items-center py-2 border-b border-blue-200">
-                 <span className="text-muted-foreground">VG比例</span>
-                 <span className="font-medium text-purple-600">
-                   {fragrance.vgRatio || 0}%
-                 </span>
-               </div>
-               <div className="flex justify-between items-center py-2 border-b border-blue-200">
-                 <span className="text-muted-foreground">總比例</span>
-                 <span className="font-medium text-orange-600">
-                   {((fragrance.percentage || 0) + (fragrance.pgRatio || 0) + (fragrance.vgRatio || 0))}%
-                 </span>
-               </div>
+               {(() => {
+                 const correctRatios = calculateCorrectRatios(
+                   fragrance.percentage || 0,
+                   fragrance.pgRatio || 0,
+                   fragrance.vgRatio || 0
+                 );
+                 return (
+                   <>
+                     <div className="flex justify-between items-center py-2 border-b border-blue-200">
+                       <span className="text-muted-foreground">香精比例</span>
+                       <span className="font-medium text-blue-600">
+                         {correctRatios.fragrance}%
+                       </span>
+                     </div>
+                     <div className="flex justify-between items-center py-2 border-b border-blue-200">
+                       <span className="text-muted-foreground">PG比例</span>
+                       <span className="font-medium text-green-600">
+                         {correctRatios.pg}%
+                       </span>
+                     </div>
+                     <div className="flex justify-between items-center py-2 border-b border-blue-200">
+                       <span className="text-muted-foreground">VG比例</span>
+                       <span className="font-medium text-purple-600">
+                         {correctRatios.vg}%
+                       </span>
+                     </div>
+                     <div className="flex justify-between items-center py-2 border-b border-blue-200">
+                       <span className="text-muted-foreground">總比例</span>
+                       <span className="font-medium text-orange-600">
+                         {correctRatios.total}%
+                       </span>
+                     </div>
+                   </>
+                 );
+               })()}
              </div>
            </CardContent>
          </Card>
