@@ -9,12 +9,14 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
+import { Search } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { ProductData } from './ProductDialog';
 import { OptionType } from '@/components/ui/multi-select';
 
@@ -37,6 +39,9 @@ interface FragranceChangeDialogProps {
 export function FragranceChangeDialog({ isOpen, onOpenChange, onUpdate, productData, currentFragranceName }: FragranceChangeDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fragranceOptions, setFragranceOptions] = useState<OptionType[]>([]);
+  const [allFragrances, setAllFragrances] = useState<OptionType[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSelectOpen, setIsSelectOpen] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -54,19 +59,36 @@ export function FragranceChangeDialog({ isOpen, onOpenChange, onUpdate, productD
           const q = query(collection(db, 'fragrances'), where('status', '==', 'active'));
           const querySnapshot = await getDocs(q);
           const options = querySnapshot.docs
-            .map(doc => ({ value: doc.id, label: doc.data().name }))
+            .map(doc => ({ 
+              value: doc.id, 
+              label: `${doc.data().code}(${doc.data().name})` 
+            }))
             // 過濾掉當前正在使用的香精
             .filter(option => option.value !== productData?.currentFragranceRef?.id);
+          setAllFragrances(options);
           setFragranceOptions(options);
         } catch (error) {
           toast.error("讀取香精選項失敗。");
         }
       };
       fetchFragrances();
-      // 重置表單
+      // 重置表單和搜尋
       form.reset({ newFragranceId: undefined, reason: '' });
+      setSearchTerm('');
     }
   }, [isOpen, productData, form]);
+
+  // 搜尋功能
+  useEffect(() => {
+    if (searchTerm.trim() === '') {
+      setFragranceOptions(allFragrances);
+    } else {
+      const filtered = allFragrances.filter(fragrance =>
+        fragrance.label.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFragranceOptions(filtered);
+    }
+  }, [searchTerm, allFragrances]);
 
   // 表單提交處理
   async function onSubmit(values: FormData) {
@@ -116,15 +138,36 @@ export function FragranceChangeDialog({ isOpen, onOpenChange, onUpdate, productD
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>選擇新香精</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select 
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      setIsSelectOpen(false);
+                    }} 
+                    defaultValue={field.value}
+                    open={isSelectOpen}
+                    onOpenChange={setIsSelectOpen}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="從可用的香精中選擇..." />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      {/* 搜尋輸入框 */}
+                      <div className="flex items-center px-3 py-2 border-b">
+                        <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                        <Input
+                          placeholder="搜尋香精..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                        />
+                      </div>
+                      {/* 香精選項列表 */}
                       {fragranceOptions.map(option => (
-                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
