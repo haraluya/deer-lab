@@ -88,8 +88,19 @@ function ProductsPageContent() {
         } as ProductWithDetails;
       });
 
-      setProducts(productsList);
-      setFilteredProducts(productsList);
+      // 排序：先按系列名稱升序，再按產品名稱升序
+      const sortedProductsList = productsList.sort((a, b) => {
+        // 首先按系列名稱排序
+        const seriesComparison = (a.seriesName || '').localeCompare(b.seriesName || '');
+        if (seriesComparison !== 0) {
+          return seriesComparison;
+        }
+        // 如果系列相同，再按產品名稱排序
+        return (a.name || '').localeCompare(b.name || '');
+      });
+
+      setProducts(sortedProductsList);
+      setFilteredProducts(sortedProductsList);
     } catch (error) {
       console.error("讀取產品資料失敗:", error);
       toast.error("讀取產品資料失敗。");
