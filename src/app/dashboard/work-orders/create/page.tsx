@@ -208,9 +208,28 @@ export default function CreateWorkOrderPage() {
   }
 
   const calculateMaterialRequirements = () => {
-    if (!selectedProduct || !materials.length) return []
+    if (!selectedProduct || !materials.length) {
+      console.log('缺少必要資料:', { 
+        hasSelectedProduct: !!selectedProduct, 
+        materialsCount: materials.length,
+        selectedProduct: selectedProduct,
+        materials: materials
+      })
+      return []
+    }
 
-    console.log('計算物料需求:', { selectedProduct, materials, targetQuantity })
+    console.log('計算物料需求:', { 
+      selectedProduct: {
+        id: selectedProduct.id,
+        name: selectedProduct.name,
+        fragranceName: selectedProduct.fragranceName,
+        fragranceCode: selectedProduct.fragranceCode,
+        specificMaterialNames: selectedProduct.specificMaterialNames,
+        commonMaterialNames: selectedProduct.commonMaterialNames
+      }, 
+      materialsCount: materials.length,
+      targetQuantity 
+    })
 
     const materialRequirementsMap = new Map<string, any>()
 
@@ -265,6 +284,17 @@ export default function CreateWorkOrderPage() {
         m.name === selectedProduct.fragranceName ||
         m.name.includes(selectedProduct.fragranceName)
       )
+      
+      console.log('香精匹配結果:', {
+        fragranceCode: selectedProduct.fragranceCode,
+        fragranceName: selectedProduct.fragranceName,
+        foundMaterial: fragranceMaterial ? {
+          id: fragranceMaterial.id,
+          code: fragranceMaterial.code,
+          name: fragranceMaterial.name
+        } : null,
+        allMaterials: materials.map(m => ({ code: m.code, name: m.name }))
+      })
       
       const currentStock = fragranceMaterial ? (fragranceMaterial.currentStock || 0) : 0
       const hasEnoughStock = currentStock >= fragranceQuantity
@@ -345,6 +375,14 @@ export default function CreateWorkOrderPage() {
     if (selectedProduct.specificMaterialNames && selectedProduct.specificMaterialNames.length > 0) {
       selectedProduct.specificMaterialNames.forEach(materialName => {
         const material = materials.find(m => m.name === materialName)
+        console.log('專屬材料匹配:', {
+          materialName,
+          foundMaterial: material ? {
+            id: material.id,
+            code: material.code,
+            name: material.name
+          } : null
+        })
         if (material) {
           // 根據物料類型計算需求量
           let requiredQuantity = 0
