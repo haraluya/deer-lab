@@ -74,6 +74,23 @@ export const createWorkOrder = onCall(async (request) => {
       }
     }
 
+    // 如果沒有找到香精資料，嘗試從產品資料中獲取
+    if (!fragranceData && productData.fragranceCode) {
+      try {
+        const fragranceQuery = await db.collection('fragrances')
+          .where('code', '==', productData.fragranceCode)
+          .limit(1)
+          .get();
+        
+        if (!fragranceQuery.empty) {
+          fragranceData = fragranceQuery.docs[0].data();
+          fragranceRef = fragranceQuery.docs[0].ref;
+        }
+      } catch (error) {
+        logger.warn(`無法從產品香精代號找到香精資料:`, error);
+      }
+    }
+
     // 4. Fetch series data for seriesName
     let seriesName = '未指定';
     if (productData.seriesRef) {

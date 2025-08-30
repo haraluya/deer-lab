@@ -299,11 +299,18 @@ export function RecipeCalculatorDialog({
       const selectedProduct = products.find(p => p.id === selectedProductId);
       const selectedFragrance = fragrances.find(f => f.code === selectedProduct?.fragranceCode);
 
+      console.log('建立工單資料:', {
+        selectedProduct,
+        selectedFragrance,
+        targetQuantity,
+        bomItems: bomItems.filter(item => item.requiredQuantity > 0)
+      });
+
       const payload = {
         productId: selectedProductId,
         targetQuantity,
-        fragranceId: selectedFragrance?.id,
-        nicotineMg: selectedProduct?.nicotineMg,
+        fragranceId: selectedFragrance?.id || null,
+        nicotineMg: selectedProduct?.nicotineMg || 0,
         bomItems: bomItems.filter(item => item.requiredQuantity > 0).map(item => ({
           materialId: item.id,
           materialType: item.type,

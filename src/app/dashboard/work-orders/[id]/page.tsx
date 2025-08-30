@@ -121,6 +121,8 @@ export default function WorkOrderDetailPage() {
       
       if (docSnap.exists()) {
         const data = docSnap.data() as WorkOrderData
+        console.log('工單資料:', data);
+        console.log('產品快照:', data.productSnapshot);
         setWorkOrder({ ...data, id: docSnap.id })
         setEditData({
           status: data.status,
