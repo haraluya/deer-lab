@@ -33,6 +33,7 @@ interface Fragrance {
   productCount: number;
   remarks?: string; // 新增備註欄位
   currentStock?: number; // 新增庫存數量欄位
+  safetyStockLevel?: number; // 新增安全庫存欄位
 }
 
 interface Product {
@@ -159,6 +160,7 @@ export default function FragranceDetailPage() {
           productCount: productsList.length,
           remarks: data.remarks || '', // 獲取備註
           currentStock: data.currentStock || 0, // 添加庫存數量
+          safetyStockLevel: data.safetyStockLevel || 0, // 添加安全庫存
         });
       } catch (error) {
         console.error('Failed to fetch fragrance:', error);
@@ -319,6 +321,7 @@ export default function FragranceDetailPage() {
          productCount: productsList.length,
          remarks: data.remarks, // 更新備註
          currentStock: data.currentStock || 0, // 更新庫存數量
+         safetyStockLevel: data.safetyStockLevel || 0, // 更新安全庫存
        });
     } catch (error) {
       console.error('Failed to refresh fragrance data:', error);
@@ -522,6 +525,12 @@ export default function FragranceDetailPage() {
                 <span className="text-muted-foreground">單位成本</span>
                 <span className="font-medium text-green-600">
                   ${fragrance.costPerUnit?.toFixed(2) || '0.00'} / KG
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-muted-foreground">安全庫存</span>
+                <span className="font-medium text-orange-600">
+                  {fragrance.safetyStockLevel || 0} KG
                 </span>
               </div>
               
