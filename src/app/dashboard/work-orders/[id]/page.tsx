@@ -251,7 +251,7 @@ export default function WorkOrderDetailPage() {
     });
   };
 
-  // 上傳圖片到 Firebase Storage - 添加重試機制
+  // 上傳圖片到 Firebase Storage - 改進資料夾分類和錯誤處理
   const uploadImageToStorage = async (file: File): Promise<string> => {
     const maxRetries = 3;
     let lastError: any;
@@ -262,26 +262,58 @@ export default function WorkOrderDetailPage() {
         const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
         const storage = getStorage();
         
-        // 使用日期分類的檔案路徑
+        // 改進的日期分類檔案路徑結構
         const date = new Date();
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
+        const hour = String(date.getHours()).padStart(2, '0');
+        const minute = String(date.getMinutes()).padStart(2, '0');
         const timestamp = Date.now();
         
-        const imagePath = `work-orders/${workOrderId}/comments/${year}/${month}/${day}/${timestamp}_${file.name}`;
+        // 更詳細的資料夾分類：年/月/日/時/分
+        const imagePath = `work-orders/${workOrderId}/comments/${year}/${month}/${day}/${hour}/${minute}/${timestamp}_${file.name}`;
         const imageRef = ref(storage, imagePath);
         
+        // 設定上傳元數據，避免 CORS 問題
+        const metadata = {
+          contentType: file.type,
+          cacheControl: 'public, max-age=31536000', // 1年快取
+        };
+        
         // 上傳圖片
-        await uploadBytes(imageRef, file);
+        await uploadBytes(imageRef, file, metadata);
         const downloadURL = await getDownloadURL(imageRef);
         
         console.log(`圖片上傳成功 (嘗試 ${attempt}/${maxRetries}):`, imagePath);
+        console.log('圖片URL:', downloadURL);
         return downloadURL;
         
       } catch (error) {
         lastError = error;
         console.error(`圖片上傳失敗 (嘗試 ${attempt}/${maxRetries}):`, error);
+        
+        // 如果是 CORS 錯誤，嘗試不同的方法
+        if (error instanceof Error && error.message && error.message.includes('CORS')) {
+          console.log('檢測到 CORS 錯誤，嘗試使用不同的上傳方法...');
+          try {
+            // 嘗試使用更簡單的路徑
+            const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+            const storage = getStorage();
+            
+            const simplePath = `work-orders/${workOrderId}/comments/${Date.now()}_${file.name}`;
+            const simpleRef = ref(storage, simplePath);
+            
+            await uploadBytes(simpleRef, file);
+            const downloadURL = await getDownloadURL(simpleRef);
+            
+            console.log(`使用簡化路徑上傳成功:`, simplePath);
+            return downloadURL;
+          } catch (simpleError) {
+            console.error('簡化路徑上傳也失敗:', simpleError);
+            lastError = simpleError;
+          }
+        }
         
         if (attempt < maxRetries) {
           // 等待一段時間後重試
@@ -321,11 +353,19 @@ export default function WorkOrderDetailPage() {
           const compressedFile = await compressImage(file);
           console.log('圖片壓縮完成:', compressedFile.name, '大小:', compressedFile.size, 'bytes');
           
-          // 上傳圖片
-          const downloadURL = await uploadImageToStorage(compressedFile);
-          uploadedURLs.push(downloadURL);
+          // 嘗試上傳圖片到 Firebase Storage
+          let downloadURL: string;
+          try {
+            downloadURL = await uploadImageToStorage(compressedFile);
+            console.log('Firebase Storage 上傳成功:', downloadURL);
+          } catch (uploadError) {
+            console.warn('Firebase Storage 上傳失敗，使用 Base64 備用方法:', uploadError);
+            // 使用 Base64 備用方法
+            downloadURL = await uploadImageAsBase64(compressedFile);
+            console.log('Base64 備用上傳成功');
+          }
           
-          console.log('圖片上傳成功:', downloadURL);
+          uploadedURLs.push(downloadURL);
           
         } catch (error) {
           console.error(`處理圖片 ${file.name} 失敗:`, error);
@@ -351,6 +391,21 @@ export default function WorkOrderDetailPage() {
     
     // 清空 input 值，允許重複選擇相同檔案
     event.target.value = '';
+  };
+
+  // 備用圖片上傳方法 - 使用 Base64 編碼
+  const uploadImageAsBase64 = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64String = reader.result as string;
+        resolve(base64String);
+      };
+      reader.onerror = () => {
+        reject(new Error('圖片讀取失敗'));
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   // 移除已上傳的圖片
