@@ -181,13 +181,6 @@ function WorkOrdersPageContent() {
             >
               入庫
             </Button>
-              variant={statusFilter === '已取消' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setStatusFilter('已取消')}
-              className={statusFilter === '已取消' ? 'bg-red-600 hover:bg-red-700' : 'border-red-200 text-red-600 hover:bg-red-50'}
-            >
-              已取消
-            </Button>
           </div>
 
           {/* 統計資訊 */}
