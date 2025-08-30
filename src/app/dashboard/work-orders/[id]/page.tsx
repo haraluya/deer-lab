@@ -881,39 +881,40 @@ export default function WorkOrderDetailPage() {
   }
 
   return (
-    <div className="container mx-auto p-2 sm:p-4 py-4 sm:py-10">
-      {/* 頁面標題 */}
-      <div className="flex items-center justify-between mb-4 sm:mb-8">
-        <div className="flex items-center gap-2 sm:gap-4">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={() => router.back()}
-            className="hover:bg-blue-50"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-grow min-w-0">
-            <h1 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent truncate">
-              工單詳情
-            </h1>
-            <p className="text-gray-600 font-mono text-sm sm:text-base truncate">{workOrder.code}</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+      <div className="container mx-auto p-2 sm:p-4 py-4 sm:py-10">
+        {/* 頁面標題 */}
+        <div className="flex items-center justify-between mb-4 sm:mb-8">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={() => router.back()}
+              className="hover:bg-white/80 backdrop-blur-sm"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex-grow min-w-0">
+              <h1 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent truncate">
+                工單詳情
+              </h1>
+              <p className="text-gray-600 font-mono text-sm sm:text-base truncate">{workOrder.code}</p>
+            </div>
           </div>
+          <Button 
+            variant="destructive" 
+            onClick={() => setIsDeleteDialogOpen(true)}
+            className="bg-red-500 hover:bg-red-600 flex-shrink-0"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            刪除工單
+          </Button>
         </div>
-        <Button 
-          variant="destructive" 
-          onClick={() => setIsDeleteDialogOpen(true)}
-          className="bg-red-600 hover:bg-red-700 flex-shrink-0"
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          刪除工單
-        </Button>
-      </div>
 
       {/* 工單基本資料 */}
-      <Card className="mb-4 sm:mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-        <CardHeader className="pb-3 sm:pb-6">
-          <CardTitle className="text-blue-800 flex items-center gap-2 text-lg sm:text-xl">
+      <Card className="mb-4 sm:mb-6 shadow-lg border-0 bg-white">
+        <CardHeader className="pb-3 sm:pb-6 bg-gradient-to-r from-blue-200 to-blue-300 text-blue-800 rounded-t-xl">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Package className="h-5 w-5" />
             工單基本資料
           </CardTitle>
@@ -948,9 +949,9 @@ export default function WorkOrderDetailPage() {
       </Card>
 
       {/* 工單詳細資料 */}
-      <Card className="mb-4 sm:mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
-        <CardHeader className="pb-3 sm:pb-6">
-          <CardTitle className="text-green-800 flex items-center gap-2 text-lg sm:text-xl">
+      <Card className="mb-4 sm:mb-6 shadow-lg border-0 bg-white">
+        <CardHeader className="pb-3 sm:pb-6 bg-gradient-to-r from-green-200 to-green-300 text-green-800 rounded-t-xl">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Calculator className="h-5 w-5" />
             工單詳細資料
           </CardTitle>
@@ -1052,10 +1053,10 @@ export default function WorkOrderDetailPage() {
       </Card>
 
       {/* 香精物料清單 (BOM表) */}
-      <Card className="mb-4 sm:mb-6 bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
-        <CardHeader className="pb-3 sm:pb-6">
+      <Card className="mb-4 sm:mb-6 shadow-lg border-0 bg-white">
+        <CardHeader className="pb-3 sm:pb-6 bg-gradient-to-r from-purple-200 to-purple-300 text-purple-800 rounded-t-xl">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-purple-800 flex items-center gap-2 text-lg sm:text-xl">
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
               <Droplets className="h-5 w-5" />
               香精物料清單 (BOM表)
             </CardTitle>
@@ -1106,20 +1107,20 @@ export default function WorkOrderDetailPage() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-gradient-to-r from-purple-600 to-indigo-700">
-                      <TableHead className="text-white font-bold text-xs sm:text-sm">物料名稱</TableHead>
-                      <TableHead className="text-white font-bold text-xs sm:text-sm">料件代號</TableHead>
-                      <TableHead className="text-white font-bold text-xs sm:text-sm">比例</TableHead>
-                      <TableHead className="text-white font-bold text-xs sm:text-sm">需求數量</TableHead>
-                      <TableHead className="text-white font-bold text-xs sm:text-sm">使用數量</TableHead>
-                      <TableHead className="text-white font-bold text-xs sm:text-sm">單位</TableHead>
+                    <TableRow className="bg-gradient-to-r from-gray-50 to-gray-100">
+                      <TableHead className="text-gray-700 font-bold text-xs sm:text-sm">物料名稱</TableHead>
+                      <TableHead className="text-gray-700 font-bold text-xs sm:text-sm">料件代號</TableHead>
+                      <TableHead className="text-gray-700 font-bold text-xs sm:text-sm">比例</TableHead>
+                      <TableHead className="text-gray-700 font-bold text-xs sm:text-sm">需求數量</TableHead>
+                      <TableHead className="text-gray-700 font-bold text-xs sm:text-sm">使用數量</TableHead>
+                      <TableHead className="text-gray-700 font-bold text-xs sm:text-sm">單位</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {workOrder.billOfMaterials
                       .filter(item => ['fragrance', 'pg', 'vg', 'nicotine'].includes(item.category))
                       .map((item, index) => (
-                        <TableRow key={index} className="bg-gradient-to-r from-purple-50 to-pink-50">
+                        <TableRow key={index} className="hover:bg-gray-50/50 transition-all duration-200">
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-2">
                               {item.category === 'fragrance' && <Droplets className="h-4 w-4 text-purple-600" />}
@@ -1168,20 +1169,20 @@ export default function WorkOrderDetailPage() {
                 </h3>
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader>
-                      <TableRow className="bg-gradient-to-r from-blue-600 to-indigo-700">
-                        <TableHead className="text-white font-bold">物料名稱</TableHead>
-                        <TableHead className="text-white font-bold">料件代號</TableHead>
-                        <TableHead className="text-white font-bold">使用數量</TableHead>
-                        <TableHead className="text-white font-bold">單位</TableHead>
-                      </TableRow>
-                    </TableHeader>
+                                      <TableHeader>
+                    <TableRow className="bg-gradient-to-r from-gray-50 to-gray-100">
+                      <TableHead className="text-gray-700 font-bold">物料名稱</TableHead>
+                      <TableHead className="text-gray-700 font-bold">料件代號</TableHead>
+                      <TableHead className="text-gray-700 font-bold">使用數量</TableHead>
+                      <TableHead className="text-gray-700 font-bold">單位</TableHead>
+                    </TableRow>
+                  </TableHeader>
                     <TableBody>
                       {workOrder.billOfMaterials
                         .filter(item => item.category === 'specific')
                         .sort((a, b) => a.name.localeCompare(b.name))
                         .map((item, index) => (
-                          <TableRow key={index} className="bg-gradient-to-r from-blue-50 to-indigo-50">
+                          <TableRow key={index} className="hover:bg-gray-50/50 transition-all duration-200">
                             <TableCell className="font-medium">{item.name}</TableCell>
                             <TableCell className="font-mono text-sm">{item.code}</TableCell>
                             <TableCell>
@@ -1739,6 +1740,7 @@ export default function WorkOrderDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   )
 }
