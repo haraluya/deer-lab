@@ -421,6 +421,20 @@ export default function WorkOrderDetailPage() {
     }
   }, [isAddTimeRecordOpen])
 
+  // 初始化編輯資料
+  const handleStartEditing = () => {
+    if (!workOrder) return;
+    
+    setEditData({
+      status: workOrder.status,
+      qcStatus: workOrder.qcStatus,
+      actualQuantity: workOrder.actualQuantity,
+      targetQuantity: workOrder.targetQuantity,
+      notes: workOrder.notes || ""
+    });
+    setIsEditing(true);
+  };
+
   // 儲存編輯資料
   const handleSave = async () => {
     if (!workOrder || !db) return
@@ -683,7 +697,7 @@ export default function WorkOrderDetailPage() {
 
             <div>
               <Label className="text-sm text-gray-600">目標產量 (KG)</Label>
-              {isEditing && workOrder.status !== '已完工' && workOrder.status !== '已入庫' ? (
+              {isEditing ? (
                 <Input
                   type="number"
                   min="0.1"
@@ -730,7 +744,7 @@ export default function WorkOrderDetailPage() {
               </div>
             ) : (
               <Button
-                onClick={() => setIsEditing(true)}
+                onClick={handleStartEditing}
                 className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
               >
                 <Edit className="mr-2 h-4 w-4" />
