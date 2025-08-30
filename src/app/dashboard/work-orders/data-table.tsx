@@ -62,19 +62,19 @@ export function DataTable<TData extends { id: string }, TValue>({
 
       {/* 桌面版表格容器 */}
       <div className="hidden lg:block">
-        <div className="bg-gradient-to-br from-pink-50 to-purple-50 rounded-xl shadow-xl border border-pink-200 overflow-hidden">
-          <div className="px-6 py-4 bg-gradient-to-r from-pink-500 to-purple-600 border-b border-pink-300">
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 bg-gradient-to-r from-pink-100 to-purple-100 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                <div className="w-8 h-8 bg-gradient-to-br from-pink-400 to-purple-500 rounded-lg flex items-center justify-center">
                   <ClipboardList className="h-4 w-4 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">工單清單</h3>
-                  <p className="text-sm text-pink-100">詳細的工單資訊與狀態</p>
+                  <h3 className="text-lg font-semibold text-gray-800">工單清單</h3>
+                  <p className="text-sm text-gray-600">詳細的工單資訊與狀態</p>
                 </div>
               </div>
-              <div className="text-sm text-white bg-white/20 px-3 py-1 rounded-full">
+              <div className="text-sm text-gray-700 bg-white/80 px-3 py-1 rounded-full border border-gray-200">
                 共 {table.getFilteredRowModel().rows.length} 個工單
               </div>
             </div>
@@ -84,10 +84,10 @@ export function DataTable<TData extends { id: string }, TValue>({
             <Table className="table-modern">
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id} className="bg-gradient-to-r from-pink-100 to-purple-100 hover:bg-pink-100/80">
+                  <TableRow key={headerGroup.id} className="bg-gradient-to-r from-gray-50 to-gray-100 hover:bg-gray-50/80">
                     {headerGroup.headers.map((header) => {
                       return (
-                        <TableHead key={header.id} className="font-semibold text-purple-700 py-4 px-6">
+                        <TableHead key={header.id} className="font-semibold text-gray-700 py-4 px-6">
                           {header.isPlaceholder
                             ? null
                             : flexRender(
@@ -107,7 +107,7 @@ export function DataTable<TData extends { id: string }, TValue>({
                       key={row.id}
                       data-state={row.getIsSelected() && "selected"}
                       onClick={() => router.push(`/dashboard/work-orders/${row.original.id}`)}
-                      className="cursor-pointer hover:bg-pink-50/50 transition-all duration-200 border-b border-pink-100 group"
+                      className="cursor-pointer hover:bg-gray-50/50 transition-all duration-200 border-b border-gray-100 group"
                     >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id} className="py-4 px-6">
@@ -145,19 +145,19 @@ export function DataTable<TData extends { id: string }, TValue>({
 
       {/* 手機版卡片佈局 */}
       <div className="lg:hidden">
-        <div className="bg-gradient-to-br from-pink-50 to-purple-50 rounded-xl shadow-xl border border-pink-200 overflow-hidden">
-          <div className="px-4 py-3 bg-gradient-to-r from-pink-500 to-purple-600 border-b border-pink-300">
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+          <div className="px-4 py-3 bg-gradient-to-r from-pink-100 to-purple-100 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
+                <div className="w-6 h-6 bg-gradient-to-br from-pink-400 to-purple-500 rounded-lg flex items-center justify-center">
                   <ClipboardList className="h-3 w-3 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-white">工單清單</h3>
-                  <p className="text-xs text-pink-100">手機版檢視</p>
+                  <h3 className="text-base font-semibold text-gray-800">工單清單</h3>
+                  <p className="text-xs text-gray-600">手機版檢視</p>
                 </div>
               </div>
-              <div className="text-xs text-white bg-white/20 px-2 py-1 rounded-full">
+              <div className="text-xs text-gray-700 bg-white/80 px-2 py-1 rounded-full border border-gray-200">
                 {table.getFilteredRowModel().rows.length} 個
               </div>
             </div>
@@ -169,16 +169,16 @@ export function DataTable<TData extends { id: string }, TValue>({
                 {table.getRowModel().rows.map((row) => {
                   const workOrder = row.original as any
                   return (
-                    <div
-                      key={row.id}
-                      onClick={() => router.push(`/dashboard/work-orders/${workOrder.id}`)}
-                      className="bg-white border border-pink-200 rounded-xl p-4 cursor-pointer hover:bg-pink-50/50 transition-all duration-200 shadow-sm hover:shadow-md group"
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-purple-600 rounded-lg flex items-center justify-center">
-                            <ClipboardList className="h-4 w-4 text-white" />
-                          </div>
+                                         <div
+                       key={row.id}
+                       onClick={() => router.push(`/dashboard/work-orders/${workOrder.id}`)}
+                       className="bg-white border border-gray-200 rounded-xl p-4 cursor-pointer hover:bg-gray-50/50 transition-all duration-200 shadow-sm hover:shadow-md group"
+                     >
+                       <div className="flex items-start justify-between mb-3">
+                         <div className="flex items-center gap-3">
+                           <div className="w-8 h-8 bg-gradient-to-br from-pink-400 to-purple-500 rounded-lg flex items-center justify-center">
+                             <ClipboardList className="h-4 w-4 text-white" />
+                           </div>
                           <div>
                             <div className="font-semibold text-slate-800 text-sm">{workOrder.code}</div>
                             <div className="text-xs text-slate-500">建立於 {workOrder.createdAt}</div>
@@ -252,7 +252,7 @@ export function DataTable<TData extends { id: string }, TValue>({
 
       {/* 分頁控制 - 現代化設計 */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-6">
-        <div className="text-sm text-purple-700 bg-gradient-to-r from-pink-50 to-purple-50 px-4 py-2 rounded-lg border border-pink-200">
+        <div className="text-sm text-gray-700 bg-gray-50 px-4 py-2 rounded-lg border border-gray-200">
           顯示第 {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} 到{' '}
           {Math.min(
             (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
@@ -266,7 +266,7 @@ export function DataTable<TData extends { id: string }, TValue>({
             size="sm"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
-            className="border-pink-300 text-purple-700 hover:bg-pink-50 hover:border-pink-400 transition-all duration-200"
+            className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
             上一頁
@@ -276,7 +276,7 @@ export function DataTable<TData extends { id: string }, TValue>({
             size="sm"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
-            className="border-pink-300 text-purple-700 hover:bg-pink-50 hover:border-pink-400 transition-all duration-200"
+            className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
           >
             下一頁
             <ChevronRight className="h-4 w-4 ml-1" />
