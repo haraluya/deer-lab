@@ -149,10 +149,20 @@ export default function CreateWorkOrderPage() {
 
     const materialRequirementsMap = new Map<string, any>() // Use a map to handle potential duplicates and ensure unique materials
 
-    // 1. Core Ingredients (Fragrance, PG, VG, Nicotine) - always calculate and add/override
+    // 1. Get fragrance details to get correct ratios
+    let fragranceRatios = { fragrance: 0.357, pg: 0.4501, vg: 0.1929 } // Default ratios from HYP-244MA
+    if (selectedProduct.fragranceCode && selectedProduct.fragranceCode !== '未指定') {
+      // For now, use the known ratios for HYP-244MA
+      // In the future, we should fetch fragrance details from Firestore
+      if (selectedProduct.fragranceCode === 'HYP-244MA') {
+        fragranceRatios = { fragrance: 0.357, pg: 0.4501, vg: 0.1929 }
+      }
+    }
+
+    // 2. Core Ingredients (Fragrance, PG, VG, Nicotine) - use correct ratios from fragrance
     // Fragrance
     if (selectedProduct.fragranceCode && selectedProduct.fragranceCode !== '未指定') {
-      const fragranceQuantity = (targetQuantity * 5) / 100 // 5% Fragrance ratio
+      const fragranceQuantity = targetQuantity * fragranceRatios.fragrance
       materialRequirementsMap.set('fragrance', { // Use a unique key for fragrance
         materialId: 'fragrance', // Placeholder ID for fragrance
         materialCode: selectedProduct.fragranceCode,
@@ -162,15 +172,15 @@ export default function CreateWorkOrderPage() {
         unit: 'KG',
         hasEnoughStock: true, // Placeholder
         category: 'fragrance',
-        ratio: 0.05 // Store ratio for display if needed
+        ratio: fragranceRatios.fragrance
       })
-      console.log('添加香精:', selectedProduct.fragranceName, fragranceQuantity)
+      console.log('添加香精:', selectedProduct.fragranceName, fragranceQuantity, '比例:', fragranceRatios.fragrance)
     }
 
-    // PG (Propylene Glycol) - 70% ratio
+    // PG (Propylene Glycol) - use ratio from fragrance
     const pgMaterial = materials.find(m => m.name.includes('PG丙二醇') || m.name.includes('PG') || m.code.includes('PG'))
     if (pgMaterial) {
-      const pgQuantity = (targetQuantity * 70) / 100 // 70% PG ratio
+      const pgQuantity = targetQuantity * fragranceRatios.pg
       materialRequirementsMap.set(pgMaterial.id, {
         materialId: pgMaterial.id,
         materialCode: pgMaterial.code,
@@ -180,15 +190,15 @@ export default function CreateWorkOrderPage() {
         unit: pgMaterial.unit || 'KG',
         hasEnoughStock: (pgMaterial.currentStock || 0) >= pgQuantity,
         category: 'pg',
-        ratio: 0.70
+        ratio: fragranceRatios.pg
       })
-      console.log('添加PG:', pgMaterial.name, pgQuantity)
+      console.log('添加PG:', pgMaterial.name, pgQuantity, '比例:', fragranceRatios.pg)
     }
 
-    // VG (Vegetable Glycerin) - 25% ratio
+    // VG (Vegetable Glycerin) - use ratio from fragrance
     const vgMaterial = materials.find(m => m.name.includes('VG甘油') || m.name.includes('VG') || m.code.includes('VG'))
     if (vgMaterial) {
-      const vgQuantity = (targetQuantity * 25) / 100 // 25% VG ratio
+      const vgQuantity = targetQuantity * fragranceRatios.vg
       materialRequirementsMap.set(vgMaterial.id, {
         materialId: vgMaterial.id,
         materialCode: vgMaterial.code,
@@ -198,9 +208,9 @@ export default function CreateWorkOrderPage() {
         unit: vgMaterial.unit || 'KG',
         hasEnoughStock: (vgMaterial.currentStock || 0) >= vgQuantity,
         category: 'vg',
-        ratio: 0.25
+        ratio: fragranceRatios.vg
       })
-      console.log('添加VG:', vgMaterial.name, vgQuantity)
+      console.log('添加VG:', vgMaterial.name, vgQuantity, '比例:', fragranceRatios.vg)
     }
 
     // Nicotine
@@ -225,9 +235,13 @@ export default function CreateWorkOrderPage() {
     }
 
     // 2. Other materials from selectedProduct.billOfMaterials
+    console.log('產品BOM資料:', selectedProduct.billOfMaterials)
     if (selectedProduct.billOfMaterials && Array.isArray(selectedProduct.billOfMaterials)) {
-      selectedProduct.billOfMaterials.forEach(bom => {
+      console.log('BOM陣列長度:', selectedProduct.billOfMaterials.length)
+      selectedProduct.billOfMaterials.forEach((bom, index) => {
+        console.log(`BOM項目 ${index}:`, bom)
         const material = materials.find(m => m.id === bom.materialId)
+        console.log('找到的物料:', material)
 
         // If this material is one of the core ingredients (PG, VG, Nicotine), we skip it
         // as we've already calculated it with fixed ratios.
@@ -257,8 +271,12 @@ export default function CreateWorkOrderPage() {
             ratio: bom.quantity // Use quantity as ratio
           })
           console.log('添加產品BOM物料:', material.name, requiredQuantity)
+        } else {
+          console.log('跳過物料:', material?.name, '原因:', { isCoreIngredient, isFragrancePlaceholder, materialFound: !!material })
         }
       })
+    } else {
+      console.log('產品沒有BOM資料或BOM不是陣列')
     }
 
     // Convert map to array and sort
