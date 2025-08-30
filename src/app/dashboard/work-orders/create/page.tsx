@@ -223,8 +223,8 @@ export default function CreateWorkOrderPage() {
         // 香精比例
         const fragranceRatio = percentage / 100
         
-        // PG比例：如果香精低於60%，PG補滿60%，否則使用配方中的PG比例
-        let pgRatioCalculated = pgRatio / 100
+        // PG比例：如果香精低於60%，PG補滿60%，否則不加PG
+        let pgRatioCalculated = 0
         if (fragranceRatio < 0.6) {
           pgRatioCalculated = 0.6 - fragranceRatio
         }
