@@ -71,13 +71,10 @@ interface Personnel {
 }
 
 const statusOptions = [
-  { value: "未確認", label: "未確認", color: "bg-gray-100 text-gray-800" },
-  { value: "進行中", label: "進行中", color: "bg-blue-100 text-blue-800" },
-  { value: "待完工確認", label: "待完工確認", color: "bg-yellow-100 text-yellow-800" },
-  { value: "待品檢", label: "待品檢", color: "bg-orange-100 text-orange-800" },
-  { value: "已完工", label: "已完工", color: "bg-green-100 text-green-800" },
-  { value: "已入庫", label: "已入庫", color: "bg-purple-100 text-purple-800" },
-  { value: "已取消", label: "已取消", color: "bg-red-100 text-red-800" }
+  { value: "預報", label: "預報", color: "bg-orange-100 text-orange-800 border-orange-200" },
+  { value: "進行", label: "進行", color: "bg-blue-100 text-blue-800 border-blue-200" },
+  { value: "完工", label: "完工", color: "bg-green-100 text-green-800 border-green-200" },
+  { value: "入庫", label: "入庫", color: "bg-gray-100 text-gray-800 border-gray-200" }
 ]
 
 const qcStatusOptions = [
@@ -138,7 +135,7 @@ export default function WorkOrderDetailPage() {
           billOfMaterials: data.billOfMaterials || [],
           targetQuantity: data.targetQuantity || 0,
           actualQuantity: data.actualQuantity || 0,
-          status: data.status || '未確認',
+          status: data.status || '預報',
           qcStatus: data.qcStatus || '未檢驗',
           createdAt: data.createdAt,
           createdByRef: data.createdByRef,

@@ -50,7 +50,7 @@ function WorkOrdersPageContent() {
           code: data.code || "",
           productName: data.productSnapshot?.name || "未知產品",
           targetQuantity: data.targetQuantity || 0,
-          status: data.status || "未確認",
+          status: data.status || "預報",
           createdAt: data.createdAt?.toDate?.()?.toLocaleDateString() || "未知日期"
         }
       }) as WorkOrderColumn[]
@@ -150,54 +150,37 @@ function WorkOrdersPageContent() {
               全部
             </Button>
             <Button
-              variant={statusFilter === '未確認' ? 'default' : 'outline'}
+              variant={statusFilter === '預報' ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setStatusFilter('未確認')}
-              className={statusFilter === '未確認' ? 'bg-gray-600 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}
+              onClick={() => setStatusFilter('預報')}
+              className={statusFilter === '預報' ? 'bg-orange-500 hover:bg-orange-600' : 'border-orange-200 text-orange-600 hover:bg-orange-50'}
             >
-              未確認
+              預報
             </Button>
             <Button
-              variant={statusFilter === '進行中' ? 'default' : 'outline'}
+              variant={statusFilter === '進行' ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setStatusFilter('進行中')}
-              className={statusFilter === '進行中' ? 'bg-blue-600 hover:bg-blue-700' : 'border-blue-200 text-blue-600 hover:bg-blue-50'}
+              onClick={() => setStatusFilter('進行')}
+              className={statusFilter === '進行' ? 'bg-blue-500 hover:bg-blue-600' : 'border-blue-200 text-blue-600 hover:bg-blue-50'}
             >
-              進行中
+              進行
             </Button>
             <Button
-              variant={statusFilter === '待完工確認' ? 'default' : 'outline'}
+              variant={statusFilter === '完工' ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setStatusFilter('待完工確認')}
-              className={statusFilter === '待完工確認' ? 'bg-yellow-600 hover:bg-yellow-700' : 'border-yellow-200 text-yellow-600 hover:bg-yellow-50'}
+              onClick={() => setStatusFilter('完工')}
+              className={statusFilter === '完工' ? 'bg-green-500 hover:bg-green-600' : 'border-green-200 text-green-600 hover:bg-green-50'}
             >
-              待完工確認
+              完工
             </Button>
             <Button
-              variant={statusFilter === '待品檢' ? 'default' : 'outline'}
+              variant={statusFilter === '入庫' ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setStatusFilter('待品檢')}
-              className={statusFilter === '待品檢' ? 'bg-orange-600 hover:bg-orange-700' : 'border-orange-200 text-orange-600 hover:bg-orange-50'}
+              onClick={() => setStatusFilter('入庫')}
+              className={statusFilter === '入庫' ? 'bg-gray-600 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}
             >
-              待品檢
+              入庫
             </Button>
-            <Button
-              variant={statusFilter === '已完工' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setStatusFilter('已完工')}
-              className={statusFilter === '已完工' ? 'bg-green-600 hover:bg-green-700' : 'border-green-200 text-green-600 hover:bg-green-50'}
-            >
-              已完工
-            </Button>
-            <Button
-              variant={statusFilter === '已入庫' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setStatusFilter('已入庫')}
-              className={statusFilter === '已入庫' ? 'bg-purple-600 hover:bg-purple-700' : 'border-purple-200 text-purple-600 hover:bg-purple-50'}
-            >
-              已入庫
-            </Button>
-            <Button
               variant={statusFilter === '已取消' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setStatusFilter('已取消')}

@@ -491,7 +491,7 @@ export default function CreateWorkOrderPage() {
         })),
         targetQuantity,
         actualQuantity: 0,
-        status: "未確認",
+        status: "預報",
         qcStatus: "未檢驗",
         createdAt: new Date(),
         createdByRef: null, // 這裡應該加入當前用戶的參考

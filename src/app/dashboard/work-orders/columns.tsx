@@ -7,17 +7,39 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
 
+// 自定義狀態Badge組件
+const StatusBadge = ({ status }: { status: string }) => {
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case "預報":
+        return "bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-200"
+      case "進行":
+        return "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200"
+      case "完工":
+        return "bg-green-100 text-green-800 border-green-200 hover:bg-green-200"
+      case "入庫":
+        return "bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200"
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200"
+    }
+  }
+
+  return (
+    <Badge className={`${getStatusStyle(status)} font-medium`}>
+      {status}
+    </Badge>
+  )
+}
+
 const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
   switch (status) {
-    case "已完工":
-    case "已入庫":
+    case "完工":
       return "default"
-    case "進行中":
+    case "進行":
       return "secondary"
-    case "待完工確認":
-    case "待品檢":
+    case "預報":
       return "outline"
-    case "已取消":
+    case "入庫":
       return "destructive"
     default:
       return "secondary"
@@ -85,9 +107,7 @@ export const columns: ColumnDef<WorkOrderColumn>[] = [
     accessorKey: "status",
     header: "狀態",
     cell: ({ row }: CellContext<WorkOrderColumn, unknown>) => (
-      <Badge variant={getStatusVariant(row.getValue("status"))}>
-        {row.getValue("status")}
-      </Badge>
+      <StatusBadge status={row.getValue("status")} />
     ),
   },
   {
