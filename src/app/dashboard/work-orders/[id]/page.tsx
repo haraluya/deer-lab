@@ -363,7 +363,7 @@ export default function WorkOrderDetailPage() {
           ...doc.data()
         })) as any[];
         
-        // 合併物料和香精資料
+        // 分別處理物料和香精資料
         const allMaterials: any[] = [...materialsList, ...fragrancesList];
         
         setWorkOrder({
@@ -379,11 +379,25 @@ export default function WorkOrderDetailPage() {
           },
           billOfMaterials: (data.billOfMaterials || []).map((item: any) => {
             // 查找對應的物料或香精，獲取當前庫存
-            const material = allMaterials.find((m: any) => 
-              m.id === item.id || 
-              m.code === item.code || 
-              m.name === item.name
-            );
+            let material = null;
+            
+            // 如果是香精類別，優先從香精集合中查找
+            if (item.category === 'fragrance') {
+              material = fragrancesList.find((f: any) => 
+                f.id === item.id || 
+                f.code === item.code || 
+                f.name === item.name
+              );
+            }
+            
+            // 如果沒找到或不是香精，從物料集合中查找
+            if (!material) {
+              material = materialsList.find((m: any) => 
+                m.id === item.id || 
+                m.code === item.code || 
+                m.name === item.name
+              );
+            }
             
             // 處理舊的資料結構，確保向後相容
             return {
@@ -584,15 +598,28 @@ export default function WorkOrderDetailPage() {
         ...doc.data()
       })) as any[];
       
-      const allMaterials: any[] = [...materialsList, ...fragrancesList];
-      
       // 更新庫存資訊
       const finalBOM = updatedBOM.map(item => {
-        const material = allMaterials.find((m: any) => 
-          m.id === item.id || 
-          m.code === item.code || 
-          m.name === item.name
-        );
+        let material = null;
+        
+        // 如果是香精類別，優先從香精集合中查找
+        if (item.category === 'fragrance') {
+          material = fragrancesList.find((f: any) => 
+            f.id === item.id || 
+            f.code === item.code || 
+            f.name === item.name
+          );
+        }
+        
+        // 如果沒找到或不是香精，從物料集合中查找
+        if (!material) {
+          material = materialsList.find((m: any) => 
+            m.id === item.id || 
+            m.code === item.code || 
+            m.name === item.name
+          );
+        }
+        
         return {
           ...item,
           currentStock: material ? (material.currentStock || 0) : item.currentStock || 0
@@ -645,7 +672,7 @@ export default function WorkOrderDetailPage() {
       ...doc.data()
     })) as any[];
     
-    // 合併物料和香精資料
+    // 分別處理物料和香精資料
     const allMaterials = [...materialsList, ...fragrancesList];
     console.log('重新載入BOM表 - 載入的物料列表:', materialsList.length, '個');
     console.log('重新載入BOM表 - 載入的香精列表:', fragrancesList.length, '個');
@@ -691,23 +718,23 @@ export default function WorkOrderDetailPage() {
     if (productData.fragranceName && productData.fragranceName !== '未指定') {
       const fragranceQuantity = targetQuantity * (fragranceRatios.fragrance / 100); // 35.7% = 0.357
       
-      // 查找香精的實際庫存 - 使用精確匹配
-      const fragranceMaterial = allMaterials.find((m: any) => 
-        m.code === productData.fragranceCode || 
-        m.name === productData.fragranceName
+      // 查找香精的實際庫存 - 從香精集合中查找
+      const fragranceMaterial = fragrancesList.find((f: any) => 
+        f.code === productData.fragranceCode || 
+        f.name === productData.fragranceName
       );
       
-      console.log('重新載入BOM表 - 香精匹配結果:', {
-        fragranceCode: productData.fragranceCode,
-        fragranceName: productData.fragranceName,
-        foundMaterial: fragranceMaterial ? {
-          id: fragranceMaterial.id,
-          code: fragranceMaterial.code,
-          name: fragranceMaterial.name,
-          currentStock: fragranceMaterial.currentStock
-        } : null,
-        allMaterials: allMaterials.map((m: any) => ({ code: m.code, name: m.name, currentStock: m.currentStock }))
-      });
+              console.log('重新載入BOM表 - 香精匹配結果:', {
+          fragranceCode: productData.fragranceCode,
+          fragranceName: productData.fragranceName,
+          foundFragrance: fragranceMaterial ? {
+            id: fragranceMaterial.id,
+            code: fragranceMaterial.code,
+            name: fragranceMaterial.name,
+            currentStock: fragranceMaterial.currentStock
+          } : null,
+          allFragrances: fragrancesList.map((f: any) => ({ code: f.code, name: f.name, currentStock: f.currentStock }))
+        });
       
       const currentStock = fragranceMaterial ? (fragranceMaterial.currentStock || 0) : 0;
       const hasEnoughStock = currentStock >= fragranceQuantity;
@@ -803,7 +830,7 @@ export default function WorkOrderDetailPage() {
       const existingSpecificMaterials = workOrder?.billOfMaterials?.filter(item => item.category === 'specific') || [];
       existingSpecificMaterials.forEach(item => {
         // 查找對應的物料，獲取當前庫存
-        const material = allMaterials.find((m: any) => 
+        const material = materialsList.find((m: any) => 
           m.id === item.id || 
           m.code === item.code || 
           m.name === item.name
@@ -823,7 +850,7 @@ export default function WorkOrderDetailPage() {
       const existingCommonMaterials = workOrder?.billOfMaterials?.filter(item => item.category === 'common') || [];
       existingCommonMaterials.forEach(item => {
         // 查找對應的物料，獲取當前庫存
-        const material = allMaterials.find((m: any) => 
+        const material = materialsList.find((m: any) => 
           m.id === item.id || 
           m.code === item.code || 
           m.name === item.name
@@ -2589,16 +2616,16 @@ export default function WorkOrderDetailPage() {
                           <TableRow key={index}>
                             <TableCell className="font-medium">{item.name}</TableCell>
                             <TableCell className="font-mono">{item.code}</TableCell>
-                            <TableCell className="font-medium text-blue-600">{formatNumber(currentStock)}</TableCell>
-                            <TableCell className="font-medium text-red-600">-{formatNumber(usedQuantity)}</TableCell>
-                            <TableCell className={`font-medium ${remainingStock < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                              {formatNumber(remainingStock)}
-                              {remainingStock < 0 && (
-                                <span className="ml-1 text-xs bg-red-100 text-red-800 px-1 py-0.5 rounded">
-                                  庫存不足
-                                </span>
-                              )}
-                            </TableCell>
+                                                      <TableCell className="font-medium text-blue-600">{formatNumber(currentStock)} {item.unit}</TableCell>
+                          <TableCell className="font-medium text-red-600">-{formatNumber(usedQuantity)} {item.unit}</TableCell>
+                          <TableCell className={`font-medium ${remainingStock < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            {formatNumber(remainingStock)} {item.unit}
+                            {remainingStock < 0 && (
+                              <span className="ml-1 text-xs bg-red-100 text-red-800 px-1 py-0.5 rounded">
+                                庫存不足
+                              </span>
+                            )}
+                          </TableCell>
                             <TableCell>{item.unit}</TableCell>
                           </TableRow>
                         );

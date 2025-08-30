@@ -45,10 +45,22 @@ interface Material {
   unit: string
 }
 
+interface Fragrance {
+  id: string
+  code: string
+  name: string
+  currentStock: number
+  unit: string
+  percentage: number
+  pgRatio: number
+  vgRatio: number
+}
+
 export default function CreateWorkOrderPage() {
   const router = useRouter()
   const [products, setProducts] = useState<Product[]>([])
   const [materials, setMaterials] = useState<Material[]>([])
+  const [fragrances, setFragrances] = useState<Fragrance[]>([])
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [targetQuantity, setTargetQuantity] = useState(1) // 改為1 KG
   const [loading, setLoading] = useState(true)
@@ -194,20 +206,18 @@ export default function CreateWorkOrderPage() {
           id: doc.id,
           ...doc.data()
         })) as Material[]
+        setMaterials(materialsList)
         
         // 載入香精資料
         const fragrancesSnapshot = await getDocs(collection(db, "fragrances"))
         const fragrancesList = fragrancesSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
-        })) as any[]
+        })) as Fragrance[]
+        setFragrances(fragrancesList)
         
-        // 合併物料和香精資料
-        const allMaterials = [...materialsList, ...fragrancesList]
         console.log('載入的物料列表:', materialsList.length, '個') // 調試日誌
         console.log('載入的香精列表:', fragrancesList.length, '個') // 調試日誌
-        console.log('合併後的總物料列表:', allMaterials.length, '個') // 調試日誌
-        setMaterials(allMaterials)
 
       } catch (error) {
         console.error("載入資料失敗:", error)
@@ -226,12 +236,14 @@ export default function CreateWorkOrderPage() {
   }
 
   const calculateMaterialRequirements = () => {
-    if (!selectedProduct || !materials.length) {
+    if (!selectedProduct || !materials.length || !fragrances.length) {
       console.log('缺少必要資料:', { 
         hasSelectedProduct: !!selectedProduct, 
         materialsCount: materials.length,
+        fragrancesCount: fragrances.length,
         selectedProduct: selectedProduct,
-        materials: materials
+        materials: materials,
+        fragrances: fragrances
       })
       return []
     }
@@ -246,6 +258,7 @@ export default function CreateWorkOrderPage() {
         commonMaterialNames: selectedProduct.commonMaterialNames
       }, 
       materialsCount: materials.length,
+      fragrancesCount: fragrances.length,
       targetQuantity 
     })
 
@@ -283,28 +296,28 @@ export default function CreateWorkOrderPage() {
     console.log('使用香精比例:', fragranceRatios);
 
     // 2. 核心液體 (香精、PG、VG、尼古丁) - 總是添加所有核心液體
-    // 香精 - 總是添加，並檢查實際庫存
+    // 香精 - 從香精集合中獨立查找
     if (selectedProduct.fragranceName && selectedProduct.fragranceName !== '未指定') {
       const fragranceQuantity = targetQuantity * (fragranceRatios.fragrance / 100) // 35.7% = 0.357
       
       // 查找香精的實際庫存 - 從香精集合中查找
-      const fragranceMaterial = materials.find(m => 
-        (m.code === selectedProduct.fragranceCode || 
-         m.name === selectedProduct.fragranceName ||
-         m.name.includes(selectedProduct.fragranceName) ||
-         (selectedProduct.fragranceCode && m.code.includes(selectedProduct.fragranceCode))) &&
-        m.currentStock !== undefined // 確保是香精資料（有 currentStock 欄位）
+      const fragranceMaterial = fragrances.find(f => 
+        f.code === selectedProduct.fragranceCode || 
+        f.name === selectedProduct.fragranceName ||
+        f.name.includes(selectedProduct.fragranceName) ||
+        (selectedProduct.fragranceCode && f.code.includes(selectedProduct.fragranceCode))
       )
       
       console.log('香精匹配結果:', {
         fragranceCode: selectedProduct.fragranceCode,
         fragranceName: selectedProduct.fragranceName,
-        foundMaterial: fragranceMaterial ? {
+        foundFragrance: fragranceMaterial ? {
           id: fragranceMaterial.id,
           code: fragranceMaterial.code,
-          name: fragranceMaterial.name
+          name: fragranceMaterial.name,
+          currentStock: fragranceMaterial.currentStock
         } : null,
-        allMaterials: materials.map(m => ({ code: m.code, name: m.name }))
+        allFragrances: fragrances.map(f => ({ code: f.code, name: f.name, currentStock: f.currentStock }))
       })
       
       const currentStock = fragranceMaterial ? (fragranceMaterial.currentStock || 0) : 0
@@ -768,9 +781,9 @@ export default function CreateWorkOrderPage() {
                                   <TableCell className="font-semibold text-gray-800">{material.materialCode}</TableCell>
                                   <TableCell className="font-medium text-gray-700">{material.materialName}</TableCell>
                                   <TableCell className="font-bold text-blue-600 text-lg">
-                                    {formatNumber(material.requiredQuantity)}
+                                    {formatNumber(material.requiredQuantity)} {material.unit}
                                   </TableCell>
-                                  <TableCell className="text-gray-600">{material.currentStock}</TableCell>
+                                  <TableCell className="text-gray-600">{material.currentStock} {material.unit}</TableCell>
                                   <TableCell>
                                     {material.hasEnoughStock ? (
                                       <Badge className="bg-green-100 text-green-800 border border-green-300 font-semibold">
@@ -815,7 +828,7 @@ export default function CreateWorkOrderPage() {
                                 <TableRow key={index} className="hover:bg-gray-50/50 transition-all duration-200">
                                   <TableCell className="font-semibold text-gray-800">{material.materialCode}</TableCell>
                                   <TableCell className="font-medium text-gray-700">{material.materialName}</TableCell>
-                                  <TableCell className="text-gray-600">{material.currentStock}</TableCell>
+                                  <TableCell className="text-gray-600">{material.currentStock} {material.unit}</TableCell>
                                   <TableCell>
                                     <Badge className="bg-blue-100 text-blue-800 border border-blue-300 font-semibold">
                                       <Package className="h-3 w-3 mr-1" />
