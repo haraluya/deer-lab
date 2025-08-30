@@ -40,6 +40,8 @@ interface WorkOrderData {
     unit: string
     ratio?: number
     isCalculated: boolean
+    category: 'fragrance' | 'pg' | 'vg' | 'nicotine' | 'specific' | 'common'
+    usedQuantity?: number // 新增用於編輯的欄位
   }>
   targetQuantity: number
   actualQuantity: number
@@ -504,37 +506,180 @@ export default function WorkOrderDetailPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>物料名稱</TableHead>
-                  <TableHead>代號</TableHead>
-                  <TableHead>類型</TableHead>
-                  <TableHead>比例</TableHead>
-                  <TableHead>需求數量</TableHead>
-                  <TableHead>單位</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {workOrder.billOfMaterials.map((item, index) => (
-                  <TableRow key={index}>
-                    <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell className="font-mono text-sm">{item.code}</TableCell>
-                    <TableCell>
-                      <Badge variant={item.type === 'fragrance' ? 'default' : 'secondary'}>
-                        {item.type === 'fragrance' ? '香精' : '物料'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {item.isCalculated && item.ratio ? `${item.ratio}%` : '-'}
-                    </TableCell>
-                    <TableCell className="font-medium">{item.quantity.toFixed(3)}</TableCell>
-                    <TableCell>{item.unit}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <div className="space-y-6">
+            {/* 核心配方物料 */}
+            <div>
+              <h3 className="text-lg font-semibold text-purple-700 mb-3 flex items-center gap-2">
+                <Droplets className="h-4 w-4" />
+                核心配方物料
+              </h3>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>物料名稱</TableHead>
+                      <TableHead>料件代號</TableHead>
+                      <TableHead>比例</TableHead>
+                      <TableHead>需求數量</TableHead>
+                      <TableHead>使用數量</TableHead>
+                      <TableHead>單位</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {workOrder.billOfMaterials
+                      .filter(item => ['fragrance', 'pg', 'vg', 'nicotine'].includes(item.category))
+                      .map((item, index) => (
+                        <TableRow key={index} className="bg-gradient-to-r from-purple-50 to-pink-50">
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              {item.category === 'fragrance' && <Droplets className="h-4 w-4 text-purple-600" />}
+                              {item.category === 'pg' && <div className="w-4 h-4 bg-blue-500 rounded" />}
+                              {item.category === 'vg' && <div className="w-4 h-4 bg-green-500 rounded" />}
+                              {item.category === 'nicotine' && <div className="w-4 h-4 bg-orange-500 rounded" />}
+                              {item.name}
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">{item.code}</TableCell>
+                          <TableCell>
+                            {item.ratio ? `${item.ratio}%` : '-'}
+                          </TableCell>
+                          <TableCell className="font-medium">{item.quantity.toFixed(3)}</TableCell>
+                          <TableCell>
+                            {isEditing ? (
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.001"
+                                value={item.usedQuantity || item.quantity}
+                                onChange={(e) => {
+                                  // 這裡可以添加更新使用數量的邏輯
+                                  console.log('更新使用數量:', item.id, e.target.value);
+                                }}
+                                className="w-20"
+                              />
+                            ) : (
+                              <span className="font-medium">{item.usedQuantity || item.quantity}</span>
+                            )}
+                          </TableCell>
+                          <TableCell>{item.unit}</TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            {/* 產品專屬物料 */}
+            {workOrder.billOfMaterials.filter(item => item.category === 'specific').length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold text-blue-700 mb-3 flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  產品專屬物料
+                </h3>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>物料名稱</TableHead>
+                        <TableHead>料件代號</TableHead>
+                        <TableHead>比例</TableHead>
+                        <TableHead>需求數量</TableHead>
+                        <TableHead>使用數量</TableHead>
+                        <TableHead>單位</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {workOrder.billOfMaterials
+                        .filter(item => item.category === 'specific')
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .map((item, index) => (
+                          <TableRow key={index} className="bg-gradient-to-r from-blue-50 to-indigo-50">
+                            <TableCell className="font-medium">{item.name}</TableCell>
+                            <TableCell className="font-mono text-sm">{item.code}</TableCell>
+                            <TableCell>
+                              {item.ratio ? `${item.ratio}%` : '-'}
+                            </TableCell>
+                            <TableCell className="font-medium">{item.quantity.toFixed(3)}</TableCell>
+                            <TableCell>
+                              {isEditing ? (
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="0.001"
+                                  value={item.usedQuantity || item.quantity}
+                                  onChange={(e) => {
+                                    console.log('更新使用數量:', item.id, e.target.value);
+                                  }}
+                                  className="w-20"
+                                />
+                              ) : (
+                                <span className="font-medium">{item.usedQuantity || item.quantity}</span>
+                              )}
+                            </TableCell>
+                            <TableCell>{item.unit}</TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+
+            {/* 系列通用物料 */}
+            {workOrder.billOfMaterials.filter(item => item.category === 'common').length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold text-green-700 mb-3 flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  系列通用物料
+                </h3>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>物料名稱</TableHead>
+                        <TableHead>料件代號</TableHead>
+                        <TableHead>比例</TableHead>
+                        <TableHead>需求數量</TableHead>
+                        <TableHead>使用數量</TableHead>
+                        <TableHead>單位</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {workOrder.billOfMaterials
+                        .filter(item => item.category === 'common')
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .map((item, index) => (
+                          <TableRow key={index} className="bg-gradient-to-r from-green-50 to-emerald-50">
+                            <TableCell className="font-medium">{item.name}</TableCell>
+                            <TableCell className="font-mono text-sm">{item.code}</TableCell>
+                            <TableCell>
+                              {item.ratio ? `${item.ratio}%` : '-'}
+                            </TableCell>
+                            <TableCell className="font-medium">{item.quantity.toFixed(3)}</TableCell>
+                            <TableCell>
+                              {isEditing ? (
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="0.001"
+                                  value={item.usedQuantity || item.quantity}
+                                  onChange={(e) => {
+                                    console.log('更新使用數量:', item.id, e.target.value);
+                                  }}
+                                  className="w-20"
+                                />
+                              ) : (
+                                <span className="font-medium">{item.usedQuantity || item.quantity}</span>
+                              )}
+                            </TableCell>
+                            <TableCell>{item.unit}</TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -57,6 +57,7 @@ interface BomItem {
   requiredQuantity: number;
   currentStock: number;
   isCalculated: boolean;
+  category?: string; // 新增分類欄位
 }
 
 interface RecipeCalculatorDialogProps {
@@ -173,6 +174,7 @@ export function RecipeCalculatorDialog({
         requiredQuantity: fragranceQuantity,
         currentStock: fragranceMaterial?.currentStock || 0,
         isCalculated: true,
+        category: 'fragrance',
       });
     }
 
@@ -192,6 +194,7 @@ export function RecipeCalculatorDialog({
           requiredQuantity: pgQuantity,
           currentStock: pgMaterial.currentStock,
           isCalculated: true,
+          category: 'pg',
         });
       }
     }
@@ -212,6 +215,7 @@ export function RecipeCalculatorDialog({
           requiredQuantity: vgQuantity,
           currentStock: vgMaterial.currentStock,
           isCalculated: true,
+          category: 'vg',
         });
       }
     }
@@ -236,6 +240,7 @@ export function RecipeCalculatorDialog({
           requiredQuantity: nicotineQuantity,
           currentStock: nicotineMaterial.currentStock,
           isCalculated: true,
+          category: 'nicotine',
         });
       }
     }
@@ -253,6 +258,7 @@ export function RecipeCalculatorDialog({
           requiredQuantity: 0,
           currentStock: material.currentStock,
           isCalculated: false,
+          category: 'specific', // 專屬物料
         });
       }
     });
@@ -473,64 +479,209 @@ export function RecipeCalculatorDialog({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>物料名稱</TableHead>
-                          <TableHead>代號</TableHead>
-                          <TableHead>類型</TableHead>
-                          <TableHead>比例</TableHead>
-                          <TableHead>需求數量</TableHead>
-                          <TableHead>單位</TableHead>
-                          <TableHead>目前庫存</TableHead>
-                          <TableHead>狀態</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {bomItems.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell className="font-medium">{item.name}</TableCell>
-                            <TableCell className="font-mono text-sm">{item.code}</TableCell>
-                            <TableCell>
-                              <Badge variant={item.type === 'fragrance' ? 'default' : 'secondary'}>
-                                {item.type === 'fragrance' ? '香精' : '物料'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {item.isCalculated ? `${item.ratio}%` : '-'}
-                            </TableCell>
-                            <TableCell>
-                              {item.isCalculated ? (
-                                <span className="font-medium">{item.requiredQuantity.toFixed(3)}</span>
-                              ) : (
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  step="0.001"
-                                  value={item.requiredQuantity}
-                                  onChange={(e) => updateBomItemQuantity(item.id, parseFloat(e.target.value) || 0)}
-                                  className="w-20"
-                                />
-                              )}
-                            </TableCell>
-                            <TableCell>{item.unit}</TableCell>
-                            <TableCell>{item.currentStock}</TableCell>
-                            <TableCell>
-                              {item.requiredQuantity > item.currentStock ? (
-                                <Badge variant="destructive" className="text-xs">
-                                  庫存不足
-                                </Badge>
-                              ) : (
-                                <Badge variant="default" className="text-xs">
-                                  庫存充足
-                                </Badge>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                  <div className="space-y-6">
+                    {/* 核心配方物料 */}
+                    <div>
+                      <h3 className="text-lg font-semibold text-purple-700 mb-3 flex items-center gap-2">
+                        <Droplets className="h-4 w-4" />
+                        核心配方物料
+                      </h3>
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>物料名稱</TableHead>
+                              <TableHead>料件代號</TableHead>
+                              <TableHead>比例</TableHead>
+                              <TableHead>需求數量</TableHead>
+                              <TableHead>單位</TableHead>
+                              <TableHead>目前庫存</TableHead>
+                              <TableHead>狀態</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {bomItems
+                              .filter(item => ['fragrance', 'pg', 'vg', 'nicotine'].includes(item.category || ''))
+                              .map((item) => (
+                                <TableRow key={item.id} className="bg-gradient-to-r from-purple-50 to-pink-50">
+                                  <TableCell className="font-medium">
+                                    <div className="flex items-center gap-2">
+                                      {item.category === 'fragrance' && <Droplets className="h-4 w-4 text-purple-600" />}
+                                      {item.category === 'pg' && <div className="w-4 h-4 bg-blue-500 rounded" />}
+                                      {item.category === 'vg' && <div className="w-4 h-4 bg-green-500 rounded" />}
+                                      {item.category === 'nicotine' && <div className="w-4 h-4 bg-orange-500 rounded" />}
+                                      {item.name}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="font-mono text-sm">{item.code}</TableCell>
+                                  <TableCell>
+                                    {item.isCalculated ? `${item.ratio}%` : '-'}
+                                  </TableCell>
+                                  <TableCell>
+                                    {item.isCalculated ? (
+                                      <span className="font-medium">{item.requiredQuantity.toFixed(3)}</span>
+                                    ) : (
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        step="0.001"
+                                        value={item.requiredQuantity}
+                                        onChange={(e) => updateBomItemQuantity(item.id, parseFloat(e.target.value) || 0)}
+                                        className="w-20"
+                                      />
+                                    )}
+                                  </TableCell>
+                                  <TableCell>{item.unit}</TableCell>
+                                  <TableCell>{item.currentStock}</TableCell>
+                                  <TableCell>
+                                    {item.requiredQuantity > item.currentStock ? (
+                                      <Badge variant="destructive" className="text-xs">
+                                        庫存不足
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="default" className="text-xs">
+                                        庫存充足
+                                      </Badge>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+
+                    {/* 產品專屬物料 */}
+                    {bomItems.filter(item => item.category === 'specific').length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-blue-700 mb-3 flex items-center gap-2">
+                          <Package className="h-4 w-4" />
+                          產品專屬物料
+                        </h3>
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>物料名稱</TableHead>
+                                <TableHead>料件代號</TableHead>
+                                <TableHead>比例</TableHead>
+                                <TableHead>需求數量</TableHead>
+                                <TableHead>單位</TableHead>
+                                <TableHead>目前庫存</TableHead>
+                                <TableHead>狀態</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {bomItems
+                                .filter(item => item.category === 'specific')
+                                .sort((a, b) => a.name.localeCompare(b.name))
+                                .map((item) => (
+                                  <TableRow key={item.id} className="bg-gradient-to-r from-blue-50 to-indigo-50">
+                                    <TableCell className="font-medium">{item.name}</TableCell>
+                                    <TableCell className="font-mono text-sm">{item.code}</TableCell>
+                                    <TableCell>
+                                      {item.isCalculated ? `${item.ratio}%` : '-'}
+                                    </TableCell>
+                                    <TableCell>
+                                      {item.isCalculated ? (
+                                        <span className="font-medium">{item.requiredQuantity.toFixed(3)}</span>
+                                      ) : (
+                                        <Input
+                                          type="number"
+                                          min="0"
+                                          step="0.001"
+                                          value={item.requiredQuantity}
+                                          onChange={(e) => updateBomItemQuantity(item.id, parseFloat(e.target.value) || 0)}
+                                          className="w-20"
+                                        />
+                                      )}
+                                    </TableCell>
+                                    <TableCell>{item.unit}</TableCell>
+                                    <TableCell>{item.currentStock}</TableCell>
+                                    <TableCell>
+                                      {item.requiredQuantity > item.currentStock ? (
+                                        <Badge variant="destructive" className="text-xs">
+                                          庫存不足
+                                        </Badge>
+                                      ) : (
+                                        <Badge variant="default" className="text-xs">
+                                          庫存充足
+                                        </Badge>
+                                      )}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 系列通用物料 */}
+                    {bomItems.filter(item => item.category === 'common').length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-green-700 mb-3 flex items-center gap-2">
+                          <Package className="h-4 w-4" />
+                          系列通用物料
+                        </h3>
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>物料名稱</TableHead>
+                                <TableHead>料件代號</TableHead>
+                                <TableHead>比例</TableHead>
+                                <TableHead>需求數量</TableHead>
+                                <TableHead>單位</TableHead>
+                                <TableHead>目前庫存</TableHead>
+                                <TableHead>狀態</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {bomItems
+                                .filter(item => item.category === 'common')
+                                .sort((a, b) => a.name.localeCompare(b.name))
+                                .map((item) => (
+                                  <TableRow key={item.id} className="bg-gradient-to-r from-green-50 to-emerald-50">
+                                    <TableCell className="font-medium">{item.name}</TableCell>
+                                    <TableCell className="font-mono text-sm">{item.code}</TableCell>
+                                    <TableCell>
+                                      {item.isCalculated ? `${item.ratio}%` : '-'}
+                                    </TableCell>
+                                    <TableCell>
+                                      {item.isCalculated ? (
+                                        <span className="font-medium">{item.requiredQuantity.toFixed(3)}</span>
+                                      ) : (
+                                        <Input
+                                          type="number"
+                                          min="0"
+                                          step="0.001"
+                                          value={item.requiredQuantity}
+                                          onChange={(e) => updateBomItemQuantity(item.id, parseFloat(e.target.value) || 0)}
+                                          className="w-20"
+                                        />
+                                      )}
+                                    </TableCell>
+                                    <TableCell>{item.unit}</TableCell>
+                                    <TableCell>{item.currentStock}</TableCell>
+                                    <TableCell>
+                                      {item.requiredQuantity > item.currentStock ? (
+                                        <Badge variant="destructive" className="text-xs">
+                                          庫存不足
+                                        </Badge>
+                                      ) : (
+                                        <Badge variant="default" className="text-xs">
+                                          庫存充足
+                                        </Badge>
+                                      )}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

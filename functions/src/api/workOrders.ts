@@ -11,8 +11,10 @@ interface MaterialInfo {
   name: string;
   code: string;
   type: 'fragrance' | 'material';
+  category: 'fragrance' | 'pg' | 'vg' | 'nicotine' | 'specific' | 'common';
   unit: string;
   quantity: number;
+  usedQuantity?: number;
   ratio?: number;
   isCalculated: boolean;
 }
@@ -122,6 +124,7 @@ export const createWorkOrder = onCall(async (request) => {
               name: materialData.name,
               code: materialData.code,
               type: bomItem.materialType,
+              category: materialData.category || 'common', // 預設為 'common'
               unit: bomItem.unit,
               quantity: bomItem.requiredQuantity,
               ratio: materialData.percentage || materialData.pgRatio || materialData.vgRatio || nicotineMg,
