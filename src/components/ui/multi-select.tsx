@@ -173,7 +173,7 @@ export function MultiSelect({
                   onSelect={handleCreateNew}
                   className="cursor-pointer text-blue-600"
                 >
-                  新增 "{inputValue.trim()}"
+                  新增 &quot;{inputValue.trim()}&quot;
                 </CommandItem>
               )}
             </CommandGroup>

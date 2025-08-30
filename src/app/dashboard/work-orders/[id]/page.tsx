@@ -1785,7 +1785,7 @@ export default function WorkOrderDetailPage() {
           <DialogHeader>
             <DialogTitle className="text-red-600 text-lg sm:text-xl">確認刪除工單</DialogTitle>
             <div className="text-sm text-gray-600">
-              此操作將永久刪除工單 "{workOrder.code}" 及其所有相關資料，包括：
+              此操作將永久刪除工單 &quot;{workOrder.code}&quot; 及其所有相關資料，包括：
               <ul className="list-disc list-inside mt-2 space-y-1">
                 <li>工單基本資料</li>
                 <li>所有留言記錄</li>
