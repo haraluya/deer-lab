@@ -79,6 +79,9 @@ export const createFragrance = onCall<FragranceData>(async (request) => {
 export const updateFragrance = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
   // await ensureIsAdmin(contextAuth?.uid);
+  
+  logger.info(`開始更新香精，接收到的資料:`, data);
+  
   const { fragranceId, code, name, status, fragranceType, fragranceStatus, supplierId, currentStock, safetyStockLevel, costPerUnit, percentage, pgRatio, vgRatio, unit } = data;
   if (!fragranceId || !code || !name) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (ID, 代號、名稱)。"); }
   
@@ -104,6 +107,8 @@ export const updateFragrance = onCall(async (request) => {
       unit: unit || 'KG',
       updatedAt: FieldValue.serverTimestamp(), 
     };
+
+    logger.info(`準備更新的資料:`, updateData);
     if (supplierId) { 
       updateData.supplierRef = db.collection("suppliers").doc(supplierId); 
     } else { 
@@ -153,6 +158,7 @@ export const updateFragranceByCode = onCall(async (request) => {
       code, 
       name, 
       status: finalStatus, 
+      currentStock: Number(currentStock) || 0,
       safetyStockLevel: Number(safetyStockLevel) || 0, 
       costPerUnit: Number(costPerUnit) || 0, 
       percentage: Number(percentage) || 0, 

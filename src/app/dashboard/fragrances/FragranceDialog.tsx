@@ -132,11 +132,17 @@ export function FragranceDialog({
 
   useEffect(() => {
     if (isOpen && fragranceData) {
-      form.reset({
+      console.log('正在初始化香精編輯表單，原始資料:', fragranceData);
+      
+      // 處理向後相容性
+      const fragranceType = fragranceData.fragranceType || fragranceData.status || '';
+      const fragranceStatus = fragranceData.fragranceStatus || fragranceData.status || '';
+      
+      const formData = {
         code: fragranceData.code || '',
         name: fragranceData.name || '',
-        fragranceType: fragranceData.fragranceType || '',
-        fragranceStatus: fragranceData.fragranceStatus || '',
+        fragranceType: fragranceType,
+        fragranceStatus: fragranceStatus,
         supplierId: fragranceData.supplierRef?.id || '',
         currentStock: fragranceData.currentStock || 0,
         safetyStockLevel: fragranceData.safetyStockLevel || 0,
@@ -145,7 +151,10 @@ export function FragranceDialog({
         pgRatio: fragranceData.pgRatio || 0,
         vgRatio: fragranceData.vgRatio || 0,
         remarks: fragranceData.remarks || '',
-      });
+      };
+      
+      console.log('表單初始化資料:', formData);
+      form.reset(formData);
     } else if (isOpen && !fragranceData) {
       form.reset();
     }

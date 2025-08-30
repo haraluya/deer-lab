@@ -142,14 +142,14 @@ export default function FragranceDetailPage() {
           id: fragranceDoc.id,
           code: data.code,
           name: data.name,
-          fragranceType: data.fragranceType || data.status,
-          fragranceStatus: data.fragranceStatus || data.status || 'active',
+          fragranceType: data.fragranceType || data.status || '',
+          fragranceStatus: data.fragranceStatus || data.status || '',
           supplierRef: data.supplierRef,
           supplierName,
-          costPerUnit: data.costPerUnit,
-          percentage: data.percentage,
-          pgRatio: data.pgRatio,
-          vgRatio: data.vgRatio,
+          costPerUnit: data.costPerUnit || 0,
+          percentage: data.percentage || 0,
+          pgRatio: data.pgRatio || 0,
+          vgRatio: data.vgRatio || 0,
           description: data.description,
           notes: data.notes,
           status: data.status,
@@ -157,7 +157,7 @@ export default function FragranceDetailPage() {
           createdBy: data.createdBy,
           createdByName,
           productCount: productsList.length,
-          remarks: data.remarks, // 獲取備註
+          remarks: data.remarks || '', // 獲取備註
           currentStock: data.currentStock || 0, // 添加庫存數量
         });
       } catch (error) {
