@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { collection, getDocs, addDoc, doc, getDoc } from "firebase/firestore"
+import { collection, getDocs, addDoc, doc, getDoc, DocumentReference } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
 import { ArrowLeft, Plus, Package, Loader2 } from "lucide-react"
@@ -22,16 +22,18 @@ interface Product {
   seriesName?: string
   fragranceName: string
   nicotineMg: number
-  billOfMaterials: Array<{
-    materialId: string
-    materialCode: string
-    materialName: string
-    quantity: number
-    unit: string
-  }>
-  seriesRef?: string // 新增產品系列參考
-  currentFragranceRef?: string // 新增香精參考
-  fragranceCode?: string // 新增香精代號
+  seriesRef?: DocumentReference // 產品系列參考
+  currentFragranceRef?: DocumentReference // 香精參考
+  fragranceCode?: string // 香精代號
+  fragranceFormula?: {
+    percentage: number
+    pgRatio: number
+    vgRatio: number
+  }
+  specificMaterials?: DocumentReference[] // 專屬材料參考
+  specificMaterialNames?: string[] // 專屬材料名稱
+  commonMaterials?: DocumentReference[] // 通用材料參考
+  commonMaterialNames?: string[] // 通用材料名稱
 }
 
 interface Material {
@@ -50,7 +52,7 @@ export default function CreateWorkOrderPage() {
   const [targetQuantity, setTargetQuantity] = useState(1) // 改為1 KG
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('') // 新增搜尋功能
+  const [searchTerm, setSearchTerm] = useState('') // 搜尋功能
 
   // 過濾產品列表
   const filteredProducts = products.filter(product => 
@@ -89,6 +91,7 @@ export default function CreateWorkOrderPage() {
           // 獲取香精資訊
           let fragranceName = '未指定'
           let fragranceCode = '未指定'
+          let fragranceFormula = { percentage: 0, pgRatio: 0, vgRatio: 0 }
           if (data.currentFragranceRef) {
             try {
               const fragranceDoc = await getDoc(data.currentFragranceRef)
@@ -96,9 +99,58 @@ export default function CreateWorkOrderPage() {
                 const fragranceData = fragranceDoc.data() as any
                 fragranceName = fragranceData.name || '未指定'
                 fragranceCode = fragranceData.code || '未指定'
+                fragranceFormula = {
+                  percentage: fragranceData?.percentage || 0,
+                  pgRatio: fragranceData?.pgRatio || 0,
+                  vgRatio: fragranceData?.vgRatio || 0,
+                }
               }
             } catch (error) {
               console.error('獲取香精資訊失敗:', error)
+            }
+          }
+
+          // 獲取專屬材料名稱
+          let specificMaterialNames: string[] = []
+          if (data.specificMaterials && data.specificMaterials.length > 0) {
+            try {
+              const materialDocs = await Promise.all(
+                data.specificMaterials.map((ref: DocumentReference) => getDoc(ref))
+              )
+              specificMaterialNames = materialDocs
+                .filter(doc => doc.exists())
+                .map(doc => {
+                  const materialData = doc.data() as any
+                  return materialData?.name || '未知材料'
+                })
+            } catch (error) {
+              console.error('獲取專屬材料失敗:', error)
+            }
+          }
+
+          // 獲取通用材料名稱
+          let commonMaterialNames: string[] = []
+          let commonMaterialRefs: DocumentReference[] = []
+          if (data.seriesRef) {
+            try {
+              const seriesDoc = await getDoc(data.seriesRef)
+              if (seriesDoc.exists()) {
+                const seriesData = seriesDoc.data() as any
+                if (seriesData.commonMaterials && seriesData.commonMaterials.length > 0) {
+                  commonMaterialRefs = seriesData.commonMaterials
+                  const materialDocs = await Promise.all(
+                    seriesData.commonMaterials.map((ref: DocumentReference) => getDoc(ref))
+                  )
+                  commonMaterialNames = materialDocs
+                    .filter(doc => doc.exists())
+                    .map(doc => {
+                      const materialData = doc.data() as any
+                      return materialData?.name || '未知材料'
+                    })
+                }
+              }
+            } catch (error) {
+              console.error('獲取通用材料失敗:', error)
             }
           }
 
@@ -108,11 +160,15 @@ export default function CreateWorkOrderPage() {
             code: data.code,
             seriesName: seriesName,
             seriesRef: data.seriesRef,
-            fragranceRef: data.currentFragranceRef,
+            currentFragranceRef: data.currentFragranceRef,
             fragranceName: fragranceName,
             fragranceCode: fragranceCode,
+            fragranceFormula: fragranceFormula,
             nicotineMg: data.nicotineMg || 0,
-            billOfMaterials: data.billOfMaterials || []
+            specificMaterials: data.specificMaterials || [],
+            specificMaterialNames: specificMaterialNames,
+            commonMaterials: commonMaterialRefs,
+            commonMaterialNames: commonMaterialNames
           }
         }))
         setProducts(productsList)
@@ -147,37 +203,41 @@ export default function CreateWorkOrderPage() {
 
     console.log('計算物料需求:', { selectedProduct, materials, targetQuantity })
 
-    const materialRequirementsMap = new Map<string, any>() // Use a map to handle potential duplicates and ensure unique materials
+    const materialRequirementsMap = new Map<string, any>()
 
-    // 1. Get fragrance details to get correct ratios
-    let fragranceRatios = { fragrance: 0.357, pg: 0.4501, vg: 0.1929 } // Default ratios from HYP-244MA
-    if (selectedProduct.fragranceCode && selectedProduct.fragranceCode !== '未指定') {
-      // For now, use the known ratios for HYP-244MA
-      // In the future, we should fetch fragrance details from Firestore
-      if (selectedProduct.fragranceCode === 'HYP-244MA') {
-        fragranceRatios = { fragrance: 0.357, pg: 0.4501, vg: 0.1929 }
+    // 1. 使用香精配方比例（如果有的話）
+    let fragranceRatios = { fragrance: 0.357, pg: 0.4501, vg: 0.1929 } // 預設比例
+    if (selectedProduct.fragranceFormula) {
+      const { percentage, pgRatio, vgRatio } = selectedProduct.fragranceFormula
+      if (percentage > 0) {
+        fragranceRatios = {
+          fragrance: percentage / 100,
+          pg: pgRatio / 100,
+          vg: vgRatio / 100
+        }
       }
     }
+    console.log('使用香精比例:', fragranceRatios)
 
-    // 2. Core Ingredients (Fragrance, PG, VG, Nicotine) - use correct ratios from fragrance
-    // Fragrance
+    // 2. 核心液體 (香精、PG、VG、尼古丁)
+    // 香精
     if (selectedProduct.fragranceCode && selectedProduct.fragranceCode !== '未指定') {
       const fragranceQuantity = targetQuantity * fragranceRatios.fragrance
-      materialRequirementsMap.set('fragrance', { // Use a unique key for fragrance
-        materialId: 'fragrance', // Placeholder ID for fragrance
+      materialRequirementsMap.set('fragrance', {
+        materialId: 'fragrance',
         materialCode: selectedProduct.fragranceCode,
         materialName: selectedProduct.fragranceName,
         requiredQuantity: fragranceQuantity,
-        currentStock: 0, // Needs to be fetched from fragrance stock
+        currentStock: 0,
         unit: 'KG',
-        hasEnoughStock: true, // Placeholder
+        hasEnoughStock: true,
         category: 'fragrance',
         ratio: fragranceRatios.fragrance
       })
       console.log('添加香精:', selectedProduct.fragranceName, fragranceQuantity, '比例:', fragranceRatios.fragrance)
     }
 
-    // PG (Propylene Glycol) - use ratio from fragrance
+    // PG (丙二醇)
     const pgMaterial = materials.find(m => m.name.includes('PG丙二醇') || m.name.includes('PG') || m.code.includes('PG'))
     if (pgMaterial) {
       const pgQuantity = targetQuantity * fragranceRatios.pg
@@ -195,7 +255,7 @@ export default function CreateWorkOrderPage() {
       console.log('添加PG:', pgMaterial.name, pgQuantity, '比例:', fragranceRatios.pg)
     }
 
-    // VG (Vegetable Glycerin) - use ratio from fragrance
+    // VG (甘油)
     const vgMaterial = materials.find(m => m.name.includes('VG甘油') || m.name.includes('VG') || m.code.includes('VG'))
     if (vgMaterial) {
       const vgQuantity = targetQuantity * fragranceRatios.vg
@@ -213,12 +273,11 @@ export default function CreateWorkOrderPage() {
       console.log('添加VG:', vgMaterial.name, vgQuantity, '比例:', fragranceRatios.vg)
     }
 
-    // Nicotine
-    let nicotineMaterial: Material | undefined
+    // 尼古丁
     if (selectedProduct.nicotineMg && selectedProduct.nicotineMg > 0) {
-      nicotineMaterial = materials.find(m => m.name.includes('丁鹽') || m.name.includes('尼古丁') || m.code.includes('NIC'))
+      const nicotineMaterial = materials.find(m => m.name.includes('丁鹽') || m.name.includes('尼古丁') || m.code.includes('NIC'))
       if (nicotineMaterial) {
-        const nicotineQuantity = (targetQuantity * selectedProduct.nicotineMg) / 250 // Formula: target_quantity (KG) * concentration / 250
+        const nicotineQuantity = (targetQuantity * selectedProduct.nicotineMg) / 250
         materialRequirementsMap.set(nicotineMaterial.id, {
           materialId: nicotineMaterial.id,
           materialCode: nicotineMaterial.code,
@@ -228,133 +287,66 @@ export default function CreateWorkOrderPage() {
           unit: nicotineMaterial.unit || 'KG',
           hasEnoughStock: (nicotineMaterial.currentStock || 0) >= nicotineQuantity,
           category: 'nicotine',
-          ratio: selectedProduct.nicotineMg / 250 // Store ratio for display if needed
+          ratio: selectedProduct.nicotineMg / 250
         })
         console.log('添加尼古丁:', nicotineMaterial.name, nicotineQuantity)
       }
     }
 
-    // 2. Other materials from selectedProduct.billOfMaterials
-    console.log('產品BOM資料:', selectedProduct.billOfMaterials)
-    if (selectedProduct.billOfMaterials && Array.isArray(selectedProduct.billOfMaterials)) {
-      console.log('BOM陣列長度:', selectedProduct.billOfMaterials.length)
-      selectedProduct.billOfMaterials.forEach((bom, index) => {
-        console.log(`BOM項目 ${index}:`, bom)
-        const material = materials.find(m => m.id === bom.materialId)
-        console.log('找到的物料:', material)
-
-        // If this material is one of the core ingredients (PG, VG, Nicotine), we skip it
-        // as we've already calculated it with fixed ratios.
-        const isCoreIngredient = (
-          (pgMaterial && material?.id === pgMaterial.id) ||
-          (vgMaterial && material?.id === vgMaterial.id) ||
-          (nicotineMaterial && material?.id === nicotineMaterial.id)
-        )
-
-        // Also, if the materialId is 'fragrance' (our placeholder), we skip it if fragrance was already added.
-        const isFragrancePlaceholder = bom.materialId === 'fragrance' && materialRequirementsMap.has('fragrance')
-
-        if (!isCoreIngredient && !isFragrancePlaceholder && material) {
-          // Assuming bom.quantity is a ratio or amount per KG of final product
-          const requiredQuantity = bom.quantity * targetQuantity;
-          const currentStock = material?.currentStock || 0;
-
+    // 3. 專屬材料
+    console.log('專屬材料名稱:', selectedProduct.specificMaterialNames)
+    if (selectedProduct.specificMaterialNames && selectedProduct.specificMaterialNames.length > 0) {
+      selectedProduct.specificMaterialNames.forEach(materialName => {
+        const material = materials.find(m => m.name === materialName)
+        if (material) {
+          const requiredQuantity = 1 * targetQuantity // 每個產品1個
           materialRequirementsMap.set(material.id, {
             materialId: material.id,
             materialCode: material.code,
             materialName: material.name,
             requiredQuantity: requiredQuantity,
-            currentStock: currentStock,
-            unit: material.unit || 'KG', // Default to KG, but use material's unit if available
-            hasEnoughStock: currentStock >= requiredQuantity,
-            category: 'common', // Default to common for BOM materials
-            ratio: bom.quantity // Use quantity as ratio
+            currentStock: material.currentStock || 0,
+            unit: material.unit || '個',
+            hasEnoughStock: (material.currentStock || 0) >= requiredQuantity,
+            category: 'specific',
+            ratio: 1
           })
-          console.log('添加產品BOM物料:', material.name, requiredQuantity)
+          console.log('添加專屬材料:', material.name, requiredQuantity)
         } else {
-          console.log('跳過物料:', material?.name, '原因:', { isCoreIngredient, isFragrancePlaceholder, materialFound: !!material })
+          console.log('找不到專屬材料:', materialName)
         }
       })
-    } else {
-      console.log('產品沒有BOM資料或BOM不是陣列')
-      
-      // 臨時解決方案：為皇家康普茶動態添加通用物料和專用物料
-      if (selectedProduct.code === 'BOT-XTS-5610' || selectedProduct.name === '皇家康普茶') {
-        console.log('為皇家康普茶添加臨時BOM物料')
-        
-        // 通用材料
-        const commonMaterials = [
-          { name: '30ML-矮-黑-空瓶', quantity: 1, unit: '個' },
-          { name: '30ML-矮-黑-蓋子', quantity: 1, unit: '個' }
-        ]
-        
-        // 專屬材料
-        const specificMaterials = [
-          { name: '小茶山-大紙盒-皇家康普茶', quantity: 1, unit: '個' },
-          { name: '小茶山-貼紙-皇家康普茶', quantity: 1, unit: '個' }
-        ]
-        
-        // 添加通用材料
-        commonMaterials.forEach(required => {
-          const material = materials.find(m => 
-            m.name.includes(required.name) || 
-            required.name.includes(m.name) ||
-            (m.name.includes('空瓶') && required.name.includes('空瓶')) ||
-            (m.name.includes('蓋子') && required.name.includes('蓋子'))
-          )
-          
-          if (material) {
-            const requiredQuantity = required.quantity * targetQuantity
-            materialRequirementsMap.set(material.id, {
-              materialId: material.id,
-              materialCode: material.code,
-              materialName: material.name,
-              requiredQuantity: requiredQuantity,
-              currentStock: material.currentStock || 0,
-              unit: material.unit || required.unit,
-              hasEnoughStock: (material.currentStock || 0) >= requiredQuantity,
-              category: 'common',
-              ratio: required.quantity
-            })
-            console.log('添加通用物料:', material.name, requiredQuantity)
-          } else {
-            console.log('找不到通用物料:', required.name)
-          }
-        })
-        
-        // 添加專屬材料
-        specificMaterials.forEach(required => {
-          const material = materials.find(m => 
-            m.name.includes(required.name) || 
-            required.name.includes(m.name) ||
-            (m.name.includes('小茶山') && m.name.includes('皇家康普茶'))
-          )
-          
-          if (material) {
-            const requiredQuantity = required.quantity * targetQuantity
-            materialRequirementsMap.set(material.id, {
-              materialId: material.id,
-              materialCode: material.code,
-              materialName: material.name,
-              requiredQuantity: requiredQuantity,
-              currentStock: material.currentStock || 0,
-              unit: material.unit || required.unit,
-              hasEnoughStock: (material.currentStock || 0) >= requiredQuantity,
-              category: 'specific',
-              ratio: required.quantity
-            })
-            console.log('添加專屬物料:', material.name, requiredQuantity)
-          } else {
-            console.log('找不到專屬物料:', required.name)
-          }
-        })
-      }
     }
 
-    // Convert map to array and sort
+    // 4. 通用材料
+    console.log('通用材料名稱:', selectedProduct.commonMaterialNames)
+    if (selectedProduct.commonMaterialNames && selectedProduct.commonMaterialNames.length > 0) {
+      selectedProduct.commonMaterialNames.forEach(materialName => {
+        const material = materials.find(m => m.name === materialName)
+        if (material) {
+          const requiredQuantity = 1 * targetQuantity // 每個產品1個
+          materialRequirementsMap.set(material.id, {
+            materialId: material.id,
+            materialCode: material.code,
+            materialName: material.name,
+            requiredQuantity: requiredQuantity,
+            currentStock: material.currentStock || 0,
+            unit: material.unit || '個',
+            hasEnoughStock: (material.currentStock || 0) >= requiredQuantity,
+            category: 'common',
+            ratio: 1
+          })
+          console.log('添加通用材料:', material.name, requiredQuantity)
+        } else {
+          console.log('找不到通用材料:', materialName)
+        }
+      })
+    }
+
+    // 轉換為陣列並排序
     const finalRequirements = Array.from(materialRequirementsMap.values())
 
-    // Sort according to user's request: Fragrance, PG, VG, Nicotine first, then others by category and name
+    // 排序：香精、PG、VG、尼古丁優先，然後按類別和名稱排序
     finalRequirements.sort((a, b) => {
       const categoryOrder = ['fragrance', 'pg', 'vg', 'nicotine', 'specific', 'common', 'other']
       const categoryA = categoryOrder.indexOf(a.category || 'other')
@@ -474,35 +466,33 @@ export default function CreateWorkOrderPage() {
               <CardDescription>選擇要生產的產品</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="product">產品</Label>
-                <div className="space-y-2">
-                  {/* 搜尋輸入框 */}
-                  <Input
-                    placeholder="搜尋產品名稱、代號或系列..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="mb-2"
-                  />
-                  <Select onValueChange={handleProductSelect}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="選擇要生產的產品" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredProducts.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          <div className="flex flex-col">
-                            <span>{product.code} - {product.name}</span>
-                            {product.seriesName && (
-                              <span className="text-xs text-muted-foreground">{product.seriesName}</span>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+                             <div>
+                 <Label htmlFor="product">產品</Label>
+                 <Select onValueChange={handleProductSelect}>
+                   <SelectTrigger>
+                     <SelectValue placeholder="搜尋並選擇要生產的產品" />
+                   </SelectTrigger>
+                   <SelectContent>
+                     {filteredProducts.map((product) => (
+                       <SelectItem key={product.id} value={product.id}>
+                         <div className="flex flex-col">
+                           <span>{product.code} - {product.name}</span>
+                           {product.seriesName && (
+                             <span className="text-xs text-muted-foreground">{product.seriesName}</span>
+                           )}
+                         </div>
+                       </SelectItem>
+                     ))}
+                   </SelectContent>
+                 </Select>
+                 <div className="mt-2">
+                   <Input
+                     placeholder="搜尋產品名稱、代號或系列..."
+                     value={searchTerm}
+                     onChange={(e) => setSearchTerm(e.target.value)}
+                   />
+                 </div>
+               </div>
 
               {selectedProduct && (
                 <div className="p-4 bg-muted rounded-lg">
