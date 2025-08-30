@@ -60,7 +60,7 @@ export function DataTable<TData extends { id: string }, TValue>({
   return (
     <div className="space-y-6">
       {/* 搜尋欄 - 響應式設計 */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 py-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 py-2 sm:py-4">
         <div className="relative flex-1 max-w-sm">
           <Input
             placeholder="搜尋工單..."
@@ -68,7 +68,7 @@ export function DataTable<TData extends { id: string }, TValue>({
             onChange={(event) =>
               table.getColumn("productName")?.setFilterValue(event.target.value)
             }
-            className="pl-10 h-10 sm:h-12 focus-ring border-orange-200 focus:border-orange-500 focus:ring-orange-500"
+            className="pl-10 h-9 sm:h-10 text-sm sm:text-base focus-ring border-orange-200 focus:border-orange-500 focus:ring-orange-500"
           />
           <svg
             className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-orange-500"
@@ -88,13 +88,13 @@ export function DataTable<TData extends { id: string }, TValue>({
 
       {/* 桌面版表格容器 */}
       <div className="hidden lg:block bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-orange-50 border-b border-gray-200">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-gray-50 to-orange-50 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ClipboardList className="h-5 w-5 text-orange-600" />
-              <h2 className="text-lg font-semibold text-gray-800">工單清單</h2>
+              <h2 className="text-base sm:text-lg font-semibold text-gray-800">工單清單</h2>
             </div>
-            <div className="text-sm text-gray-600">
+            <div className="text-xs sm:text-sm text-gray-600">
               共 {table.getFilteredRowModel().rows.length} 個工單
             </div>
           </div>
@@ -157,11 +157,11 @@ export function DataTable<TData extends { id: string }, TValue>({
       {/* 手機版卡片佈局 */}
       <div className="lg:hidden">
         <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="px-4 py-3 bg-gradient-to-r from-gray-50 to-orange-50 border-b border-gray-200">
+          <div className="px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-gray-50 to-orange-50 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ClipboardList className="h-4 w-4 text-orange-600" />
-                <h2 className="text-base font-semibold text-gray-800">工單清單</h2>
+                <h2 className="text-sm sm:text-base font-semibold text-gray-800">工單清單</h2>
               </div>
               <div className="text-xs text-gray-600">
                 共 {table.getFilteredRowModel().rows.length} 個工單
@@ -169,24 +169,24 @@ export function DataTable<TData extends { id: string }, TValue>({
             </div>
           </div>
           
-          <div className="p-4">
+          <div className="p-3 sm:p-4">
             {table.getRowModel().rows?.length ? (
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {table.getRowModel().rows.map((row) => {
                   const workOrder = row.original as any
                   return (
                     <div
                       key={row.id}
                       onClick={() => router.push(`/dashboard/work-orders/${workOrder.id}`)}
-                      className="bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:bg-orange-50/50 transition-colors duration-200"
+                      className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 cursor-pointer hover:bg-orange-50/50 transition-colors duration-200"
                     >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg flex items-center justify-center">
-                            <ClipboardList className="h-4 w-4 text-white" />
+                      <div className="flex items-start justify-between mb-2 sm:mb-3">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg flex items-center justify-center">
+                            <ClipboardList className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                           </div>
                           <div>
-                            <div className="font-medium text-gray-900 text-sm">{workOrder.code}</div>
+                            <div className="font-medium text-gray-900 text-xs sm:text-sm">{workOrder.code}</div>
                             <div className="text-xs text-gray-500">工單 ID: {workOrder.id}</div>
                           </div>
                         </div>
@@ -195,7 +195,7 @@ export function DataTable<TData extends { id: string }, TValue>({
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-xs sm:text-sm">
                         <div>
                           <div className="flex items-center gap-1 mb-1">
                             <span className="text-gray-500">產品</span>

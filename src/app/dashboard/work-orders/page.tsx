@@ -84,27 +84,27 @@ function WorkOrdersPageContent() {
 
 
   return (
-    <div className="container mx-auto py-10 work-orders-page">
+    <div className="container mx-auto p-2 sm:p-4 py-4 sm:py-10 work-orders-page">
       {/* 頁面標題 */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+      <div className="mb-4 sm:mb-8">
+        <h1 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
           工單管理
         </h1>
-        <p className="text-gray-600 mt-2">管理生產工單與進度追蹤</p>
+        <p className="text-gray-600 mt-2 text-sm sm:text-base">管理生產工單與進度追蹤</p>
       </div>
 
       {/* 工單清單區域 */}
-      <Card className="mb-6">
-        <CardHeader>
-          <div className="flex items-center justify-between">
+      <Card className="mb-4 sm:mb-6">
+        <CardHeader className="pb-3 sm:pb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Factory className="h-5 w-5 text-blue-600" />
-              <CardTitle>工單清單</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">工單清單</CardTitle>
             </div>
             <div className="flex items-center gap-2">
               <Button 
                 onClick={handleCreateWorkOrder}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
               >
                 <Plus className="mr-2 h-4 w-4" />
                 建立新工單
@@ -114,49 +114,53 @@ function WorkOrdersPageContent() {
         </CardHeader>
         <CardContent>
           {/* 狀態篩選 */}
-          <div className="flex items-center gap-2 mb-4">
-            <Filter className="h-4 w-4 text-gray-500" />
-            <span className="text-sm text-gray-600">狀態篩選：</span>
-            <Button
-              variant={statusFilter === 'all' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setStatusFilter('all')}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              全部
-            </Button>
-            <Button
-              variant={statusFilter === '預報' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setStatusFilter('預報')}
-              className={statusFilter === '預報' ? 'bg-orange-500 hover:bg-orange-600' : 'border-orange-200 text-orange-600 hover:bg-orange-50'}
-            >
-              預報
-            </Button>
-            <Button
-              variant={statusFilter === '進行' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setStatusFilter('進行')}
-              className={statusFilter === '進行' ? 'bg-blue-500 hover:bg-blue-600' : 'border-blue-200 text-blue-600 hover:bg-blue-50'}
-            >
-              進行
-            </Button>
-            <Button
-              variant={statusFilter === '完工' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setStatusFilter('完工')}
-              className={statusFilter === '完工' ? 'bg-green-500 hover:bg-green-600' : 'border-green-200 text-green-600 hover:bg-green-50'}
-            >
-              完工
-            </Button>
-            <Button
-              variant={statusFilter === '入庫' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setStatusFilter('入庫')}
-              className={statusFilter === '入庫' ? 'bg-gray-600 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}
-            >
-              入庫
-            </Button>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <span className="text-sm text-gray-600">狀態篩選：</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={statusFilter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('all')}
+                className="bg-blue-600 hover:bg-blue-700 text-xs sm:text-sm"
+              >
+                全部
+              </Button>
+              <Button
+                variant={statusFilter === '預報' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('預報')}
+                className={`text-xs sm:text-sm ${statusFilter === '預報' ? 'bg-orange-500 hover:bg-orange-600' : 'border-orange-200 text-orange-600 hover:bg-orange-50'}`}
+              >
+                預報
+              </Button>
+              <Button
+                variant={statusFilter === '進行' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('進行')}
+                className={`text-xs sm:text-sm ${statusFilter === '進行' ? 'bg-blue-500 hover:bg-blue-600' : 'border-blue-200 text-blue-600 hover:bg-blue-50'}`}
+              >
+                進行
+              </Button>
+              <Button
+                variant={statusFilter === '完工' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('完工')}
+                className={`text-xs sm:text-sm ${statusFilter === '完工' ? 'bg-green-500 hover:bg-green-600' : 'border-green-200 text-green-600 hover:bg-green-50'}`}
+              >
+                完工
+              </Button>
+              <Button
+                variant={statusFilter === '入庫' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('入庫')}
+                className={`text-xs sm:text-sm ${statusFilter === '入庫' ? 'bg-gray-600 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+              >
+                入庫
+              </Button>
+            </div>
           </div>
 
           {/* 統計資訊 */}

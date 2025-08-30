@@ -92,6 +92,74 @@
   }
 }
 
+/* 手機版適配樣式 */
+@layer components {
+  /* 表格手機版優化 */
+  .table-mobile-optimized {
+    @apply text-xs sm:text-sm;
+  }
+  
+  .table-mobile-optimized th,
+  .table-mobile-optimized td {
+    @apply px-2 sm:px-4 py-2 sm:py-3;
+  }
+  
+  /* 按鈕手機版優化 */
+  .btn-mobile {
+    @apply w-full sm:w-auto;
+  }
+  
+  /* 對話框手機版優化 */
+  .dialog-mobile {
+    @apply w-[95vw] max-w-md sm:max-w-lg;
+  }
+  
+  /* 卡片手機版優化 */
+  .card-mobile {
+    @apply mb-4 sm:mb-6;
+  }
+  
+  .card-header-mobile {
+    @apply pb-3 sm:pb-6;
+  }
+  
+  .card-title-mobile {
+    @apply text-lg sm:text-xl;
+  }
+  
+  /* 網格手機版優化 */
+  .grid-mobile {
+    @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4;
+  }
+  
+  /* 文字手機版優化 */
+  .text-mobile {
+    @apply text-xs sm:text-sm;
+  }
+  
+  .text-mobile-lg {
+    @apply text-sm sm:text-base;
+  }
+  
+  /* 間距手機版優化 */
+  .space-mobile {
+    @apply space-y-4 sm:space-y-6;
+  }
+  
+  .gap-mobile {
+    @apply gap-3 sm:gap-6;
+  }
+  
+  /* 圖片預覽手機版優化 */
+  .image-preview-modal {
+    @apply fixed inset-0 z-50 flex items-center justify-center bg-black/80;
+  }
+  
+  .image-preview-img {
+    @apply max-w-[90vw] max-h-[90vh] object-contain rounded-lg;
+  }
+}
+
 /* Toast 樣式 - 根據不同頁面設定不同配色 */
 @layer components {
   /* 預設 toast 樣式 */

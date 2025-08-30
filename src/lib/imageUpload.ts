@@ -22,23 +22,23 @@ export interface ImageUploadOptions {
 const DEFAULT_OPTIONS: Required<ImageUploadOptions> = {
   folder: 'uploads',
   fileName: '',
-  maxSize: 10, // 10MB
+  maxSize: 5, // 降低到 5MB
   allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
   compress: true,
-  quality: 0.7
+  quality: 0.6 // 降低品質以減少檔案大小
 };
 
-// 圖片壓縮函數
-export const compressImage = (file: File, quality: number = 0.7): Promise<File> => {
+// 圖片壓縮函數 - 更激進的壓縮
+export const compressImage = (file: File, quality: number = 0.6): Promise<File> => {
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const img = new Image();
 
     img.onload = () => {
-      // 計算新的尺寸，最大 1280x720 (720P)
-      const maxWidth = 1280;
-      const maxHeight = 720;
+      // 更激進的尺寸限制，最大 800x600
+      const maxWidth = 800;
+      const maxHeight = 600;
       let { width, height } = img;
 
       if (width > height) {
@@ -172,38 +172,27 @@ export const uploadImage = async (
   } catch (error) {
     console.error('圖片上傳失敗:', error);
     
-    // 嘗試使用 Base64 備用方法
-    try {
-      console.log('嘗試使用 Base64 備用方法...');
-      const base64Url = await fileToBase64(file);
-      return {
-        success: true,
-        url: base64Url,
-        path: 'base64'
-      };
-    } catch (base64Error) {
-      console.error('Base64 備用方法也失敗:', base64Error);
+    // 檢查是否為權限錯誤
+    if (error instanceof Error && error.message.includes('unauthorized')) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : '未知錯誤'
+        error: '圖片上傳權限不足，請檢查 Firebase Storage 規則設定'
       };
     }
+    
+    // 檢查是否為網路錯誤
+    if (error instanceof Error && error.message.includes('network')) {
+      return {
+        success: false,
+        error: '網路連線問題，請檢查網路連線後重試'
+      };
+    }
+    
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '未知錯誤'
+    };
   }
-};
-
-// Base64 備用方法
-const fileToBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64String = reader.result as string;
-      resolve(base64String);
-    };
-    reader.onerror = () => {
-      reject(new Error('檔案讀取失敗'));
-    };
-    reader.readAsDataURL(file);
-  });
 };
 
 // 批量上傳

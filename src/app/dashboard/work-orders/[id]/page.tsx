@@ -210,11 +210,20 @@ export default function WorkOrderDetailPage() {
     const toastId = toast.loading("正在處理圖片...");
     
     try {
+      // 檢查總檔案大小
+      const totalSize = fileArray.reduce((sum, file) => sum + file.size, 0);
+      const maxTotalSize = 10 * 1024 * 1024; // 10MB 總限制
+      
+      if (totalSize > maxTotalSize) {
+        toast.error(`總檔案大小不能超過 10MB，請選擇較小的圖片`, { id: toastId });
+        return;
+      }
+      
       const results = await uploadMultipleImages(fileArray, {
         folder: `work-orders/${workOrderId}/comments`,
-        maxSize: 10,
+        maxSize: 2, // 每張圖片最大 2MB
         compress: true,
-        quality: 0.7
+        quality: 0.6
       });
       
       const successfulUploads = results.filter(result => result.success);
@@ -546,27 +555,29 @@ export default function WorkOrderDetailPage() {
   }
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="container mx-auto p-2 sm:p-4 py-4 sm:py-10">
       {/* 頁面標題 */}
-      <div className="flex items-center gap-4 mb-8">
-        <Button 
-          variant="outline" 
-          size="icon" 
-          onClick={() => router.back()}
-          className="hover:bg-blue-50"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex-grow">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-            工單詳情
-          </h1>
-          <p className="text-gray-600 font-mono">{workOrder.code}</p>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-4 sm:mb-8">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={() => router.back()}
+            className="hover:bg-blue-50"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex-grow min-w-0">
+            <h1 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent truncate">
+              工單詳情
+            </h1>
+            <p className="text-gray-600 font-mono text-sm sm:text-base truncate">{workOrder.code}</p>
+          </div>
         </div>
         <Button 
           variant="destructive" 
           onClick={() => setIsDeleteDialogOpen(true)}
-          className="bg-red-600 hover:bg-red-700"
+          className="bg-red-600 hover:bg-red-700 w-full sm:w-auto"
         >
           <Trash2 className="mr-2 h-4 w-4" />
           刪除工單
@@ -574,34 +585,34 @@ export default function WorkOrderDetailPage() {
       </div>
 
       {/* 工單基本資料 */}
-      <Card className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-        <CardHeader>
-          <CardTitle className="text-blue-800 flex items-center gap-2">
+      <Card className="mb-4 sm:mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="text-blue-800 flex items-center gap-2 text-lg sm:text-xl">
             <Package className="h-5 w-5" />
             工單基本資料
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="text-center p-4 bg-white rounded-lg border">
-              <div className="text-sm text-gray-600 mb-1">生產產品名稱</div>
-              <div className="font-semibold text-blue-800">{workOrder.productSnapshot.name}</div>
-              <div className="text-xs text-gray-500">{workOrder.productSnapshot.seriesName || '未指定'}</div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+            <div className="text-center p-3 sm:p-4 bg-white rounded-lg border">
+              <div className="text-xs sm:text-sm text-gray-600 mb-1">生產產品名稱</div>
+              <div className="font-semibold text-blue-800 text-sm sm:text-base truncate">{workOrder.productSnapshot.name}</div>
+              <div className="text-xs text-gray-500 truncate">{workOrder.productSnapshot.seriesName || '未指定'}</div>
             </div>
             
-            <div className="text-center p-4 bg-white rounded-lg border">
-              <div className="text-sm text-gray-600 mb-1">使用香精</div>
-              <div className="font-semibold text-pink-800">{workOrder.productSnapshot.fragranceCode}</div>
-              <div className="text-xs text-gray-500">{workOrder.productSnapshot.fragranceName}</div>
+            <div className="text-center p-3 sm:p-4 bg-white rounded-lg border">
+              <div className="text-xs sm:text-sm text-gray-600 mb-1">使用香精</div>
+              <div className="font-semibold text-pink-800 text-sm sm:text-base truncate">{workOrder.productSnapshot.fragranceCode}</div>
+              <div className="text-xs text-gray-500 truncate">{workOrder.productSnapshot.fragranceName}</div>
             </div>
             
-            <div className="text-center p-4 bg-white rounded-lg border">
-              <div className="text-sm text-gray-600 mb-1">尼古丁濃度</div>
-              <div className="font-semibold text-orange-800">{workOrder.productSnapshot.nicotineMg} mg</div>
+            <div className="text-center p-3 sm:p-4 bg-white rounded-lg border">
+              <div className="text-xs sm:text-sm text-gray-600 mb-1">尼古丁濃度</div>
+              <div className="font-semibold text-orange-800 text-sm sm:text-base">{workOrder.productSnapshot.nicotineMg} mg</div>
             </div>
             
-            <div className="text-center p-4 bg-white rounded-lg border">
-              <div className="text-sm text-gray-600 mb-1">工單狀態</div>
+            <div className="text-center p-3 sm:p-4 bg-white rounded-lg border">
+              <div className="text-xs sm:text-sm text-gray-600 mb-1">工單狀態</div>
               <Badge className={statusOptions.find(s => s.value === workOrder.status)?.color}>
                 {workOrder.status}
               </Badge>
@@ -611,15 +622,15 @@ export default function WorkOrderDetailPage() {
       </Card>
 
       {/* 工單詳細資料 */}
-      <Card className="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
-        <CardHeader>
-          <CardTitle className="text-green-800 flex items-center gap-2">
+      <Card className="mb-4 sm:mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="text-green-800 flex items-center gap-2 text-lg sm:text-xl">
             <Calculator className="h-5 w-5" />
             工單詳細資料
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div>
               <Label className="text-sm text-gray-600">目前工單狀態</Label>
               {isEditing ? (
@@ -672,20 +683,21 @@ export default function WorkOrderDetailPage() {
           </div>
 
           {/* 編輯按鈕 */}
-          <div className="mt-4 flex justify-end">
+          <div className="mt-4 flex flex-col sm:flex-row justify-end gap-2">
             {isEditing ? (
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button
                   variant="outline"
                   onClick={() => setIsEditing(false)}
                   disabled={isSaving}
+                  className="w-full sm:w-auto"
                 >
                   取消
                 </Button>
                 <Button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="bg-green-600 hover:bg-green-700"
+                  className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
                 >
                   {isSaving ? (
                     <>
@@ -703,7 +715,7 @@ export default function WorkOrderDetailPage() {
             ) : (
               <Button
                 onClick={() => setIsEditing(true)}
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
               >
                 <Edit className="mr-2 h-4 w-4" />
                 編輯
@@ -714,15 +726,15 @@ export default function WorkOrderDetailPage() {
       </Card>
 
       {/* 香精物料清單 (BOM表) */}
-      <Card className="mb-6 bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
-        <CardHeader>
-          <CardTitle className="text-purple-800 flex items-center gap-2">
+      <Card className="mb-4 sm:mb-6 bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="text-purple-800 flex items-center gap-2 text-lg sm:text-xl">
             <Droplets className="h-5 w-5" />
             香精物料清單 (BOM表)
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* 核心配方物料 */}
             <div>
               <h3 className="text-lg font-semibold text-purple-700 mb-3 flex items-center gap-2">
@@ -733,12 +745,12 @@ export default function WorkOrderDetailPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>物料名稱</TableHead>
-                      <TableHead>料件代號</TableHead>
-                      <TableHead>比例</TableHead>
-                      <TableHead>需求數量</TableHead>
-                      <TableHead>使用數量</TableHead>
-                      <TableHead>單位</TableHead>
+                      <TableHead className="text-xs sm:text-sm">物料名稱</TableHead>
+                      <TableHead className="text-xs sm:text-sm">料件代號</TableHead>
+                      <TableHead className="text-xs sm:text-sm">比例</TableHead>
+                      <TableHead className="text-xs sm:text-sm">需求數量</TableHead>
+                      <TableHead className="text-xs sm:text-sm">使用數量</TableHead>
+                      <TableHead className="text-xs sm:text-sm">單位</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -752,10 +764,10 @@ export default function WorkOrderDetailPage() {
                               {item.category === 'pg' && <div className="w-4 h-4 bg-blue-500 rounded" />}
                               {item.category === 'vg' && <div className="w-4 h-4 bg-green-500 rounded" />}
                               {item.category === 'nicotine' && <div className="w-4 h-4 bg-orange-500 rounded" />}
-                              {item.name}
+                              <span className="text-xs sm:text-sm truncate">{item.name}</span>
                             </div>
                           </TableCell>
-                          <TableCell className="font-mono text-sm">{item.code}</TableCell>
+                          <TableCell className="font-mono text-xs sm:text-sm">{item.code}</TableCell>
                           <TableCell>
                             {item.ratio ? `${item.ratio}%` : '-'}
                           </TableCell>
@@ -901,16 +913,16 @@ export default function WorkOrderDetailPage() {
       </Card>
 
       {/* 工時申報 */}
-      <Card className="mb-6 bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-orange-800 flex items-center gap-2">
+      <Card className="mb-4 sm:mb-6 bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200">
+        <CardHeader className="pb-3 sm:pb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <CardTitle className="text-orange-800 flex items-center gap-2 text-lg sm:text-xl">
               <Clock className="h-5 w-5" />
               工時申報
             </CardTitle>
             <Button
               onClick={() => setIsAddTimeRecordOpen(true)}
-              className="bg-orange-600 hover:bg-orange-700"
+              className="bg-orange-600 hover:bg-orange-700 w-full sm:w-auto"
             >
               <Plus className="mr-2 h-4 w-4" />
               新增工時紀錄
@@ -919,10 +931,10 @@ export default function WorkOrderDetailPage() {
         </CardHeader>
         <CardContent>
           {/* 總人工小時統計 */}
-          <div className="mb-6 p-4 bg-white rounded-lg border">
+          <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-white rounded-lg border">
             <div className="text-center">
               <div className="text-sm text-gray-600 mb-1">總人工小時</div>
-              <div className="text-2xl font-bold text-orange-600">
+              <div className="text-xl sm:text-2xl font-bold text-orange-600">
                 {totalHours} 小時 {totalMinutes} 分鐘
               </div>
               <div className="text-xs text-gray-500">共 {workOrder.timeRecords?.length || 0} 筆紀錄</div>
@@ -935,11 +947,11 @@ export default function WorkOrderDetailPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>人員</TableHead>
-                    <TableHead>工作日期</TableHead>
-                    <TableHead>開始時間</TableHead>
-                    <TableHead>結束時間</TableHead>
-                    <TableHead>工時小計</TableHead>
+                    <TableHead className="text-xs sm:text-sm">人員</TableHead>
+                    <TableHead className="text-xs sm:text-sm">工作日期</TableHead>
+                    <TableHead className="text-xs sm:text-sm">開始時間</TableHead>
+                    <TableHead className="text-xs sm:text-sm">結束時間</TableHead>
+                    <TableHead className="text-xs sm:text-sm">工時小計</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -971,9 +983,9 @@ export default function WorkOrderDetailPage() {
 
       {/* 新增工時紀錄對話框 */}
       <Dialog open={isAddTimeRecordOpen} onOpenChange={setIsAddTimeRecordOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] max-w-md sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>新增工時紀錄</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">新增工時紀錄</DialogTitle>
             <DialogDescription>
               請填寫工時紀錄的詳細資訊
             </DialogDescription>
@@ -1007,7 +1019,7 @@ export default function WorkOrderDetailPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="startTime">開始時間 (24小時制)</Label>
                 <div className="flex gap-2 mt-1">
@@ -1141,13 +1153,13 @@ export default function WorkOrderDetailPage() {
             )}
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddTimeRecordOpen(false)}>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setIsAddTimeRecordOpen(false)} className="w-full sm:w-auto">
               取消
             </Button>
             <Button 
               onClick={handleAddTimeRecord} 
-              className="bg-orange-600 hover:bg-orange-700"
+              className="bg-orange-600 hover:bg-orange-700 w-full sm:w-auto"
               disabled={!newTimeRecord.personnelId || !newTimeRecord.workDate || !newTimeRecord.startTime || !newTimeRecord.endTime}
             >
               <Plus className="mr-2 h-4 w-4" />
@@ -1180,7 +1192,7 @@ export default function WorkOrderDetailPage() {
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 placeholder="輸入留言內容..."
-                className="mt-1 min-h-[100px]"
+                className="mt-1 min-h-[100px] resize-none"
               />
             </div>
 
@@ -1189,11 +1201,11 @@ export default function WorkOrderDetailPage() {
               <Label className="text-sm font-medium text-gray-700 mb-2 block">
                 上傳圖片
               </Label>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                 <Button
                   variant="outline"
                   onClick={() => document.getElementById('image-upload')?.click()}
-                  className="border-yellow-300 text-yellow-700 hover:bg-yellow-50"
+                  className="border-yellow-300 text-yellow-700 hover:bg-yellow-50 w-full sm:w-auto"
                 >
                   <Upload className="mr-2 h-4 w-4" />
                   選擇圖片
@@ -1206,8 +1218,8 @@ export default function WorkOrderDetailPage() {
                   onChange={handleImageUpload}
                   className="hidden"
                 />
-                <span className="text-sm text-gray-500">
-                  可選擇多張圖片
+                <span className="text-sm text-gray-500 text-center sm:text-left">
+                  可選擇多張圖片 (每張最大 2MB)
                 </span>
               </div>
 
@@ -1217,19 +1229,33 @@ export default function WorkOrderDetailPage() {
                   <Label className="text-sm font-medium text-gray-700 mb-2 block">
                     已選擇的圖片 ({uploadedImages.length} 張)
                   </Label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                     {uploadedImages.map((imageUrl, index) => (
                       <div key={index} className="relative group">
                         <img
                           src={imageUrl}
                           alt={`圖片 ${index + 1}`}
-                          className="w-full h-24 object-cover rounded-lg border"
+                          className="w-full h-20 sm:h-24 object-cover rounded-lg border cursor-pointer"
+                          onClick={() => {
+                            // 創建圖片預覽對話框
+                            const modal = document.createElement('div');
+                            modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/80';
+                            modal.onclick = () => modal.remove();
+                            
+                            const img = document.createElement('img');
+                            img.src = imageUrl;
+                            img.className = 'max-w-[90vw] max-h-[90vh] object-contain rounded-lg';
+                            img.onclick = (e) => e.stopPropagation();
+                            
+                            modal.appendChild(img);
+                            document.body.appendChild(modal);
+                          }}
                         />
                         <Button
                           variant="destructive"
                           size="sm"
                           onClick={() => handleRemoveImage(index)}
-                          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
                         >
                           <X className="h-3 w-3" />
                         </Button>
@@ -1243,7 +1269,7 @@ export default function WorkOrderDetailPage() {
             <Button
               onClick={handleAddComment}
               disabled={!newComment.trim() && uploadedImages.length === 0}
-              className="bg-orange-600 hover:bg-orange-700"
+              className="bg-orange-600 hover:bg-orange-700 w-full sm:w-auto"
             >
               <MessageSquare className="mr-2 h-4 w-4" />
               新增留言
@@ -1259,11 +1285,13 @@ export default function WorkOrderDetailPage() {
               </div>
             ) : (
               comments.map((comment) => (
-                <div key={comment.id} className="bg-white rounded-lg border border-yellow-200 p-4">
+                <div key={comment.id} className="bg-white rounded-lg border border-yellow-200 p-3 sm:p-4">
                   <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-gray-500" />
-                      <span className="font-medium text-gray-700">{comment.createdBy}</span>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                        <span className="font-medium text-gray-700 truncate">{comment.createdBy}</span>
+                      </div>
                       <span className="text-sm text-gray-500">
                         {new Date(comment.createdAt).toLocaleString()}
                       </span>
@@ -1272,27 +1300,40 @@ export default function WorkOrderDetailPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeleteComment(comment.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0 ml-2"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                   
                   {comment.text && (
-                    <div className="mb-3 text-gray-700 whitespace-pre-wrap">
+                    <div className="mb-3 text-gray-700 whitespace-pre-wrap break-words">
                       {comment.text}
                     </div>
                   )}
 
                   {comment.images.length > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                       {comment.images.map((imageUrl, index) => (
                         <div key={index} className="relative group">
                           <img
                             src={imageUrl}
                             alt={`留言圖片 ${index + 1}`}
-                            className="w-full h-24 object-cover rounded-lg border cursor-pointer"
-                            onClick={() => window.open(imageUrl, '_blank')}
+                            className="w-full h-20 sm:h-24 object-cover rounded-lg border cursor-pointer"
+                            onClick={() => {
+                              // 創建圖片預覽對話框
+                              const modal = document.createElement('div');
+                              modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/80';
+                              modal.onclick = () => modal.remove();
+                              
+                              const img = document.createElement('img');
+                              img.src = imageUrl;
+                              img.className = 'max-w-[90vw] max-h-[90vh] object-contain rounded-lg';
+                              img.onclick = (e) => e.stopPropagation();
+                              
+                              modal.appendChild(img);
+                              document.body.appendChild(modal);
+                            }}
                           />
                         </div>
                       ))}
@@ -1307,9 +1348,9 @@ export default function WorkOrderDetailPage() {
 
       {/* 刪除工單確認對話框 */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] max-w-md sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-red-600">確認刪除工單</DialogTitle>
+            <DialogTitle className="text-red-600 text-lg sm:text-xl">確認刪除工單</DialogTitle>
             <DialogDescription>
               此操作將永久刪除工單 "{workOrder.code}" 及其所有相關資料，包括：
               <ul className="list-disc list-inside mt-2 space-y-1">
@@ -1323,15 +1364,15 @@ export default function WorkOrderDetailPage() {
               </p>
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="w-full sm:w-auto">
               取消
             </Button>
             <Button
               variant="destructive"
               onClick={handleDeleteWorkOrder}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 w-full sm:w-auto"
             >
               {isDeleting ? (
                 <>

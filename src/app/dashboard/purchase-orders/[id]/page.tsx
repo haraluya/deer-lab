@@ -7,6 +7,7 @@ import { doc, getDoc, Timestamp, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { toast } from 'sonner';
+import { uploadMultipleImages } from '@/lib/imageUpload';
 import { ArrowLeft, Loader2, CheckCircle, Truck, ShoppingCart, Building, User, Calendar, Package, Plus, MessageSquare, Upload, X, Trash2 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -174,134 +175,145 @@ export default function PurchaseOrderDetailPage() {
     toast.success("已移除其他費用");
   };
 
-  // 處理留言
-  const handleAddComment = () => {
-    if (!newComment.trim()) {
-      toast.error("請輸入留言內容");
-      return;
-    }
-
-    const comment: Comment = {
-      id: Date.now().toString(),
-      text: newComment.trim(),
-      images: uploadedImages, // 使用已上傳的圖片
-      createdAt: new Date().toLocaleString('zh-TW'),
-      createdBy: po?.createdByName || '未知用戶'
-    };
-
-    setComments(prev => [...prev, comment]);
-    setNewComment('');
-    setUploadedImages([]); // 清空已上傳的圖片
-    toast.success("已添加留言");
-  };
-
-  // 圖片壓縮功能
-  const compressImage = (file: File): Promise<File> => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-      
-      img.onload = () => {
-        // 設定最大尺寸
-        const maxWidth = 800;
-        const maxHeight = 600;
-        
-        let { width, height } = img;
-        
-        // 計算縮放比例
-        if (width > height) {
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
-          }
-        } else {
-          if (height > maxHeight) {
-            width = (width * maxHeight) / height;
-            height = maxHeight;
-          }
-        }
-        
-        canvas.width = width;
-        canvas.height = height;
-        
-        // 繪製壓縮後的圖片
-        ctx?.drawImage(img, 0, 0, width, height);
-        
-        // 轉換為 Blob
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const compressedFile = new File([blob], file.name, {
-              type: 'image/jpeg',
-              lastModified: Date.now(),
-            });
-            resolve(compressedFile);
-          } else {
-            resolve(file);
-          }
-        }, 'image/jpeg', 0.8); // 80% 品質
-      };
-      
-      img.src = URL.createObjectURL(file);
-    });
-  };
-
-  // 上傳圖片到 Firebase Storage
-  const uploadImageToStorage = async (file: File): Promise<string> => {
-    try {
-      const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
-      const storage = getStorage();
-      
-      // 使用日期分類的檔案路徑
-      const date = new Date();
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const timestamp = Date.now();
-      
-      const imagePath = `purchase-orders/${po?.id}/comments/${year}/${month}/${day}/${timestamp}_${file.name}`;
-      const imageRef = ref(storage, imagePath);
-      
-      await uploadBytes(imageRef, file);
-      const downloadURL = await getDownloadURL(imageRef);
-      
-      return downloadURL;
-    } catch (error) {
-      console.error('圖片上傳失敗:', error);
-      throw new Error('圖片上傳失敗');
-    }
-  };
-
+  // 使用成熟的圖片上傳工具
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (files) {
-      const fileArray = Array.from(files);
+    if (!files || files.length === 0) return;
+    
+    const fileArray = Array.from(files);
+    const toastId = toast.loading("正在處理圖片...");
+    
+    try {
+      // 檢查總檔案大小
+      const totalSize = fileArray.reduce((sum, file) => sum + file.size, 0);
+      const maxTotalSize = 10 * 1024 * 1024; // 10MB 總限制
       
-      try {
-        // 顯示上傳中提示
-        const toastId = toast.loading("正在處理圖片...");
-        
-        // 壓縮並上傳每張圖片
-        const uploadPromises = fileArray.map(async (file) => {
-          const compressedFile = await compressImage(file);
-          const downloadURL = await uploadImageToStorage(compressedFile);
-          return downloadURL;
-        });
-        
-        const uploadedURLs = await Promise.all(uploadPromises);
-        
-        // 更新已上傳的圖片列表
-        setUploadedImages(prev => [...prev, ...uploadedURLs]);
-        
-        toast.success(`成功上傳 ${uploadedURLs.length} 張圖片`, { id: toastId });
-      } catch (error) {
-        console.error('圖片處理失敗:', error);
-        toast.error('圖片處理失敗');
+      if (totalSize > maxTotalSize) {
+        toast.error(`總檔案大小不能超過 10MB，請選擇較小的圖片`, { id: toastId });
+        return;
       }
+      
+      const results = await uploadMultipleImages(fileArray, {
+        folder: `purchase-orders/${id}/comments`,
+        maxSize: 2, // 每張圖片最大 2MB
+        compress: true,
+        quality: 0.6
+      });
+      
+      const successfulUploads = results.filter(result => result.success);
+      const failedUploads = results.filter(result => !result.success);
+      
+      // 更新已上傳的圖片列表
+      if (successfulUploads.length > 0) {
+        const urls = successfulUploads.map(result => result.url!);
+        setUploadedImages(prev => [...prev, ...urls]);
+        toast.success(`成功上傳 ${successfulUploads.length} 張圖片`, { id: toastId });
+      }
+      
+      // 顯示失敗的圖片
+      if (failedUploads.length > 0) {
+        const failedNames = failedUploads.map(result => result.error).join(', ');
+        toast.error(`以下圖片上傳失敗: ${failedNames}`, { id: toastId });
+      }
+      
+    } catch (error) {
+      console.error('圖片處理失敗:', error);
+      toast.error(`圖片處理失敗: ${error instanceof Error ? error.message : '未知錯誤'}`, { id: toastId });
     }
     
     // 清空 input 值，允許重複選擇相同檔案
     event.target.value = '';
+  };
+
+  // 移除已上傳的圖片
+  const handleRemoveImage = (index: number) => {
+    setUploadedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // 處理留言
+  const handleAddComment = async () => {
+    if (!newComment.trim() && uploadedImages.length === 0) {
+      toast.error("請輸入留言內容或上傳圖片");
+      return;
+    }
+
+    if (!po || !db) return;
+
+    try {
+      const comment: Comment = {
+        id: Date.now().toString(),
+        text: newComment.trim(),
+        images: uploadedImages,
+        createdAt: new Date().toISOString(),
+        createdBy: po.createdByName || "當前用戶"
+      };
+
+      // 更新採購單文檔
+      const docRef = doc(db, "purchaseOrders", po.id);
+      const updatedComments = [...comments, comment];
+      await updateDoc(docRef, {
+        comments: updatedComments,
+        updatedAt: Timestamp.now()
+      });
+
+      // 更新本地狀態
+      setComments(updatedComments);
+      setPo(prev => prev ? { ...prev, comments: updatedComments } : null);
+      
+      // 清空表單
+      setNewComment('');
+      setUploadedImages([]);
+      
+      toast.success("留言已新增");
+    } catch (error) {
+      console.error("新增留言失敗:", error);
+      toast.error("新增留言失敗");
+    }
+  };
+
+  // 刪除留言
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      const comment = comments.find(c => c.id === commentId);
+      if (!comment) return;
+
+      // 刪除相關圖片
+      if (comment.images.length > 0) {
+        const { getStorage, ref, deleteObject } = await import('firebase/storage');
+        const storage = getStorage();
+        
+        const deletePromises = comment.images.map(async (imageURL) => {
+          try {
+            const imageRef = ref(storage, imageURL);
+            await deleteObject(imageRef);
+          } catch (error) {
+            console.error('刪除圖片失敗:', error);
+          }
+        });
+        
+        await Promise.all(deletePromises);
+      }
+
+      // 從本地狀態中移除留言
+      const updatedComments = comments.filter(c => c.id !== commentId);
+      setComments(updatedComments);
+      
+      // 更新採購單文檔
+      if (po && db) {
+        const docRef = doc(db, "purchaseOrders", po.id);
+        await updateDoc(docRef, {
+          comments: updatedComments,
+          updatedAt: Timestamp.now()
+        });
+        
+        setPo(prev => prev ? { ...prev, comments: updatedComments } : null);
+      }
+      
+      toast.success('留言已刪除');
+    } catch (error) {
+      console.error('刪除留言失敗:', error);
+      toast.error('刪除留言失敗');
+    }
   };
 
   const handleRemoveImage = (index: number) => {
@@ -445,10 +457,10 @@ export default function PurchaseOrderDetailPage() {
   };
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="container mx-auto p-2 sm:p-4 py-4 sm:py-10">
       {/* 頁面標題區域 */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-4 mb-4 sm:mb-8">
+        <div className="flex items-center gap-2 sm:gap-4">
           <Button 
             variant="outline" 
             size="icon" 
@@ -457,21 +469,21 @@ export default function PurchaseOrderDetailPage() {
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-amber-600">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-3xl font-bold text-amber-600 truncate">
               採購單詳情
             </h1>
-            <p className="text-muted-foreground mt-2">查看採購單的詳細資訊</p>
+            <p className="text-muted-foreground mt-2 text-sm sm:text-base">查看採購單的詳細資訊</p>
           </div>
         </div>
         
         {/* 操作按鈕區域 */}
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           {po.status === '預報單' && (
             <Button 
               onClick={() => handleUpdateStatus('已訂購')} 
               disabled={isUpdating}
-              className="bg-amber-600 hover:bg-amber-700"
+              className="bg-amber-600 hover:bg-amber-700 w-full sm:w-auto"
             >
               {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
               標示為已訂購
@@ -481,7 +493,7 @@ export default function PurchaseOrderDetailPage() {
             <Button 
               onClick={() => setIsReceiveDialogOpen(true)} 
               disabled={isUpdating}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
             >
               <Truck className="mr-2 h-4 w-4" />
               收貨入庫
@@ -491,7 +503,7 @@ export default function PurchaseOrderDetailPage() {
             onClick={() => setIsDeleteDialogOpen(true)} 
             disabled={isDeleting}
             variant="destructive"
-            className="bg-red-600 hover:bg-red-700"
+            className="bg-red-600 hover:bg-red-700 w-full sm:w-auto"
           >
             <Trash2 className="mr-2 h-4 w-4" />
             刪除訂單
@@ -500,15 +512,15 @@ export default function PurchaseOrderDetailPage() {
       </div>
 
       {/* 採購單基本資訊卡片 */}
-      <Card className="mb-6 border-0 shadow-lg bg-gradient-to-r from-background to-amber-10">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-amber-600">
+      <Card className="mb-4 sm:mb-6 border-0 shadow-lg bg-gradient-to-r from-background to-amber-10">
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="flex items-center gap-2 text-amber-600 text-lg sm:text-xl">
             <ShoppingCart className="h-5 w-5" />
             採購單資訊
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
@@ -580,9 +592,9 @@ export default function PurchaseOrderDetailPage() {
       </Card>
       
       {/* 採購項目列表卡片 */}
-      <Card className="border-0 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <Card className="mb-4 sm:mb-6 border-0 shadow-lg">
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Package className="h-5 w-5 text-amber-600" />
             採購項目清單
           </CardTitle>
@@ -711,17 +723,17 @@ export default function PurchaseOrderDetailPage() {
       </Card>
 
       {/* 其他費用區域 */}
-      <Card className="mb-6 border-0 shadow-lg">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
+      <Card className="mb-4 sm:mb-6 border-0 shadow-lg">
+        <CardHeader className="pb-3 sm:pb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
               <Package className="h-5 w-5 text-amber-600" />
               其他費用
             </CardTitle>
             {po.status !== '已收貨' && (
               <Button
                 onClick={() => setIsAddFeeDialogOpen(true)}
-                className="bg-amber-600 hover:bg-amber-700 text-white"
+                className="bg-amber-600 hover:bg-amber-700 text-white w-full sm:w-auto"
               >
                 <Plus className="mr-2 h-4 w-4" />
                 增加其他費用
@@ -771,116 +783,177 @@ export default function PurchaseOrderDetailPage() {
       </Card>
 
       {/* 留言區域 */}
-      <Card className="mb-6 border-0 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5 text-amber-600" />
+      <Card className="mb-4 sm:mb-6 border-0 shadow-lg bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl text-amber-800">
+            <MessageSquare className="h-5 w-5" />
             留言記錄
+            <Badge variant="secondary" className="ml-2">
+              {comments.length} 則留言
+            </Badge>
           </CardTitle>
           <CardDescription>採購單相關的留言和備註</CardDescription>
         </CardHeader>
         <CardContent>
           {/* 新增留言 */}
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-            <div className="space-y-3">
+          <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-white rounded-lg border border-amber-200">
+            <div className="mb-4">
+              <label className="text-sm font-medium text-gray-700">
+                新增留言
+              </label>
               <Textarea
                 placeholder="輸入留言內容..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                className="min-h-[100px]"
+                className="mt-1 min-h-[100px] resize-none"
               />
-              
-              {/* 圖片上傳 */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <label className="cursor-pointer">
-                    <input
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                    />
-                    <Button variant="outline" size="sm" className="border-amber-200 text-amber-600 hover:bg-amber-50">
-                      <Upload className="mr-2 h-4 w-4" />
-                      上傳圖片
-                    </Button>
+            </div>
+
+            {/* 圖片上傳區域 */}
+            <div className="mb-4">
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                上傳圖片
+              </label>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => document.getElementById('purchase-image-upload')?.click()}
+                  className="border-amber-300 text-amber-700 hover:bg-amber-50 w-full sm:w-auto"
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  選擇圖片
+                </Button>
+                <input
+                  id="purchase-image-upload"
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                <span className="text-sm text-gray-500 text-center sm:text-left">
+                  可選擇多張圖片 (每張最大 2MB)
+                </span>
+              </div>
+
+              {/* 已上傳的圖片預覽 */}
+              {uploadedImages.length > 0 && (
+                <div className="mt-3">
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">
+                    已選擇的圖片 ({uploadedImages.length} 張)
                   </label>
-                </div>
-                
-                {/* 預覽已上傳的圖片 */}
-                {uploadedImages.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {uploadedImages.map((imageURL, index) => (
-                      <div key={index} className="relative">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                    {uploadedImages.map((imageUrl, index) => (
+                      <div key={index} className="relative group">
                         <img
-                          src={imageURL}
-                          alt={`預覽 ${index + 1}`}
-                          className="w-20 h-20 object-cover rounded border"
+                          src={imageUrl}
+                          alt={`圖片 ${index + 1}`}
+                          className="w-full h-20 sm:h-24 object-cover rounded-lg border cursor-pointer"
+                          onClick={() => {
+                            // 創建圖片預覽對話框
+                            const modal = document.createElement('div');
+                            modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/80';
+                            modal.onclick = () => modal.remove();
+                            
+                            const img = document.createElement('img');
+                            img.src = imageUrl;
+                            img.className = 'max-w-[90vw] max-h-[90vh] object-contain rounded-lg';
+                            img.onclick = (e) => e.stopPropagation();
+                            
+                            modal.appendChild(img);
+                            document.body.appendChild(modal);
+                          }}
                         />
                         <Button
-                          variant="ghost"
+                          variant="destructive"
                           size="sm"
                           onClick={() => handleRemoveImage(index)}
-                          className="absolute -top-2 -right-2 w-6 h-6 p-0 bg-red-500 text-white hover:bg-red-600"
+                          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
                         >
                           <X className="h-3 w-3" />
                         </Button>
                       </div>
                     ))}
                   </div>
-                )}
-              </div>
-              
-              <Button
-                onClick={handleAddComment}
-                disabled={!newComment.trim()}
-                className="bg-amber-600 hover:bg-amber-700 text-white"
-              >
-                <MessageSquare className="mr-2 h-4 w-4" />
-                添加留言
-              </Button>
+                </div>
+              )}
             </div>
+
+            <Button
+              onClick={handleAddComment}
+              disabled={!newComment.trim() && uploadedImages.length === 0}
+              className="bg-amber-600 hover:bg-amber-700 w-full sm:w-auto"
+            >
+              <MessageSquare className="mr-2 h-4 w-4" />
+              新增留言
+            </Button>
           </div>
 
           {/* 留言列表 */}
           <div className="space-y-4">
-            {comments.length > 0 ? (
+            {comments.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <MessageSquare className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p>尚無留言記錄</p>
+              </div>
+            ) : (
               comments.map((comment) => (
-                <div key={comment.id} className="p-4 bg-white border border-gray-200 rounded-lg">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900">{comment.createdBy}</span>
-                      <span className="text-sm text-gray-500">{comment.createdAt}</span>
+                <div key={comment.id} className="bg-white rounded-lg border border-amber-200 p-3 sm:p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                        <span className="font-medium text-gray-700 truncate">{comment.createdBy}</span>
+                      </div>
+                      <span className="text-sm text-gray-500">
+                        {new Date(comment.createdAt).toLocaleString()}
+                      </span>
                     </div>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeleteComment(comment.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0 ml-2"
                     >
-                      <X className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                  <div className="text-gray-700 mb-3">{comment.text}</div>
+                  
+                  {comment.text && (
+                    <div className="mb-3 text-gray-700 whitespace-pre-wrap break-words">
+                      {comment.text}
+                    </div>
+                  )}
+
                   {comment.images.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {comment.images.map((image, index) => (
-                        <img
-                          key={index}
-                          src={image}
-                          alt={`留言圖片 ${index + 1}`}
-                          className="w-20 h-20 object-cover rounded border"
-                        />
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                      {comment.images.map((imageUrl, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={imageUrl}
+                            alt={`留言圖片 ${index + 1}`}
+                            className="w-full h-20 sm:h-24 object-cover rounded-lg border cursor-pointer"
+                            onClick={() => {
+                              // 創建圖片預覽對話框
+                              const modal = document.createElement('div');
+                              modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/80';
+                              modal.onclick = () => modal.remove();
+                              
+                              const img = document.createElement('img');
+                              img.src = imageUrl;
+                              img.className = 'max-w-[90vw] max-h-[90vh] object-contain rounded-lg';
+                              img.onclick = (e) => e.stopPropagation();
+                              
+                              modal.appendChild(img);
+                              document.body.appendChild(modal);
+                            }}
+                          />
+                        </div>
                       ))}
                     </div>
                   )}
                 </div>
               ))
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                目前沒有留言
-              </div>
             )}
           </div>
         </CardContent>
@@ -891,9 +964,9 @@ export default function PurchaseOrderDetailPage() {
 
       {/* 增加其他費用對話框 */}
       <Dialog open={isAddFeeDialogOpen} onOpenChange={setIsAddFeeDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[95vw] max-w-md sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>增加其他費用</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">增加其他費用</DialogTitle>
             <DialogDescription>
               添加運費、關稅或其他額外費用項目
             </DialogDescription>
@@ -909,7 +982,7 @@ export default function PurchaseOrderDetailPage() {
               />
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-gray-700">單價 (NT$)</label>
                 <Input
@@ -950,16 +1023,17 @@ export default function PurchaseOrderDetailPage() {
             </div>
           </div>
           
-          <DialogFooter>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
               onClick={() => setIsAddFeeDialogOpen(false)}
+              className="w-full sm:w-auto"
             >
               取消
             </Button>
             <Button
               onClick={handleAddAdditionalFee}
-              className="bg-amber-600 hover:bg-amber-700 text-white"
+              className="bg-amber-600 hover:bg-amber-700 text-white w-full sm:w-auto"
             >
               添加費用
             </Button>
@@ -969,9 +1043,9 @@ export default function PurchaseOrderDetailPage() {
 
       {/* 刪除訂單確認對話框 */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[95vw] max-w-md sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-red-600">刪除採購單</DialogTitle>
+            <DialogTitle className="text-red-600 text-lg sm:text-xl">刪除採購單</DialogTitle>
             <DialogDescription>
               此操作將永久刪除此採購單及其所有相關資料，包括：
             </DialogDescription>
@@ -1005,11 +1079,12 @@ export default function PurchaseOrderDetailPage() {
             </div>
           </div>
           
-          <DialogFooter>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
               onClick={() => setIsDeleteDialogOpen(false)}
               disabled={isDeleting}
+              className="w-full sm:w-auto"
             >
               取消
             </Button>
@@ -1017,7 +1092,7 @@ export default function PurchaseOrderDetailPage() {
               onClick={handleDeletePurchaseOrder}
               disabled={isDeleting}
               variant="destructive"
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 w-full sm:w-auto"
             >
               {isDeleting ? (
                 <>
