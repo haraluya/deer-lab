@@ -53,6 +53,7 @@ interface WorkOrderData {
     isCalculated: boolean
     category: 'fragrance' | 'pg' | 'vg' | 'nicotine' | 'specific' | 'common'
     usedQuantity?: number // 新增用於編輯的欄位
+    currentStock?: number // 新增當前庫存數量
   }>
   targetQuantity: number
   actualQuantity: number
@@ -372,7 +373,8 @@ export default function WorkOrderDetailPage() {
               ratio: item.ratio || 0,
               isCalculated: item.isCalculated !== undefined ? item.isCalculated : true,
               category: item.category || 'other',
-              usedQuantity: item.usedQuantity || item.quantity || item.requiredQuantity || 0
+              usedQuantity: item.usedQuantity || item.quantity || item.requiredQuantity || 0,
+              currentStock: item.currentStock || 0
             };
           }),
           targetQuantity: data.targetQuantity || 0,
@@ -535,10 +537,20 @@ export default function WorkOrderDetailPage() {
         workOrder.targetQuantity
       );
       
-      // 5. 更新工單的BOM表
+      // 5. 更新工單的BOM表，保留現有的使用數量和庫存資訊
+      const existingBOM = workOrder.billOfMaterials;
+      const updatedBOM = materialRequirements.map(newItem => {
+        const existingItem = existingBOM.find(item => item.id === newItem.id);
+        return {
+          ...newItem,
+          usedQuantity: existingItem?.usedQuantity || newItem.usedQuantity,
+          currentStock: existingItem?.currentStock || newItem.currentStock || 0
+        };
+      });
+
       const docRef = doc(db, "workOrders", workOrderId);
       await updateDoc(docRef, {
-        billOfMaterials: materialRequirements,
+        billOfMaterials: updatedBOM,
         updatedAt: Timestamp.now()
       });
       
@@ -659,7 +671,8 @@ export default function WorkOrderDetailPage() {
         ratio: fragranceRatios.fragrance, // 直接儲存香精詳情中的原始百分比值
         isCalculated: true,
         category: 'fragrance',
-        usedQuantity: fragranceQuantity
+        usedQuantity: fragranceQuantity,
+        currentStock: currentStock
       });
       console.log('重新載入BOM表 - 添加香精:', productData.fragranceName, fragranceQuantity, '比例:', fragranceRatios.fragrance, '庫存:', currentStock, '充足:', hasEnoughStock);
     } else {
@@ -680,7 +693,8 @@ export default function WorkOrderDetailPage() {
         ratio: fragranceRatios.pg, // 直接儲存香精詳情中的原始百分比值
         isCalculated: true,
         category: 'pg',
-        usedQuantity: pgQuantity
+        usedQuantity: pgQuantity,
+        currentStock: pgMaterial.currentStock || 0
       });
       console.log('重新載入BOM表 - 添加PG:', pgMaterial.name, pgQuantity, '比例:', fragranceRatios.pg);
     } else {
@@ -701,7 +715,8 @@ export default function WorkOrderDetailPage() {
         ratio: fragranceRatios.vg, // 直接儲存香精詳情中的原始百分比值
         isCalculated: true,
         category: 'vg',
-        usedQuantity: vgQuantity
+        usedQuantity: vgQuantity,
+        currentStock: vgMaterial.currentStock || 0
       });
       console.log('重新載入BOM表 - 添加VG:', vgMaterial.name, vgQuantity, '比例:', fragranceRatios.vg);
     } else {
@@ -724,7 +739,8 @@ export default function WorkOrderDetailPage() {
         ratio: 0, // 尼古丁鹽不算在比例裡面
         isCalculated: true,
         category: 'nicotine',
-        usedQuantity: nicotineQuantity
+        usedQuantity: nicotineQuantity,
+        currentStock: nicotineMaterial.currentStock || 0
       });
       console.log('重新載入BOM表 - 添加尼古丁:', nicotineMaterial.name, nicotineQuantity, '濃度:', productData.nicotineMg);
     }
@@ -737,7 +753,8 @@ export default function WorkOrderDetailPage() {
         materialRequirementsMap.set(item.id, {
           ...item,
           quantity: 0, // 專屬材料不配置需求量
-          usedQuantity: item.usedQuantity || 0
+          usedQuantity: item.usedQuantity || 0,
+          currentStock: item.currentStock || 0
         });
         console.log('重新載入BOM表 - 保持專屬材料:', item.name, '需求量: 0', item.unit);
       });
@@ -749,7 +766,8 @@ export default function WorkOrderDetailPage() {
         materialRequirementsMap.set(item.id, {
           ...item,
           quantity: 0, // 通用材料不配置需求量
-          usedQuantity: item.usedQuantity || 0
+          usedQuantity: item.usedQuantity || 0,
+          currentStock: item.currentStock || 0
         });
         console.log('重新載入BOM表 - 保持通用材料:', item.name, '需求量: 0', item.unit);
       });
@@ -2448,7 +2466,7 @@ export default function WorkOrderDetailPage() {
           <DialogHeader>
             <DialogTitle className="text-green-600 text-lg sm:text-xl">確認完工</DialogTitle>
             <DialogDescription>
-              請確認以下資訊後點擊完工按鈕。完工後將無法再修改目標產量和使用數量，但仍可新增工時記錄。
+              請確認以下資訊後點擊完工按鈕。完工後將無法再修改目標產量和使用數量，但仍可新增工時記錄。系統會顯示庫存扣除後的剩餘數量。
             </DialogDescription>
           </DialogHeader>
           
@@ -2456,35 +2474,142 @@ export default function WorkOrderDetailPage() {
             {/* 已填寫使用數量的物料 */}
             <div>
               <h3 className="text-lg font-semibold text-gray-800 mb-3">已填寫使用數量的物料</h3>
+              <p className="text-sm text-gray-600 mb-3">
+                顯示物料的現有庫存、使用數量和扣除後的剩餘數量。
+                <span className="text-blue-600">藍色</span>為現有數量，
+                <span className="text-red-600">紅色</span>為使用數量，
+                <span className="text-green-600">綠色</span>為剩餘數量，
+                <span className="text-red-600">紅色</span>表示庫存不足。
+              </p>
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50">
                       <TableHead className="text-gray-700 font-bold">物料名稱</TableHead>
                       <TableHead className="text-gray-700 font-bold">料件代號</TableHead>
+                      <TableHead className="text-gray-700 font-bold">現有數量</TableHead>
                       <TableHead className="text-gray-700 font-bold">使用數量</TableHead>
+                      <TableHead className="text-gray-700 font-bold">扣完剩餘</TableHead>
                       <TableHead className="text-gray-700 font-bold">單位</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {workOrder?.billOfMaterials
                       .filter(item => (item.usedQuantity || 0) > 0)
-                      .map((item, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell className="font-mono">{item.code}</TableCell>
-                          <TableCell className="font-medium">{formatNumber(item.usedQuantity || 0)}</TableCell>
-                          <TableCell>{item.unit}</TableCell>
-                        </TableRow>
-                      ))}
+                      .map((item, index) => {
+                        // 計算庫存扣除後的剩餘數量
+                        const currentStock = item.currentStock || 0;
+                        const usedQuantity = item.usedQuantity || 0;
+                        const remainingStock = currentStock - usedQuantity;
+                        
+                        return (
+                          <TableRow key={index}>
+                            <TableCell className="font-medium">{item.name}</TableCell>
+                            <TableCell className="font-mono">{item.code}</TableCell>
+                            <TableCell className="font-medium text-blue-600">{formatNumber(currentStock)}</TableCell>
+                            <TableCell className="font-medium text-red-600">-{formatNumber(usedQuantity)}</TableCell>
+                            <TableCell className={`font-medium ${remainingStock < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                              {formatNumber(remainingStock)}
+                              {remainingStock < 0 && (
+                                <span className="ml-1 text-xs bg-red-100 text-red-800 px-1 py-0.5 rounded">
+                                  庫存不足
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell>{item.unit}</TableCell>
+                          </TableRow>
+                        );
+                      })}
                   </TableBody>
                 </Table>
               </div>
+              
+              {/* 表格顏色說明 */}
+              <div className="mt-3 flex flex-wrap gap-4 text-xs text-gray-600">
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-blue-100 border border-blue-300 rounded"></div>
+                  <span>現有數量</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-red-100 border border-red-300 rounded"></div>
+                  <span>使用數量</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-green-100 border border-green-300 rounded"></div>
+                  <span>剩餘數量</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-red-100 border border-red-300 rounded"></div>
+                  <span>庫存不足</span>
+                </div>
+              </div>
+              
+              {/* 庫存充足項目統計 */}
+              {workOrder?.billOfMaterials.filter(item => {
+                const currentStock = item.currentStock || 0;
+                const usedQuantity = item.usedQuantity || 0;
+                return (currentStock - usedQuantity) >= 0 && usedQuantity > 0;
+              }).length > 0 && (
+                <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div className="text-center">
+                    <div className="text-sm text-green-700 font-medium">庫存充足項目</div>
+                    <div className="text-lg font-bold text-green-600">
+                      {workOrder?.billOfMaterials.filter(item => {
+                        const currentStock = item.currentStock || 0;
+                        const usedQuantity = item.usedQuantity || 0;
+                        return (currentStock - usedQuantity) >= 0 && usedQuantity > 0;
+                      }).length || 0} 項
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               {workOrder?.billOfMaterials.filter(item => (item.usedQuantity || 0) > 0).length === 0 && (
                 <div className="text-center py-4 text-red-500 bg-red-50 rounded-lg border border-red-200">
                   <AlertCircle className="h-6 w-6 mx-auto mb-2" />
                   <p className="font-medium">警告：尚無填寫使用數量的物料</p>
                   <p className="text-sm">請先填寫至少一個物料的使用數量才能完工</p>
+                </div>
+              )}
+              
+              {/* 庫存不足警告 */}
+              {workOrder?.billOfMaterials.some(item => {
+                const currentStock = item.currentStock || 0;
+                const usedQuantity = item.usedQuantity || 0;
+                return (currentStock - usedQuantity) < 0;
+              }) && (
+                <div className="text-center py-4 text-orange-500 bg-orange-50 rounded-lg border border-orange-200">
+                  <AlertCircle className="h-6 w-6 mx-auto mb-2" />
+                  <p className="font-medium">注意：有庫存不足的物料</p>
+                  <p className="text-sm">部分物料的庫存不足以滿足使用數量，但仍可完工</p>
+                  
+                  {/* 庫存不足項目列表 */}
+                  <div className="mt-3 text-left">
+                    <p className="text-sm font-medium text-orange-700 mb-2">庫存不足項目：</p>
+                    <div className="space-y-1">
+                      {workOrder?.billOfMaterials
+                        .filter(item => {
+                          const currentStock = item.currentStock || 0;
+                          const usedQuantity = item.usedQuantity || 0;
+                          return (currentStock - usedQuantity) < 0;
+                        })
+                        .map((item, index) => {
+                          const currentStock = item.currentStock || 0;
+                          const usedQuantity = item.usedQuantity || 0;
+                          const shortage = usedQuantity - currentStock;
+                          return (
+                            <div key={index} className="text-xs bg-orange-100 p-2 rounded border border-orange-200">
+                              <div className="font-medium">{item.name} ({item.code})</div>
+                              <div className="text-orange-600">
+                                現有: {formatNumber(currentStock)} {item.unit} | 
+                                使用: {formatNumber(usedQuantity)} {item.unit} | 
+                                不足: {formatNumber(shortage)} {item.unit}
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -2565,6 +2690,92 @@ export default function WorkOrderDetailPage() {
                     {workOrder?.targetQuantity} KG
                   </div>
                 </div>
+                <div>
+                  <div className="text-sm text-blue-600 mb-1">庫存不足項目</div>
+                  <div className="text-lg font-bold text-red-600">
+                    {workOrder?.billOfMaterials.filter(item => {
+                      const currentStock = item.currentStock || 0;
+                      const usedQuantity = item.usedQuantity || 0;
+                      return (currentStock - usedQuantity) < 0;
+                    }).length || 0} 項
+                  </div>
+                  <div className="text-xs text-red-500">
+                    不足: {workOrder?.billOfMaterials.reduce((total, item) => {
+                      const currentStock = item.currentStock || 0;
+                      const usedQuantity = item.usedQuantity || 0;
+                      const shortage = Math.max(0, usedQuantity - currentStock);
+                      return total + shortage;
+                    }, 0).toFixed(3)} KG
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-blue-600 mb-1">總使用數量</div>
+                  <div className="text-lg font-bold text-blue-800">
+                    {workOrder?.billOfMaterials.reduce((total, item) => total + (item.usedQuantity || 0), 0).toFixed(3)} KG
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-blue-600 mb-1">庫存充足項目</div>
+                  <div className="text-lg font-bold text-green-600">
+                    {workOrder?.billOfMaterials.filter(item => {
+                      const currentStock = item.currentStock || 0;
+                      const usedQuantity = item.usedQuantity || 0;
+                      return (currentStock - usedQuantity) >= 0 && usedQuantity > 0;
+                    }).length || 0} 項
+                  </div>
+                  <div className="text-xs text-green-500">
+                    剩餘: {workOrder?.billOfMaterials.reduce((total, item) => {
+                      const currentStock = item.currentStock || 0;
+                      const usedQuantity = item.usedQuantity || 0;
+                      const remaining = Math.max(0, currentStock - usedQuantity);
+                      return total + remaining;
+                    }, 0).toFixed(3)} KG
+                  </div>
+                </div>
+              </div>
+              
+              {/* 庫存統計摘要 */}
+              <div className="mt-4 p-3 bg-white rounded-lg border border-blue-200">
+                <h4 className="text-sm font-semibold text-blue-800 mb-2">庫存統計摘要</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div className="text-center">
+                    <div className="text-gray-600">總庫存數量</div>
+                    <div className="font-bold text-blue-600">
+                      {workOrder?.billOfMaterials.reduce((total, item) => total + (item.currentStock || 0), 0).toFixed(3)} KG
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-gray-600">總使用數量</div>
+                    <div className="font-bold text-red-600">
+                      {workOrder?.billOfMaterials.reduce((total, item) => total + (item.usedQuantity || 0), 0).toFixed(3)} KG
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-gray-600">預計剩餘</div>
+                    <div className="font-bold text-green-600">
+                      {workOrder?.billOfMaterials.reduce((total, item) => {
+                        const currentStock = item.currentStock || 0;
+                        const usedQuantity = item.usedQuantity || 0;
+                        return total + (currentStock - usedQuantity);
+                      }, 0).toFixed(3)} KG
+                    </div>
+                  </div>
+                </div>
+                
+                {/* 庫存使用率 */}
+                <div className="mt-3 pt-3 border-t border-blue-200">
+                  <div className="text-center">
+                    <div className="text-gray-600 text-xs">庫存使用率</div>
+                    <div className="font-bold text-blue-600">
+                      {(() => {
+                        const totalStock = workOrder?.billOfMaterials.reduce((total, item) => total + (item.currentStock || 0), 0) || 0;
+                        const totalUsed = workOrder?.billOfMaterials.reduce((total, item) => total + (item.usedQuantity || 0), 0) || 0;
+                        if (totalStock === 0) return '0%';
+                        return `${((totalUsed / totalStock) * 100).toFixed(1)}%`;
+                      })()}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -2582,19 +2793,33 @@ export default function WorkOrderDetailPage() {
               onClick={handleConfirmComplete}
               disabled={isCompleting || (workOrder?.billOfMaterials.filter(item => (item.usedQuantity || 0) > 0).length === 0)}
               className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
-              title={workOrder?.billOfMaterials.filter(item => (item.usedQuantity || 0) > 0).length === 0 ? "請先填寫至少一個物料的使用數量" : "確認將工單狀態設為完工"}
+              title={
+                workOrder?.billOfMaterials.filter(item => (item.usedQuantity || 0) > 0).length === 0 
+                  ? "請先填寫至少一個物料的使用數量" 
+                  : workOrder?.billOfMaterials.some(item => {
+                      const currentStock = item.currentStock || 0;
+                      const usedQuantity = item.usedQuantity || 0;
+                      return (currentStock - usedQuantity) < 0;
+                    })
+                    ? "有庫存不足的物料，但仍可完工"
+                    : "確認將工單狀態設為完工"
+              }
             >
-              {isCompleting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  完工中...
-                </>
-              ) : (
-                <>
-                  <Check className="mr-2 h-4 w-4" />
-                  確認完工
-                </>
-              )}
+                              {isCompleting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    完工中...
+                  </>
+                ) : (
+                  <>
+                    <Check className="mr-2 h-4 w-4" />
+                    {workOrder?.billOfMaterials.some(item => {
+                      const currentStock = item.currentStock || 0;
+                      const usedQuantity = item.usedQuantity || 0;
+                      return (currentStock - usedQuantity) < 0;
+                    }) ? "確認完工 (有庫存不足)" : "確認完工"}
+                  </>
+                )}
             </Button>
           </DialogFooter>
         </DialogContent>
