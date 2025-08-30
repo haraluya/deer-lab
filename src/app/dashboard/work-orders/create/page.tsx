@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { collection, getDocs, addDoc, doc, getDoc, DocumentReference } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
-import { ArrowLeft, Plus, Package, Loader2 } from "lucide-react"
+import { ArrowLeft, Plus, Package, Loader2, Calculator } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -220,8 +220,8 @@ export default function CreateWorkOrderPage() {
     }
     console.log('使用香精比例:', fragranceRatios)
 
-    // 2. 核心液體 (香精、PG、VG、尼古丁) - 使用配方比例
-    // 香精 - 總是添加，即使比例為0
+    // 2. 核心液體 (香精、PG、VG、尼古丁) - 總是添加所有核心液體
+    // 香精 - 總是添加
     if (selectedProduct.fragranceCode && selectedProduct.fragranceCode !== '未指定') {
       const fragranceQuantity = targetQuantity * fragranceRatios.fragrance
       materialRequirementsMap.set('fragrance', {
@@ -238,7 +238,7 @@ export default function CreateWorkOrderPage() {
       console.log('添加香精:', selectedProduct.fragranceName, fragranceQuantity, '比例:', fragranceRatios.fragrance)
     }
 
-    // PG (丙二醇) - 使用配方比例
+    // PG (丙二醇) - 總是添加
     const pgMaterial = materials.find(m => m.name.includes('PG丙二醇') || m.name.includes('PG') || m.code.includes('PG'))
     if (pgMaterial) {
       const pgQuantity = targetQuantity * fragranceRatios.pg
@@ -256,7 +256,7 @@ export default function CreateWorkOrderPage() {
       console.log('添加PG:', pgMaterial.name, pgQuantity, '比例:', fragranceRatios.pg)
     }
 
-    // VG (甘油) - 使用配方比例
+    // VG (甘油) - 總是添加
     const vgMaterial = materials.find(m => m.name.includes('VG甘油') || m.name.includes('VG') || m.code.includes('VG'))
     if (vgMaterial) {
       const vgQuantity = targetQuantity * fragranceRatios.vg
@@ -274,46 +274,61 @@ export default function CreateWorkOrderPage() {
       console.log('添加VG:', vgMaterial.name, vgQuantity, '比例:', fragranceRatios.vg)
     }
 
-    // 尼古丁 - 使用配方比例
-    if (selectedProduct.nicotineMg && selectedProduct.nicotineMg > 0) {
-      const nicotineMaterial = materials.find(m => m.name.includes('丁鹽') || m.name.includes('尼古丁') || m.code.includes('NIC'))
-      if (nicotineMaterial) {
-        const nicotineQuantity = (targetQuantity * selectedProduct.nicotineMg) / 250
-        materialRequirementsMap.set(nicotineMaterial.id, {
-          materialId: nicotineMaterial.id,
-          materialCode: nicotineMaterial.code,
-          materialName: nicotineMaterial.name,
-          requiredQuantity: nicotineQuantity,
-          currentStock: nicotineMaterial.currentStock || 0,
-          unit: nicotineMaterial.unit || 'KG',
-          hasEnoughStock: (nicotineMaterial.currentStock || 0) >= nicotineQuantity,
-          category: 'nicotine',
-          ratio: selectedProduct.nicotineMg / 250
-        })
-        console.log('添加尼古丁:', nicotineMaterial.name, nicotineQuantity)
-      }
+    // 尼古丁 - 總是添加（如果有尼古丁濃度）
+    const nicotineMaterial = materials.find(m => m.name.includes('丁鹽') || m.name.includes('尼古丁') || m.code.includes('NIC'))
+    if (nicotineMaterial) {
+      const nicotineQuantity = selectedProduct.nicotineMg && selectedProduct.nicotineMg > 0 
+        ? (targetQuantity * selectedProduct.nicotineMg) / 250 
+        : 0
+      materialRequirementsMap.set(nicotineMaterial.id, {
+        materialId: nicotineMaterial.id,
+        materialCode: nicotineMaterial.code,
+        materialName: nicotineMaterial.name,
+        requiredQuantity: nicotineQuantity,
+        currentStock: nicotineMaterial.currentStock || 0,
+        unit: nicotineMaterial.unit || 'KG',
+        hasEnoughStock: (nicotineMaterial.currentStock || 0) >= nicotineQuantity,
+        category: 'nicotine',
+        ratio: selectedProduct.nicotineMg ? selectedProduct.nicotineMg / 250 : 0
+      })
+      console.log('添加尼古丁:', nicotineMaterial.name, nicotineQuantity)
     }
 
-    // 3. 其他材料（專屬材料和通用材料）- 每個產品1個
+    // 3. 其他材料（專屬材料和通用材料）- 根據實際需求計算
     // 專屬材料
     console.log('專屬材料名稱:', selectedProduct.specificMaterialNames)
     if (selectedProduct.specificMaterialNames && selectedProduct.specificMaterialNames.length > 0) {
       selectedProduct.specificMaterialNames.forEach(materialName => {
         const material = materials.find(m => m.name === materialName)
         if (material) {
-          const requiredQuantity = 1 * targetQuantity // 每個產品1個
+          // 根據物料類型計算需求量
+          let requiredQuantity = 0
+          let unit = material.unit || '個'
+          
+          // 如果是包裝材料，每個產品1個
+          if (material.name.includes('包裝') || material.name.includes('盒') || material.name.includes('貼紙') || 
+              material.name.includes('底座') || material.name.includes('空倉') || material.name.includes('小塞')) {
+            requiredQuantity = targetQuantity
+            unit = '個'
+          }
+          // 如果是其他材料，可能需要不同的計算方式
+          else {
+            requiredQuantity = targetQuantity
+            unit = material.unit || '個'
+          }
+          
           materialRequirementsMap.set(material.id, {
             materialId: material.id,
             materialCode: material.code,
             materialName: material.name,
             requiredQuantity: requiredQuantity,
             currentStock: material.currentStock || 0,
-            unit: material.unit || '個',
+            unit: unit,
             hasEnoughStock: (material.currentStock || 0) >= requiredQuantity,
             category: 'specific',
             ratio: 1
           })
-          console.log('添加專屬材料:', material.name, requiredQuantity)
+          console.log('添加專屬材料:', material.name, requiredQuantity, unit)
         } else {
           console.log('找不到專屬材料:', materialName)
         }
@@ -326,19 +341,34 @@ export default function CreateWorkOrderPage() {
       selectedProduct.commonMaterialNames.forEach(materialName => {
         const material = materials.find(m => m.name === materialName)
         if (material) {
-          const requiredQuantity = 1 * targetQuantity // 每個產品1個
+          // 根據物料類型計算需求量
+          let requiredQuantity = 0
+          let unit = material.unit || '個'
+          
+          // 如果是包裝材料，每個產品1個
+          if (material.name.includes('包裝') || material.name.includes('盒') || material.name.includes('貼紙') || 
+              material.name.includes('底座') || material.name.includes('空倉') || material.name.includes('小塞')) {
+            requiredQuantity = targetQuantity
+            unit = '個'
+          }
+          // 如果是其他材料，可能需要不同的計算方式
+          else {
+            requiredQuantity = targetQuantity
+            unit = material.unit || '個'
+          }
+          
           materialRequirementsMap.set(material.id, {
             materialId: material.id,
             materialCode: material.code,
             materialName: material.name,
             requiredQuantity: requiredQuantity,
             currentStock: material.currentStock || 0,
-            unit: material.unit || '個',
+            unit: unit,
             hasEnoughStock: (material.currentStock || 0) >= requiredQuantity,
             category: 'common',
             ratio: 1
           })
-          console.log('添加通用材料:', material.name, requiredQuantity)
+          console.log('添加通用材料:', material.name, requiredQuantity, unit)
         } else {
           console.log('找不到通用材料:', materialName)
         }
@@ -449,209 +479,279 @@ export default function CreateWorkOrderPage() {
     )
   }
 
-  return (
-    <div className="container mx-auto py-6">
-      <div className="flex items-center gap-4 mb-6">
-        <Button variant="ghost" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          返回
-        </Button>
-        <h1 className="text-2xl font-bold">建立新工單</h1>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 左側：產品選擇和設定 */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>產品選擇</CardTitle>
-              <CardDescription>選擇要生產的產品</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                             <div>
-                 <Label htmlFor="product">產品</Label>
-                 <Select onValueChange={handleProductSelect}>
-                   <SelectTrigger>
-                     <SelectValue placeholder="選擇要生產的產品" />
-                   </SelectTrigger>
-                   <SelectContent>
-                     {filteredProducts.map((product) => (
-                       <SelectItem key={product.id} value={product.id}>
-                         <div className="flex flex-col">
-                           <span>{product.code} - {product.name}</span>
-                           {product.seriesName && (
-                             <span className="text-xs text-muted-foreground">{product.seriesName}</span>
-                           )}
-                         </div>
-                       </SelectItem>
-                     ))}
-                   </SelectContent>
-                 </Select>
-               </div>
-
-              {selectedProduct && (
-                <div className="p-4 bg-muted rounded-lg">
-                  <h4 className="font-semibold mb-2">產品資訊</h4>
-                  <div className="space-y-2 text-sm">
-                    <div><span className="font-medium">產品代號：</span>{selectedProduct.code}</div>
-                    <div><span className="font-medium">產品名稱：</span>{selectedProduct.name}</div>
-                    <div><span className="font-medium">產品系列：</span>{selectedProduct.seriesName}</div>
-                    <div><span className="font-medium">香精：</span>{selectedProduct.fragranceName}</div>
-                    <div><span className="font-medium">尼古丁濃度：</span>{selectedProduct.nicotineMg} mg/ml</div>
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <Label htmlFor="targetQuantity">目標產量 (KG)</Label>
-                <Input
-                  type="number"
-                  value={targetQuantity}
-                  onChange={(e) => setTargetQuantity(Number(e.target.value))}
-                  placeholder="1"
-                  min="1"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>工單資訊</CardTitle>
-              <CardDescription>工單基本資訊</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div><span className="font-medium">工單號碼：</span>{generateWorkOrderCode()}</div>
-              </div>
-            </CardContent>
-          </Card>
+    return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="container mx-auto py-8 px-4">
+        {/* 頁面標題 */}
+        <div className="flex items-center gap-4 mb-8">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => router.back()}
+            className="hover:bg-white/80 backdrop-blur-sm"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            返回
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800">建立新工單</h1>
+            <p className="text-gray-600 mt-1">選擇產品並設定生產參數</p>
+          </div>
         </div>
 
-        {/* 右側：物料需求分析 */}
-        <Card>
-          <CardHeader>
-            <CardTitle>物料需求分析</CardTitle>
-            <CardDescription>
-              基於目標產量 {targetQuantity}KG 的物料需求
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {selectedProduct ? (
-              <div className="space-y-4">
-                                 <div className="space-y-4">
-                   {/* 核心液體區域 */}
-                   <div>
-                     <h4 className="font-semibold text-lg mb-3 text-blue-600 border-b border-blue-200 pb-2">
-                       核心液體 (按香精配方比例)
-                     </h4>
-                     <Table>
-                       <TableHeader>
-                         <TableRow className="bg-blue-50">
-                           <TableHead className="text-blue-700 font-semibold">物料代號</TableHead>
-                           <TableHead className="text-blue-700 font-semibold">物料名稱</TableHead>
-                           <TableHead className="text-blue-700 font-semibold">需求量 (KG)</TableHead>
-                           <TableHead className="text-blue-700 font-semibold">當前庫存</TableHead>
-                           <TableHead className="text-blue-700 font-semibold">狀態</TableHead>
-                         </TableRow>
-                       </TableHeader>
-                       <TableBody>
-                         {materialRequirements
-                           .filter(m => ['fragrance', 'pg', 'vg', 'nicotine'].includes(m.category))
-                           .map((material, index) => (
-                             <TableRow key={index} className="hover:bg-blue-50">
-                               <TableCell className="font-medium">{material.materialCode}</TableCell>
-                               <TableCell className="font-medium">{material.materialName}</TableCell>
-                               <TableCell className="font-semibold text-blue-600">
-                                 {material.requiredQuantity.toFixed(2)}
-                               </TableCell>
-                               <TableCell>{material.currentStock}</TableCell>
-                               <TableCell>
-                                 {material.hasEnoughStock ? (
-                                   <Badge variant="default" className="bg-green-100 text-green-800">庫存充足</Badge>
-                                 ) : (
-                                   <Badge variant="destructive">庫存不足</Badge>
-                                 )}
-                               </TableCell>
-                             </TableRow>
-                           ))}
-                       </TableBody>
-                     </Table>
-                   </div>
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          {/* 左側：產品選擇和設定 */}
+          <div className="xl:col-span-1 space-y-6">
+            {/* 產品選擇卡片 */}
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-t-lg">
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  產品選擇
+                </CardTitle>
+                <CardDescription className="text-blue-100">
+                  選擇要生產的產品
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                <div>
+                  <Label htmlFor="product" className="text-sm font-semibold text-gray-700 mb-2 block">
+                    產品
+                  </Label>
+                  <Select onValueChange={handleProductSelect}>
+                    <SelectTrigger className="h-12 border-2 border-gray-200 hover:border-blue-300 focus:border-blue-500 transition-colors">
+                      <SelectValue placeholder="選擇要生產的產品" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredProducts.map((product) => (
+                        <SelectItem key={product.id} value={product.id}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{product.code} - {product.name}</span>
+                            {product.seriesName && (
+                              <span className="text-xs text-muted-foreground">{product.seriesName}</span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                   {/* 其他材料區域 */}
-                   <div>
-                     <h4 className="font-semibold text-lg mb-3 text-gray-600 border-b border-gray-200 pb-2">
-                       其他材料 (每個產品1個)
-                     </h4>
-                     <Table>
-                       <TableHeader>
-                         <TableRow className="bg-gray-50">
-                           <TableHead className="text-gray-700 font-semibold">物料代號</TableHead>
-                           <TableHead className="text-gray-700 font-semibold">物料名稱</TableHead>
-                           <TableHead className="text-gray-700 font-semibold">需求量 (個)</TableHead>
-                           <TableHead className="text-gray-700 font-semibold">當前庫存</TableHead>
-                           <TableHead className="text-gray-700 font-semibold">狀態</TableHead>
-                         </TableRow>
-                       </TableHeader>
-                       <TableBody>
-                         {materialRequirements
-                           .filter(m => !['fragrance', 'pg', 'vg', 'nicotine'].includes(m.category))
-                           .map((material, index) => (
-                             <TableRow key={index} className="hover:bg-gray-50">
-                               <TableCell className="font-medium">{material.materialCode}</TableCell>
-                               <TableCell className="font-medium">{material.materialName}</TableCell>
-                               <TableCell className="font-semibold text-gray-600">
-                                 {material.requiredQuantity.toFixed(0)}
-                               </TableCell>
-                               <TableCell>{material.currentStock}</TableCell>
-                               <TableCell>
-                                 {material.hasEnoughStock ? (
-                                   <Badge variant="default" className="bg-green-100 text-green-800">庫存充足</Badge>
-                                 ) : (
-                                   <Badge variant="destructive">庫存不足</Badge>
-                                 )}
-                               </TableCell>
-                             </TableRow>
-                           ))}
-                       </TableBody>
-                     </Table>
-                   </div>
-                 </div>
-
-                <Button 
-                  onClick={handleCreateWorkOrder}
-                  disabled={!selectedProduct || hasInsufficientStock || creating}
-                  className="w-full"
-                  size="lg"
-                >
-                  {creating ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      建立中...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="mr-2 h-4 w-4" />
-                      建立工單
-                    </>
-                  )}
-                </Button>
-                
-                {!selectedProduct && (
-                  <p className="text-sm text-muted-foreground text-center mt-2">
-                    請先選擇產品
-                  </p>
+                {/* 產品資訊 */}
+                {selectedProduct && (
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
+                    <h4 className="font-semibold mb-3 text-green-800 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      產品資訊
+                    </h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-600">產品代號：</span>
+                        <span className="font-semibold text-gray-800">{selectedProduct.code}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-600">產品名稱：</span>
+                        <span className="font-semibold text-gray-800">{selectedProduct.name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-600">產品系列：</span>
+                        <span className="font-semibold text-gray-800">{selectedProduct.seriesName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-600">香精：</span>
+                        <span className="font-semibold text-gray-800">{selectedProduct.fragranceName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-600">尼古丁濃度：</span>
+                        <span className="font-semibold text-gray-800">{selectedProduct.nicotineMg} mg/ml</span>
+                      </div>
+                    </div>
+                  </div>
                 )}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                <p>請選擇產品以查看物料需求</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+
+                {/* 目標產量 */}
+                <div>
+                  <Label htmlFor="targetQuantity" className="text-sm font-semibold text-gray-700 mb-2 block">
+                    目標產量 (KG)
+                  </Label>
+                  <Input
+                    type="number"
+                    value={targetQuantity}
+                    onChange={(e) => setTargetQuantity(Number(e.target.value))}
+                    placeholder="1"
+                    min="1"
+                    className="h-12 border-2 border-gray-200 hover:border-blue-300 focus:border-blue-500 transition-colors"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 工單資訊卡片 */}
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-t-lg">
+                <CardTitle className="flex items-center gap-2">
+                  <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
+                    <span className="text-xs font-bold">WO</span>
+                  </div>
+                  工單資訊
+                </CardTitle>
+                <CardDescription className="text-purple-100">
+                  工單基本資訊
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-gray-600">工單號碼：</span>
+                    <span className="font-bold text-purple-700 text-lg">{generateWorkOrderCode()}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* 右側：物料需求分析 */}
+          <div className="xl:col-span-2">
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-t-lg">
+                <CardTitle className="flex items-center gap-2">
+                  <Calculator className="h-5 w-5" />
+                  物料需求分析
+                </CardTitle>
+                <CardDescription className="text-orange-100">
+                  基於目標產量 {targetQuantity}KG 的物料需求
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                {selectedProduct ? (
+                  <div className="space-y-6">
+                    {/* 核心液體區域 */}
+                    <div>
+                      <h4 className="font-bold text-xl mb-4 text-blue-700 border-b-2 border-blue-200 pb-3 flex items-center gap-2">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        核心液體 (按香精配方比例)
+                      </h4>
+                      <div className="overflow-hidden rounded-lg border border-blue-200">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gradient-to-r from-blue-500 to-blue-600">
+                              <TableHead className="text-white font-bold">物料代號</TableHead>
+                              <TableHead className="text-white font-bold">物料名稱</TableHead>
+                              <TableHead className="text-white font-bold">需求量 (KG)</TableHead>
+                              <TableHead className="text-white font-bold">當前庫存</TableHead>
+                              <TableHead className="text-white font-bold">狀態</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {materialRequirements
+                              .filter(m => ['fragrance', 'pg', 'vg', 'nicotine'].includes(m.category))
+                              .map((material, index) => (
+                                <TableRow key={index} className="hover:bg-blue-50 transition-colors">
+                                  <TableCell className="font-semibold text-gray-800">{material.materialCode}</TableCell>
+                                  <TableCell className="font-medium text-gray-700">{material.materialName}</TableCell>
+                                  <TableCell className="font-bold text-blue-600 text-lg">
+                                    {material.requiredQuantity.toFixed(2)}
+                                  </TableCell>
+                                  <TableCell className="text-gray-600">{material.currentStock}</TableCell>
+                                  <TableCell>
+                                    {material.hasEnoughStock ? (
+                                      <Badge className="bg-green-100 text-green-800 border border-green-300 font-semibold">
+                                        庫存充足
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="destructive" className="font-semibold">
+                                        庫存不足
+                                      </Badge>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+
+                    {/* 其他材料區域 */}
+                    <div>
+                      <h4 className="font-bold text-xl mb-4 text-gray-700 border-b-2 border-gray-200 pb-3 flex items-center gap-2">
+                        <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
+                        其他材料 (每個產品1個)
+                      </h4>
+                      <div className="overflow-hidden rounded-lg border border-gray-200">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gradient-to-r from-gray-500 to-gray-600">
+                              <TableHead className="text-white font-bold">物料代號</TableHead>
+                              <TableHead className="text-white font-bold">物料名稱</TableHead>
+                              <TableHead className="text-white font-bold">需求量 (個)</TableHead>
+                              <TableHead className="text-white font-bold">當前庫存</TableHead>
+                              <TableHead className="text-white font-bold">狀態</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {materialRequirements
+                              .filter(m => !['fragrance', 'pg', 'vg', 'nicotine'].includes(m.category))
+                              .map((material, index) => (
+                                <TableRow key={index} className="hover:bg-gray-50 transition-colors">
+                                  <TableCell className="font-semibold text-gray-800">{material.materialCode}</TableCell>
+                                  <TableCell className="font-medium text-gray-700">{material.materialName}</TableCell>
+                                  <TableCell className="font-bold text-gray-600 text-lg">
+                                    {material.requiredQuantity.toFixed(0)}
+                                  </TableCell>
+                                  <TableCell className="text-gray-600">{material.currentStock}</TableCell>
+                                  <TableCell>
+                                    {material.hasEnoughStock ? (
+                                      <Badge className="bg-green-100 text-green-800 border border-green-300 font-semibold">
+                                        庫存充足
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="destructive" className="font-semibold">
+                                        庫存不足
+                                      </Badge>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+
+                    {/* 建立工單按鈕 */}
+                    <div className="pt-4">
+                      <Button 
+                        onClick={handleCreateWorkOrder}
+                        disabled={!selectedProduct || hasInsufficientStock || creating}
+                        className="w-full h-14 text-lg font-bold bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                        size="lg"
+                      >
+                        {creating ? (
+                          <>
+                            <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                            建立中...
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="mr-3 h-5 w-5" />
+                            建立工單
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-blue-100 to-indigo-200 rounded-full flex items-center justify-center">
+                      <Package className="h-12 w-12 text-blue-600" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-700 mb-2">請選擇產品</h3>
+                    <p className="text-gray-500">選擇產品後將顯示詳細的物料需求分析</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </div>
   )
