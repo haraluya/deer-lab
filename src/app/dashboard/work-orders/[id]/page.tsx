@@ -114,11 +114,11 @@ export default function WorkOrderDetailPage() {
 
   // 載入工單資料
   const fetchWorkOrder = useCallback(async () => {
-    if (!id || !db) return;
+    if (!workOrderId || !db) return;
     
-    setIsLoading(true);
+    setLoading(true);
     try {
-      const workOrderDoc = await getDoc(doc(db, 'workOrders', id));
+      const workOrderDoc = await getDoc(doc(db, 'workOrders', workOrderId));
       if (workOrderDoc.exists()) {
         const data = workOrderDoc.data();
         console.log('工單資料:', data); // 調試日誌
@@ -154,9 +154,9 @@ export default function WorkOrderDetailPage() {
       console.error('載入工單失敗:', error);
       toast.error('載入工單失敗');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }, [id, db, router]);
+  }, [workOrderId, db, router]);
 
   // 載入人員資料
   const fetchPersonnel = useCallback(async () => {
