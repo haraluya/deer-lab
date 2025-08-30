@@ -219,7 +219,9 @@ export default function CreateWorkOrderPage() {
     if (selectedProduct.fragranceFormula) {
       const { percentage, pgRatio, vgRatio } = selectedProduct.fragranceFormula
       console.log('香精配方資料:', { percentage, pgRatio, vgRatio })
-      if (percentage > 0 && pgRatio > 0 && vgRatio > 0) {
+      
+      // 只要有香精比例就進行計算，不檢查PG和VG的原始值
+      if (percentage > 0) {
         // 香精比例
         const fragranceRatio = percentage / 100
         
@@ -244,7 +246,11 @@ export default function CreateWorkOrderPage() {
           VG: (vgRatioCalculated * 100).toFixed(1) + '%',
           總計: ((fragranceRatio + pgRatioCalculated + vgRatioCalculated) * 100).toFixed(1) + '%'
         })
+      } else {
+        console.log('香精比例為0，使用預設比例')
       }
+    } else {
+      console.log('沒有香精配方資料，使用預設比例')
     }
     console.log('使用香精比例:', fragranceRatios)
 
