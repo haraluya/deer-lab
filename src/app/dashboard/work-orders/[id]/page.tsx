@@ -200,7 +200,7 @@ export default function WorkOrderDetailPage() {
     }
   }, [])
 
-  // 圖片壓縮功能
+  // 圖片壓縮功能 - 優化為720P
   const compressImage = (file: File): Promise<File> => {
     return new Promise((resolve) => {
       const canvas = document.createElement('canvas');
@@ -208,13 +208,13 @@ export default function WorkOrderDetailPage() {
       const img = new Image();
       
       img.onload = () => {
-        // 設定最大尺寸
-        const maxWidth = 800;
-        const maxHeight = 600;
+        // 設定720P最大尺寸 (1280x720)
+        const maxWidth = 1280;
+        const maxHeight = 720;
         
         let { width, height } = img;
         
-        // 計算縮放比例
+        // 計算縮放比例，保持寬高比
         if (width > height) {
           if (width > maxWidth) {
             height = (height * maxWidth) / width;
@@ -233,7 +233,7 @@ export default function WorkOrderDetailPage() {
         // 繪製壓縮後的圖片
         ctx?.drawImage(img, 0, 0, width, height);
         
-        // 轉換為 Blob
+        // 轉換為 Blob，降低品質以減少檔案大小
         canvas.toBlob((blob) => {
           if (blob) {
             const compressedFile = new File([blob], file.name, {
@@ -244,66 +244,109 @@ export default function WorkOrderDetailPage() {
           } else {
             resolve(file);
           }
-        }, 'image/jpeg', 0.8); // 80% 品質
+        }, 'image/jpeg', 0.7); // 70% 品質，進一步減少檔案大小
       };
       
       img.src = URL.createObjectURL(file);
     });
   };
 
-  // 上傳圖片到 Firebase Storage
+  // 上傳圖片到 Firebase Storage - 添加重試機制
   const uploadImageToStorage = async (file: File): Promise<string> => {
-    try {
-      const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
-      const storage = getStorage();
-      
-      // 使用日期分類的檔案路徑
-      const date = new Date();
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const timestamp = Date.now();
-      
-      const imagePath = `work-orders/${workOrderId}/comments/${year}/${month}/${day}/${timestamp}_${file.name}`;
-      const imageRef = ref(storage, imagePath);
-      
-      await uploadBytes(imageRef, file);
-      const downloadURL = await getDownloadURL(imageRef);
-      
-      return downloadURL;
-    } catch (error) {
-      console.error('圖片上傳失敗:', error);
-      throw new Error('圖片上傳失敗');
+    const maxRetries = 3;
+    let lastError: any;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // 動態導入 Firebase Storage 模組
+        const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+        const storage = getStorage();
+        
+        // 使用日期分類的檔案路徑
+        const date = new Date();
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const timestamp = Date.now();
+        
+        const imagePath = `work-orders/${workOrderId}/comments/${year}/${month}/${day}/${timestamp}_${file.name}`;
+        const imageRef = ref(storage, imagePath);
+        
+        // 上傳圖片
+        await uploadBytes(imageRef, file);
+        const downloadURL = await getDownloadURL(imageRef);
+        
+        console.log(`圖片上傳成功 (嘗試 ${attempt}/${maxRetries}):`, imagePath);
+        return downloadURL;
+        
+      } catch (error) {
+        lastError = error;
+        console.error(`圖片上傳失敗 (嘗試 ${attempt}/${maxRetries}):`, error);
+        
+        if (attempt < maxRetries) {
+          // 等待一段時間後重試
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
+      }
     }
+    
+    throw new Error(`圖片上傳失敗，已重試 ${maxRetries} 次: ${lastError?.message || '未知錯誤'}`);
   };
 
-  // 處理圖片上傳
+  // 處理圖片上傳 - 改進錯誤處理
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (files) {
-      const fileArray = Array.from(files);
+    if (!files || files.length === 0) return;
+    
+    const fileArray = Array.from(files);
+    const toastId = toast.loading("正在處理圖片...");
+    
+    try {
+      const uploadedURLs: string[] = [];
+      const failedFiles: string[] = [];
       
-      try {
-        // 顯示上傳中提示
-        const toastId = toast.loading("正在處理圖片...");
-        
-        // 壓縮並上傳每張圖片
-        const uploadPromises = fileArray.map(async (file) => {
+      // 逐個處理圖片，避免一個失敗影響全部
+      for (const file of fileArray) {
+        try {
+          console.log('開始處理圖片:', file.name, '大小:', file.size, 'bytes');
+          
+          // 檢查檔案大小
+          if (file.size > 10 * 1024 * 1024) { // 10MB
+            toast.error(`圖片 ${file.name} 太大，請選擇小於 10MB 的圖片`);
+            failedFiles.push(file.name);
+            continue;
+          }
+          
+          // 壓縮圖片
           const compressedFile = await compressImage(file);
+          console.log('圖片壓縮完成:', compressedFile.name, '大小:', compressedFile.size, 'bytes');
+          
+          // 上傳圖片
           const downloadURL = await uploadImageToStorage(compressedFile);
-          return downloadURL;
-        });
-        
-        const uploadedURLs = await Promise.all(uploadPromises);
-        
-        // 更新已上傳的圖片列表
-        setUploadedImages(prev => [...prev, ...uploadedURLs]);
-        
-        toast.success(`成功上傳 ${uploadedURLs.length} 張圖片`, { id: toastId });
-      } catch (error) {
-        console.error('圖片處理失敗:', error);
-        toast.error('圖片處理失敗');
+          uploadedURLs.push(downloadURL);
+          
+          console.log('圖片上傳成功:', downloadURL);
+          
+        } catch (error) {
+          console.error(`處理圖片 ${file.name} 失敗:`, error);
+          failedFiles.push(file.name);
+        }
       }
+      
+      // 更新已上傳的圖片列表
+      if (uploadedURLs.length > 0) {
+        setUploadedImages(prev => [...prev, ...uploadedURLs]);
+        toast.success(`成功上傳 ${uploadedURLs.length} 張圖片`, { id: toastId });
+      }
+      
+      // 顯示失敗的圖片
+      if (failedFiles.length > 0) {
+        toast.error(`以下圖片上傳失敗: ${failedFiles.join(', ')}`, { id: toastId });
+      }
+      
+    } catch (error) {
+      console.error('圖片處理失敗:', error);
+      toast.error(`圖片處理失敗: ${error instanceof Error ? error.message : '未知錯誤'}`, { id: toastId });
     }
     
     // 清空 input 值，允許重複選擇相同檔案
@@ -1035,33 +1078,7 @@ export default function WorkOrderDetailPage() {
         </CardContent>
       </Card>
 
-      {/* 留言欄位 */}
-      <Card className="bg-gradient-to-r from-gray-50 to-slate-50 border-gray-200">
-        <CardHeader>
-          <CardTitle className="text-gray-800 flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            留言
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isEditing ? (
-            <Textarea
-              value={editData.notes}
-              onChange={(e) => setEditData(prev => ({ ...prev, notes: e.target.value }))}
-              placeholder="輸入留言內容..."
-              className="min-h-[100px]"
-            />
-          ) : (
-            <div className="min-h-[100px] bg-white rounded-lg border p-4">
-              {workOrder.notes ? (
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{workOrder.notes}</p>
-              ) : (
-                <p className="text-sm text-gray-500 text-center py-8">暫無留言</p>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+
 
       {/* 新增工時紀錄對話框 */}
       <Dialog open={isAddTimeRecordOpen} onOpenChange={setIsAddTimeRecordOpen}>
