@@ -344,44 +344,60 @@ export default function WorkOrderDetailPage() {
 
   // 刪除整個工單
   const handleDeleteWorkOrder = async () => {
-    if (!workOrder || !db) return;
+    if (!workOrder || !db) {
+      console.error('缺少必要資料:', { workOrder: !!workOrder, db: !!db });
+      toast.error('缺少必要資料，無法刪除工單');
+      return;
+    }
     
     setIsDeleting(true);
     const toastId = toast.loading("正在刪除工單...");
     
     try {
+      console.log('開始刪除工單:', workOrder.id);
+      
       // 1. 刪除所有留言的圖片
       const allImages = comments.flatMap(comment => comment.images);
+      console.log('需要刪除的圖片數量:', allImages.length);
+      
       if (allImages.length > 0) {
         const { getStorage, ref, deleteObject } = await import('firebase/storage');
         const storage = getStorage();
         
-        const deleteImagePromises = allImages.map(async (imageURL) => {
+        const deleteImagePromises = allImages.map(async (imageURL, index) => {
           try {
+            console.log(`刪除圖片 ${index + 1}/${allImages.length}:`, imageURL);
             const imageRef = ref(storage, imageURL);
             await deleteObject(imageRef);
+            console.log(`圖片 ${index + 1} 刪除成功`);
           } catch (error) {
-            console.error('刪除圖片失敗:', error);
+            console.error(`刪除圖片 ${index + 1} 失敗:`, error);
+            // 不中斷整個流程，繼續刪除其他圖片
           }
         });
         
         await Promise.all(deleteImagePromises);
+        console.log('所有圖片刪除完成');
       }
 
       // 2. 刪除工單文檔
+      console.log('刪除工單文檔:', workOrder.id);
       const { doc, deleteDoc } = await import('firebase/firestore');
       const workOrderRef = doc(db, 'workOrders', workOrder.id);
       await deleteDoc(workOrderRef);
+      console.log('工單文檔刪除成功');
 
       toast.success("工單已刪除", { id: toastId });
+      console.log('刪除完成，準備跳轉到工單列表');
       
       // 3. 返回工單列表頁面
       router.push('/dashboard/work-orders');
       
     } catch (error) {
       console.error("刪除工單失敗:", error);
-      toast.error("刪除工單失敗", { id: toastId });
+      toast.error(`刪除工單失敗: ${error instanceof Error ? error.message : '未知錯誤'}`, { id: toastId });
     } finally {
+      console.log('清理狀態');
       setIsDeleting(false);
       setIsDeleteDialogOpen(false);
     }
@@ -1351,7 +1367,7 @@ export default function WorkOrderDetailPage() {
         <DialogContent className="w-[95vw] max-w-md sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-red-600 text-lg sm:text-xl">確認刪除工單</DialogTitle>
-            <DialogDescription>
+            <div className="text-sm text-gray-600">
               此操作將永久刪除工單 "{workOrder.code}" 及其所有相關資料，包括：
               <ul className="list-disc list-inside mt-2 space-y-1">
                 <li>工單基本資料</li>
@@ -1362,7 +1378,7 @@ export default function WorkOrderDetailPage() {
               <p className="mt-3 font-medium text-red-600">
                 此操作無法復原，請確認是否繼續？
               </p>
-            </DialogDescription>
+            </div>
           </DialogHeader>
           <DialogFooter className="flex flex-col sm:flex-row gap-2">
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="w-full sm:w-auto">
