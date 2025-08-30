@@ -3,7 +3,7 @@ import { initializeApp, FirebaseApp } from 'firebase/app'
 import { getAuth, Auth } from 'firebase/auth'
 import { getFirestore, Firestore } from 'firebase/firestore'
 import { getFunctions, Functions } from 'firebase/functions'
-import { getStorage, Storage } from 'firebase/storage'
+import { getStorage } from 'firebase/storage'
 
 console.log('🔧 Firebase 模組載入...');
 
@@ -12,7 +12,7 @@ let app: FirebaseApp | null = null;
 let authInstance: Auth | null = null;
 let dbInstance: Firestore | null = null;
 let functionsInstance: Functions | null = null;
-let storageInstance: Storage | null = null;
+let storageInstance: any = null;
 let isInitialized = false;
 
 // 獲取 Firebase 配置
@@ -115,7 +115,7 @@ export function getFunctionsInstance(): Functions | null {
   return getFirebaseInstances().functions;
 }
 
-export function getStorageInstance(): Storage | null {
+export function getStorageInstance(): any {
   return getFirebaseInstances().storage;
 }
 

@@ -1,5 +1,5 @@
 // src/lib/imageUpload.ts
-import { storage } from './firebase';
+import { getStorageInstance } from './firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
 export interface ImageUploadResult {
@@ -126,6 +126,7 @@ export const uploadImage = async (
     }
 
     // 檢查 Firebase Storage 是否可用
+    const storage = getStorageInstance();
     if (!storage) {
       return { success: false, error: 'Firebase Storage 未初始化' };
     }
@@ -223,6 +224,7 @@ export const uploadMultipleImages = async (
 // 刪除圖片
 export const deleteImage = async (path: string): Promise<boolean> => {
   try {
+    const storage = getStorageInstance();
     if (!storage) {
       console.error('Firebase Storage 未初始化');
       return false;
@@ -241,6 +243,7 @@ export const deleteImage = async (path: string): Promise<boolean> => {
 // 獲取圖片 URL（如果路徑是 Firebase Storage 路徑）
 export const getImageURL = async (path: string): Promise<string | null> => {
   try {
+    const storage = getStorageInstance();
     if (!storage) {
       console.error('Firebase Storage 未初始化');
       return null;
