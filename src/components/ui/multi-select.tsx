@@ -80,6 +80,15 @@ export function MultiSelect({
     return materialName.includes(searchTerm) || 
            category.includes(searchTerm) || 
            subCategory.includes(searchTerm);
+  }).sort((a, b) => {
+    // 搜尋結果也按照相同的排序邏輯：主分類 -> 細分分類 -> 物料名稱
+    if (a.category !== b.category) {
+      return (a.category || '').localeCompare(b.category || '', 'zh-TW');
+    }
+    if (a.subCategory !== b.subCategory) {
+      return (a.subCategory || '').localeCompare(b.subCategory || '', 'zh-TW');
+    }
+    return (a.materialName || a.label).localeCompare(b.materialName || b.label, 'zh-TW');
   });
 
   return (
