@@ -188,8 +188,20 @@ export default function CreateWorkOrderPage() {
           id: doc.id,
           ...doc.data()
         })) as Material[]
-        console.log('載入的物料列表:', materialsList) // 調試日誌
-        setMaterials(materialsList)
+        
+        // 載入香精資料
+        const fragrancesSnapshot = await getDocs(collection(db, "fragrances"))
+        const fragrancesList = fragrancesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Material[]
+        
+        // 合併物料和香精資料
+        const allMaterials = [...materialsList, ...fragrancesList]
+        console.log('載入的物料列表:', materialsList.length, '個') // 調試日誌
+        console.log('載入的香精列表:', fragrancesList.length, '個') // 調試日誌
+        console.log('合併後的總物料列表:', allMaterials.length, '個') // 調試日誌
+        setMaterials(allMaterials)
 
       } catch (error) {
         console.error("載入資料失敗:", error)
@@ -233,37 +245,26 @@ export default function CreateWorkOrderPage() {
 
     const materialRequirementsMap = new Map<string, any>()
 
-    // 1. 使用香精配方比例（如果有的話）
-    let fragranceRatios = { fragrance: 0.357, pg: 0.4501, vg: 0.1929 } // 預設比例
+    // 1. 直接使用香精詳情中的配方比例（避免浮點數精度問題）
+    let fragranceRatios = { fragrance: 35.7, pg: 24.3, vg: 40 } // 預設比例
     if (selectedProduct.fragranceFormula) {
       const { percentage, pgRatio, vgRatio } = selectedProduct.fragranceFormula
       console.log('香精配方資料:', { percentage, pgRatio, vgRatio })
       
-      // 只要有香精比例就進行計算，不檢查PG和VG的原始值
+      // 直接使用香精詳情中的原始比例，避免浮點數精度問題
       if (percentage > 0) {
-        // 香精比例
-        const fragranceRatio = percentage / 100
-        
-        // PG比例：如果香精低於60%，PG補滿60%，否則不加PG
-        let pgRatioCalculated = 0
-        if (fragranceRatio < 0.6) {
-          pgRatioCalculated = 0.6 - fragranceRatio
-        }
-        
-        // VG比例：剩餘部分
-        const vgRatioCalculated = 1 - fragranceRatio - pgRatioCalculated
-        
+        // 直接使用原始百分比值，不進行任何計算
         fragranceRatios = {
-          fragrance: fragranceRatio,
-          pg: pgRatioCalculated,
-          vg: vgRatioCalculated
+          fragrance: percentage, // 直接使用香精詳情中的percentage（如35.7）
+          pg: pgRatio,          // 直接使用香精詳情中的pgRatio（如24.3）
+          vg: vgRatio           // 直接使用香精詳情中的vgRatio（如40）
         }
         
-        console.log('計算後的比例:', {
-          香精: (fragranceRatio * 100).toFixed(1) + '%',
-          PG: (pgRatioCalculated * 100).toFixed(1) + '%',
-          VG: (vgRatioCalculated * 100).toFixed(1) + '%',
-          總計: ((fragranceRatio + pgRatioCalculated + vgRatioCalculated) * 100).toFixed(1) + '%'
+        console.log('直接使用香精詳情中的配方比例（避免浮點數精度問題）:', {
+          香精: percentage + '%',
+          PG: pgRatio + '%',
+          VG: vgRatio + '%',
+          總計: (percentage + pgRatio + vgRatio) + '%'
         })
       } else {
         console.log('香精比例為0，使用預設比例')
@@ -275,14 +276,15 @@ export default function CreateWorkOrderPage() {
 
     // 2. 核心液體 (香精、PG、VG、尼古丁) - 總是添加所有核心液體
     // 香精 - 總是添加，並檢查實際庫存
-    if (selectedProduct.fragranceCode && selectedProduct.fragranceCode !== '未指定') {
-      const fragranceQuantity = targetQuantity * fragranceRatios.fragrance
+    if (selectedProduct.fragranceName && selectedProduct.fragranceName !== '未指定') {
+      const fragranceQuantity = targetQuantity * (fragranceRatios.fragrance / 100) // 35.7% = 0.357
       
       // 查找香精的實際庫存
       const fragranceMaterial = materials.find(m => 
         m.code === selectedProduct.fragranceCode || 
         m.name === selectedProduct.fragranceName ||
-        m.name.includes(selectedProduct.fragranceName)
+        m.name.includes(selectedProduct.fragranceName) ||
+        (selectedProduct.fragranceCode && m.code.includes(selectedProduct.fragranceCode))
       )
       
       console.log('香精匹配結果:', {
@@ -316,7 +318,7 @@ export default function CreateWorkOrderPage() {
     // PG (丙二醇) - 總是添加，使用配方比例
     const pgMaterial = materials.find(m => m.name.includes('PG丙二醇') || m.name.includes('PG') || m.code.includes('PG'))
     if (pgMaterial) {
-      const pgQuantity = targetQuantity * fragranceRatios.pg
+      const pgQuantity = targetQuantity * (fragranceRatios.pg / 100) // 24.3% = 0.243
       materialRequirementsMap.set(pgMaterial.id, {
         materialId: pgMaterial.id,
         materialCode: pgMaterial.code,
@@ -334,7 +336,7 @@ export default function CreateWorkOrderPage() {
     // VG (甘油) - 總是添加，使用配方比例
     const vgMaterial = materials.find(m => m.name.includes('VG甘油') || m.name.includes('VG') || m.code.includes('VG'))
     if (vgMaterial) {
-      const vgQuantity = targetQuantity * fragranceRatios.vg
+      const vgQuantity = targetQuantity * (fragranceRatios.vg / 100) // 40% = 0.4
       materialRequirementsMap.set(vgMaterial.id, {
         materialId: vgMaterial.id,
         materialCode: vgMaterial.code,
@@ -521,11 +523,16 @@ export default function CreateWorkOrderPage() {
           nicotineMg: selectedProduct.nicotineMg
         },
         billOfMaterials: materialRequirements.map(m => ({
-          materialId: m.materialId,
-          materialCode: m.materialCode,
-          materialName: m.materialName,
+          id: m.materialId,
+          name: m.materialName,
+          code: m.materialCode,
+          type: m.category === 'fragrance' ? 'fragrance' : 'material',
           quantity: m.requiredQuantity,
-          unit: m.unit
+          unit: m.unit,
+          ratio: m.ratio || 0, // 直接儲存香精詳情中的原始百分比值，避免浮點數精度問題
+          isCalculated: true,
+          category: m.category,
+          usedQuantity: m.requiredQuantity // 初始使用數量等於需求數量
         })),
         targetQuantity,
         actualQuantity: 0,

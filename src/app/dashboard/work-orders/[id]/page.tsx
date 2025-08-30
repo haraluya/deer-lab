@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { doc, getDoc, updateDoc, collection, getDocs, addDoc, Timestamp } from "firebase/firestore"
+import { doc, getDoc, updateDoc, collection, getDocs, addDoc, Timestamp, query, where } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
 import { uploadImage, uploadMultipleImages } from "@/lib/imageUpload"
 import { 
   ArrowLeft, Edit, Save, CheckCircle, AlertCircle, Clock, Package, Users, 
-  Droplets, Calculator, MessageSquare, Calendar, User, Plus, X, Loader2, Upload, Trash2
+  Droplets, Calculator, MessageSquare, Calendar, User, Plus, X, Loader2, Upload, Trash2,
+  RefreshCw, Check
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -125,6 +126,8 @@ export default function WorkOrderDetailPage() {
   const [uploadedImages, setUploadedImages] = useState<string[]>([])
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isReloading, setIsReloading] = useState(false)
+  const [isEditingQuantity, setIsEditingQuantity] = useState(false)
 
   // 載入工單資料
   const fetchWorkOrder = useCallback(async () => {
@@ -149,7 +152,21 @@ export default function WorkOrderDetailPage() {
             fragranceCode: data.productSnapshot?.fragranceCode || '未指定',
             nicotineMg: data.productSnapshot?.nicotineMg || 0,
           },
-          billOfMaterials: data.billOfMaterials || [],
+          billOfMaterials: (data.billOfMaterials || []).map((item: any) => {
+            // 處理舊的資料結構，確保向後相容
+            return {
+              id: item.id || item.materialId || '',
+              name: item.name || item.materialName || '',
+              code: item.code || item.materialCode || '',
+              type: item.type || (item.category === 'fragrance' ? 'fragrance' : 'material'),
+              quantity: item.quantity || item.requiredQuantity || 0,
+              unit: item.unit || '個',
+              ratio: item.ratio || 0,
+              isCalculated: item.isCalculated !== undefined ? item.isCalculated : true,
+              category: item.category || 'other',
+              usedQuantity: item.usedQuantity || item.quantity || item.requiredQuantity || 0
+            };
+          }),
           targetQuantity: data.targetQuantity || 0,
           actualQuantity: data.actualQuantity || 0,
           status: data.status || '預報',
@@ -254,6 +271,261 @@ export default function WorkOrderDetailPage() {
   // 移除已上傳的圖片
   const handleRemoveImage = (index: number) => {
     setUploadedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // 重新載入BOM表
+  const handleReloadBOM = useCallback(async () => {
+    if (!workOrder || !db) return;
+    
+    setIsReloading(true);
+    try {
+      // 重新載入產品資料以獲取最新的配方資訊
+      // 使用產品代號來重新獲取完整的產品資料
+      const productQuery = query(
+        collection(db, "products"),
+        where("code", "==", workOrder.productSnapshot.code)
+      );
+      const productSnapshot = await getDocs(productQuery);
+      
+      if (productSnapshot.empty) {
+        toast.error("找不到產品資料");
+        return;
+      }
+      
+      const productDoc = productSnapshot.docs[0];
+      const productData = productDoc.data();
+      console.log('重新載入BOM表 - 獲取到的產品資料:', productData);
+      
+      // 重新計算BOM表（使用與建立工單相同的邏輯）
+      const materialRequirements = await calculateMaterialRequirements(
+        productData,
+        workOrder.targetQuantity
+      );
+      
+      // 更新工單的BOM表
+      const docRef = doc(db, "workOrders", workOrderId);
+      await updateDoc(docRef, {
+        billOfMaterials: materialRequirements,
+        updatedAt: Timestamp.now()
+      });
+      
+      // 重新載入工單資料
+      await fetchWorkOrder();
+      
+      toast.success("BOM表已重新載入");
+    } catch (error) {
+      console.error("重新載入BOM表失敗:", error);
+      toast.error("重新載入BOM表失敗");
+    } finally {
+      setIsReloading(false);
+    }
+  }, [workOrder, db, workOrderId, fetchWorkOrder]);
+
+  // 計算物料需求的輔助函數 - 完全重新計算，如同建立工單時一樣
+  const calculateMaterialRequirements = async (productData: any, targetQuantity: number) => {
+    if (!db) return [];
+    
+    console.log('重新載入BOM表 - 開始重新計算物料需求:', {
+      productData: {
+        name: productData.name,
+        fragranceName: productData.fragranceName,
+        fragranceCode: productData.fragranceCode,
+        nicotineMg: productData.nicotineMg
+      },
+      targetQuantity
+    });
+    
+    // 載入物料資料
+    const materialsSnapshot = await getDocs(collection(db, "materials"));
+    const materialsList = materialsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as any[];
+    
+    // 載入香精資料
+    const fragrancesSnapshot = await getDocs(collection(db, "fragrances"));
+    const fragrancesList = fragrancesSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as any[];
+    
+    // 合併物料和香精資料
+    const allMaterials = [...materialsList, ...fragrancesList];
+    console.log('重新載入BOM表 - 載入的物料列表:', materialsList.length, '個');
+    console.log('重新載入BOM表 - 載入的香精列表:', fragrancesList.length, '個');
+    console.log('重新載入BOM表 - 合併後的總物料列表:', allMaterials.length, '個');
+    
+    const materialRequirementsMap = new Map<string, any>();
+    
+    // 1. 直接使用香精詳情中的配方比例（避免浮點數精度問題）
+    let fragranceRatios = { fragrance: 35.7, pg: 24.3, vg: 40 }; // 預設比例
+    if (productData.fragranceFormula) {
+      const { percentage, pgRatio, vgRatio } = productData.fragranceFormula;
+      console.log('重新載入BOM表 - 香精配方資料:', { percentage, pgRatio, vgRatio });
+      
+      if (percentage > 0) {
+        // 直接使用香精詳情中的原始比例，避免浮點數精度問題
+        fragranceRatios = {
+          fragrance: percentage, // 直接使用香精詳情中的percentage（如35.7）
+          pg: pgRatio,          // 直接使用香精詳情中的pgRatio（如24.3）
+          vg: vgRatio           // 直接使用香精詳情中的vgRatio（如40）
+        };
+        
+        console.log('重新載入BOM表 - 直接使用香精詳情中的配方比例（避免浮點數精度問題）:', {
+          香精: percentage + '%',
+          PG: pgRatio + '%',
+          VG: vgRatio + '%',
+          總計: (percentage + pgRatio + vgRatio) + '%'
+        });
+      } else {
+        console.log('重新載入BOM表 - 香精比例為0，使用預設比例');
+      }
+    } else {
+      console.log('重新載入BOM表 - 沒有香精配方資料，使用預設比例');
+    }
+    console.log('重新載入BOM表 - 使用香精比例:', fragranceRatios);
+    
+    // 2. 核心液體 (香精、PG、VG、尼古丁) - 總是添加所有核心液體
+    // 香精 - 總是添加，並檢查實際庫存
+    if (productData.fragranceName && productData.fragranceName !== '未指定') {
+      const fragranceQuantity = targetQuantity * (fragranceRatios.fragrance / 100); // 35.7% = 0.357
+      
+      // 查找香精的實際庫存
+      const fragranceMaterial = allMaterials.find((m: any) => 
+        m.code === productData.fragranceCode || 
+        m.name === productData.fragranceName ||
+        m.name?.includes(productData.fragranceName) ||
+        (productData.fragranceCode && m.code?.includes(productData.fragranceCode))
+      );
+      
+      console.log('重新載入BOM表 - 香精匹配結果:', {
+        fragranceCode: productData.fragranceCode,
+        fragranceName: productData.fragranceName,
+        foundMaterial: fragranceMaterial ? {
+          id: fragranceMaterial.id,
+          code: fragranceMaterial.code,
+          name: fragranceMaterial.name
+        } : null,
+        allMaterials: allMaterials.map((m: any) => ({ code: m.code, name: m.name }))
+      });
+      
+      const currentStock = fragranceMaterial ? (fragranceMaterial.currentStock || 0) : 0;
+      const hasEnoughStock = currentStock >= fragranceQuantity;
+      
+      materialRequirementsMap.set('fragrance', {
+        id: fragranceMaterial ? fragranceMaterial.id : 'fragrance',
+        name: productData.fragranceName,
+        code: productData.fragranceCode,
+        type: 'fragrance',
+        quantity: fragranceQuantity,
+        unit: 'KG',
+        ratio: fragranceRatios.fragrance, // 直接儲存香精詳情中的原始百分比值
+        isCalculated: true,
+        category: 'fragrance',
+        usedQuantity: fragranceQuantity
+      });
+      console.log('重新載入BOM表 - 添加香精:', productData.fragranceName, fragranceQuantity, '比例:', fragranceRatios.fragrance, '庫存:', currentStock, '充足:', hasEnoughStock);
+    }
+    
+    // PG (丙二醇) - 總是添加，使用配方比例
+    const pgMaterial = allMaterials.find((m: any) => m.name?.includes('PG丙二醇') || m.name?.includes('PG') || m.code?.includes('PG'));
+    if (pgMaterial) {
+      const pgQuantity = targetQuantity * (fragranceRatios.pg / 100); // 24.3% = 0.243
+      materialRequirementsMap.set(pgMaterial.id, {
+        id: pgMaterial.id,
+        name: pgMaterial.name,
+        code: pgMaterial.code,
+        type: 'material',
+        quantity: pgQuantity,
+        unit: pgMaterial.unit || 'KG',
+        ratio: fragranceRatios.pg, // 直接儲存香精詳情中的原始百分比值
+        isCalculated: true,
+        category: 'pg',
+        usedQuantity: pgQuantity
+      });
+      console.log('重新載入BOM表 - 添加PG:', pgMaterial.name, pgQuantity, '比例:', fragranceRatios.pg);
+    }
+    
+    // VG (甘油) - 總是添加，使用配方比例
+    const vgMaterial = allMaterials.find((m: any) => m.name?.includes('VG甘油') || m.name?.includes('VG') || m.code?.includes('VG'));
+    if (vgMaterial) {
+      const vgQuantity = targetQuantity * (fragranceRatios.vg / 100); // 40% = 0.4
+      materialRequirementsMap.set(vgMaterial.id, {
+        id: vgMaterial.id,
+        name: vgMaterial.name,
+        code: vgMaterial.code,
+        type: 'material',
+        quantity: vgQuantity,
+        unit: vgMaterial.unit || 'KG',
+        ratio: fragranceRatios.vg, // 直接儲存香精詳情中的原始百分比值
+        isCalculated: true,
+        category: 'vg',
+        usedQuantity: vgQuantity
+      });
+      console.log('重新載入BOM表 - 添加VG:', vgMaterial.name, vgQuantity, '比例:', fragranceRatios.vg);
+    }
+    
+    // 尼古丁 - 總是添加，使用產品濃度計算
+    const nicotineMaterial = allMaterials.find((m: any) => m.name?.includes('丁鹽') || m.name?.includes('尼古丁') || m.code?.includes('NIC'));
+    if (nicotineMaterial) {
+      const nicotineQuantity = productData.nicotineMg && productData.nicotineMg > 0 
+        ? (targetQuantity * productData.nicotineMg) / 250 
+        : 0;
+      materialRequirementsMap.set(nicotineMaterial.id, {
+        id: nicotineMaterial.id,
+        name: nicotineMaterial.name,
+        code: nicotineMaterial.code,
+        type: 'material',
+        quantity: nicotineQuantity,
+        unit: nicotineMaterial.unit || 'KG',
+        ratio: productData.nicotineMg ? productData.nicotineMg / 250 : 0,
+        isCalculated: true,
+        category: 'nicotine',
+        usedQuantity: nicotineQuantity
+      });
+      console.log('重新載入BOM表 - 添加尼古丁:', nicotineMaterial.name, nicotineQuantity, '濃度:', productData.nicotineMg);
+    }
+    
+    // 3. 其他材料（專屬材料和通用材料）- 根據實際需求計算
+    // 專屬材料 - 保持原有的專屬材料
+    console.log('重新載入BOM表 - 專屬材料名稱:', workOrder?.billOfMaterials?.filter(item => item.category === 'specific').map(item => item.name));
+    const existingSpecificMaterials = workOrder?.billOfMaterials?.filter(item => item.category === 'specific') || [];
+    existingSpecificMaterials.forEach(item => {
+      materialRequirementsMap.set(item.id, {
+        ...item,
+        usedQuantity: item.usedQuantity || item.quantity
+      });
+      console.log('重新載入BOM表 - 保持專屬材料:', item.name, item.quantity, item.unit);
+    });
+    
+    // 通用材料 - 保持原有的通用材料
+    console.log('重新載入BOM表 - 通用材料名稱:', workOrder?.billOfMaterials?.filter(item => item.category === 'common').map(item => item.name));
+    const existingCommonMaterials = workOrder?.billOfMaterials?.filter(item => item.category === 'common') || [];
+    existingCommonMaterials.forEach(item => {
+      materialRequirementsMap.set(item.id, {
+        ...item,
+        usedQuantity: item.usedQuantity || item.quantity
+      });
+      console.log('重新載入BOM表 - 保持通用材料:', item.name, item.quantity, item.unit);
+    });
+    
+    // 轉換為陣列並排序
+    const finalRequirements = Array.from(materialRequirementsMap.values());
+    
+    // 排序：香精、PG、VG、尼古丁優先，然後按類別和名稱排序
+    finalRequirements.sort((a, b) => {
+      const categoryOrder = ['fragrance', 'pg', 'vg', 'nicotine', 'specific', 'common', 'other'];
+      const categoryA = categoryOrder.indexOf(a.category || 'other');
+      const categoryB = categoryOrder.indexOf(b.category || 'other');
+      
+      if (categoryA !== categoryB) {
+        return categoryA - categoryB;
+      }
+      return (a.name || '').localeCompare(b.name || '');
+    });
+    
+    console.log('重新載入BOM表 - 最終物料需求:', finalRequirements);
+    return finalRequirements;
   };
 
   // 新增留言
@@ -758,10 +1030,46 @@ export default function WorkOrderDetailPage() {
       {/* 香精物料清單 (BOM表) */}
       <Card className="mb-4 sm:mb-6 bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
         <CardHeader className="pb-3 sm:pb-6">
-          <CardTitle className="text-purple-800 flex items-center gap-2 text-lg sm:text-xl">
-            <Droplets className="h-5 w-5" />
-            香精物料清單 (BOM表)
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-purple-800 flex items-center gap-2 text-lg sm:text-xl">
+              <Droplets className="h-5 w-5" />
+              香精物料清單 (BOM表)
+            </CardTitle>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleReloadBOM}
+                disabled={isReloading}
+                className="text-purple-700 border-purple-300 hover:bg-purple-50"
+              >
+                {isReloading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                重新載入
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditingQuantity(!isEditingQuantity)}
+                className="text-purple-700 border-purple-300 hover:bg-purple-50"
+              >
+                {isEditingQuantity ? (
+                  <>
+                    <Check className="h-4 w-4 mr-1" />
+                    完成編輯
+                  </>
+                ) : (
+                  <>
+                    <Edit className="h-4 w-4 mr-1" />
+                    編輯數量
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4 sm:space-y-6">
@@ -801,9 +1109,9 @@ export default function WorkOrderDetailPage() {
                           <TableCell>
                             {item.ratio ? `${item.ratio}%` : '-'}
                           </TableCell>
-                          <TableCell className="font-medium">{item.quantity.toFixed(3)}</TableCell>
+                          <TableCell className="font-medium">{item.quantity.toFixed(2)}</TableCell>
                           <TableCell>
-                            {isEditing ? (
+                            {isEditingQuantity ? (
                               <Input
                                 type="number"
                                 min="0"
@@ -816,7 +1124,7 @@ export default function WorkOrderDetailPage() {
                                 className="w-20"
                               />
                             ) : (
-                              <span className="font-medium">{item.usedQuantity || item.quantity}</span>
+                              <span className="font-medium">{(item.usedQuantity || item.quantity).toFixed(2)}</span>
                             )}
                           </TableCell>
                           <TableCell>{item.unit}</TableCell>
@@ -840,8 +1148,6 @@ export default function WorkOrderDetailPage() {
                       <TableRow>
                         <TableHead>物料名稱</TableHead>
                         <TableHead>料件代號</TableHead>
-                        <TableHead>比例</TableHead>
-                        <TableHead>需求數量</TableHead>
                         <TableHead>使用數量</TableHead>
                         <TableHead>單位</TableHead>
                       </TableRow>
@@ -855,15 +1161,11 @@ export default function WorkOrderDetailPage() {
                             <TableCell className="font-medium">{item.name}</TableCell>
                             <TableCell className="font-mono text-sm">{item.code}</TableCell>
                             <TableCell>
-                              {item.ratio ? `${item.ratio}%` : '-'}
-                            </TableCell>
-                            <TableCell className="font-medium">{item.quantity.toFixed(3)}</TableCell>
-                            <TableCell>
-                              {isEditing ? (
+                              {isEditingQuantity ? (
                                 <Input
                                   type="number"
                                   min="0"
-                                  step="0.001"
+                                  step="1"
                                   value={item.usedQuantity || item.quantity}
                                   onChange={(e) => {
                                     console.log('更新使用數量:', item.id, e.target.value);
@@ -896,8 +1198,6 @@ export default function WorkOrderDetailPage() {
                       <TableRow>
                         <TableHead>物料名稱</TableHead>
                         <TableHead>料件代號</TableHead>
-                        <TableHead>比例</TableHead>
-                        <TableHead>需求數量</TableHead>
                         <TableHead>使用數量</TableHead>
                         <TableHead>單位</TableHead>
                       </TableRow>
@@ -911,15 +1211,11 @@ export default function WorkOrderDetailPage() {
                             <TableCell className="font-medium">{item.name}</TableCell>
                             <TableCell className="font-mono text-sm">{item.code}</TableCell>
                             <TableCell>
-                              {item.ratio ? `${item.ratio}%` : '-'}
-                            </TableCell>
-                            <TableCell className="font-medium">{item.quantity.toFixed(3)}</TableCell>
-                            <TableCell>
-                              {isEditing ? (
+                              {isEditingQuantity ? (
                                 <Input
                                   type="number"
                                   min="0"
-                                  step="0.001"
+                                  step="1"
                                   value={item.usedQuantity || item.quantity}
                                   onChange={(e) => {
                                     console.log('更新使用數量:', item.id, e.target.value);
