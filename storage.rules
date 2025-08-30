@@ -1,0 +1,25 @@
+rules_version = '2';
+
+// 允許讀取所有文件
+service firebase.storage {
+  match /b/{bucket}/o {
+    // 允許讀取所有文件
+    match /{allPaths=**} {
+      allow read: if true;
+    }
+    
+    // 允許上傳到工單和採購單的評論路徑
+    match /work-orders/{workOrderId}/comments/{allPaths=**} {
+      allow write: if true;
+    }
+    
+    match /purchase-orders/{purchaseOrderId}/comments/{allPaths=**} {
+      allow write: if true;
+    }
+    
+    // 允許上傳到其他上傳路徑
+    match /uploads/{allPaths=**} {
+      allow write: if true;
+    }
+  }
+}
