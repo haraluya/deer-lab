@@ -79,7 +79,7 @@ export const createFragrance = onCall<FragranceData>(async (request) => {
 export const updateFragrance = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
   // await ensureIsAdmin(contextAuth?.uid);
-  const { fragranceId, code, name, status, fragranceType, fragranceStatus, supplierId, safetyStockLevel, costPerUnit, percentage, pgRatio, vgRatio, unit } = data;
+  const { fragranceId, code, name, status, fragranceType, fragranceStatus, supplierId, currentStock, safetyStockLevel, costPerUnit, percentage, pgRatio, vgRatio, unit } = data;
   if (!fragranceId || !code || !name) { throw new HttpsError("invalid-argument", "請求缺少必要的欄位 (ID, 代號、名稱)。"); }
   
   // 處理 fragranceType 和 status 的相容性
@@ -95,6 +95,7 @@ export const updateFragrance = onCall(async (request) => {
       status: finalStatus, 
       fragranceType: finalFragranceType,
       fragranceStatus: finalFragranceStatus,
+      currentStock: Number(currentStock) || 0,
       safetyStockLevel: Number(safetyStockLevel) || 0, 
       costPerUnit: Number(costPerUnit) || 0, 
       percentage: Number(percentage) || 0, 

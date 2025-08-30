@@ -25,6 +25,7 @@ const formSchema = z.object({
   fragranceType: z.string({ required_error: '必須選擇香精種類' }),
   fragranceStatus: z.string({ required_error: '必須選擇香精狀態' }),
   supplierId: z.string().optional(),
+  currentStock: z.coerce.number().min(0, { message: '現有庫存不能為負數' }).optional(),
   safetyStockLevel: z.coerce.number().min(0).optional(),
   costPerUnit: z.coerce.number().min(0).optional(),
   percentage: z.coerce.number().min(0).max(100, { message: '香精比例不能超過100%' }),
@@ -77,31 +78,55 @@ export function FragranceDialog({
 }: FragranceDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [fragranceTypes, setFragranceTypes] = useState<string[]>([]);
+  const [fragranceStatuses, setFragranceStatuses] = useState<string[]>([]);
   const isEditMode = !!fragranceData;
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      code: '', name: '', fragranceType: 'cotton', fragranceStatus: 'active', supplierId: '',
-      safetyStockLevel: 0, costPerUnit: 0, percentage: 0, pgRatio: 0, vgRatio: 0, remarks: '',
+      code: '', name: '', fragranceType: '', fragranceStatus: '', supplierId: '',
+      currentStock: 0, safetyStockLevel: 0, costPerUnit: 0, percentage: 0, pgRatio: 0, vgRatio: 0, remarks: '',
     },
   });
 
   useEffect(() => {
     if (isOpen) {
-      const fetchSuppliers = async () => {
+      const fetchData = async () => {
         try {
           if (!db) {
             throw new Error("Firebase 未初始化")
           }
-          const querySnapshot = await getDocs(collection(db, 'suppliers'));
-          const suppliersList = querySnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name })) as Supplier[];
+          
+          // 獲取供應商
+          const suppliersSnapshot = await getDocs(collection(db, 'suppliers'));
+          const suppliersList = suppliersSnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name })) as Supplier[];
           setSuppliers(suppliersList);
+
+          // 獲取香精種類
+          try {
+            const fragranceTypesSnapshot = await getDocs(collection(db, 'fragranceTypes'));
+            const fragranceTypesList = fragranceTypesSnapshot.docs.map(doc => doc.data().name).filter(Boolean);
+            setFragranceTypes(fragranceTypesList.length > 0 ? fragranceTypesList : ['棉芯', '陶瓷芯', '棉陶芯通用']);
+          } catch (error) {
+            console.log("香精種類集合不存在，使用預設值");
+            setFragranceTypes(['棉芯', '陶瓷芯', '棉陶芯通用']);
+          }
+
+          // 獲取香精狀態
+          try {
+            const fragranceStatusesSnapshot = await getDocs(collection(db, 'fragranceStatuses'));
+            const fragranceStatusesList = fragranceStatusesSnapshot.docs.map(doc => doc.data().name).filter(Boolean);
+            setFragranceStatuses(fragranceStatusesList.length > 0 ? fragranceStatusesList : ['啟用', '備用', '棄用']);
+          } catch (error) {
+            console.log("香精狀態集合不存在，使用預設值");
+            setFragranceStatuses(['啟用', '備用', '棄用']);
+          }
         } catch (error) {
-          toast.error("讀取供應商列表失敗。");
+          toast.error("讀取資料失敗。");
         }
       };
-      fetchSuppliers();
+      fetchData();
     }
   }, [isOpen]);
 
@@ -110,9 +135,10 @@ export function FragranceDialog({
       form.reset({
         code: fragranceData.code || '',
         name: fragranceData.name || '',
-        fragranceType: fragranceData.fragranceType || fragranceData.status || 'cotton',
-        fragranceStatus: fragranceData.fragranceStatus || 'active',
+        fragranceType: fragranceData.fragranceType || '',
+        fragranceStatus: fragranceData.fragranceStatus || '',
         supplierId: fragranceData.supplierRef?.id || '',
+        currentStock: fragranceData.currentStock || 0,
         safetyStockLevel: fragranceData.safetyStockLevel || 0,
         costPerUnit: fragranceData.costPerUnit || 0,
         percentage: fragranceData.percentage || 0,
@@ -269,9 +295,11 @@ export function FragranceDialog({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="cotton">棉芯</SelectItem>
-                          <SelectItem value="ceramic">陶瓷芯</SelectItem>
-                          <SelectItem value="universal">棉陶芯通用</SelectItem>
+                          {fragranceTypes.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -292,9 +320,11 @@ export function FragranceDialog({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="active">啟用</SelectItem>
-                          <SelectItem value="standby">備用</SelectItem>
-                          <SelectItem value="discontinued">棄用</SelectItem>
+                          {fragranceStatuses.map((status) => (
+                            <SelectItem key={status} value={status}>
+                              {status}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -336,7 +366,27 @@ export function FragranceDialog({
                 庫存與成本
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <FormField
+                  control={form.control}
+                  name="currentStock"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold text-gray-700">現有庫存 (KG)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01"
+                          placeholder="0"
+                          className="border-gray-300 focus:border-green-500 focus:ring-green-500"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="safetyStockLevel"

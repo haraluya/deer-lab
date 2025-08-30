@@ -252,6 +252,8 @@ export const updateMaterial = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
   // await ensureCanManageMaterials(contextAuth?.uid);
   
+  logger.info(`開始更新物料，接收到的資料:`, data);
+  
   const { materialId, name, category, subCategory, supplierId, currentStock, safetyStockLevel, costPerUnit, unit, notes } = data;
   
   if (!materialId || !name) { 
@@ -293,6 +295,8 @@ export const updateMaterial = onCall(async (request) => {
       updatedAt: FieldValue.serverTimestamp(),
     };
 
+    logger.info(`準備更新的資料:`, updateData);
+
     if (supplierId) {
       updateData.supplierRef = db.collection("suppliers").doc(supplierId);
     } else {
@@ -301,6 +305,7 @@ export const updateMaterial = onCall(async (request) => {
 
     await materialRef.update(updateData);
     logger.info(`管理員 ${contextAuth?.uid} 成功更新物料: ${materialId}`);
+    logger.info(`更新完成，返回結果:`, { status: "success", message: `物料 ${name} 已成功更新。`, updatedCode });
     
     return {
       status: "success",

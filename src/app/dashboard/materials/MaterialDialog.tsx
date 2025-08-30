@@ -280,19 +280,34 @@ export function MaterialDialog({
       const functions = getFunctions();
       
       if (isEditMode && materialData) {
-        const updateMaterial = httpsCallable(functions, 'updateMaterial');
-        await updateMaterial({
+        console.log('正在更新物料，資料:', {
           materialId: materialData.id,
           ...data,
           supplierId: data.supplierId === 'none' ? undefined : data.supplierId
         });
+        
+        const updateMaterial = httpsCallable(functions, 'updateMaterial');
+        const result = await updateMaterial({
+          materialId: materialData.id,
+          ...data,
+          supplierId: data.supplierId === 'none' ? undefined : data.supplierId
+        });
+        
+        console.log('更新物料結果:', result);
         toast.success(`物料 ${data.name} 已成功更新。`, { id: toastId });
       } else {
-              const createMaterial = httpsCallable(functions, 'createMaterial');
-      await createMaterial({
-        ...data,
-        supplierId: data.supplierId === 'none' ? undefined : data.supplierId
-      });
+        console.log('正在新增物料，資料:', {
+          ...data,
+          supplierId: data.supplierId === 'none' ? undefined : data.supplierId
+        });
+        
+        const createMaterial = httpsCallable(functions, 'createMaterial');
+        const result = await createMaterial({
+          ...data,
+          supplierId: data.supplierId === 'none' ? undefined : data.supplierId
+        });
+        
+        console.log('新增物料結果:', result);
         toast.success(`物料 ${data.name} 已成功建立。`, { id: toastId });
       }
       
