@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ProductDialog, ProductData } from '../ProductDialog';
 import { RemarksDialog } from './RemarksDialog';
-import { RecipeCalculatorDialog } from '../../work-orders/RecipeCalculatorDialog';
+
 
 interface Product {
   id: string;
@@ -59,7 +59,7 @@ export default function ProductDetailPage() {
   const [targetProduction, setTargetProduction] = useState<number>(1);
   const [isRemarksDialogOpen, setIsRemarksDialogOpen] = useState(false);
   const [remarks, setRemarks] = useState<string>('');
-  const [isRecipeCalculatorOpen, setIsRecipeCalculatorOpen] = useState(false);
+
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -232,18 +232,7 @@ export default function ProductDetailPage() {
 
     fetchProduct();
 
-    // 監聽配方計算機打開事件
-    const handleOpenRecipeCalculator = (event: CustomEvent) => {
-      if (event.detail?.productId === params.id) {
-        setIsRecipeCalculatorOpen(true);
-      }
-    };
 
-    window.addEventListener('openRecipeCalculator', handleOpenRecipeCalculator as EventListener);
-
-    return () => {
-      window.removeEventListener('openRecipeCalculator', handleOpenRecipeCalculator as EventListener);
-    };
   }, [params.id]);
 
   const handleEdit = () => {
@@ -366,14 +355,6 @@ export default function ProductDetailPage() {
           <p className="text-muted-foreground font-mono">{product.code}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            onClick={() => setIsRecipeCalculatorOpen(true)}
-            variant="outline"
-            className="border-blue-200 text-blue-600 hover:bg-blue-50"
-          >
-            <Calculator className="mr-2 h-4 w-4" />
-            配方計算機
-          </Button>
           <Button onClick={handleEdit} className="bg-primary hover:bg-primary/90">
             <Edit className="mr-2 h-4 w-4" />
             編輯產品
@@ -732,16 +713,7 @@ export default function ProductDetailPage() {
         currentRemarks={remarks}
       />
 
-      {/* 配方計算機對話框 */}
-      <RecipeCalculatorDialog
-        isOpen={isRecipeCalculatorOpen}
-        onOpenChange={setIsRecipeCalculatorOpen}
-        onWorkOrderCreated={() => {
-          // 工單建立成功後可以重新載入產品資料
-          window.location.reload();
-        }}
-        initialProductId={product?.id}
-      />
+
     </div>
   );
 }
