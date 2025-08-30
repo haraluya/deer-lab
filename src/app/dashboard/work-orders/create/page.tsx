@@ -210,7 +210,7 @@ export default function CreateWorkOrderPage() {
     if (selectedProduct.fragranceFormula) {
       const { percentage, pgRatio, vgRatio } = selectedProduct.fragranceFormula
       console.log('香精配方資料:', { percentage, pgRatio, vgRatio })
-      if (percentage > 0) {
+      if (percentage > 0 && pgRatio > 0 && vgRatio > 0) {
         fragranceRatios = {
           fragrance: percentage / 100,
           pg: pgRatio / 100,
@@ -249,7 +249,7 @@ export default function CreateWorkOrderPage() {
       console.log('添加香精:', selectedProduct.fragranceName, fragranceQuantity, '比例:', fragranceRatios.fragrance, '庫存:', currentStock, '充足:', hasEnoughStock)
     }
 
-    // PG (丙二醇) - 總是添加
+    // PG (丙二醇) - 總是添加，使用配方比例
     const pgMaterial = materials.find(m => m.name.includes('PG丙二醇') || m.name.includes('PG') || m.code.includes('PG'))
     if (pgMaterial) {
       const pgQuantity = targetQuantity * fragranceRatios.pg
@@ -267,7 +267,7 @@ export default function CreateWorkOrderPage() {
       console.log('添加PG:', pgMaterial.name, pgQuantity, '比例:', fragranceRatios.pg)
     }
 
-    // VG (甘油) - 總是添加
+    // VG (甘油) - 總是添加，使用配方比例
     const vgMaterial = materials.find(m => m.name.includes('VG甘油') || m.name.includes('VG') || m.code.includes('VG'))
     if (vgMaterial) {
       const vgQuantity = targetQuantity * fragranceRatios.vg
@@ -285,7 +285,7 @@ export default function CreateWorkOrderPage() {
       console.log('添加VG:', vgMaterial.name, vgQuantity, '比例:', fragranceRatios.vg)
     }
 
-    // 尼古丁 - 總是添加（如果有尼古丁濃度）
+    // 尼古丁 - 總是添加，使用產品濃度計算
     const nicotineMaterial = materials.find(m => m.name.includes('丁鹽') || m.name.includes('尼古丁') || m.code.includes('NIC'))
     if (nicotineMaterial) {
       const nicotineQuantity = selectedProduct.nicotineMg && selectedProduct.nicotineMg > 0 
@@ -302,7 +302,7 @@ export default function CreateWorkOrderPage() {
         category: 'nicotine',
         ratio: selectedProduct.nicotineMg ? selectedProduct.nicotineMg / 250 : 0
       })
-      console.log('添加尼古丁:', nicotineMaterial.name, nicotineQuantity)
+      console.log('添加尼古丁:', nicotineMaterial.name, nicotineQuantity, '濃度:', selectedProduct.nicotineMg)
     }
 
     // 3. 其他材料（專屬材料和通用材料）- 根據實際需求計算
