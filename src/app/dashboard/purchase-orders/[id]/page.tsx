@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { doc, getDoc, Timestamp, DocumentData } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, Timestamp, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { toast } from 'sonner';
@@ -316,41 +316,7 @@ export default function PurchaseOrderDetailPage() {
     }
   };
 
-  const handleRemoveImage = (index: number) => {
-    setUploadedImages(prev => prev.filter((_, i) => i !== index));
-  };
 
-  // 刪除留言功能
-  const handleDeleteComment = async (commentId: string) => {
-    try {
-      const comment = comments.find(c => c.id === commentId);
-      if (!comment) return;
-
-      // 刪除相關圖片
-      if (comment.images.length > 0) {
-        const { getStorage, ref, deleteObject } = await import('firebase/storage');
-        const storage = getStorage();
-        
-        const deletePromises = comment.images.map(async (imageURL) => {
-          try {
-            const imageRef = ref(storage, imageURL);
-            await deleteObject(imageRef);
-          } catch (error) {
-            console.error('刪除圖片失敗:', error);
-          }
-        });
-        
-        await Promise.all(deletePromises);
-      }
-
-      // 從本地狀態中移除留言
-      setComments(prev => prev.filter(c => c.id !== commentId));
-      toast.success('留言已刪除');
-    } catch (error) {
-      console.error('刪除留言失敗:', error);
-      toast.error('刪除留言失敗');
-    }
-  };
 
   // 刪除整個採購單功能
   const handleDeletePurchaseOrder = async () => {
