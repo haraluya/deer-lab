@@ -77,9 +77,23 @@ export function MultiSelect({
     const category = (option.category || '').toLowerCase();
     const subCategory = (option.subCategory || '').toLowerCase();
     
-    return materialName.includes(searchTerm) || 
-           category.includes(searchTerm) || 
-           subCategory.includes(searchTerm);
+    const matches = materialName.includes(searchTerm) || 
+                   category.includes(searchTerm) || 
+                   subCategory.includes(searchTerm);
+    
+    // 調試日誌
+    if (inputValue.trim()) {
+      console.log('搜尋檢查:', {
+        searchTerm,
+        materialName,
+        category,
+        subCategory,
+        matches,
+        option: option
+      });
+    }
+    
+    return matches;
   }).sort((a, b) => {
     // 搜尋結果優先按照物料名稱排序
     const materialNameA = (a.materialName || a.label).toLowerCase();
