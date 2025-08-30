@@ -366,13 +366,13 @@ export default function WorkOrderDetailPage() {
             <div className="text-center p-4 bg-white rounded-lg border">
               <div className="text-sm text-gray-600 mb-1">生產產品名稱</div>
               <div className="font-semibold text-blue-800">{workOrder.productSnapshot.name}</div>
-              <div className="text-xs text-gray-500">{workOrder.productSnapshot.seriesName}</div>
+              <div className="text-xs text-gray-500">{workOrder.productSnapshot.seriesName || '未指定'}</div>
             </div>
             
             <div className="text-center p-4 bg-white rounded-lg border">
               <div className="text-sm text-gray-600 mb-1">使用香精</div>
-              <div className="font-semibold text-pink-800">{workOrder.productSnapshot.fragranceName}</div>
-              <div className="text-xs text-gray-500">{workOrder.productSnapshot.fragranceCode}</div>
+              <div className="font-semibold text-pink-800">{workOrder.productSnapshot.fragranceCode}</div>
+              <div className="text-xs text-gray-500">{workOrder.productSnapshot.fragranceName}</div>
             </div>
             
             <div className="text-center p-4 bg-white rounded-lg border">
