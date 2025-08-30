@@ -573,7 +573,7 @@ export default function WorkOrderDetailPage() {
   return (
     <div className="container mx-auto p-2 sm:p-4 py-4 sm:py-10">
       {/* 頁面標題 */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-4 sm:mb-8">
+      <div className="flex items-center justify-between mb-4 sm:mb-8">
         <div className="flex items-center gap-2 sm:gap-4">
           <Button 
             variant="outline" 
@@ -593,7 +593,7 @@ export default function WorkOrderDetailPage() {
         <Button 
           variant="destructive" 
           onClick={() => setIsDeleteDialogOpen(true)}
-          className="bg-red-600 hover:bg-red-700 w-full sm:w-auto"
+          className="bg-red-600 hover:bg-red-700 flex-shrink-0"
         >
           <Trash2 className="mr-2 h-4 w-4" />
           刪除工單
@@ -629,7 +629,7 @@ export default function WorkOrderDetailPage() {
             
             <div className="text-center p-3 sm:p-4 bg-white rounded-lg border">
               <div className="text-xs sm:text-sm text-gray-600 mb-1">工單狀態</div>
-              <Badge className={statusOptions.find(s => s.value === workOrder.status)?.color}>
+              <Badge className={`${statusOptions.find(s => s.value === workOrder.status)?.color} text-base sm:text-lg font-bold px-3 py-1`}>
                 {workOrder.status}
               </Badge>
             </div>
@@ -664,7 +664,7 @@ export default function WorkOrderDetailPage() {
                 </Select>
               ) : (
                 <div className="mt-1">
-                  <Badge className={statusOptions.find(s => s.value === workOrder.status)?.color}>
+                  <Badge className={`${statusOptions.find(s => s.value === workOrder.status)?.color} text-base sm:text-lg font-bold px-3 py-1`}>
                     {workOrder.status}
                   </Badge>
                 </div>
