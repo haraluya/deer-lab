@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import { doc, getDoc, updateDoc, collection, getDocs, addDoc, Timestamp } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
+import { uploadImage, uploadMultipleImages } from "@/lib/imageUpload"
 import { 
   ArrowLeft, Edit, Save, CheckCircle, AlertCircle, Clock, Package, Users, 
   Droplets, Calculator, MessageSquare, Calendar, User, Plus, X, Loader2, Upload, Trash2
@@ -200,132 +201,7 @@ export default function WorkOrderDetailPage() {
     }
   }, [])
 
-  // 圖片壓縮功能 - 優化為720P
-  const compressImage = (file: File): Promise<File> => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-      
-      img.onload = () => {
-        // 設定720P最大尺寸 (1280x720)
-        const maxWidth = 1280;
-        const maxHeight = 720;
-        
-        let { width, height } = img;
-        
-        // 計算縮放比例，保持寬高比
-        if (width > height) {
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
-          }
-        } else {
-          if (height > maxHeight) {
-            width = (width * maxHeight) / height;
-            height = maxHeight;
-          }
-        }
-        
-        canvas.width = width;
-        canvas.height = height;
-        
-        // 繪製壓縮後的圖片
-        ctx?.drawImage(img, 0, 0, width, height);
-        
-        // 轉換為 Blob，降低品質以減少檔案大小
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const compressedFile = new File([blob], file.name, {
-              type: 'image/jpeg',
-              lastModified: Date.now(),
-            });
-            resolve(compressedFile);
-          } else {
-            resolve(file);
-          }
-        }, 'image/jpeg', 0.7); // 70% 品質，進一步減少檔案大小
-      };
-      
-      img.src = URL.createObjectURL(file);
-    });
-  };
-
-  // 上傳圖片到 Firebase Storage - 改進資料夾分類和錯誤處理
-  const uploadImageToStorage = async (file: File): Promise<string> => {
-    const maxRetries = 3;
-    let lastError: any;
-
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        // 動態導入 Firebase Storage 模組
-        const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
-        const storage = getStorage();
-        
-        // 改進的日期分類檔案路徑結構
-        const date = new Date();
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hour = String(date.getHours()).padStart(2, '0');
-        const minute = String(date.getMinutes()).padStart(2, '0');
-        const timestamp = Date.now();
-        
-        // 更詳細的資料夾分類：年/月/日/時/分
-        const imagePath = `work-orders/${workOrderId}/comments/${year}/${month}/${day}/${hour}/${minute}/${timestamp}_${file.name}`;
-        const imageRef = ref(storage, imagePath);
-        
-        // 設定上傳元數據，避免 CORS 問題
-        const metadata = {
-          contentType: file.type,
-          cacheControl: 'public, max-age=31536000', // 1年快取
-        };
-        
-        // 上傳圖片
-        await uploadBytes(imageRef, file, metadata);
-        const downloadURL = await getDownloadURL(imageRef);
-        
-        console.log(`圖片上傳成功 (嘗試 ${attempt}/${maxRetries}):`, imagePath);
-        console.log('圖片URL:', downloadURL);
-        return downloadURL;
-        
-      } catch (error) {
-        lastError = error;
-        console.error(`圖片上傳失敗 (嘗試 ${attempt}/${maxRetries}):`, error);
-        
-        // 如果是 CORS 錯誤，嘗試不同的方法
-        if (error instanceof Error && error.message && error.message.includes('CORS')) {
-          console.log('檢測到 CORS 錯誤，嘗試使用不同的上傳方法...');
-          try {
-            // 嘗試使用更簡單的路徑
-            const { getStorage, ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
-            const storage = getStorage();
-            
-            const simplePath = `work-orders/${workOrderId}/comments/${Date.now()}_${file.name}`;
-            const simpleRef = ref(storage, simplePath);
-            
-            await uploadBytes(simpleRef, file);
-            const downloadURL = await getDownloadURL(simpleRef);
-            
-            console.log(`使用簡化路徑上傳成功:`, simplePath);
-            return downloadURL;
-          } catch (simpleError) {
-            console.error('簡化路徑上傳也失敗:', simpleError);
-            lastError = simpleError;
-          }
-        }
-        
-        if (attempt < maxRetries) {
-          // 等待一段時間後重試
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-        }
-      }
-    }
-    
-    throw new Error(`圖片上傳失敗，已重試 ${maxRetries} 次: ${lastError?.message || '未知錯誤'}`);
-  };
-
-  // 處理圖片上傳 - 改進錯誤處理
+  // 使用成熟的圖片上傳工具
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
@@ -334,54 +210,27 @@ export default function WorkOrderDetailPage() {
     const toastId = toast.loading("正在處理圖片...");
     
     try {
-      const uploadedURLs: string[] = [];
-      const failedFiles: string[] = [];
+      const results = await uploadMultipleImages(fileArray, {
+        folder: `work-orders/${workOrderId}/comments`,
+        maxSize: 10,
+        compress: true,
+        quality: 0.7
+      });
       
-      // 逐個處理圖片，避免一個失敗影響全部
-      for (const file of fileArray) {
-        try {
-          console.log('開始處理圖片:', file.name, '大小:', file.size, 'bytes');
-          
-          // 檢查檔案大小
-          if (file.size > 10 * 1024 * 1024) { // 10MB
-            toast.error(`圖片 ${file.name} 太大，請選擇小於 10MB 的圖片`);
-            failedFiles.push(file.name);
-            continue;
-          }
-          
-          // 壓縮圖片
-          const compressedFile = await compressImage(file);
-          console.log('圖片壓縮完成:', compressedFile.name, '大小:', compressedFile.size, 'bytes');
-          
-          // 嘗試上傳圖片到 Firebase Storage
-          let downloadURL: string;
-          try {
-            downloadURL = await uploadImageToStorage(compressedFile);
-            console.log('Firebase Storage 上傳成功:', downloadURL);
-          } catch (uploadError) {
-            console.warn('Firebase Storage 上傳失敗，使用 Base64 備用方法:', uploadError);
-            // 使用 Base64 備用方法
-            downloadURL = await uploadImageAsBase64(compressedFile);
-            console.log('Base64 備用上傳成功');
-          }
-          
-          uploadedURLs.push(downloadURL);
-          
-        } catch (error) {
-          console.error(`處理圖片 ${file.name} 失敗:`, error);
-          failedFiles.push(file.name);
-        }
-      }
+      const successfulUploads = results.filter(result => result.success);
+      const failedUploads = results.filter(result => !result.success);
       
       // 更新已上傳的圖片列表
-      if (uploadedURLs.length > 0) {
-        setUploadedImages(prev => [...prev, ...uploadedURLs]);
-        toast.success(`成功上傳 ${uploadedURLs.length} 張圖片`, { id: toastId });
+      if (successfulUploads.length > 0) {
+        const urls = successfulUploads.map(result => result.url!);
+        setUploadedImages(prev => [...prev, ...urls]);
+        toast.success(`成功上傳 ${successfulUploads.length} 張圖片`, { id: toastId });
       }
       
       // 顯示失敗的圖片
-      if (failedFiles.length > 0) {
-        toast.error(`以下圖片上傳失敗: ${failedFiles.join(', ')}`, { id: toastId });
+      if (failedUploads.length > 0) {
+        const failedNames = failedUploads.map(result => result.error).join(', ');
+        toast.error(`以下圖片上傳失敗: ${failedNames}`, { id: toastId });
       }
       
     } catch (error) {
@@ -391,21 +240,6 @@ export default function WorkOrderDetailPage() {
     
     // 清空 input 值，允許重複選擇相同檔案
     event.target.value = '';
-  };
-
-  // 備用圖片上傳方法 - 使用 Base64 編碼
-  const uploadImageAsBase64 = async (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64String = reader.result as string;
-        resolve(base64String);
-      };
-      reader.onerror = () => {
-        reject(new Error('圖片讀取失敗'));
-      };
-      reader.readAsDataURL(file);
-    });
   };
 
   // 移除已上傳的圖片

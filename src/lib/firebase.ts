@@ -3,6 +3,7 @@ import { initializeApp, FirebaseApp } from 'firebase/app'
 import { getAuth, Auth } from 'firebase/auth'
 import { getFirestore, Firestore } from 'firebase/firestore'
 import { getFunctions, Functions } from 'firebase/functions'
+import { getStorage, Storage } from 'firebase/storage'
 
 console.log('🔧 Firebase 模組載入...');
 
@@ -11,6 +12,7 @@ let app: FirebaseApp | null = null;
 let authInstance: Auth | null = null;
 let dbInstance: Firestore | null = null;
 let functionsInstance: Functions | null = null;
+let storageInstance: Storage | null = null;
 let isInitialized = false;
 
 // 獲取 Firebase 配置
@@ -77,14 +79,18 @@ function initializeFirebase() {
     functionsInstance = getFunctions(app);
     console.log('✅ Firebase Functions 初始化成功');
 
+    console.log('🚀 正在初始化 Firebase Storage...');
+    storageInstance = getStorage(app);
+    console.log('✅ Firebase Storage 初始化成功');
+
     isInitialized = true;
     console.log('🎉 Firebase 所有服務初始化完成！');
     
-    return { app, auth: authInstance, db: dbInstance, functions: functionsInstance };
+    return { app, auth: authInstance, db: dbInstance, functions: functionsInstance, storage: storageInstance };
   } catch (error) {
     console.error('❌ Firebase 初始化失敗:', error);
     // 不拋出錯誤，而是返回 null
-    return { app: null, auth: null, db: null, functions: null };
+    return { app: null, auth: null, db: null, functions: null, storage: null };
   }
 }
 
@@ -93,7 +99,7 @@ function getFirebaseInstances() {
   if (!isInitialized) {
     return initializeFirebase();
   }
-  return { app, auth: authInstance, db: dbInstance, functions: functionsInstance };
+  return { app, auth: authInstance, db: dbInstance, functions: functionsInstance, storage: storageInstance };
 }
 
 // 導出函數
@@ -109,8 +115,13 @@ export function getFunctionsInstance(): Functions | null {
   return getFirebaseInstances().functions;
 }
 
+export function getStorageInstance(): Storage | null {
+  return getFirebaseInstances().storage;
+}
+
 // 為了向後兼容，導出函數調用的結果
 export const auth = getAuthInstance();
 export const db = getFirestoreInstance();
 export const functions = getFunctionsInstance();
+export const storage = getStorageInstance();
 export default app;
