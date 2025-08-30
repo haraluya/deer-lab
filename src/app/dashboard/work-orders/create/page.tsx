@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { collection, getDocs, addDoc, doc, getDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
-import { ArrowLeft, Plus, Package, Calculator } from "lucide-react"
+import { ArrowLeft, Plus, Package, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -29,6 +29,9 @@ interface Product {
     quantity: number
     unit: string
   }>
+  seriesRef?: string // 新增產品系列參考
+  currentFragranceRef?: string // 新增香精參考
+  fragranceCode?: string // 新增香精代號
 }
 
 interface Material {
@@ -44,9 +47,17 @@ export default function CreateWorkOrderPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [materials, setMaterials] = useState<Material[]>([])
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
-  const [targetQuantity, setTargetQuantity] = useState(1000)
+  const [targetQuantity, setTargetQuantity] = useState(1) // 改為1 KG
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('') // 新增搜尋功能
+
+  // 過濾產品列表
+  const filteredProducts = products.filter(product => 
+    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (product.seriesName && product.seriesName.toLowerCase().includes(searchTerm.toLowerCase()))
+  )
 
   useEffect(() => {
     const loadData = async () => {
@@ -58,10 +69,52 @@ export default function CreateWorkOrderPage() {
         
         // 載入產品資料
         const productsSnapshot = await getDocs(collection(db, "products"))
-        const productsList = productsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Product[]
+        const productsList = await Promise.all(productsSnapshot.docs.map(async doc => {
+          const data = doc.data()
+          
+          // 獲取產品系列名稱
+          let seriesName = '未指定'
+          if (data.seriesRef) {
+            try {
+              const seriesDoc = await getDoc(data.seriesRef)
+              if (seriesDoc.exists()) {
+                const seriesData = seriesDoc.data() as any
+                seriesName = seriesData.name || '未指定'
+              }
+            } catch (error) {
+              console.error('獲取產品系列失敗:', error)
+            }
+          }
+
+          // 獲取香精資訊
+          let fragranceName = '未指定'
+          let fragranceCode = '未指定'
+          if (data.currentFragranceRef) {
+            try {
+              const fragranceDoc = await getDoc(data.currentFragranceRef)
+              if (fragranceDoc.exists()) {
+                const fragranceData = fragranceDoc.data() as any
+                fragranceName = fragranceData.name || '未指定'
+                fragranceCode = fragranceData.code || '未指定'
+              }
+            } catch (error) {
+              console.error('獲取香精資訊失敗:', error)
+            }
+          }
+
+          return {
+            id: doc.id,
+            name: data.name,
+            code: data.code,
+            seriesName: seriesName,
+            seriesRef: data.seriesRef,
+            fragranceRef: data.currentFragranceRef,
+            fragranceName: fragranceName,
+            fragranceCode: fragranceCode,
+            nicotineMg: data.nicotineMg || 0,
+            billOfMaterials: data.billOfMaterials || []
+          }
+        }))
         setProducts(productsList)
 
         // 載入物料資料
@@ -151,7 +204,9 @@ export default function CreateWorkOrderPage() {
         productSnapshot: {
           code: selectedProduct.code,
           name: selectedProduct.name,
+          seriesName: selectedProduct.seriesName,
           fragranceName: selectedProduct.fragranceName,
+          fragranceCode: selectedProduct.fragranceCode,
           nicotineMg: selectedProduct.nicotineMg
         },
         billOfMaterials: materialRequirements.map(m => ({
@@ -188,23 +243,26 @@ export default function CreateWorkOrderPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-lg">載入中...</div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">載入中...</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="container mx-auto py-6">
       <div className="flex items-center gap-4 mb-6">
-        <Button variant="outline" onClick={() => router.back()}>
+        <Button variant="ghost" size="sm" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           返回
         </Button>
-        <h1 className="text-3xl font-bold">建立新工單</h1>
+        <h1 className="text-2xl font-bold">建立新工單</h1>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 左側：產品選擇和基本設定 */}
+        {/* 左側：產品選擇和設定 */}
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -214,18 +272,32 @@ export default function CreateWorkOrderPage() {
             <CardContent className="space-y-4">
               <div>
                 <Label htmlFor="product">產品</Label>
-                <Select onValueChange={handleProductSelect}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="選擇產品" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {products.map((product) => (
-                      <SelectItem key={product.id} value={product.id}>
-                        {product.code} - {product.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="space-y-2">
+                  {/* 搜尋輸入框 */}
+                  <Input
+                    placeholder="搜尋產品名稱、代號或系列..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="mb-2"
+                  />
+                  <Select onValueChange={handleProductSelect}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="選擇要生產的產品" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredProducts.map((product) => (
+                        <SelectItem key={product.id} value={product.id}>
+                          <div className="flex flex-col">
+                            <span>{product.code} - {product.name}</span>
+                            {product.seriesName && (
+                              <span className="text-xs text-muted-foreground">{product.seriesName}</span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               {selectedProduct && (
@@ -234,6 +306,7 @@ export default function CreateWorkOrderPage() {
                   <div className="space-y-2 text-sm">
                     <div><span className="font-medium">產品代號：</span>{selectedProduct.code}</div>
                     <div><span className="font-medium">產品名稱：</span>{selectedProduct.name}</div>
+                    <div><span className="font-medium">產品系列：</span>{selectedProduct.seriesName}</div>
                     <div><span className="font-medium">香精：</span>{selectedProduct.fragranceName}</div>
                     <div><span className="font-medium">尼古丁濃度：</span>{selectedProduct.nicotineMg} mg/ml</div>
                   </div>
@@ -241,12 +314,12 @@ export default function CreateWorkOrderPage() {
               )}
 
               <div>
-                <Label htmlFor="targetQuantity">目標產量 (g)</Label>
+                <Label htmlFor="targetQuantity">目標產量 (KG)</Label>
                 <Input
                   type="number"
                   value={targetQuantity}
                   onChange={(e) => setTargetQuantity(Number(e.target.value))}
-                  placeholder="1000"
+                  placeholder="1"
                   min="1"
                 />
               </div>
@@ -258,141 +331,87 @@ export default function CreateWorkOrderPage() {
               <CardTitle>工單資訊</CardTitle>
               <CardDescription>工單基本資訊</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>工單號碼</Label>
-                <div className="p-3 bg-muted rounded-md font-mono text-sm">
-                  {generateWorkOrderCode()}
-                </div>
-              </div>
-              
-              <div>
-                <Label>建立時間</Label>
-                <div className="p-3 bg-muted rounded-md text-sm">
-                  {new Date().toLocaleString()}
-                </div>
-              </div>
-
-              <div>
-                <Label>初始狀態</Label>
-                <div className="flex gap-2">
-                  <Badge variant="outline">未確認</Badge>
-                  <Badge variant="outline">未檢驗</Badge>
-                </div>
+            <CardContent>
+              <div className="space-y-2">
+                <div><span className="font-medium">工單號碼：</span>{generateWorkOrderCode()}</div>
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* 右側：物料需求分析 */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                物料需求分析
-              </CardTitle>
-              <CardDescription>
-                基於目標產量 {targetQuantity}g 的物料需求
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {selectedProduct ? (
-                <div className="space-y-4">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>物料代號</TableHead>
-                        <TableHead>物料名稱</TableHead>
-                        <TableHead className="text-right">需求量</TableHead>
-                        <TableHead className="text-right">當前庫存</TableHead>
-                        <TableHead className="text-right">狀態</TableHead>
+        <Card>
+          <CardHeader>
+            <CardTitle>物料需求分析</CardTitle>
+            <CardDescription>
+              基於目標產量 {targetQuantity}KG 的物料需求
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {selectedProduct ? (
+              <div className="space-y-4">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>物料代號</TableHead>
+                      <TableHead>物料名稱</TableHead>
+                      <TableHead>需求量</TableHead>
+                      <TableHead>當前庫存</TableHead>
+                      <TableHead>狀態</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {materialRequirements.map((material, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{material.materialCode}</TableCell>
+                        <TableCell>{material.materialName}</TableCell>
+                        <TableCell>{material.requiredQuantity.toFixed(2)}</TableCell>
+                        <TableCell>{material.currentStock}</TableCell>
+                        <TableCell>
+                          {material.hasEnoughStock ? (
+                            <Badge variant="default">庫存充足</Badge>
+                          ) : (
+                            <Badge variant="destructive">庫存不足</Badge>
+                          )}
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {materialRequirements.map((material, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="font-mono">{material.materialCode}</TableCell>
-                          <TableCell>{material.materialName}</TableCell>
-                          <TableCell className="text-right font-medium">
-                            {material.requiredQuantity.toFixed(3)} {material.unit}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {material.currentStock} {material.unit}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Badge variant={material.hasEnoughStock ? "default" : "destructive"}>
-                              {material.hasEnoughStock ? "庫存充足" : "庫存不足"}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                    ))}
+                  </TableBody>
+                </Table>
 
-                  {hasInsufficientStock && (
-                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                      <h4 className="font-semibold text-red-800 mb-2">⚠️ 庫存不足警告</h4>
-                      <p className="text-sm text-red-700">
-                        部分物料庫存不足，無法建立工單。請先補充庫存。
-                      </p>
-                    </div>
+                <Button 
+                  onClick={handleCreateWorkOrder}
+                  disabled={!selectedProduct || hasInsufficientStock || creating}
+                  className="w-full"
+                  size="lg"
+                >
+                  {creating ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      建立中...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="mr-2 h-4 w-4" />
+                      建立工單
+                    </>
                   )}
-
-                  {!hasInsufficientStock && materialRequirements.length > 0 && (
-                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <h4 className="font-semibold text-green-800 mb-2">✅ 庫存充足</h4>
-                      <p className="text-sm text-green-700">
-                        所有物料庫存充足，可以建立工單。
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>請先選擇產品以查看物料需求</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* 建立按鈕 */}
-          <Card>
-            <CardContent className="pt-6">
-              <Button 
-                onClick={handleCreateWorkOrder}
-                disabled={!selectedProduct || hasInsufficientStock || creating}
-                className="w-full"
-                size="lg"
-              >
-                {creating ? (
-                  <>
-                    <Calculator className="h-4 w-4 mr-2 animate-spin" />
-                    建立中...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="h-4 w-4 mr-2" />
-                    建立工單
-                  </>
+                </Button>
+                
+                {!selectedProduct && (
+                  <p className="text-sm text-muted-foreground text-center mt-2">
+                    請先選擇產品
+                  </p>
                 )}
-              </Button>
-              
-              {!selectedProduct && (
-                <p className="text-sm text-muted-foreground text-center mt-2">
-                  請先選擇產品
-                </p>
-              )}
-              
-              {hasInsufficientStock && (
-                <p className="text-sm text-red-600 text-center mt-2">
-                  部分物料庫存不足，無法建立工單
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                <p>請選擇產品以查看物料需求</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
