@@ -2,48 +2,51 @@
 "use client"
 
 import { ColumnDef, CellContext, HeaderContext } from "@tanstack/react-table"
-import { ArrowUpDown, MoreHorizontal } from "lucide-react"
+import { ArrowUpDown, MoreHorizontal, Eye, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
 
-// 自定義狀態Badge組件
+// 現代化狀態Badge組件
 const StatusBadge = ({ status }: { status: string }) => {
-  const getStatusStyle = (status: string) => {
+  const getStatusConfig = (status: string) => {
     switch (status) {
       case "預報":
-        return "bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-200"
+        return {
+          className: "bg-gradient-to-r from-orange-100 to-amber-100 text-orange-800 border border-orange-200 shadow-sm",
+          icon: "⏳"
+        }
       case "進行":
-        return "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200"
+        return {
+          className: "bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-800 border border-blue-200 shadow-sm",
+          icon: "🔄"
+        }
       case "完工":
-        return "bg-green-100 text-green-800 border-green-200 hover:bg-green-200"
+        return {
+          className: "bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border border-green-200 shadow-sm",
+          icon: "✅"
+        }
       case "入庫":
-        return "bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200"
+        return {
+          className: "bg-gradient-to-r from-purple-100 to-violet-100 text-purple-800 border border-purple-200 shadow-sm",
+          icon: "📦"
+        }
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200"
+        return {
+          className: "bg-gradient-to-r from-slate-100 to-gray-100 text-slate-800 border border-slate-200 shadow-sm",
+          icon: "❓"
+        }
     }
   }
 
+  const config = getStatusConfig(status)
+
   return (
-    <Badge className={`${getStatusStyle(status)} font-medium`}>
+    <Badge className={`${config.className} font-semibold px-3 py-1.5 rounded-full text-sm transition-all duration-200 hover:scale-105`}>
+      <span className="mr-1.5">{config.icon}</span>
       {status}
     </Badge>
   )
-}
-
-const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
-  switch (status) {
-    case "完工":
-      return "default"
-    case "進行":
-      return "secondary"
-    case "預報":
-      return "outline"
-    case "入庫":
-      return "destructive"
-    default:
-      return "secondary"
-  }
 }
 
 export type WorkOrderColumn = {
@@ -60,22 +63,34 @@ const ActionsCell = ({ row }: CellContext<WorkOrderColumn, unknown>) => {
   const workOrder = row.original;
 
   return (
-    <div className="text-right">
+    <div className="flex items-center justify-end gap-2">
       <Button
         variant="ghost"
-        className="h-8 w-8 p-0"
+        size="sm"
+        className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200"
         onClick={(e) => {
           e.stopPropagation();
           router.push(`/dashboard/work-orders/${workOrder.id}`);
         }}
+        title="查看詳情"
       >
-        <span className="sr-only">開啟選單</span>
+        <Eye className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 w-8 p-0 hover:bg-slate-50 hover:text-slate-600 transition-all duration-200"
+        onClick={(e) => {
+          e.stopPropagation();
+          router.push(`/dashboard/work-orders/${workOrder.id}`);
+        }}
+        title="更多操作"
+      >
         <MoreHorizontal className="h-4 w-4" />
       </Button>
     </div>
   );
 };
-
 
 export const columns: ColumnDef<WorkOrderColumn>[] = [
   {
@@ -84,28 +99,49 @@ export const columns: ColumnDef<WorkOrderColumn>[] = [
       <Button
         variant="ghost"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        className="font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-all duration-200"
       >
         工單號碼
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
-    cell: ({ row }: CellContext<WorkOrderColumn, unknown>) => <div className="font-mono pl-4">{row.getValue("code")}</div>,
+    cell: ({ row }: CellContext<WorkOrderColumn, unknown>) => (
+      <div className="font-mono font-semibold text-slate-800 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+        {row.getValue("code")}
+      </div>
+    ),
   },
   {
     accessorKey: "productName",
-    header: "產品名稱",
+    header: () => (
+      <div className="font-semibold text-slate-700">產品名稱</div>
+    ),
+    cell: ({ row }: CellContext<WorkOrderColumn, unknown>) => (
+      <div className="font-medium text-slate-800 max-w-xs truncate" title={row.getValue("productName")}>
+        {row.getValue("productName")}
+      </div>
+    ),
   },
   {
     accessorKey: "targetQuantity",
-    header: () => <div className="text-right">目標產量</div>,
+    header: () => (
+      <div className="text-right font-semibold text-slate-700">目標產量</div>
+    ),
     cell: ({ row }: CellContext<WorkOrderColumn, unknown>) => {
       const amount = parseFloat(row.getValue("targetQuantity"))
-      return <div className="text-right font-medium">{amount} g</div>
+      return (
+        <div className="text-right">
+          <div className="font-bold text-blue-600 text-lg">{amount}</div>
+          <div className="text-xs text-slate-500 font-medium">克 (g)</div>
+        </div>
+      )
     },
   },
   {
     accessorKey: "status",
-    header: "狀態",
+    header: () => (
+      <div className="font-semibold text-slate-700">狀態</div>
+    ),
     cell: ({ row }: CellContext<WorkOrderColumn, unknown>) => (
       <StatusBadge status={row.getValue("status")} />
     ),
@@ -113,18 +149,26 @@ export const columns: ColumnDef<WorkOrderColumn>[] = [
   {
     accessorKey: "createdAt",
     header: ({ column }: HeaderContext<WorkOrderColumn, unknown>) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          建立日期
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      ),
-    cell: ({ row }: CellContext<WorkOrderColumn, unknown>) => <div className="pl-4">{row.getValue("createdAt")}</div>,
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        className="font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-all duration-200"
+      >
+        建立日期
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
+    cell: ({ row }: CellContext<WorkOrderColumn, unknown>) => (
+      <div className="text-slate-600 font-medium">
+        {row.getValue("createdAt")}
+      </div>
+    ),
   },
   {
     id: "actions",
+    header: () => (
+      <div className="text-right font-semibold text-slate-700">操作</div>
+    ),
     cell: ActionsCell,
   },
 ]

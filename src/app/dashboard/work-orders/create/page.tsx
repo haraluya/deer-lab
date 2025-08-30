@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { collection, getDocs, addDoc, doc, getDoc, DocumentReference } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
-import { ArrowLeft, Plus, Package, Loader2, Calculator } from "lucide-react"
+import { ArrowLeft, Plus, Package, Loader2, Calculator, Target, Zap, CheckCircle, AlertTriangle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -500,10 +500,13 @@ export default function CreateWorkOrderPage() {
     }
 
     const materialRequirements = calculateMaterialRequirements()
-    const insufficientMaterials = materialRequirements.filter(m => !m.hasEnoughStock)
+    // 只檢查核心配方物料的庫存
+    const insufficientMaterials = materialRequirements.filter(m => 
+      ['fragrance', 'pg', 'vg', 'nicotine'].includes(m.category) && !m.hasEnoughStock
+    )
 
     if (insufficientMaterials.length > 0) {
-      toast.error(`以下物料庫存不足：${insufficientMaterials.map(m => m.materialName).join(", ")}`)
+      toast.error(`以下核心物料庫存不足：${insufficientMaterials.map(m => m.materialName).join(", ")}`)
       return
     }
 
@@ -527,12 +530,12 @@ export default function CreateWorkOrderPage() {
           name: m.materialName,
           code: m.materialCode,
           type: m.category === 'fragrance' ? 'fragrance' : 'material',
-          quantity: m.requiredQuantity,
+          quantity: ['fragrance', 'pg', 'vg', 'nicotine'].includes(m.category) ? m.requiredQuantity : 0, // 只有核心配方物料才有需求量
           unit: m.unit,
           ratio: m.ratio || 0, // 直接儲存香精詳情中的原始百分比值，避免浮點數精度問題
           isCalculated: true,
           category: m.category,
-          usedQuantity: m.requiredQuantity // 初始使用數量等於需求數量
+          usedQuantity: 0 // 所有物料的使用數量預設為0
         })),
         targetQuantity,
         actualQuantity: 0,
@@ -556,21 +559,28 @@ export default function CreateWorkOrderPage() {
   }
 
   const materialRequirements = calculateMaterialRequirements()
-  const hasInsufficientStock = materialRequirements.some(m => !m.hasEnoughStock)
+  // 只檢查核心配方物料的庫存
+  const hasInsufficientStock = materialRequirements.some(m => 
+    ['fragrance', 'pg', 'vg', 'nicotine'].includes(m.category) && !m.hasEnoughStock
+  )
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">載入中...</p>
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-slate-200 rounded-full animate-spin"></div>
+            <div className="absolute top-0 left-0 w-16 h-16 border-4 border-transparent border-t-blue-600 rounded-full animate-spin"></div>
+          </div>
+          <p className="text-slate-600 mt-6 font-medium text-lg">載入中...</p>
+          <p className="text-slate-500 text-sm mt-2">正在準備工單建立環境</p>
         </div>
       </div>
     )
   }
 
-    return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       <div className="container mx-auto py-8 px-4">
         {/* 頁面標題 */}
         <div className="flex items-center gap-4 mb-8">
@@ -578,14 +588,16 @@ export default function CreateWorkOrderPage() {
             variant="ghost" 
             size="sm" 
             onClick={() => router.back()}
-            className="hover:bg-white/80 backdrop-blur-sm"
+            className="hover:bg-white/80 backdrop-blur-sm transition-all duration-200"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             返回
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">建立新工單</h1>
-            <p className="text-gray-600 mt-1">選擇產品並設定生產參數</p>
+            <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-slate-800 via-blue-800 to-indigo-800 bg-clip-text text-transparent">
+              建立新工單
+            </h1>
+            <p className="text-slate-600 mt-2 text-lg">選擇產品並設定生產參數</p>
           </div>
         </div>
 
@@ -593,10 +605,12 @@ export default function CreateWorkOrderPage() {
           {/* 左側：產品選擇和設定 */}
           <div className="xl:col-span-1 space-y-6">
             {/* 產品選擇卡片 */}
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-t-lg">
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5" />
+            <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
+              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-t-xl">
+                <CardTitle className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    <Package className="h-5 w-5" />
+                  </div>
                   產品選擇
                 </CardTitle>
                 <CardDescription className="text-blue-100">
@@ -605,61 +619,61 @@ export default function CreateWorkOrderPage() {
               </CardHeader>
               <CardContent className="p-6 space-y-6">
                 <div>
-                  <Label htmlFor="product" className="text-sm font-semibold text-gray-700 mb-2 block">
+                  <Label htmlFor="product" className="text-sm font-semibold text-slate-700 mb-3 block">
                     產品
                   </Label>
                   <Select onValueChange={handleProductSelect}>
-                    <SelectTrigger className="h-12 border-2 border-gray-200 hover:border-blue-300 focus:border-blue-500 transition-colors">
+                    <SelectTrigger className="h-12 border-2 border-slate-200 hover:border-blue-300 focus:border-blue-500 transition-all duration-200 bg-white/80 backdrop-blur-sm">
                       <SelectValue placeholder="選擇要生產的產品" />
                     </SelectTrigger>
-                                         <SelectContent>
-                       {filteredProducts.map((product) => (
-                         <SelectItem key={product.id} value={product.id}>
-                           <div className="flex flex-col">
-                             <span className="font-medium">[{product.seriesName || '未指定'}] - {product.name}</span>
-                             <span className="text-xs text-muted-foreground">{product.code}</span>
-                           </div>
-                         </SelectItem>
-                       ))}
-                     </SelectContent>
+                    <SelectContent>
+                      {filteredProducts.map((product) => (
+                        <SelectItem key={product.id} value={product.id}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">[{product.seriesName || '未指定'}] - {product.name}</span>
+                            <span className="text-xs text-slate-500">{product.code}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </div>
 
                 {/* 產品資訊 */}
                 {selectedProduct && (
-                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
-                    <h4 className="font-semibold mb-3 text-green-800 flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <div className="bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-xl p-4">
+                    <h4 className="font-semibold mb-4 text-emerald-800 flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4" />
                       產品資訊
                     </h4>
-                                         <div className="space-y-2 text-sm">
-                       <div className="flex justify-between">
-                         <span className="font-medium text-gray-600">產品系列：</span>
-                         <span className="font-semibold text-gray-800">{selectedProduct.seriesName}</span>
-                       </div>
-                       <div className="flex justify-between">
-                         <span className="font-medium text-gray-600">產品名稱：</span>
-                         <span className="font-semibold text-gray-800">{selectedProduct.name}</span>
-                       </div>
-                       <div className="flex justify-between">
-                         <span className="font-medium text-gray-600">產品代號：</span>
-                         <span className="font-semibold text-gray-800">{selectedProduct.code}</span>
-                       </div>
-                       <div className="flex justify-between">
-                         <span className="font-medium text-gray-600">香精：</span>
-                         <span className="font-semibold text-gray-800">{selectedProduct.fragranceName}</span>
-                       </div>
-                       <div className="flex justify-between">
-                         <span className="font-medium text-gray-600">尼古丁濃度：</span>
-                         <span className="font-semibold text-gray-800">{selectedProduct.nicotineMg} mg/ml</span>
-                       </div>
-                     </div>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-slate-600">產品系列：</span>
+                        <span className="font-semibold text-slate-800">{selectedProduct.seriesName}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-slate-600">產品名稱：</span>
+                        <span className="font-semibold text-slate-800">{selectedProduct.name}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-slate-600">產品代號：</span>
+                        <span className="font-semibold text-slate-800">{selectedProduct.code}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-slate-600">香精：</span>
+                        <span className="font-semibold text-slate-800">{selectedProduct.fragranceName}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-slate-600">尼古丁濃度：</span>
+                        <span className="font-semibold text-slate-800">{selectedProduct.nicotineMg} mg/ml</span>
+                      </div>
+                    </div>
                   </div>
                 )}
 
                 {/* 目標產量 */}
                 <div>
-                  <Label htmlFor="targetQuantity" className="text-sm font-semibold text-gray-700 mb-2 block">
+                  <Label htmlFor="targetQuantity" className="text-sm font-semibold text-slate-700 mb-3 block">
                     目標產量 (KG)
                   </Label>
                   <Input
@@ -668,18 +682,18 @@ export default function CreateWorkOrderPage() {
                     onChange={(e) => setTargetQuantity(Number(e.target.value))}
                     placeholder="1"
                     min="1"
-                    className="h-12 border-2 border-gray-200 hover:border-blue-300 focus:border-blue-500 transition-colors"
+                    className="h-12 border-2 border-slate-200 hover:border-blue-300 focus:border-blue-500 transition-all duration-200 bg-white/80 backdrop-blur-sm"
                   />
                 </div>
               </CardContent>
             </Card>
 
             {/* 工單資訊卡片 */}
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-t-lg">
-                <CardTitle className="flex items-center gap-2">
-                  <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-bold">WO</span>
+            <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
+              <CardHeader className="bg-gradient-to-r from-purple-600 to-pink-700 text-white rounded-t-xl">
+                <CardTitle className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    <Target className="h-5 w-5" />
                   </div>
                   工單資訊
                 </CardTitle>
@@ -688,10 +702,10 @@ export default function CreateWorkOrderPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6">
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-4">
                   <div className="flex justify-between items-center">
-                    <span className="font-medium text-gray-600">工單號碼：</span>
-                    <span className="font-bold text-purple-700 text-lg">{generateWorkOrderCode()}</span>
+                    <span className="font-medium text-slate-600">工單號碼：</span>
+                    <span className="font-bold text-purple-700 text-lg font-mono">{generateWorkOrderCode()}</span>
                   </div>
                 </div>
               </CardContent>
@@ -700,10 +714,12 @@ export default function CreateWorkOrderPage() {
 
           {/* 右側：物料需求分析 */}
           <div className="xl:col-span-2">
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-t-lg">
-                <CardTitle className="flex items-center gap-2">
-                  <Calculator className="h-5 w-5" />
+            <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
+              <CardHeader className="bg-gradient-to-r from-orange-600 to-red-700 text-white rounded-t-xl">
+                <CardTitle className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    <Calculator className="h-5 w-5" />
+                  </div>
                   物料需求分析
                 </CardTitle>
                 <CardDescription className="text-orange-100">
@@ -712,17 +728,18 @@ export default function CreateWorkOrderPage() {
               </CardHeader>
               <CardContent className="p-6">
                 {selectedProduct ? (
-                  <div className="space-y-6">
+                  <div className="space-y-8">
                     {/* 核心液體區域 */}
                     <div>
-                      <h4 className="font-bold text-xl mb-4 text-blue-700 border-b-2 border-blue-200 pb-3 flex items-center gap-2">
-                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      <h4 className="font-bold text-xl mb-6 text-blue-700 border-b-2 border-blue-200 pb-4 flex items-center gap-3">
+                        <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
+                        <Zap className="h-5 w-5" />
                         核心液體 (按香精配方比例)
                       </h4>
-                      <div className="overflow-hidden rounded-lg border border-blue-200">
+                      <div className="overflow-hidden rounded-xl border border-blue-200 shadow-lg">
                         <Table>
                           <TableHeader>
-                            <TableRow className="bg-gradient-to-r from-blue-500 to-blue-600">
+                            <TableRow className="bg-gradient-to-r from-blue-600 to-indigo-700">
                               <TableHead className="text-white font-bold">物料代號</TableHead>
                               <TableHead className="text-white font-bold">物料名稱</TableHead>
                               <TableHead className="text-white font-bold">需求量 (KG)</TableHead>
@@ -734,20 +751,22 @@ export default function CreateWorkOrderPage() {
                             {materialRequirements
                               .filter(m => ['fragrance', 'pg', 'vg', 'nicotine'].includes(m.category))
                               .map((material, index) => (
-                                <TableRow key={index} className="hover:bg-blue-50 transition-colors">
-                                  <TableCell className="font-semibold text-gray-800">{material.materialCode}</TableCell>
-                                  <TableCell className="font-medium text-gray-700">{material.materialName}</TableCell>
+                                <TableRow key={index} className="hover:bg-blue-50/50 transition-all duration-200">
+                                  <TableCell className="font-semibold text-slate-800">{material.materialCode}</TableCell>
+                                  <TableCell className="font-medium text-slate-700">{material.materialName}</TableCell>
                                   <TableCell className="font-bold text-blue-600 text-lg">
                                     {material.requiredQuantity.toFixed(2)}
                                   </TableCell>
-                                  <TableCell className="text-gray-600">{material.currentStock}</TableCell>
+                                  <TableCell className="text-slate-600">{material.currentStock}</TableCell>
                                   <TableCell>
                                     {material.hasEnoughStock ? (
                                       <Badge className="bg-green-100 text-green-800 border border-green-300 font-semibold">
+                                        <CheckCircle className="h-3 w-3 mr-1" />
                                         庫存充足
                                       </Badge>
                                     ) : (
                                       <Badge variant="destructive" className="font-semibold">
+                                        <AlertTriangle className="h-3 w-3 mr-1" />
                                         庫存不足
                                       </Badge>
                                     )}
@@ -761,17 +780,17 @@ export default function CreateWorkOrderPage() {
 
                     {/* 其他材料區域 */}
                     <div>
-                      <h4 className="font-bold text-xl mb-4 text-gray-700 border-b-2 border-gray-200 pb-3 flex items-center gap-2">
-                        <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
-                        其他材料 (每個產品1個)
+                      <h4 className="font-bold text-xl mb-6 text-slate-700 border-b-2 border-slate-200 pb-4 flex items-center gap-3">
+                        <div className="w-4 h-4 bg-slate-500 rounded-full"></div>
+                        <Package className="h-5 w-5" />
+                        其他材料 (手動配置使用數量)
                       </h4>
-                      <div className="overflow-hidden rounded-lg border border-gray-200">
+                      <div className="overflow-hidden rounded-xl border border-slate-200 shadow-lg">
                         <Table>
                           <TableHeader>
-                            <TableRow className="bg-gradient-to-r from-gray-500 to-gray-600">
+                            <TableRow className="bg-gradient-to-r from-slate-600 to-gray-700">
                               <TableHead className="text-white font-bold">物料代號</TableHead>
                               <TableHead className="text-white font-bold">物料名稱</TableHead>
-                              <TableHead className="text-white font-bold">需求量 (個)</TableHead>
                               <TableHead className="text-white font-bold">當前庫存</TableHead>
                               <TableHead className="text-white font-bold">狀態</TableHead>
                             </TableRow>
@@ -780,23 +799,15 @@ export default function CreateWorkOrderPage() {
                             {materialRequirements
                               .filter(m => !['fragrance', 'pg', 'vg', 'nicotine'].includes(m.category))
                               .map((material, index) => (
-                                <TableRow key={index} className="hover:bg-gray-50 transition-colors">
-                                  <TableCell className="font-semibold text-gray-800">{material.materialCode}</TableCell>
-                                  <TableCell className="font-medium text-gray-700">{material.materialName}</TableCell>
-                                  <TableCell className="font-bold text-gray-600 text-lg">
-                                    {material.requiredQuantity.toFixed(0)}
-                                  </TableCell>
-                                  <TableCell className="text-gray-600">{material.currentStock}</TableCell>
+                                <TableRow key={index} className="hover:bg-slate-50/50 transition-all duration-200">
+                                  <TableCell className="font-semibold text-slate-800">{material.materialCode}</TableCell>
+                                  <TableCell className="font-medium text-slate-700">{material.materialName}</TableCell>
+                                  <TableCell className="text-slate-600">{material.currentStock}</TableCell>
                                   <TableCell>
-                                    {material.hasEnoughStock ? (
-                                      <Badge className="bg-green-100 text-green-800 border border-green-300 font-semibold">
-                                        庫存充足
-                                      </Badge>
-                                    ) : (
-                                      <Badge variant="destructive" className="font-semibold">
-                                        庫存不足
-                                      </Badge>
-                                    )}
+                                    <Badge className="bg-blue-100 text-blue-800 border border-blue-300 font-semibold">
+                                      <Package className="h-3 w-3 mr-1" />
+                                      手動配置
+                                    </Badge>
                                   </TableCell>
                                 </TableRow>
                               ))}
@@ -806,21 +817,21 @@ export default function CreateWorkOrderPage() {
                     </div>
 
                     {/* 建立工單按鈕 */}
-                    <div className="pt-4">
+                    <div className="pt-6">
                       <Button 
                         onClick={handleCreateWorkOrder}
                         disabled={!selectedProduct || hasInsufficientStock || creating}
-                        className="w-full h-14 text-lg font-bold bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                        className="w-full h-16 text-xl font-bold bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         size="lg"
                       >
                         {creating ? (
                           <>
-                            <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                            <Loader2 className="mr-3 h-6 w-6 animate-spin" />
                             建立中...
                           </>
                         ) : (
                           <>
-                            <Plus className="mr-3 h-5 w-5" />
+                            <Plus className="mr-3 h-6 w-6" />
                             建立工單
                           </>
                         )}
@@ -828,12 +839,12 @@ export default function CreateWorkOrderPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-12">
-                    <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-blue-100 to-indigo-200 rounded-full flex items-center justify-center">
-                      <Package className="h-12 w-12 text-blue-600" />
+                  <div className="text-center py-16">
+                    <div className="w-32 h-32 mx-auto mb-8 bg-gradient-to-br from-blue-100 to-indigo-200 rounded-full flex items-center justify-center">
+                      <Package className="h-16 w-16 text-blue-600" />
                     </div>
-                    <h3 className="text-xl font-semibold text-gray-700 mb-2">請選擇產品</h3>
-                    <p className="text-gray-500">選擇產品後將顯示詳細的物料需求分析</p>
+                    <h3 className="text-2xl font-semibold text-slate-700 mb-4">請選擇產品</h3>
+                    <p className="text-slate-500 text-lg">選擇產品後將顯示詳細的物料需求分析</p>
                   </div>
                 )}
               </CardContent>

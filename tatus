@@ -1,0 +1,112 @@
+warning: in the working copy of 'src/app/dashboard/work-orders/columns.tsx', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'src/app/dashboard/work-orders/create/page.tsx', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'src/app/dashboard/work-orders/data-table.tsx', CRLF will be replaced by LF the next time Git touches it
+[1mdiff --git a/src/app/dashboard/work-orders/[id]/page.tsx b/src/app/dashboard/work-orders/[id]/page.tsx[m
+[1mindex 81c7f25..76bd54f 100644[m
+[1m--- a/src/app/dashboard/work-orders/[id]/page.tsx[m
+[1m+++ b/src/app/dashboard/work-orders/[id]/page.tsx[m
+[36m@@ -85,7 +85,7 @@[m [mconst statusOptions = [[m
+   { value: "預報", label: "預報", color: "bg-orange-100 text-orange-800 border-orange-200" },[m
+   { value: "進行", label: "進行", color: "bg-blue-100 text-blue-800 border-blue-200" },[m
+   { value: "完工", label: "完工", color: "bg-green-100 text-green-800 border-green-200" },[m
+[31m-  { value: "入庫", label: "入庫", color: "bg-gray-100 text-gray-800 border-gray-200" }[m
+[32m+[m[32m  { value: "入庫", label: "入庫", color: "bg-purple-100 text-purple-800 border-purple-200" }[m
+ ][m
+ [m
+ const qcStatusOptions = [[m
+[36m@@ -509,27 +509,29 @@[m [mexport default function WorkOrderDetailPage() {[m
+     }[m
+     [m
+     // 3. 其他材料（專屬材料和通用材料）- 根據實際需求計算[m
+[31m-    // 專屬材料 - 保持原有的專屬材料[m
+[31m-    console.log('重新載入BOM表 - 專屬材料名稱:', workOrder?.billOfMaterials?.filter(item => item.category === 'specific').map(item => item.name));[m
+[31m-    const existingSpecificMaterials = workOrder?.billOfMaterials?.filter(item => item.category === 'specific') || [];[m
+[31m-    existingSpecificMaterials.forEach(item => {[m
+[31m-      materialRequirementsMap.set(item.id, {[m
+[31m-        ...item,[m
+[31m-        usedQuantity: item.usedQuantity || item.quantity[m
+[32m+[m[32m          // 專屬材料 - 保持原有的專屬材料，但不配置需求量[m
+[32m+[m[32m      console.log('重新載入BOM表 - 專屬材料名稱:', workOrder?.billOfMaterials?.filter(item => item.category === 'specific').map(item => item.name));[m
+[32m+[m[32m      const existingSpecificMaterials = workOrder?.billOfMaterials?.filter(item => item.category === 'specific') || [];[m
+[32m+[m[32m      existingSpecificMaterials.forEach(item => {[m
+[32m+[m[32m        materialRequirementsMap.set(item.id, {[m
+[32m+[m[32m          ...item,[m
+[32m+[m[32m          quantity: 0, // 專屬材料不配置需求量[m
+[32m+[m[32m          usedQuantity: item.usedQuantity || 0[m
+[32m+[m[32m        });[m
+[32m+[m[32m        console.log('重新載入BOM表 - 保持專屬材料:', item.name, '需求量: 0', item.unit);[m
+       });[m
+[31m-      console.log('重新載入BOM表 - 保持專屬材料:', item.name, item.quantity, item.unit);[m
+[31m-    });[m
+[31m-    [m
+[31m-    // 通用材料 - 保持原有的通用材料[m
+[31m-    console.log('重新載入BOM表 - 通用材料名稱:', workOrder?.billOfMaterials?.filter(item => item.category === 'common').map(item => item.name));[m
+[31m-    const existingCommonMaterials = workOrder?.billOfMaterials?.filter(item => item.category === 'common') || [];[m
+[31m-    existingCommonMaterials.forEach(item => {[m
+[31m-      materialRequirementsMap.set(item.id, {[m
+[31m-        ...item,[m
+[31m-        usedQuantity: item.usedQuantity || item.quantity[m
+[32m+[m[41m      [m
+[32m+[m[32m      // 通用材料 - 保持原有的通用材料，但不配置需求量[m
+[32m+[m[32m      console.log('重新載入BOM表 - 通用材料名稱:', workOrder?.billOfMaterials?.filter(item => item.category === 'common').map(item => item.name));[m
+[32m+[m[32m      const existingCommonMaterials = workOrder?.billOfMaterials?.filter(item => item.category === 'common') || [];[m
+[32m+[m[32m      existingCommonMaterials.forEach(item => {[m
+[32m+[m[32m        materialRequirementsMap.set(item.id, {[m
+[32m+[m[32m          ...item,[m
+[32m+[m[32m          quantity: 0, // 通用材料不配置需求量[m
+[32m+[m[32m          usedQuantity: item.usedQuantity || 0[m
+[32m+[m[32m        });[m
+[32m+[m[32m        console.log('重新載入BOM表 - 保持通用材料:', item.name, '需求量: 0', item.unit);[m
+       });[m
+[31m-      console.log('重新載入BOM表 - 保持通用材料:', item.name, item.quantity, item.unit);[m
+[31m-    });[m
+     [m
+     // 轉換為陣列並排序[m
+     const finalRequirements = Array.from(materialRequirementsMap.values());[m
+[36m@@ -1104,13 +1106,13 @@[m [mexport default function WorkOrderDetailPage() {[m
+               <div className="overflow-x-auto">[m
+                 <Table>[m
+                   <TableHeader>[m
+[31m-                    <TableRow>[m
+[31m-                      <TableHead className="text-xs sm:text-sm">物料名稱</TableHead>[m
+[31m-                      <TableHead className="text-xs sm:text-sm">料件代號</TableHead>[m
+[31m-                      <TableHead className="text-xs sm:text-sm">比例</TableHead>[m
+[31m-                      <TableHead className="text-xs sm:text-sm">需求數量</TableHead>[m
+[31m-                      <TableHead className="text-xs sm:text-sm">使用數量</TableHead>[m
+[31m-                      <TableHead className="text-xs sm:text-sm">單位</TableHead>[m
+[32m+[m[32m                    <TableRow className="bg-gradient-to-r from-purple-600 to-indigo-700">[m
+[32m+[m[32m                      <TableHead className="text-white font-bold text-xs sm:text-sm">物料名稱</TableHead>[m
+[32m+[m[32m                      <TableHead className="text-white font-bold text-xs sm:text-sm">料件代號</TableHead>[m
+[32m+[m[32m                      <TableHead className="text-white font-bold text-xs sm:text-sm">比例</TableHead>[m
+[32m+[m[32m                      <TableHead className="text-white font-bold text-xs sm:text-sm">需求數量</TableHead>[m
+[32m+[m[32m                      <TableHead className="text-white font-bold text-xs sm:text-sm">使用數量</TableHead>[m
+[32m+[m[32m                      <TableHead className="text-white font-bold text-xs sm:text-sm">單位</TableHead>[m
+                     </TableRow>[m
+                   </TableHeader>[m
+                   <TableBody>[m
+[36m@@ -1138,7 +1140,7 @@[m [mexport default function WorkOrderDetailPage() {[m
+                                 type="number"[m
+                                 min="0"[m
+                                 step="0.001"[m
+[31m-                                value={item.usedQuantity || item.quantity}[m
+[32m+[m[32m                                value={item.usedQuantity || 0}[m
+                                 onChange={(e) => {[m
+                                   // 這裡可以添加更新使用數量的邏輯[m
+                                   console.log('更新使用數量:', item.id, e.target.value);[m
+[36m@@ -1146,7 +1148,7 @@[m [mexport default function WorkOrderDetailPage() {[m
+                                 className="w-20"[m
+                               />[m
+                             ) : ([m
+[31m-                              <span className="font-medium">{(item.usedQuantity || item.quantity).toFixed(2)}</span>[m
+[32m+[m[32m                              <span className="font-medium">{(item.usedQuantity || 0).toFixed(2)}</span>[m
+                             )}[m
+                           </TableCell>[m
+                           <TableCell>{item.unit}</TableCell>[m
+[36m@@ -1167,11 +1169,11 @@[m [mexport default function WorkOrderDetailPage() {[m
+                 <div className="overflow-x-auto">[m
+                   <Table>[m
+                     <TableHeader>[m
+[31m-                      <TableRow>[m
+[31m-                        <TableHead>物料名稱</TableHead>[m
+[31m-                        <TableHead>料件代號</TableHead>[m
+[31m-                        <TableHead>使用數量</

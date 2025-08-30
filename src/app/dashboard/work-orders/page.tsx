@@ -156,7 +156,7 @@ function WorkOrdersPageContent() {
                 variant={statusFilter === '入庫' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setStatusFilter('入庫')}
-                className={`text-xs sm:text-sm ${statusFilter === '入庫' ? 'bg-gray-600 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                className={`text-xs sm:text-sm ${statusFilter === '入庫' ? 'bg-purple-600 hover:bg-purple-700' : 'border-purple-200 text-purple-600 hover:bg-purple-50'}`}
               >
                 入庫
               </Button>

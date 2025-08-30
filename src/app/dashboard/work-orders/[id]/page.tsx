@@ -85,7 +85,7 @@ const statusOptions = [
   { value: "預報", label: "預報", color: "bg-orange-100 text-orange-800 border-orange-200" },
   { value: "進行", label: "進行", color: "bg-blue-100 text-blue-800 border-blue-200" },
   { value: "完工", label: "完工", color: "bg-green-100 text-green-800 border-green-200" },
-  { value: "入庫", label: "入庫", color: "bg-gray-100 text-gray-800 border-gray-200" }
+  { value: "入庫", label: "入庫", color: "bg-purple-100 text-purple-800 border-purple-200" }
 ]
 
 const qcStatusOptions = [
@@ -509,27 +509,29 @@ export default function WorkOrderDetailPage() {
     }
     
     // 3. 其他材料（專屬材料和通用材料）- 根據實際需求計算
-    // 專屬材料 - 保持原有的專屬材料
-    console.log('重新載入BOM表 - 專屬材料名稱:', workOrder?.billOfMaterials?.filter(item => item.category === 'specific').map(item => item.name));
-    const existingSpecificMaterials = workOrder?.billOfMaterials?.filter(item => item.category === 'specific') || [];
-    existingSpecificMaterials.forEach(item => {
-      materialRequirementsMap.set(item.id, {
-        ...item,
-        usedQuantity: item.usedQuantity || item.quantity
+          // 專屬材料 - 保持原有的專屬材料，但不配置需求量
+      console.log('重新載入BOM表 - 專屬材料名稱:', workOrder?.billOfMaterials?.filter(item => item.category === 'specific').map(item => item.name));
+      const existingSpecificMaterials = workOrder?.billOfMaterials?.filter(item => item.category === 'specific') || [];
+      existingSpecificMaterials.forEach(item => {
+        materialRequirementsMap.set(item.id, {
+          ...item,
+          quantity: 0, // 專屬材料不配置需求量
+          usedQuantity: item.usedQuantity || 0
+        });
+        console.log('重新載入BOM表 - 保持專屬材料:', item.name, '需求量: 0', item.unit);
       });
-      console.log('重新載入BOM表 - 保持專屬材料:', item.name, item.quantity, item.unit);
-    });
-    
-    // 通用材料 - 保持原有的通用材料
-    console.log('重新載入BOM表 - 通用材料名稱:', workOrder?.billOfMaterials?.filter(item => item.category === 'common').map(item => item.name));
-    const existingCommonMaterials = workOrder?.billOfMaterials?.filter(item => item.category === 'common') || [];
-    existingCommonMaterials.forEach(item => {
-      materialRequirementsMap.set(item.id, {
-        ...item,
-        usedQuantity: item.usedQuantity || item.quantity
+      
+      // 通用材料 - 保持原有的通用材料，但不配置需求量
+      console.log('重新載入BOM表 - 通用材料名稱:', workOrder?.billOfMaterials?.filter(item => item.category === 'common').map(item => item.name));
+      const existingCommonMaterials = workOrder?.billOfMaterials?.filter(item => item.category === 'common') || [];
+      existingCommonMaterials.forEach(item => {
+        materialRequirementsMap.set(item.id, {
+          ...item,
+          quantity: 0, // 通用材料不配置需求量
+          usedQuantity: item.usedQuantity || 0
+        });
+        console.log('重新載入BOM表 - 保持通用材料:', item.name, '需求量: 0', item.unit);
       });
-      console.log('重新載入BOM表 - 保持通用材料:', item.name, item.quantity, item.unit);
-    });
     
     // 轉換為陣列並排序
     const finalRequirements = Array.from(materialRequirementsMap.values());
@@ -1104,13 +1106,13 @@ export default function WorkOrderDetailPage() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-xs sm:text-sm">物料名稱</TableHead>
-                      <TableHead className="text-xs sm:text-sm">料件代號</TableHead>
-                      <TableHead className="text-xs sm:text-sm">比例</TableHead>
-                      <TableHead className="text-xs sm:text-sm">需求數量</TableHead>
-                      <TableHead className="text-xs sm:text-sm">使用數量</TableHead>
-                      <TableHead className="text-xs sm:text-sm">單位</TableHead>
+                    <TableRow className="bg-gradient-to-r from-purple-600 to-indigo-700">
+                      <TableHead className="text-white font-bold text-xs sm:text-sm">物料名稱</TableHead>
+                      <TableHead className="text-white font-bold text-xs sm:text-sm">料件代號</TableHead>
+                      <TableHead className="text-white font-bold text-xs sm:text-sm">比例</TableHead>
+                      <TableHead className="text-white font-bold text-xs sm:text-sm">需求數量</TableHead>
+                      <TableHead className="text-white font-bold text-xs sm:text-sm">使用數量</TableHead>
+                      <TableHead className="text-white font-bold text-xs sm:text-sm">單位</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1138,7 +1140,7 @@ export default function WorkOrderDetailPage() {
                                 type="number"
                                 min="0"
                                 step="0.001"
-                                value={item.usedQuantity || item.quantity}
+                                value={item.usedQuantity || 0}
                                 onChange={(e) => {
                                   // 這裡可以添加更新使用數量的邏輯
                                   console.log('更新使用數量:', item.id, e.target.value);
@@ -1146,7 +1148,7 @@ export default function WorkOrderDetailPage() {
                                 className="w-20"
                               />
                             ) : (
-                              <span className="font-medium">{(item.usedQuantity || item.quantity).toFixed(2)}</span>
+                              <span className="font-medium">{(item.usedQuantity || 0).toFixed(2)}</span>
                             )}
                           </TableCell>
                           <TableCell>{item.unit}</TableCell>
@@ -1167,11 +1169,11 @@ export default function WorkOrderDetailPage() {
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>物料名稱</TableHead>
-                        <TableHead>料件代號</TableHead>
-                        <TableHead>使用數量</TableHead>
-                        <TableHead>單位</TableHead>
+                      <TableRow className="bg-gradient-to-r from-blue-600 to-indigo-700">
+                        <TableHead className="text-white font-bold">物料名稱</TableHead>
+                        <TableHead className="text-white font-bold">料件代號</TableHead>
+                        <TableHead className="text-white font-bold">使用數量</TableHead>
+                        <TableHead className="text-white font-bold">單位</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1188,14 +1190,14 @@ export default function WorkOrderDetailPage() {
                                   type="number"
                                   min="0"
                                   step="1"
-                                  value={item.usedQuantity || item.quantity}
+                                  value={item.usedQuantity || 0}
                                   onChange={(e) => {
                                     console.log('更新使用數量:', item.id, e.target.value);
                                   }}
                                   className="w-20"
                                 />
                               ) : (
-                                <span className="font-medium">{item.usedQuantity || item.quantity}</span>
+                                <span className="font-medium">{item.usedQuantity || 0}</span>
                               )}
                             </TableCell>
                             <TableCell>{item.unit}</TableCell>
@@ -1217,11 +1219,11 @@ export default function WorkOrderDetailPage() {
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>物料名稱</TableHead>
-                        <TableHead>料件代號</TableHead>
-                        <TableHead>使用數量</TableHead>
-                        <TableHead>單位</TableHead>
+                      <TableRow className="bg-gradient-to-r from-green-600 to-emerald-700">
+                        <TableHead className="text-white font-bold">物料名稱</TableHead>
+                        <TableHead className="text-white font-bold">料件代號</TableHead>
+                        <TableHead className="text-white font-bold">使用數量</TableHead>
+                        <TableHead className="text-white font-bold">單位</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1238,14 +1240,14 @@ export default function WorkOrderDetailPage() {
                                   type="number"
                                   min="0"
                                   step="1"
-                                  value={item.usedQuantity || item.quantity}
+                                  value={item.usedQuantity || 0}
                                   onChange={(e) => {
                                     console.log('更新使用數量:', item.id, e.target.value);
                                   }}
                                   className="w-20"
                                 />
                               ) : (
-                                <span className="font-medium">{item.usedQuantity || item.quantity}</span>
+                                <span className="font-medium">{item.usedQuantity || 0}</span>
                               )}
                             </TableCell>
                             <TableCell>{item.unit}</TableCell>
@@ -1294,12 +1296,12 @@ export default function WorkOrderDetailPage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs sm:text-sm">人員</TableHead>
-                    <TableHead className="text-xs sm:text-sm">工作日期</TableHead>
-                    <TableHead className="text-xs sm:text-sm">開始時間</TableHead>
-                    <TableHead className="text-xs sm:text-sm">結束時間</TableHead>
-                    <TableHead className="text-xs sm:text-sm">工時小計</TableHead>
+                  <TableRow className="bg-gradient-to-r from-orange-600 to-amber-700">
+                    <TableHead className="text-white font-bold text-xs sm:text-sm">人員</TableHead>
+                    <TableHead className="text-white font-bold text-xs sm:text-sm">工作日期</TableHead>
+                    <TableHead className="text-white font-bold text-xs sm:text-sm">開始時間</TableHead>
+                    <TableHead className="text-white font-bold text-xs sm:text-sm">結束時間</TableHead>
+                    <TableHead className="text-white font-bold text-xs sm:text-sm">工時小計</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
