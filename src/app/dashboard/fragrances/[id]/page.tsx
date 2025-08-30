@@ -684,7 +684,7 @@ export default function FragranceDetailPage() {
           onFragranceUpdate={handleFragranceUpdate}
           fragranceData={{
             ...fragrance,
-            currentStock: 0, // 添加缺失的屬性
+            currentStock: fragrance.currentStock || 0, // 使用實際的庫存資料
           } as FragranceData}
         />
       )}
@@ -697,7 +697,7 @@ export default function FragranceDetailPage() {
            onFragranceUpdate={handleFragranceUpdate}
            fragranceData={{
              ...fragrance,
-             currentStock: 0, // 添加缺少的屬性
+             currentStock: fragrance.currentStock || 0, // 使用實際的庫存資料
              remarks: fragrance.remarks || '', // 傳入當前備註
            } as FragranceData}
          />
