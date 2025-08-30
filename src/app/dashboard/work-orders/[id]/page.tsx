@@ -130,9 +130,13 @@ export default function WorkOrderDetailPage() {
   const [isEditingQuantity, setIsEditingQuantity] = useState(false)
   const [editingQuantities, setEditingQuantities] = useState<{[key: string]: number}>({})
 
-  // 格式化數值顯示，整數不顯示小數點
+  // 格式化數值顯示，智能去除尾隨的0
   const formatNumber = (value: number) => {
-    return value % 1 === 0 ? value.toString() : value.toFixed(3);
+    if (value % 1 === 0) {
+      return value.toString();
+    }
+    // 使用 parseFloat 來去除尾隨的0
+    return parseFloat(value.toFixed(3)).toString();
   };
 
   // 處理使用數量更新
