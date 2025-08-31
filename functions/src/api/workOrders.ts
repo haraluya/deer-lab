@@ -340,9 +340,15 @@ export const completeWorkOrder = onCall(async (request) => {
       });
 
       // 3. 處理物料消耗和庫存紀錄
+      // 收集所有消耗的物料明細
+      const materialDetails = [];
+      
+      logger.info(`開始處理工單 ${workOrderId} 的物料消耗:`, { 
+        consumedMaterials: consumedMaterials || 'null',
+        consumedMaterialsLength: consumedMaterials ? consumedMaterials.length : 0
+      });
+      
       if (consumedMaterials && Array.isArray(consumedMaterials)) {
-        // 收集所有消耗的物料明細
-        const materialDetails = [];
         
         for (const material of consumedMaterials) {
           if (!material.materialId || !material.consumedQuantity || material.consumedQuantity <= 0) {
@@ -418,6 +424,11 @@ export const completeWorkOrder = onCall(async (request) => {
       }
 
       // 5. 建立統一的庫存紀錄（以動作為單位）
+      logger.info(`準備建立庫存紀錄:`, { 
+        materialDetailsLength: materialDetails.length,
+        materialDetails: materialDetails
+      });
+      
       if (materialDetails.length > 0) {
         const inventoryRecordRef = db.collection("inventory_records").doc();
         transaction.set(inventoryRecordRef, {
@@ -431,6 +442,9 @@ export const completeWorkOrder = onCall(async (request) => {
           details: materialDetails,
           createdAt: FieldValue.serverTimestamp(),
         });
+        logger.info(`已建立工單 ${workOrderId} 的庫存紀錄，包含 ${materialDetails.length} 個項目`);
+      } else {
+        logger.warn(`工單 ${workOrderId} 完工但沒有物料消耗記錄，未建立庫存紀錄`);
       }
     });
 

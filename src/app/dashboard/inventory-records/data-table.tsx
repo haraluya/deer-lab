@@ -165,7 +165,7 @@ export function DataTable<TData, TValue>({
                     </Badge>
                   </div>
                   <div className="text-sm text-gray-600">
-                    影響項目：{row.getValue("details")?.length || 0} 項
+                    影響項目：{(row.getValue("details") as any[])?.length || 0} 項
                   </div>
                 </div>
                 <div className="text-right">

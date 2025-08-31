@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { toast } from 'sonner';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const { login, isLoading } = useAuth();
@@ -45,7 +46,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center mb-2">
-            <img src="/icon.png" alt="Deer Lab Logo" className="w-12 h-12 mr-3" />
+            <Image src="/icon.png" alt="Deer Lab Logo" width={48} height={48} className="mr-3" />
             <CardTitle className="text-2xl font-bold">Deer Lab</CardTitle>
           </div>
           <CardDescription>生產管理系統</CardDescription>

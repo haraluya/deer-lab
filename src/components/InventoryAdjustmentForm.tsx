@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Package, FlaskConical, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
-import { createInventoryRecordByReason } from '@/lib/inventoryRecords';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 
@@ -62,19 +62,20 @@ export function InventoryAdjustmentForm({
         return;
       }
 
-      await createInventoryRecordByReason('manual_adjustment', {
-        operatorId: appUser.uid,
-        operatorName: appUser.name || '未知用戶',
-        remarks: remarks || undefined,
-        details: [{
-          itemId,
-          itemType,
-          itemCode,
-          itemName,
-          quantityChange,
-          quantityAfter: newStock
-        }]
-      });
+      // 使用 Firebase Functions 進行庫存調整
+      const functions = getFunctions();
+      const adjustInventory = httpsCallable(functions, 'adjustInventory');
+      
+      const adjustmentData = {
+        itemId,
+        itemType,
+        quantityChange,
+        remarks: remarks || '手動庫存調整'
+      };
+      
+      console.log('呼叫 adjustInventory 函數，資料:', adjustmentData);
+      
+      await adjustInventory(adjustmentData);
 
       toast.success('庫存調整成功');
       onAdjustmentComplete(newStock, remarks);

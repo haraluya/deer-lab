@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -43,7 +43,7 @@ export function InventoryHistorySection({
   const [selectedRecord, setSelectedRecord] = useState<InventoryRecord | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
     setLoading(true);
     try {
       const records = await getItemInventoryHistory(itemId, itemType, 20);
@@ -73,11 +73,11 @@ export function InventoryHistorySection({
     } finally {
       setLoading(false);
     }
-  };
+  }, [itemId, itemType]);
 
   useEffect(() => {
     loadHistory();
-  }, [itemId, itemType]);
+  }, [itemId, itemType, loadHistory]);
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('zh-TW', {

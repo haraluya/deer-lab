@@ -128,3 +128,5 @@ firebase-debug.*.log
 **/api-keys.json
 **/secrets.json
 **/firebase-config.json
+
+deer-lab-firebase-adminsdk-fbsvc-d35cefcad6.json
