@@ -107,6 +107,7 @@ export async function getInventoryRecords(params: InventoryRecordQueryParams = {
       q = query(q, where('operatorId', '==', operatorId));
     }
     if (remarks) {
+      // 使用 contains 查詢來搜尋備註內容
       q = query(q, where('remarks', '>=', remarks), where('remarks', '<=', remarks + '\uf8ff'));
     }
     if (startDate) {
