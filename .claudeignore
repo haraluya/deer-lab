@@ -1,0 +1,92 @@
+# 依賴套件和第三方程式庫
+node_modules/
+functions/node_modules/
+.next/
+dist/
+build/
+
+# 編譯和建構產物
+*.js.map
+*.d.ts.map
+.cache/
+.vercel/
+
+# 日誌檔案
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 環境設定檔案 (包含敏感資訊)
+.env
+.env.*
+!.env.example
+
+# IDE 和編輯器檔案
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Git 相關檔案
+.git/
+.gitignore
+
+# 測試覆蓋率報告
+coverage/
+.nyc_output/
+junit.xml
+
+# 臨時檔案
+tmp/
+temp/
+*.tmp
+*.temp
+
+# 圖片和媒體檔案 (除了專案需要的)
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.svg
+*.ico
+*.webp
+*.mp4
+*.avi
+*.mov
+!public/**
+!src/app/icon.png
+!public/icon.png
+
+# 文件檔案 (除了重要的專案文檔)
+*.pdf
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.ppt
+*.pptx
+
+# 已刪除或不需要的 MD 檔案
+designplan.md
+deploy-*.md
+debug-*.md
+filereadme.md
+
+# Firebase 相關
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+pubsub-debug.log
+
+# 其他不需要掃描的檔案
+*.lock
+package-lock.json
+yarn.lock
+.eslintcache
+.tsbuildinfo
