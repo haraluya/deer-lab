@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { collection, addDoc, getDocs, query, where, orderBy, doc, deleteDoc, updateDoc, Timestamp } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
-import { Clock, User, Plus, Trash2, Edit2, Calendar, Save, X, ChevronDown, ChevronUp, Users, Timer, ClipboardList } from "lucide-react"
+import { Clock, User, Plus, Trash2, Edit2, Calendar, Save, X, ChevronDown, ChevronUp, Users, Timer, ClipboardList, Zap, AlertTriangle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -357,35 +357,53 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
 
         <div className="space-y-6">
           {/* 統計資訊 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-blue-200">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">總工時記錄</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-bold text-blue-800">總記錄數</CardTitle>
+                  <div className="p-2 bg-blue-500 rounded-lg">
+                    <ClipboardList className="h-4 w-4 text-white" />
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{timeEntries.length}</div>
-                <p className="text-xs text-muted-foreground">筆記錄</p>
+                <div className="text-3xl font-bold text-blue-900 mb-1">{timeEntries.length}</div>
+                <p className="text-xs text-blue-600 font-medium">筆工時記錄</p>
               </CardContent>
+              <div className="absolute inset-0 bg-gradient-to-br from-transparent to-blue-600/10 pointer-events-none" />
             </Card>
 
-            <Card>
+            <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-50 to-green-100 border-2 border-emerald-200">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">總工時</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-bold text-emerald-800">總工時</CardTitle>
+                  <div className="p-2 bg-emerald-500 rounded-lg">
+                    <Clock className="h-4 w-4 text-white" />
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatDuration(getTotalHours())}</div>
-                <p className="text-xs text-muted-foreground">累計時間</p>
+                <div className="text-3xl font-bold text-emerald-900 mb-1">{formatDuration(getTotalHours())}</div>
+                <p className="text-xs text-emerald-600 font-medium">累計工作時間</p>
               </CardContent>
+              <div className="absolute inset-0 bg-gradient-to-br from-transparent to-emerald-600/10 pointer-events-none" />
             </Card>
 
-            <Card>
+            <Card className="relative overflow-hidden bg-gradient-to-br from-purple-50 to-violet-100 border-2 border-purple-200">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">人工工時</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-bold text-purple-800">人工總時</CardTitle>
+                  <div className="p-2 bg-purple-500 rounded-lg">
+                    <Users className="h-4 w-4 text-white" />
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatDuration(getTotalManHours())}</div>
-                <p className="text-xs text-muted-foreground">總人工時</p>
+                <div className="text-3xl font-bold text-purple-900 mb-1">{formatDuration(getTotalManHours())}</div>
+                <p className="text-xs text-purple-600 font-medium">總人工工時</p>
               </CardContent>
+              <div className="absolute inset-0 bg-gradient-to-br from-transparent to-purple-600/10 pointer-events-none" />
             </Card>
           </div>
 
@@ -457,89 +475,188 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                   )}
                 </div>
 
+                {/* 工作日期 */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-blue-600" />
+                    工作日期
+                  </Label>
+                  <Input
+                    type="date"
+                    value={newEntry.startDate}
+                    onChange={(e) => setNewEntry({
+                      ...newEntry, 
+                      startDate: e.target.value,
+                      endDate: e.target.value // 預設結束日期為同一天
+                    })}
+                    className="bg-white border-2 border-blue-200 focus:border-blue-500 focus:ring-blue-200"
+                  />
+                </div>
+
                 {/* 時間輸入區 */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-4 p-4 bg-white rounded-lg border">
-                    <div className="flex items-center gap-2 text-sm font-medium text-green-700">
-                      <Calendar className="h-4 w-4" />
-                      開始時間
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <Label htmlFor="startDate" className="text-xs text-gray-600">日期</Label>
-                        <Input
-                          type="date"
-                          value={newEntry.startDate}
-                          onChange={(e) => setNewEntry({...newEntry, startDate: e.target.value})}
-                          className="text-sm"
-                        />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* 開始時間 */}
+                  <div className="space-y-4 p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border-2 border-green-200">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-green-500 rounded-lg">
+                        <Clock className="h-5 w-5 text-white" />
                       </div>
                       <div>
-                        <Label htmlFor="startTime" className="text-xs text-gray-600">時間</Label>
+                        <h3 className="text-lg font-bold text-green-800">上班時間</h3>
+                        <p className="text-xs text-green-600">設定開始工作時間</p>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium text-green-700">時間 (24小時制)</Label>
+                      <div className="relative">
                         <Input
                           type="time"
                           value={newEntry.startTime}
                           onChange={(e) => setNewEntry({...newEntry, startTime: e.target.value})}
-                          className="text-sm"
+                          className="text-lg font-mono bg-white border-2 border-green-300 focus:border-green-500 focus:ring-green-200 pl-12"
+                          placeholder="09:00"
                         />
+                        <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-green-500" />
                       </div>
+                      <p className="text-xs text-green-600 bg-green-100 p-2 rounded">
+                        格式：HH:MM (例如：09:30, 14:00)
+                      </p>
                     </div>
                   </div>
 
-                  <div className="space-y-4 p-4 bg-white rounded-lg border">
-                    <div className="flex items-center gap-2 text-sm font-medium text-red-700">
-                      <Calendar className="h-4 w-4" />
-                      結束時間
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <Label htmlFor="endDate" className="text-xs text-gray-600">日期</Label>
-                        <Input
-                          type="date"
-                          value={newEntry.endDate}
-                          onChange={(e) => setNewEntry({...newEntry, endDate: e.target.value})}
-                          className="text-sm"
-                        />
+                  {/* 結束時間 */}
+                  <div className="space-y-4 p-6 bg-gradient-to-br from-red-50 to-pink-50 rounded-xl border-2 border-red-200">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-red-500 rounded-lg">
+                        <Clock className="h-5 w-5 text-white" />
                       </div>
                       <div>
-                        <Label htmlFor="endTime" className="text-xs text-gray-600">時間</Label>
+                        <h3 className="text-lg font-bold text-red-800">下班時間</h3>
+                        <p className="text-xs text-red-600">設定結束工作時間</p>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium text-red-700">時間 (24小時制)</Label>
+                      <div className="relative">
                         <Input
                           type="time"
                           value={newEntry.endTime}
-                          onChange={(e) => setNewEntry({...newEntry, endTime: e.target.value})}
-                          className="text-sm"
+                          onChange={(e) => setNewEntry({
+                            ...newEntry, 
+                            endTime: e.target.value,
+                            endDate: newEntry.startDate // 自動同步結束日期
+                          })}
+                          className="text-lg font-mono bg-white border-2 border-red-300 focus:border-red-500 focus:ring-red-200 pl-12"
+                          placeholder="18:00"
                         />
+                        <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-red-500" />
                       </div>
+                      <p className="text-xs text-red-600 bg-red-100 p-2 rounded">
+                        格式：HH:MM (例如：17:30, 18:00)
+                      </p>
                     </div>
                   </div>
                 </div>
 
                 {/* 備註 */}
-                <div>
-                  <Label htmlFor="notes" className="text-sm font-medium text-gray-700">備註</Label>
-                  <Input
-                    placeholder="可選的備註說明"
-                    value={newEntry.notes}
-                    onChange={(e) => setNewEntry({...newEntry, notes: e.target.value})}
-                    className="bg-white"
-                  />
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                    <Edit2 className="h-4 w-4 text-purple-600" />
+                    備註說明
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      placeholder="輸入工作內容或特殊註意事項..."
+                      value={newEntry.notes}
+                      onChange={(e) => setNewEntry({...newEntry, notes: e.target.value})}
+                      className="bg-gradient-to-r from-white to-purple-50 border-2 border-purple-200 focus:border-purple-500 focus:ring-purple-200 pl-10"
+                    />
+                    <Edit2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-purple-500" />
+                  </div>
+                </div>
+
+                {/* 快速時間設定 */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-yellow-600" />
+                    快速設定
+                  </Label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setNewEntry({...newEntry, startTime: '09:00', endTime: '18:00'})}
+                      className="gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 hover:from-blue-100 hover:to-indigo-100"
+                    >
+                      <Clock className="h-3 w-3" />
+                      日班 9-6
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setNewEntry({...newEntry, startTime: '08:00', endTime: '17:00'})}
+                      className="gap-2 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 hover:from-green-100 hover:to-emerald-100"
+                    >
+                      <Clock className="h-3 w-3" />
+                      早班 8-5
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setNewEntry({...newEntry, startTime: '14:00', endTime: '22:00'})}
+                      className="gap-2 bg-gradient-to-r from-purple-50 to-violet-50 border-purple-200 hover:from-purple-100 hover:to-violet-100"
+                    >
+                      <Clock className="h-3 w-3" />
+                      晚班 2-10
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setNewEntry({...newEntry, startTime: '09:00', endTime: '13:00'})}
+                      className="gap-2 bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200 hover:from-orange-100 hover:to-amber-100"
+                    >
+                      <Clock className="h-3 w-3" />
+                      上半日
+                    </Button>
+                  </div>
                 </div>
 
                 {/* 動態計算工時 */}
                 {newEntry.startDate && newEntry.startTime && newEntry.endDate && newEntry.endTime && (
-                  <div className="p-4 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-lg border border-orange-200">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Timer className="h-5 w-5 text-orange-600" />
-                        <span className="text-sm font-medium text-orange-900">預計工時：</span>
+                  <div className="p-6 bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 rounded-xl border-2 border-orange-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-orange-500 rounded-lg">
+                          <Timer className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-orange-900">工時計算</h3>
+                          <p className="text-xs text-orange-600">自動計算工作時間</p>
+                        </div>
                       </div>
-                      <div className="text-lg font-bold text-orange-900">
-                        {formatDuration(calculateDuration(newEntry.startDate, newEntry.startTime, newEntry.endDate, newEntry.endTime))}
+                      <div className="text-right">
+                        <div className="text-3xl font-bold text-orange-900">
+                          {formatDuration(calculateDuration(newEntry.startDate, newEntry.startTime, newEntry.endDate, newEntry.endTime))}
+                        </div>
+                        <p className="text-xs text-orange-600">總工時</p>
                       </div>
                     </div>
+                    
                     {calculateOvertimeHours(calculateDuration(newEntry.startDate, newEntry.startTime, newEntry.endDate, newEntry.endTime)) > 0 && (
-                      <div className="mt-2 text-sm text-orange-700">
-                        含加班 {formatDuration(calculateOvertimeHours(calculateDuration(newEntry.startDate, newEntry.startTime, newEntry.endDate, newEntry.endTime)))}
+                      <div className="flex items-center justify-between p-3 bg-red-100 rounded-lg border border-red-200">
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className="h-4 w-4 text-red-600" />
+                          <span className="text-sm font-medium text-red-800">加班時数：</span>
+                        </div>
+                        <div className="text-lg font-bold text-red-800">
+                          {formatDuration(calculateOvertimeHours(calculateDuration(newEntry.startDate, newEntry.startTime, newEntry.endDate, newEntry.endTime)))}
+                        </div>
                       </div>
                     )}
                   </div>
