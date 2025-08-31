@@ -99,6 +99,17 @@ export const updateFragrance = onCall(async (request) => {
     const newStock = Number(currentStock) || 0;
     const stockChanged = oldStock !== newStock;
     
+    logger.info(`香精庫存變更檢查:`, {
+      fragranceId,
+      oldStock,
+      newStock,
+      stockChanged,
+      oldStockType: typeof oldStock,
+      newStockType: typeof newStock,
+      currentStockParam: currentStock,
+      currentStockParamType: typeof currentStock
+    });
+    
     const updateData: any = { 
       code, 
       name, 

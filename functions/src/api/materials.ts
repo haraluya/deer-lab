@@ -286,6 +286,17 @@ export const updateMaterial = onCall(async (request) => {
     const oldStock = currentMaterial.currentStock || 0;
     const newStock = Number(currentStock) || 0;
     const stockChanged = oldStock !== newStock;
+    
+    logger.info(`庫存變更檢查:`, {
+      materialId,
+      oldStock,
+      newStock,
+      stockChanged,
+      oldStockType: typeof oldStock,
+      newStockType: typeof newStock,
+      currentStockParam: currentStock,
+      currentStockParamType: typeof currentStock
+    });
 
     const updateData: Partial<MaterialData> = {
       name,
