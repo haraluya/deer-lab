@@ -36,15 +36,20 @@ export function useGlobalCart() {
       return;
     }
 
+    console.log('useGlobalCart: 開始監聽購物車變化');
+    
     const unsubscribe = onSnapshot(
       doc(db, 'globalCart', 'main'),
       (doc) => {
+        console.log('useGlobalCart: 收到購物車更新');
         if (doc.exists()) {
           const data = doc.data();
           const items = data?.items || [];
+          console.log('useGlobalCart: 購物車項目數量:', items.length);
           setCartItems(items);
           setCartItemCount(items.length);
         } else {
+          console.log('useGlobalCart: 購物車文檔不存在，設置為空');
           setCartItems([]);
           setCartItemCount(0);
         }

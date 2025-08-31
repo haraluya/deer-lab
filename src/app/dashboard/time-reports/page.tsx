@@ -2,6 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { collection, getDocs, query, orderBy, where, doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
@@ -9,7 +10,7 @@ import { TimeEntry as TimeEntryType } from '@/types';
 import { 
   Clock, Users, Factory, Calendar, Filter, Search, 
   ChevronDown, ChevronUp, FileText, BarChart3, TrendingUp,
-  Activity, Timer, AlertCircle, CheckCircle, Eye
+  Activity, Timer, AlertCircle, CheckCircle, Eye, ExternalLink
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -44,18 +45,19 @@ interface WorkOrderSummary {
 interface TimeReportStats {
   totalWorkOrders: number;
   totalHours: number;
-  totalOvertime: number;
+  monthlyHours: number;
   activePersonnel: number;
   avgHoursPerOrder: number;
 }
 
 export default function TimeReportsPage() {
+  const router = useRouter();
   const [workOrderSummaries, setWorkOrderSummaries] = useState<WorkOrderSummary[]>([]);
   const [filteredSummaries, setFilteredSummaries] = useState<WorkOrderSummary[]>([]);
   const [stats, setStats] = useState<TimeReportStats>({
     totalWorkOrders: 0,
     totalHours: 0,
-    totalOvertime: 0,
+    monthlyHours: 0,
     activePersonnel: 0,
     avgHoursPerOrder: 0
   });
@@ -187,13 +189,18 @@ export default function TimeReportsPage() {
 
   const calculateStats = (summaries: WorkOrderSummary[], entries: LocalTimeEntry[]) => {
     const totalHours = summaries.reduce((sum, order) => sum + order.totalHours, 0);
-    const totalOvertime = summaries.reduce((sum, order) => sum + order.totalOvertime, 0);
     const allPersonnel = new Set(entries.map(entry => entry.personnelId));
+
+    // 計算本月工時
+    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+    const monthlyHours = entries
+      .filter(entry => new Date(entry.startDate).toISOString().slice(0, 7) === currentMonth)
+      .reduce((sum, entry) => sum + entry.duration, 0);
 
     setStats({
       totalWorkOrders: summaries.length,
       totalHours,
-      totalOvertime,
+      monthlyHours,
       activePersonnel: allPersonnel.size,
       avgHoursPerOrder: summaries.length > 0 ? totalHours / summaries.length : 0
     });
@@ -303,9 +310,9 @@ export default function TimeReportsPage() {
         <Card className="relative overflow-hidden bg-gradient-to-br from-orange-50 to-amber-100 border-2 border-orange-200">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-bold text-orange-800">加班時數</CardTitle>
+              <CardTitle className="text-sm font-bold text-orange-800">本月總工時</CardTitle>
               <div className="p-2 bg-orange-500 rounded-lg">
-                <AlertCircle className="h-4 w-4 text-white" />
+                <Calendar className="h-4 w-4 text-white" />
               </div>
             </div>
           </CardHeader>
@@ -313,9 +320,9 @@ export default function TimeReportsPage() {
             {isLoading ? (
               <Skeleton className="h-8 w-20 mb-2" />
             ) : (
-              <div className="text-3xl font-bold text-orange-900 mb-1">{formatDuration(stats.totalOvertime)}</div>
+              <div className="text-3xl font-bold text-orange-900 mb-1">{formatDuration(stats.monthlyHours)}</div>
             )}
-            <p className="text-xs text-orange-600 font-medium">總加班時間</p>
+            <p className="text-xs text-orange-600 font-medium">本月工作時間</p>
           </CardContent>
           <div className="absolute inset-0 bg-gradient-to-br from-transparent to-orange-600/10 pointer-events-none" />
         </Card>
@@ -423,23 +430,27 @@ export default function TimeReportsPage() {
               <div className="hidden md:block overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-gradient-to-r from-blue-600 to-indigo-600">
-                      <TableHead className="text-white font-bold">工單號碼</TableHead>
-                      <TableHead className="text-white font-bold">產品名稱</TableHead>
-                      <TableHead className="text-white font-bold">總工時</TableHead>
-                      <TableHead className="text-white font-bold">加班時數</TableHead>
-                      <TableHead className="text-white font-bold">參與人數</TableHead>
-                      <TableHead className="text-white font-bold">狀態</TableHead>
-                      <TableHead className="text-white font-bold text-right">操作</TableHead>
+                    <TableRow className="bg-slate-800 hover:bg-slate-800">
+                      <TableHead className="text-white font-bold text-base">工單號碼</TableHead>
+                      <TableHead className="text-white font-bold text-base">產品名稱</TableHead>
+                      <TableHead className="text-white font-bold text-base">總工時</TableHead>
+                      <TableHead className="text-white font-bold text-base">參與人數</TableHead>
+                      <TableHead className="text-white font-bold text-base">狀態</TableHead>
+                      <TableHead className="text-white font-bold text-base text-right">操作</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredSummaries.map((order) => (
                       <TableRow key={order.workOrderId} className="hover:bg-gray-50">
                         <TableCell>
-                          <div className="font-medium text-blue-600">
+                          <Button
+                            variant="link"
+                            className="font-medium text-blue-600 hover:text-blue-800 p-0 h-auto"
+                            onClick={() => router.push(`/dashboard/work-orders/${order.workOrderId}`)}
+                          >
                             {order.workOrderNumber}
-                          </div>
+                            <ExternalLink className="ml-1 h-3 w-3" />
+                          </Button>
                         </TableCell>
                         <TableCell>
                           <div className="font-medium">
@@ -450,15 +461,6 @@ export default function TimeReportsPage() {
                           <Badge variant="outline" className="bg-green-50 text-green-700">
                             {formatDuration(order.totalHours)}
                           </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {order.totalOvertime > 0 ? (
-                            <Badge variant="destructive" className="bg-red-50 text-red-700">
-                              {formatDuration(order.totalOvertime)}
-                            </Badge>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">

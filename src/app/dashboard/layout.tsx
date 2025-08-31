@@ -62,11 +62,17 @@ function SidebarNav() {
   const pathname = usePathname();
   const cartItemCount = usePurchaseCart();
   
-  // 添加調試信息
+  // 添加調試信息和購物車狀態監控
   useEffect(() => {
     console.log('SidebarNav: 當前路徑:', pathname);
     console.log('SidebarNav: 導航連結:', navLinks.map(link => link.href));
-  }, [pathname]);
+    console.log('SidebarNav: 購物車數量:', cartItemCount);
+    console.log('SidebarNav: 購物車數量類型:', typeof cartItemCount);
+    
+    if (cartItemCount > 0) {
+      console.log('SidebarNav: 購物車有項目，將顯示氣泡');
+    }
+  }, [pathname, cartItemCount]);
   
   const handleNavClick = () => {
     // 在移動版點擊導航項目後關閉側邊欄
@@ -114,10 +120,12 @@ function SidebarNav() {
           >
             <Icon className={cn("h-4 w-4", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
             <span className="truncate">{link.label}</span>
-            {/* 採購管理數量氣泡 */}
+            {/* 採購管理數量氣泡 - 重新設計 */}
             {link.href === '/dashboard/purchase-orders' && cartItemCount > 0 && (
-              <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-                {cartItemCount > 99 ? '99+' : cartItemCount}
+              <div className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center font-bold border-2 border-white shadow-lg z-10">
+                <span className="animate-pulse">
+                  {cartItemCount > 99 ? '99+' : cartItemCount}
+                </span>
               </div>
             )}
           </Link>

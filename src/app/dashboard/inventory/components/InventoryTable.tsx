@@ -6,6 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Checkbox } from "@/components/ui/checkbox"
+import { useInventoryStore } from "@/stores/inventoryStore"
 
 interface InventoryItem {
   id: string
@@ -29,6 +31,7 @@ interface InventoryTableProps {
 }
 
 export function InventoryTable({ items, loading, onQuickUpdate, type }: InventoryTableProps) {
+  const { batchOperations, selectedItems, toggleSelection } = useInventoryStore()
   if (loading) {
     return (
       <div className="space-y-3">
@@ -92,6 +95,23 @@ export function InventoryTable({ items, loading, onQuickUpdate, type }: Inventor
         <Table>
           <TableHeader>
             <TableRow className="bg-gray-50">
+              {batchOperations.isEnabled && (
+                <TableHead className="font-semibold w-12">
+                  <Checkbox
+                    checked={items.every(item => selectedItems[type === 'material' ? 'materials' : 'fragrances'].includes(item.id))}
+                    onCheckedChange={(checked) => {
+                      items.forEach(item => {
+                        const isSelected = selectedItems[type === 'material' ? 'materials' : 'fragrances'].includes(item.id)
+                        if (checked && !isSelected) {
+                          toggleSelection(type === 'material' ? 'materials' : 'fragrances', item.id)
+                        } else if (!checked && isSelected) {
+                          toggleSelection(type === 'material' ? 'materials' : 'fragrances', item.id)
+                        }
+                      })
+                    }}
+                  />
+                </TableHead>
+              )}
               <TableHead className="font-semibold">代碼</TableHead>
               <TableHead className="font-semibold">名稱</TableHead>
               <TableHead className="font-semibold">分類</TableHead>
@@ -108,11 +128,24 @@ export function InventoryTable({ items, loading, onQuickUpdate, type }: Inventor
               const stockStatus = getStockStatus(item)
               const stockValue = item.currentStock * item.costPerUnit
               
+              const isSelected = selectedItems[type === 'material' ? 'materials' : 'fragrances'].includes(item.id)
+              
               return (
                 <TableRow 
                   key={item.id}
-                  className="hover:bg-gray-50 transition-colors"
+                  className={`hover:bg-gray-50 transition-colors ${
+                    isSelected && batchOperations.isEnabled ? 'bg-blue-50 border-blue-200' : ''
+                  }`}
                 >
+                  {batchOperations.isEnabled && (
+                    <TableCell>
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelection(type === 'material' ? 'materials' : 'fragrances', item.id)}
+                      />
+                    </TableCell>
+                  )}
+                  
                   <TableCell className="font-mono text-sm font-medium">
                     {item.code}
                   </TableCell>
@@ -186,20 +219,32 @@ export function InventoryTable({ items, loading, onQuickUpdate, type }: Inventor
         {items.map((item) => {
           const stockStatus = getStockStatus(item)
           const stockValue = item.currentStock * item.costPerUnit
+          const isSelected = selectedItems[type === 'material' ? 'materials' : 'fragrances'].includes(item.id)
           
           return (
             <div 
               key={item.id}
-              className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+              className={`bg-white border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow ${
+                isSelected && batchOperations.isEnabled ? 'border-blue-300 bg-blue-50' : 'border-gray-200'
+              }`}
             >
               {/* 卡片標題區 */}
               <div className="flex justify-between items-start mb-3">
-                <div className="flex-1">
-                  <div className="font-medium text-gray-900 text-lg mb-1">{item.name}</div>
-                  <div className="font-mono text-sm text-gray-600 mb-1">代碼: {item.code}</div>
-                  {item.series && (
-                    <div className="text-sm text-gray-500">系列: {item.series}</div>
+                <div className="flex items-start gap-3 flex-1">
+                  {batchOperations.isEnabled && (
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleSelection(type === 'material' ? 'materials' : 'fragrances', item.id)}
+                      className="mt-1"
+                    />
                   )}
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900 text-lg mb-1">{item.name}</div>
+                    <div className="font-mono text-sm text-gray-600 mb-1">代碼: {item.code}</div>
+                    {item.series && (
+                      <div className="text-sm text-gray-500">系列: {item.series}</div>
+                    )}
+                  </div>
                 </div>
                 <Badge 
                   variant="outline" 

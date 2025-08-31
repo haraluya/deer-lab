@@ -14,7 +14,7 @@ export function createSelectors<S extends UseBoundStore<StoreApi<T>>, T = object
   storeWithSelectors.use = {} as { [K in keyof T]: () => T[K] }
   
   // 為每個狀態屬性創建選擇器
-  for (const key of Object.keys(store.getState())) {
+  for (const key of Object.keys(store.getState() as Record<string, unknown>)) {
     const typedKey = key as keyof T
     storeWithSelectors.use[typedKey] = () => store((state: T) => state[typedKey])
   }

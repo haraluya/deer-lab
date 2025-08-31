@@ -61,38 +61,101 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
     }
   }, [isOpen, workOrderId])
 
-  const loadData = async () => {
+  const loadData = async (retryCount = 0) => {
     setLoading(true)
     try {
       if (!db) {
         throw new Error("Firebase 未初始化")
       }
       
+      if (!workOrderId) {
+        throw new Error("工單ID未提供")
+      }
+      
+      console.log("開始載入工時申報資料，工單ID:", workOrderId)
+      
       // 載入人員資料
+      console.log("載入人員資料...")
       const personnelSnapshot = await getDocs(collection(db, "users"))
-      const personnelList = personnelSnapshot.docs.map(doc => ({
-        id: doc.id,
-        name: doc.data().name,
-        employeeId: doc.data().employeeId,
-        ...doc.data()
-      })) as Personnel[]
+      const personnelList = personnelSnapshot.docs.map(doc => {
+        const data = doc.data()
+        return {
+          id: doc.id,
+          name: data.name || "未命名",
+          employeeId: data.employeeId || "",
+          ...data
+        }
+      }).filter(person => person.name && person.name !== "未命名") as Personnel[]
+      
+      console.log("人員資料載入成功，共", personnelList.length, "人")
       setPersonnel(personnelList)
 
-      // 載入工時記錄
-      const timeEntriesQuery = query(
-        collection(db, "timeEntries"),
-        where("workOrderId", "==", workOrderId),
-        orderBy("createdAt", "desc")
-      )
-      const timeEntriesSnapshot = await getDocs(timeEntriesQuery)
-      const timeEntriesList = timeEntriesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as LocalTimeEntry[]
-      setTimeEntries(timeEntriesList)
-    } catch (error) {
+      // 載入工時記錄 - 改為不依賴複合索引的查詢方式
+      console.log("載入工時記錄...")
+      try {
+        // 先嘗試使用複合索引查詢
+        const timeEntriesQuery = query(
+          collection(db, "timeEntries"),
+          where("workOrderId", "==", workOrderId),
+          orderBy("createdAt", "desc")
+        )
+        const timeEntriesSnapshot = await getDocs(timeEntriesQuery)
+        const timeEntriesList = timeEntriesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as LocalTimeEntry[]
+        
+        console.log("工時記錄載入成功，共", timeEntriesList.length, "筆記錄")
+        setTimeEntries(timeEntriesList)
+      } catch (indexError) {
+        console.warn("複合索引查詢失敗，改用簡單查詢:", indexError)
+        
+        // 如果複合索引不存在，使用簡單查詢然後在客戶端排序
+        const simpleQuery = query(
+          collection(db, "timeEntries"),
+          where("workOrderId", "==", workOrderId)
+        )
+        const timeEntriesSnapshot = await getDocs(simpleQuery)
+        const timeEntriesList = timeEntriesSnapshot.docs
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }))
+          .sort((a: any, b: any) => {
+            const aTime = a.createdAt?.toDate?.() || new Date(a.createdAt || 0)
+            const bTime = b.createdAt?.toDate?.() || new Date(b.createdAt || 0)
+            return bTime.getTime() - aTime.getTime()
+          }) as LocalTimeEntry[]
+        
+        console.log("簡化查詢成功，共", timeEntriesList.length, "筆記錄")
+        setTimeEntries(timeEntriesList)
+      }
+      
+      toast.success("工時資料載入完成")
+    } catch (error: any) {
       console.error("載入資料失敗:", error)
-      toast.error("載入資料失敗")
+      
+      // 重試機制
+      if (retryCount < 2 && !error.message?.includes("權限")) {
+        console.log(`載入失敗，${2 - retryCount} 秒後重試...`)
+        toast.loading("載入失敗，正在重試...")
+        setTimeout(() => loadData(retryCount + 1), 2000)
+        return
+      }
+      
+      // 提供更詳細的錯誤信息
+      let errorMessage = "載入資料失敗"
+      if (error.code === 'permission-denied') {
+        errorMessage = "權限不足，請檢查登入狀態"
+      } else if (error.code === 'unavailable') {
+        errorMessage = "網路連線問題，請檢查網路連線"
+      } else if (error.message?.includes("索引")) {
+        errorMessage = "資料庫索引問題，請聯絡系統管理員"
+      } else if (error.message) {
+        errorMessage = `載入失敗: ${error.message}`
+      }
+      
+      toast.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -500,7 +563,8 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                           type="time"
                           value={newEntry.startTime}
                           onChange={(e) => setNewEntry({...newEntry, startTime: e.target.value})}
-                          className="text-lg font-mono bg-white border-2 border-green-300 focus:border-green-500 focus:ring-green-200 pl-12 text-black [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-datetime-edit]:text-black [&::-webkit-datetime-edit-text]:text-black [&::-webkit-datetime-edit-hour-field]:text-black [&::-webkit-datetime-edit-minute-field]:text-black [&::-webkit-datetime-edit-ampm-field]:text-black"
+                          step="60"
+                          className="text-lg font-mono bg-white border-2 border-green-300 focus:border-green-500 focus:ring-green-200 pl-12 text-black [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-datetime-edit]:text-black [&::-webkit-datetime-edit-text]:text-black [&::-webkit-datetime-edit-hour-field]:text-black [&::-webkit-datetime-edit-minute-field]:text-black [&::-webkit-datetime-edit-ampm-field]:display-none"
                           style={{ 
                             colorScheme: 'light', 
                             color: '#000000 !important',
@@ -540,7 +604,8 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                             endTime: e.target.value,
                             endDate: newEntry.startDate // 自動同步結束日期
                           })}
-                          className="text-lg font-mono bg-white border-2 border-red-300 focus:border-red-500 focus:ring-red-200 pl-12 text-black [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-datetime-edit]:text-black [&::-webkit-datetime-edit-text]:text-black [&::-webkit-datetime-edit-hour-field]:text-black [&::-webkit-datetime-edit-minute-field]:text-black [&::-webkit-datetime-edit-ampm-field]:text-black"
+                          step="60"
+                          className="text-lg font-mono bg-white border-2 border-red-300 focus:border-red-500 focus:ring-red-200 pl-12 text-black [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-datetime-edit]:text-black [&::-webkit-datetime-edit-text]:text-black [&::-webkit-datetime-edit-hour-field]:text-black [&::-webkit-datetime-edit-minute-field]:text-black [&::-webkit-datetime-edit-ampm-field]:display-none"
                           style={{ 
                             colorScheme: 'light', 
                             color: '#000000 !important',
@@ -743,7 +808,8 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                                       type="time"
                                       value={editEntry?.startTime}
                                       onChange={(e) => setEditEntry({...editEntry!, startTime: e.target.value})}
-                                      className="h-8 text-xs text-black [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-datetime-edit]:text-black [&::-webkit-datetime-edit-text]:text-black [&::-webkit-datetime-edit-hour-field]:text-black [&::-webkit-datetime-edit-minute-field]:text-black [&::-webkit-datetime-edit-ampm-field]:text-black"
+                                      step="60"
+                                      className="h-8 text-xs text-black [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-datetime-edit]:text-black [&::-webkit-datetime-edit-text]:text-black [&::-webkit-datetime-edit-hour-field]:text-black [&::-webkit-datetime-edit-minute-field]:text-black [&::-webkit-datetime-edit-ampm-field]:display-none"
                                       style={{ 
                                         colorScheme: 'light', 
                                         color: '#000000 !important',
@@ -765,7 +831,8 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                                       type="time"
                                       value={editEntry?.endTime}
                                       onChange={(e) => setEditEntry({...editEntry!, endTime: e.target.value})}
-                                      className="h-8 text-xs text-black [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-datetime-edit]:text-black [&::-webkit-datetime-edit-text]:text-black [&::-webkit-datetime-edit-hour-field]:text-black [&::-webkit-datetime-edit-minute-field]:text-black [&::-webkit-datetime-edit-ampm-field]:text-black"
+                                      step="60"
+                                      className="h-8 text-xs text-black [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-datetime-edit]:text-black [&::-webkit-datetime-edit-text]:text-black [&::-webkit-datetime-edit-hour-field]:text-black [&::-webkit-datetime-edit-minute-field]:text-black [&::-webkit-datetime-edit-ampm-field]:display-none"
                                       style={{ 
                                         colorScheme: 'light', 
                                         color: '#000000 !important',

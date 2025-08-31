@@ -197,17 +197,34 @@ export function SupplierDialog({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" aria-describedby="supplier-dialog-description">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Building className="h-5 w-5" />
-            {isEditMode ? '編輯供應商資料' : '新增供應商'}
-          </DialogTitle>
-          <DialogDescription id="supplier-dialog-description">
-            {isEditMode ? '修改供應商的詳細聯絡資訊。' : '請填寫新供應商的詳細聯絡資訊。'}
-          </DialogDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle className="flex items-center gap-2">
+                <Building className="h-5 w-5" />
+                {isEditMode ? '編輯供應商資料' : '新增供應商'}
+              </DialogTitle>
+              <DialogDescription id="supplier-dialog-description">
+                {isEditMode ? '修改供應商的詳細聯絡資訊。' : '請填寫新供應商的詳細聯絡資訊。'}
+              </DialogDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                關閉
+              </Button>
+              <Button 
+                form="supplier-form"
+                type="submit" 
+                disabled={isSubmitting}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+              >
+                {isSubmitting ? "處理中..." : (isEditMode ? "更新" : "新增")}
+              </Button>
+            </div>
+          </div>
         </DialogHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form id="supplier-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* 基本資料 */}
             <div className="space-y-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
               <h3 className="text-lg font-semibold flex items-center gap-2 text-blue-800">
@@ -342,19 +359,6 @@ export function SupplierDialog({
               />
             </div>
 
-            {/* 操作按鈕 */}
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                取消
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={isSubmitting}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
-              >
-                {isSubmitting ? "處理中..." : (isEditMode ? "更新" : "新增")}
-              </Button>
-            </div>
           </form>
         </Form>
       </DialogContent>

@@ -41,7 +41,7 @@ interface TimeEntry {
 interface PersonalTimeStats {
   totalEntries: number;
   totalHours: number;
-  totalOvertime: number;
+  monthlyHours: number;
   totalWorkOrders: number;
   avgHoursPerEntry: number;
 }
@@ -60,7 +60,7 @@ export default function PersonalTimeRecordsPage() {
   const [stats, setStats] = useState<PersonalTimeStats>({
     totalEntries: 0,
     totalHours: 0,
-    totalOvertime: 0,
+    monthlyHours: 0,
     totalWorkOrders: 0,
     avgHoursPerEntry: 0
   });
@@ -100,13 +100,16 @@ export default function PersonalTimeRecordsPage() {
 
   const loadPersonalTimeRecords = async () => {
     try {
-      if (!db || !appUser) return;
+      if (!db || !appUser) {
+        setIsLoading(false);
+        return;
+      }
       setIsLoading(true);
 
-      // 載入當前用戶的工時記錄
+      // 載入當前用戶的工時記錄，使用 employeeId 而不是 uid
       const timeEntriesQuery = query(
         collection(db, 'timeEntries'),
-        where('personnelId', '==', appUser.uid),
+        where('personnelId', '==', appUser.employeeId || appUser.uid),
         orderBy('createdAt', 'desc')
       );
       
@@ -124,7 +127,7 @@ export default function PersonalTimeRecordsPage() {
 
     } catch (error) {
       console.error('載入個人工時記錄失敗:', error);
-      toast.error('載入個人工時記錄失敗');
+      toast.error(`載入個人工時記錄失敗: ${error instanceof Error ? error.message : '未知錯誤'}`);
     } finally {
       setIsLoading(false);
     }
@@ -132,13 +135,18 @@ export default function PersonalTimeRecordsPage() {
 
   const calculateStats = (entries: TimeEntry[]) => {
     const totalHours = entries.reduce((sum, entry) => sum + entry.duration, 0);
-    const totalOvertime = entries.reduce((sum, entry) => sum + (entry.overtimeHours || 0), 0);
     const uniqueWorkOrders = new Set(entries.map(entry => entry.workOrderId)).size;
+
+    // 計算本月工時
+    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+    const monthlyHours = entries
+      .filter(entry => new Date(entry.startDate).toISOString().slice(0, 7) === currentMonth)
+      .reduce((sum, entry) => sum + entry.duration, 0);
 
     setStats({
       totalEntries: entries.length,
       totalHours,
-      totalOvertime,
+      monthlyHours,
       totalWorkOrders: uniqueWorkOrders,
       avgHoursPerEntry: entries.length > 0 ? totalHours / entries.length : 0
     });
@@ -272,9 +280,9 @@ export default function PersonalTimeRecordsPage() {
         <Card className="relative overflow-hidden bg-gradient-to-br from-orange-50 to-amber-100 border-2 border-orange-200">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-bold text-orange-800">加班時數</CardTitle>
+              <CardTitle className="text-sm font-bold text-orange-800">本月總工時</CardTitle>
               <div className="p-2 bg-orange-500 rounded-lg">
-                <Zap className="h-4 w-4 text-white" />
+                <Calendar className="h-4 w-4 text-white" />
               </div>
             </div>
           </CardHeader>
@@ -282,9 +290,9 @@ export default function PersonalTimeRecordsPage() {
             {isLoading ? (
               <Skeleton className="h-8 w-20 mb-2" />
             ) : (
-              <div className="text-3xl font-bold text-orange-900 mb-1">{formatDuration(stats.totalOvertime)}</div>
+              <div className="text-3xl font-bold text-orange-900 mb-1">{formatDuration(stats.monthlyHours)}</div>
             )}
-            <p className="text-xs text-orange-600 font-medium">總加班時間</p>
+            <p className="text-xs text-orange-600 font-medium">本月工作時間</p>
           </CardContent>
           <div className="absolute inset-0 bg-gradient-to-br from-transparent to-orange-600/10 pointer-events-none" />
         </Card>
@@ -387,18 +395,17 @@ export default function PersonalTimeRecordsPage() {
             <div className="space-y-3">
               {/* 桌面版 */}
               <div className="hidden md:block">
-                <div className="grid grid-cols-12 gap-4 py-3 px-4 bg-gray-50 rounded-lg font-medium text-sm text-gray-700">
+                <div className="grid grid-cols-10 gap-4 py-3 px-4 bg-gray-50 rounded-lg font-medium text-sm text-gray-700">
                   <div className="col-span-2">工單號碼</div>
                   <div className="col-span-2">工作日期</div>
                   <div className="col-span-2">工作時間</div>
                   <div className="col-span-2">總工時</div>
-                  <div className="col-span-2">加班時數</div>
                   <div className="col-span-2">狀態</div>
                 </div>
                 {filteredEntries.map((entry) => (
                   <Card key={entry.id} className="hover:shadow-md transition-shadow">
                     <CardContent className="p-4">
-                      <div className="grid grid-cols-12 gap-4 items-center">
+                      <div className="grid grid-cols-10 gap-4 items-center">
                         <div className="col-span-2">
                           <div className="font-medium text-blue-600">
                             {entry.workOrderNumber}
@@ -418,15 +425,6 @@ export default function PersonalTimeRecordsPage() {
                           <Badge variant="outline" className="bg-green-50 text-green-700">
                             {formatDuration(entry.duration)}
                           </Badge>
-                        </div>
-                        <div className="col-span-2">
-                          {entry.overtimeHours && entry.overtimeHours > 0 ? (
-                            <Badge variant="destructive" className="bg-red-50 text-red-700">
-                              {formatDuration(entry.overtimeHours)}
-                            </Badge>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
                         </div>
                         <div className="col-span-2">
                           <div className="flex items-center justify-between">
@@ -484,11 +482,6 @@ export default function PersonalTimeRecordsPage() {
                           <Badge variant="outline" className="bg-green-50 text-green-700">
                             {formatDuration(entry.duration)}
                           </Badge>
-                          {entry.overtimeHours && entry.overtimeHours > 0 && (
-                            <Badge variant="destructive" className="bg-red-50 text-red-700">
-                              加班 {formatDuration(entry.overtimeHours)}
-                            </Badge>
-                          )}
                         </div>
                         {expandedEntries.has(entry.id) ? (
                           <ChevronUp className="h-4 w-4 text-gray-400" />
