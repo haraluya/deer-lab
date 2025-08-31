@@ -151,15 +151,17 @@ function InventoryPageContent() {
 
       // 建立庫存紀錄
       await createInventoryRecordByReason('manual_adjustment', {
-        itemType,
-        itemId: item.id,
-        itemCode: item.code,
-        itemName: item.name,
-        quantityChange,
-        quantityAfter: newStock,
         operatorId: appUser.uid,
         operatorName: appUser.name || '未知用戶',
-        remarks: remarks || undefined
+        remarks: remarks || undefined,
+        details: [{
+          itemId: item.id,
+          itemType,
+          itemCode: item.code,
+          itemName: item.name,
+          quantityChange,
+          quantityAfter: newStock
+        }]
       })
 
       // 更新庫存
@@ -202,15 +204,17 @@ function InventoryPageContent() {
 
       // 建立庫存紀錄
       const recordId = await createInventoryRecordByReason('inventory_check', {
-        itemType,
-        itemId,
-        itemCode,
-        itemName,
-        quantityChange,
-        quantityAfter: newStock,
         operatorId: appUser.uid,
         operatorName: appUser.name || '未知用戶',
-        remarks: remarks || '庫存盤點調整'
+        remarks: remarks || '庫存盤點調整',
+        details: [{
+          itemId,
+          itemType,
+          itemCode,
+          itemName,
+          quantityChange,
+          quantityAfter: newStock
+        }]
       })
 
       console.log('庫存紀錄建立成功，ID:', recordId)
