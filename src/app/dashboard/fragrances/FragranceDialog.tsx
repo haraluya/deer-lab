@@ -98,9 +98,11 @@ export function FragranceDialog({
             throw new Error("Firebase 未初始化")
           }
           
-          // 獲取供應商
+          // 獲取供應商，只顯示名稱中包含「生技」的公司
           const suppliersSnapshot = await getDocs(collection(db, 'suppliers'));
-          const suppliersList = suppliersSnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name })) as Supplier[];
+          const suppliersList = suppliersSnapshot.docs
+            .map(doc => ({ id: doc.id, name: doc.data().name }))
+            .filter(supplier => supplier.name && supplier.name.includes('生技')) as Supplier[];
           setSuppliers(suppliersList);
 
           // 獲取香精種類

@@ -13,7 +13,7 @@ import { usePurchaseCart } from '@/hooks/usePurchaseCart';
 import {
   Home, Users, Building, Package, FlaskConical, Library, Box,
   ShoppingCart, Factory, Calculator, ClipboardList, LogOut, ChevronDown,
-  LucideIcon, Loader2, BarChart3, Warehouse, Shield, Tag, User
+  LucideIcon, Loader2, Warehouse, Shield, Tag
 } from 'lucide-react';
 
 // ... (SidebarNav 和 UserNav 元件保持不變) ...
@@ -35,7 +35,6 @@ type NavItem = NavLink | NavSeparator;
 
 const navLinks: NavItem[] = [
   { href: '/dashboard', label: '系統總覽', icon: Home },
-  { href: '/dashboard/profile', label: '個人資料', icon: User },
   { href: '/dashboard/personnel', label: '人員管理', icon: Users },
   // { href: '/dashboard/roles', label: '角色管理', icon: Shield }, // 已移除角色管理
   { isSeparator: true, label: '基礎資料管理' },
@@ -49,7 +48,6 @@ const navLinks: NavItem[] = [
   { href: '/dashboard/work-orders', label: '工單管理', icon: ClipboardList },
   { href: '/dashboard/inventory', label: '庫存管理', icon: Warehouse },
   { isSeparator: true, label: '數據分析' },
-  { href: '/dashboard/reports', label: '報表分析', icon: BarChart3 },
   { href: '/dashboard/inventory-records', label: '庫存紀錄', icon: ClipboardList },
   { href: '/dashboard/cost-management', label: '成本管理', icon: Calculator },
 ];

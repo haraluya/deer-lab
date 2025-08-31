@@ -7,11 +7,13 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 import { SupplierDialog, SupplierData } from './SupplierDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { MoreHorizontal, Eye, Edit, Building, Package, Phone, Plus, User, Droplets } from 'lucide-react';
+import { MoreHorizontal, Eye, Edit, Building, Package, Phone, Plus, User, Search, Droplets } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,7 +23,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
 
 // 供應商資料介面（包含對接人員資訊）
 interface SupplierWithLiaison extends SupplierData {
@@ -31,12 +32,14 @@ interface SupplierWithLiaison extends SupplierData {
 
 function SuppliersPageContent() {
   const [suppliers, setSuppliers] = useState<SupplierWithLiaison[]>([]);
+  const [filteredSuppliers, setFilteredSuppliers] = useState<SupplierWithLiaison[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [selectedDetailSupplier, setSelectedDetailSupplier] = useState<SupplierWithLiaison | null>(null);
   const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<SupplierData | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const fetchSuppliers = useCallback(async () => {
     setIsLoading(true);
@@ -84,6 +87,7 @@ function SuppliersPageContent() {
       
       console.log('最終供應商列表:', suppliersList); // 調試日誌
       setSuppliers(suppliersList);
+      setFilteredSuppliers(suppliersList);
     } catch (error) {
       console.error("讀取供應商資料失敗:", error);
       toast.error("讀取供應商資料失敗，請檢查網路連線或聯絡管理員。");
@@ -95,6 +99,21 @@ function SuppliersPageContent() {
   useEffect(() => {
     fetchSuppliers();
   }, [fetchSuppliers]);
+
+  // 搜尋功能
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredSuppliers(suppliers);
+    } else {
+      const filtered = suppliers.filter(supplier =>
+        supplier.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        supplier.products?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        supplier.contactWindow?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        supplier.liaisonPersonName?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredSuppliers(filtered);
+    }
+  }, [searchTerm, suppliers]);
 
   const handleAdd = () => {
     setSelectedSupplier(null);
@@ -141,83 +160,100 @@ function SuppliersPageContent() {
   };
 
   return (
-    <div className="container mx-auto py-10 suppliers-page">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+    <div className="container mx-auto py-6 suppliers-page">
+      {/* 頁面標題和操作區域 */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+          <h1 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
             供應商管理
           </h1>
-          <p className="text-gray-600 mt-2">管理合作供應商與聯絡資訊</p>
+          <p className="text-gray-600 mt-1 text-sm lg:text-base">管理合作供應商與聯絡資訊</p>
         </div>
-      </div>
-
-      {/* 手機版功能按鈕區域 */}
-      <div className="lg:hidden mb-6">
         <Button 
           onClick={handleAdd}
-          className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+          className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 w-full sm:w-auto"
         >
           <Plus className="mr-2 h-4 w-4" />
           新增供應商
         </Button>
       </div>
 
-      {/* 桌面版功能按鈕區域 */}
-      <div className="hidden lg:block mb-6">
-        <div className="flex justify-end">
-          <Button 
-            onClick={handleAdd}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            新增供應商
-          </Button>
+      {/* 搜尋欄 */}
+      <div className="mb-6">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder="搜尋供應商名稱、供應商品..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9 bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+          />
         </div>
+        {searchTerm && (
+          <p className="text-sm text-gray-500 mt-2">
+            找到 {filteredSuppliers.length} 個符合條件的供應商
+          </p>
+        )}
       </div>
 
-      {/* 手機版卡片容器 */}
-      <div className="lg:hidden">
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden mb-6">
-          <div className="px-4 py-3 bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Building className="h-4 w-4 text-blue-600" />
-                <h2 className="text-base font-semibold text-gray-800">供應商清單</h2>
-              </div>
-              <div className="text-xs text-gray-600">
-                共 {suppliers.length} 個
-              </div>
+      {/* 表格容器 */}
+      <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+        {/* 手機版表格標題 */}
+        <div className="lg:hidden px-4 py-3 bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Building className="h-4 w-4 text-blue-600" />
+              <h2 className="text-base font-semibold text-gray-800">供應商清單</h2>
+            </div>
+            <div className="text-xs text-gray-600">
+              共 {filteredSuppliers.length} 個
             </div>
           </div>
-          
-          <div className="overflow-x-auto">
-            <div className="min-w-full">
-              {isLoading ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <div className="relative">
-                    <div className="w-10 h-10 border-4 border-blue-200 rounded-full animate-spin"></div>
-                    <div className="absolute top-0 left-0 w-10 h-10 border-4 border-transparent border-t-blue-600 rounded-full animate-spin"></div>
-                  </div>
-                  <span className="mt-3 text-sm text-gray-600 font-medium">載入中...</span>
-                </div>
-              ) : suppliers.length > 0 ? (
-                <div className="divide-y divide-gray-200">
-                  {suppliers.map((supplier) => (
-                    <div 
+        </div>
+
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="relative">
+              <div className="w-10 h-10 border-4 border-blue-200 rounded-full animate-spin"></div>
+              <div className="absolute top-0 left-0 w-10 h-10 border-4 border-transparent border-t-blue-600 rounded-full animate-spin"></div>
+            </div>
+            <span className="mt-3 text-sm text-gray-600 font-medium">載入中...</span>
+          </div>
+        ) : filteredSuppliers.length > 0 ? (
+          <>
+            {/* 桌面版表格 */}
+            <div className="hidden lg:block overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50/80">
+                    <TableHead className="font-semibold text-gray-700">供應商名稱</TableHead>
+                    <TableHead className="font-semibold text-gray-700">供應商品</TableHead>
+                    <TableHead className="font-semibold text-gray-700">聯絡窗口</TableHead>
+                    <TableHead className="font-semibold text-gray-700">聯絡方式</TableHead>
+                    <TableHead className="font-semibold text-gray-700">對接人員</TableHead>
+                    <TableHead className="text-center font-semibold text-gray-700">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredSuppliers.map((supplier) => (
+                    <TableRow 
                       key={supplier.id} 
-                      className="p-4 hover:bg-blue-50/50 transition-colors duration-200 cursor-pointer"
+                      className="hover:bg-blue-50/50 transition-colors duration-200 cursor-pointer"
                       onClick={() => handleViewDetail(supplier)}
                     >
-                      <div className="flex items-start justify-between mb-3">
+                      <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
                             <Building className="h-4 w-4 text-white" />
                           </div>
-                          <div>
-                            <div className="font-medium text-gray-900 text-sm">{supplier.name}</div>
-                            <div className="text-xs text-gray-500">供應商</div>
-                          </div>
+                          {supplier.name}
                         </div>
+                      </TableCell>
+                      <TableCell>{supplier.products || '-'}</TableCell>
+                      <TableCell>{supplier.contactWindow || '未指定'}</TableCell>
+                      <TableCell>{supplier.contactMethod || '-'}</TableCell>
+                      <TableCell>{supplier.liaisonPersonName || '未指定'}</TableCell>
+                      <TableCell className="text-center">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -225,205 +261,129 @@ function SuppliersPageContent() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>操作</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => handleViewDetail(supplier)}>
                               <Eye className="h-4 w-4 mr-2" />
                               查看詳細
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(supplier)}>
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(supplier);
+                            }}>
                               <Edit className="h-4 w-4 mr-2" />
-                              編輯供應商
+                              編輯
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleDelete(supplier)} className="text-red-600">
-                              刪除供應商
+                            <DropdownMenuItem 
+                              onClick={() => handleDelete(supplier)}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              刪除
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 gap-3 text-sm">
-                        <div>
-                          <div className="flex items-center gap-1 mb-1">
-                            <Package className="h-3 w-3 text-blue-600" />
-                            <span className="text-gray-500">供應商品</span>
-                          </div>
-                          <span className="font-medium text-gray-700">{supplier.products || '未提供'}</span>
-                        </div>
-                        
-                        <div>
-                          <div className="flex items-center gap-1 mb-1">
-                            <User className="h-3 w-3 text-green-600" />
-                            <span className="text-gray-500">聯絡窗口</span>
-                          </div>
-                          <span className="font-medium text-gray-700">
-                            {supplier.contactWindow || '未指定'}
-                          </span>
-                        </div>
-                        
-                        <div>
-                          <div className="flex items-center gap-1 mb-1">
-                            <Phone className="h-3 w-3 text-purple-600" />
-                            <span className="text-gray-500">聯絡方式</span>
-                          </div>
-                          <span className="font-medium text-gray-700">{supplier.contactMethod || '未提供'}</span>
-                        </div>
-                        
-                        <div>
-                          <div className="flex items-center gap-1 mb-1">
-                            <User className="h-3 w-3 text-orange-600" />
-                            <span className="text-gray-500">對接人員</span>
-                          </div>
-                          <span className="font-medium text-gray-700">
-                            {supplier.liaisonPersonName || '未指定'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                    <Building className="h-6 w-6 text-gray-400" />
-                  </div>
-                  <h3 className="text-base font-medium text-gray-900 mb-1">沒有供應商資料</h3>
-                  <p className="text-sm text-gray-500 mb-4 text-center">開始建立第一個供應商來管理合作關係</p>
-                  <Button 
-                    onClick={handleAdd}
-                    variant="outline"
-                    size="sm"
-                    className="border-blue-200 text-blue-600 hover:bg-blue-50"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    新增供應商
-                  </Button>
-                </div>
-              )}
+                </TableBody>
+              </Table>
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* 桌面版卡片容器 */}
-      <div className="hidden lg:block">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {isLoading ? (
-            Array.from({ length: 6 }).map((_, index) => (
-              <div key={index} className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 animate-pulse">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
-                  <div className="flex-1">
-                    <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <div className="h-3 bg-gray-200 rounded"></div>
-                  <div className="h-3 bg-gray-200 rounded w-4/5"></div>
-                  <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-                </div>
-              </div>
-            ))
-          ) : suppliers.length > 0 ? (
-            suppliers.map((supplier) => (
-              <div 
-                key={supplier.id}
-                className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all duration-200 cursor-pointer group"
-                onClick={() => handleViewDetail(supplier)}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                      <Building className="h-5 w-5 text-white" />
+            {/* 手機版列表 */}
+            <div className="lg:hidden divide-y divide-gray-200">
+              {filteredSuppliers.map((supplier) => (
+                <div 
+                  key={supplier.id} 
+                  className="p-4 hover:bg-blue-50/50 transition-colors duration-200 cursor-pointer"
+                  onClick={() => handleViewDetail(supplier)}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                        <Building className="h-4 w-4 text-white" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900 text-sm">{supplier.name}</div>
+                        <div className="text-xs text-gray-500">供應商</div>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 text-lg group-hover:text-blue-600 transition-colors duration-200">
-                        {supplier.name}
-                      </h3>
-                      <p className="text-sm text-gray-500">供應商</p>
-                    </div>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>操作</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleViewDetail(supplier)}>
-                        <Eye className="h-4 w-4 mr-2" />
-                        查看詳細
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit(supplier);
-                      }}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        編輯供應商
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem 
-                        onClick={() => handleDelete(supplier)}
-                        className="text-red-600 focus:text-red-600"
-                      >
-                        刪除供應商
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4 text-blue-600" />
-                    <div>
-                      <p className="text-xs text-gray-500">供應商品</p>
-                      <p className="text-sm font-medium text-gray-900">{supplier.products || '未提供'}</p>
-                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleViewDetail(supplier)}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          查看詳細
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEdit(supplier)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          編輯
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleDelete(supplier)} className="text-red-600">
+                          刪除
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-green-600" />
+                  <div className="grid grid-cols-1 gap-3 text-sm">
                     <div>
-                      <p className="text-xs text-gray-500">聯絡窗口</p>
-                      <p className="text-sm font-medium text-gray-900">
+                      <div className="flex items-center gap-1 mb-1">
+                        <Package className="h-3 w-3 text-blue-600" />
+                        <span className="text-gray-500">供應商品</span>
+                      </div>
+                      <span className="font-medium text-gray-700">{supplier.products || '未提供'}</span>
+                    </div>
+                    
+                    <div>
+                      <div className="flex items-center gap-1 mb-1">
+                        <User className="h-3 w-3 text-green-600" />
+                        <span className="text-gray-500">聯絡窗口</span>
+                      </div>
+                      <span className="font-medium text-gray-700">
                         {supplier.contactWindow || '未指定'}
-                      </p>
+                      </span>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-purple-600" />
+                    
                     <div>
-                      <p className="text-xs text-gray-500">聯絡方式</p>
-                      <p className="text-sm font-medium text-gray-900">{supplier.contactMethod || '未提供'}</p>
+                      <div className="flex items-center gap-1 mb-1">
+                        <Phone className="h-3 w-3 text-purple-600" />
+                        <span className="text-gray-500">聯絡方式</span>
+                      </div>
+                      <span className="font-medium text-gray-700">{supplier.contactMethod || '未提供'}</span>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-orange-600" />
+                    
                     <div>
-                      <p className="text-xs text-gray-500">對接人員</p>
-                      <p className="text-sm font-medium text-gray-900">
+                      <div className="flex items-center gap-1 mb-1">
+                        <User className="h-3 w-3 text-orange-600" />
+                        <span className="text-gray-500">對接人員</span>
+                      </div>
+                      <span className="font-medium text-gray-700">
                         {supplier.liaisonPersonName || '未指定'}
-                      </p>
+                      </span>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                    <span className="text-xs text-gray-400">點擊查看詳情</span>
                   </div>
                 </div>
-              </div>
-            ))
-          ) : (
-            <div className="col-span-full flex flex-col items-center justify-center py-16">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <Building className="h-8 w-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">沒有供應商資料</h3>
-              <p className="text-gray-500 mb-4">開始建立第一個供應商來管理合作關係</p>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <Building className="h-8 w-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              {searchTerm ? '找不到符合條件的供應商' : '沒有供應商資料'}
+            </h3>
+            <p className="text-gray-500 mb-4 text-center">
+              {searchTerm ? '請嘗試不同的搜尋條件' : '開始建立第一個供應商來管理合作關係'}
+            </p>
+            {!searchTerm && (
               <Button 
                 onClick={handleAdd}
                 variant="outline"
@@ -432,9 +392,9 @@ function SuppliersPageContent() {
                 <Plus className="mr-2 h-4 w-4" />
                 新增供應商
               </Button>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       <SupplierDialog

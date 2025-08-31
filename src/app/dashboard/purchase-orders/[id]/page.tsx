@@ -146,6 +146,16 @@ export default function PurchaseOrderDetailPage() {
     });
   };
 
+  const handleCostPerUnitChange = (index: number, newCostPerUnit: number) => {
+    if (newCostPerUnit < 0) return;
+    
+    setEditedItems(prev => {
+      const newItems = [...prev];
+      newItems[index] = { ...newItems[index], costPerUnit: newCostPerUnit };
+      return newItems;
+    });
+  };
+
   // 處理其他費用
   const handleAddAdditionalFee = () => {
     if (!newFee.name || newFee.amount <= 0) {
@@ -364,19 +374,26 @@ export default function PurchaseOrderDetailPage() {
   };
 
   const handleSaveChanges = async () => {
-    if (!po) return;
+    if (!po || !db) return;
     setIsUpdating(true);
     const toastId = toast.loading("正在儲存變更...");
     
     try {
-      // 這裡需要實現更新採購單項目的 API
-      // 暫時只更新本地狀態
+      // 更新 Firestore 中的採購單
+      const docRef = doc(db, "purchaseOrders", po.id);
+      await updateDoc(docRef, {
+        items: editedItems,
+        additionalFees: editedAdditionalFees,
+        updatedAt: Timestamp.now()
+      });
+
+      // 更新本地狀態
       setPo(prev => prev ? { 
         ...prev, 
         items: editedItems,
-        additionalFees: editedAdditionalFees,
-        comments: comments
+        additionalFees: editedAdditionalFees
       } : null);
+      
       toast.success("變更已儲存", { id: toastId });
     } catch (error) {
       console.error("儲存變更失敗:", error);
@@ -601,33 +618,35 @@ export default function PurchaseOrderDetailPage() {
                             </span>
                           ) : (
                             <div className="flex items-center justify-end gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleQuantityChange(index, item.quantity - 1)}
-                                disabled={item.quantity <= 1}
-                                className="h-8 w-8 p-0 border-amber-200 text-amber-600 hover:bg-amber-50"
-                              >
-                                -
-                              </Button>
-                              <span className="w-16 text-center font-semibold text-amber-600">
-                                {item.quantity} {item.unit}
-                              </span>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleQuantityChange(index, item.quantity + 1)}
-                                className="h-8 w-8 p-0 border-amber-200 text-amber-600 hover:bg-amber-50"
-                              >
-                                +
-                              </Button>
+                              <Input
+                                type="number"
+                                min="1"
+                                value={item.quantity}
+                                onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 1)}
+                                className="w-20 text-center border-amber-200 focus:border-amber-500"
+                              />
+                              <span className="text-sm text-gray-500 whitespace-nowrap">{item.unit}</span>
                             </div>
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          <span className="text-gray-600">
-                            NT$ {itemCost.toLocaleString()}
-                          </span>
+                          {po.status === '已收貨' ? (
+                            <span className="text-gray-600">
+                              NT$ {itemCost.toLocaleString()}
+                            </span>
+                          ) : (
+                            <div className="flex items-center justify-end gap-1">
+                              <span className="text-sm text-gray-500">NT$</span>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={itemCost}
+                                onChange={(e) => handleCostPerUnitChange(index, parseFloat(e.target.value) || 0)}
+                                className="w-24 text-right border-amber-200 focus:border-amber-500"
+                              />
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           <span className="font-semibold text-amber-600">

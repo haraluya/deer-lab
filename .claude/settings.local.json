@@ -5,7 +5,11 @@
       "Bash(npm run build:*)",
       "Bash(npm run deploy:*)",
       "Bash(firebase functions:log:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(chcp:*)",
+      "Bash(echo $env:LANG)",
+      "Bash(cmd /c:*)",
+      "Bash(powershell:*)"
     ],
     "deny": [],
     "ask": []

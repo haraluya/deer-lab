@@ -1299,32 +1299,119 @@ function MaterialsPageContent() {
         onOpenChange={setIsImportExportOpen}
         onImport={async (data: any[], options?: { updateMode?: boolean }, onProgress?: (current: number, total: number) => void) => {
           const functions = getFunctions();
-          const importMaterials = httpsCallable(functions, 'importMaterials');
           
           try {
             // 調試日誌：檢查匯入資料
-            console.log('開始匯入資料:', {
+            console.log('開始匯入物料資料:', {
               totalRecords: data.length,
               sampleData: data.slice(0, 3).map(item => ({
                 name: item.name,
+                code: item.code,
                 supplierName: item.supplierName,
                 hasSupplierName: !!item.supplierName
               }))
+            });
+            
+            // 獲取供應商映射表
+            const suppliersMap = new Map<string, string>();
+            if (!db) {
+              throw new Error("Firebase 未初始化");
+            }
+            const supplierSnapshot = await getDocs(collection(db, "suppliers"));
+            supplierSnapshot.forEach(doc => {
+              const supplierData = doc.data();
+              suppliersMap.set(supplierData.name, doc.id);
+              console.log(`供應商映射: ${supplierData.name} -> ${doc.id}`);
+            });
+            
+            // 獲取現有物料代號映射表
+            const existingMaterialsMap = new Map<string, string>();
+            const materialSnapshot = await getDocs(collection(db, "materials"));
+            materialSnapshot.forEach(doc => {
+              const data = doc.data();
+              if (data.code) {
+                existingMaterialsMap.set(data.code, doc.id);
+              }
             });
             
             // 分批處理資料
             const batchSize = 20; // 每批處理20筆
             const totalBatches = Math.ceil(data.length / batchSize);
             let processedCount = 0;
+            let createdCount = 0;
+            let updatedCount = 0;
             
             for (let i = 0; i < totalBatches; i++) {
               const startIndex = i * batchSize;
               const endIndex = Math.min(startIndex + batchSize, data.length);
               const batch = data.slice(startIndex, endIndex);
               
-              const result = await importMaterials({ 
-                materials: batch
-              });
+              // 處理每一批資料
+              for (const item of batch) {
+                try {
+                  // 處理供應商ID
+                  let supplierId = undefined;
+                  if (item.supplierName && item.supplierName.trim() !== '') {
+                    const trimmedSupplierName = item.supplierName.trim();
+                    supplierId = suppliersMap.get(trimmedSupplierName);
+                    console.log(`尋找供應商: "${trimmedSupplierName}" -> ${supplierId || '未找到'}`);
+                    if (!supplierId) {
+                      console.warn(`找不到供應商: "${trimmedSupplierName}"`);
+                    }
+                  }
+                  
+                  // 處理數值欄位
+                  const currentStock = item.currentStock !== undefined && item.currentStock !== null && item.currentStock !== '' ? Number(item.currentStock) : 0;
+                  const safetyStockLevel = item.safetyStockLevel !== undefined && item.safetyStockLevel !== null && item.safetyStockLevel !== '' ? Number(item.safetyStockLevel) : 0;
+                  const costPerUnit = item.costPerUnit !== undefined && item.costPerUnit !== null && item.costPerUnit !== '' ? Number(item.costPerUnit) : 0;
+                  
+                  const processedItem: any = {
+                    code: item.code,
+                    name: item.name,
+                    category: item.category || '',
+                    subCategory: item.subCategory || '',
+                    supplierId,
+                    currentStock,
+                    safetyStockLevel,
+                    costPerUnit,
+                    unit: item.unit || '個',
+                    notes: item.notes || ''
+                  };
+                  
+                  console.log(`處理物料 ${item.name} 的完整資料:`, {
+                    code: processedItem.code,
+                    name: processedItem.name,
+                    category: processedItem.category,
+                    subCategory: processedItem.subCategory,
+                    supplierId: processedItem.supplierId,
+                    currentStock: processedItem.currentStock,
+                    safetyStockLevel: processedItem.safetyStockLevel,
+                    costPerUnit: processedItem.costPerUnit,
+                    unit: processedItem.unit,
+                    notes: processedItem.notes
+                  });
+                  
+                  // 智能匹配邏輯：檢查物料代號是否存在
+                  const existingMaterialId = existingMaterialsMap.get(item.code);
+                  
+                  if (existingMaterialId) {
+                    // 物料代號已存在，執行更新
+                    console.log(`物料代號 ${item.code} 已存在，執行更新操作`);
+                    const updateMaterial = httpsCallable(functions, 'updateMaterialByCode');
+                    await updateMaterial(processedItem);
+                    updatedCount++;
+                  } else {
+                    // 物料代號不存在，執行新增
+                    console.log(`物料代號 ${item.code} 不存在，執行新增操作`);
+                    const createMaterial = httpsCallable(functions, 'createMaterial');
+                    await createMaterial(processedItem);
+                    createdCount++;
+                  }
+                } catch (error) {
+                  console.error('處理物料資料失敗:', error);
+                  throw error;
+                }
+              }
               
               processedCount += batch.length;
               onProgress?.(processedCount, data.length);
@@ -1335,7 +1422,7 @@ function MaterialsPageContent() {
               }
             }
             
-            console.log('匯入結果:', `成功處理 ${processedCount} 筆資料`);
+            console.log('物料匯入結果:', `成功處理 ${processedCount} 筆資料 (新增: ${createdCount}, 更新: ${updatedCount})`);
             handleMaterialUpdate();
           } catch (error) {
             console.error('匯入物料失敗:', error);
@@ -1356,8 +1443,8 @@ function MaterialsPageContent() {
             notes: material.notes
           }));
         }}
-        title="物料"
-        description="匯入或匯出物料資料，支援 Excel 和 CSV 格式。匯入時會自動生成缺失的分類和代號。"
+        title="物料資料"
+        description="匯入或匯出物料資料，支援 Excel 和 CSV 格式。匯入時會智能匹配物料代號：如果代號不存在則新增，如果代號已存在則更新覆蓋有填入的欄位。"
         color="yellow"
         showUpdateOption={true}
         maxBatchSize={500}
