@@ -113,7 +113,7 @@ function InventoryRecordsPageContent() {
     applyFilters()
   }, [applyFilters])
 
-  const handleFilterChange = (key: keyof InventoryRecordQueryParams, value: any) => {
+  const handleFilterChange = (key: keyof InventoryRecordQueryParams, value: string | null | undefined) => {
     setFilters(prev => ({ ...prev, [key]: value }))
   }
 

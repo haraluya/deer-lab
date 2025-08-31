@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { collection, getDocs, query, orderBy, where } from "firebase/firestore"
+import { collection, getDocs, query, orderBy, where, limit, startAfter, DocumentSnapshot } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { getFunctions, httpsCallable } from "firebase/functions"
 import { toast } from "sonner"

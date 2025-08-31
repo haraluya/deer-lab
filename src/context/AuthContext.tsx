@@ -6,6 +6,8 @@ import { onAuthStateChanged, User as FirebaseUser, signOut, signInWithEmailAndPa
 import { getAuthInstance, getFirestoreInstance } from '@/lib/firebase';
 import { doc, getDoc, DocumentReference } from 'firebase/firestore';
 import { toast } from 'sonner';
+import { debug, error, warn, info } from '@/utils/logger';
+import { FirebaseError } from '@/types';
 
 export interface AppUser {
   uid: string;
@@ -40,50 +42,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // 載入用戶資料
   const loadUserData = async (firebaseUser: FirebaseUser) => {
-    console.log('🔧 loadUserData 開始執行，用戶 UID:', firebaseUser.uid);
+    debug('loadUserData 開始執行', { uid: firebaseUser.uid });
     try {
       const db = getFirestoreInstance();
       if (!db) {
-        console.error('❌ Firestore 未初始化');
+        error('Firestore 未初始化');
         setAppUser(null);
         return;
       }
       
-      console.log('🔧 獲取用戶文檔:', firebaseUser.uid);
+      debug('獲取用戶文檔', { uid: firebaseUser.uid });
       const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
       
       if (userDoc.exists()) {
-        console.log('✅ 用戶文檔存在');
+        debug('用戶文檔存在');
         const userData = userDoc.data() as AppUser;
-        console.log('🔧 用戶資料:', userData);
+        debug('用戶資料', userData);
         
         // 如果有角色引用，獲取角色資料
         if (userData.roleRef) {
-          console.log('🔧 用戶有角色引用，獲取角色資料');
+          debug('用戶有角色引用，獲取角色資料');
           try {
             const roleDoc = await getDoc(userData.roleRef);
             if (roleDoc.exists()) {
               const roleData = roleDoc.data();
               userData.roleName = roleData.name;
-              console.log('✅ 角色資料載入成功:', roleData);
+              debug('角色資料載入成功', roleData);
             } else {
-              console.warn('⚠️ 角色文檔不存在');
+              warn('角色文檔不存在');
             }
-          } catch (error) {
-            console.error('❌ 載入角色資料失敗:', error);
+          } catch (err) {
+            error('載入角色資料失敗', err as Error);
           }
         } else {
-          console.warn('⚠️ 用戶沒有角色引用');
+          warn('用戶沒有角色引用');
         }
         
-        console.log('🔧 設置 appUser:', userData);
+        debug('設置 appUser', userData);
         setAppUser(userData);
       } else {
-        console.warn('⚠️ 用戶文檔不存在');
+        warn('用戶文檔不存在');
         setAppUser(null);
       }
-    } catch (error) {
-      console.error('❌ 載入用戶資料失敗:', error);
+    } catch (err) {
+      error('載入用戶資料失敗', err as Error);
       setAppUser(null);
     }
   };
@@ -104,9 +106,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await loadUserData(result.user);
       toast.success('登入成功！');
       return true;
-    } catch (error: any) {
-      console.error('❌ 登入失敗:', error);
-      toast.error(error.message || '登入失敗');
+    } catch (err) {
+      const firebaseError = err as FirebaseError;
+      error('登入失敗', firebaseError);
+      toast.error(firebaseError.message || '登入失敗');
       return false;
     }
   };
@@ -122,53 +125,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast.success('已成功登出');
         window.location.href = '/';
       }
-    } catch (error) {
-      console.error('❌ 登出失敗:', error);
+    } catch (err) {
+      error('登出失敗', err as Error);
       toast.error('登出失敗');
     }
   };
 
   // 監聽認證狀態
   useEffect(() => {
-    console.log('🔧 AuthContext useEffect 開始執行');
+    debug('AuthContext useEffect 開始執行');
     
     try {
       const auth = getAuthInstance();
       if (!auth) {
-        console.error('❌ Auth 未初始化，設置 isLoading = false');
+        error('Auth 未初始化，設置 isLoading = false');
         setIsLoading(false);
         return;
       }
 
-      console.log('🔧 設置 onAuthStateChanged 監聽器');
+      debug('設置 onAuthStateChanged 監聽器');
       const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
         try {
-          console.log('🔧 onAuthStateChanged 觸發，用戶:', firebaseUser ? firebaseUser.uid : 'null');
+          debug('onAuthStateChanged 觸發', { uid: firebaseUser?.uid || null });
           if (firebaseUser) {
             setUser(firebaseUser);
-            console.log('🔧 開始載入用戶資料');
+            debug('開始載入用戶資料');
             await loadUserData(firebaseUser);
           } else {
             setUser(null);
             setAppUser(null);
-            console.log('🔧 用戶已登出，清除狀態');
+            debug('用戶已登出，清除狀態');
           }
           setIsLoading(false);
-          console.log('🔧 設置 isLoading = false');
-        } catch (error) {
-          console.error('❌ onAuthStateChanged 回調執行失敗:', error);
+          debug('設置 isLoading = false');
+        } catch (err) {
+          error('onAuthStateChanged 回調執行失敗', err as Error);
           setIsLoading(false);
         }
       });
 
       return () => {
-        console.log('🔧 清理 onAuthStateChanged 監聽器');
+        debug('清理 onAuthStateChanged 監聽器');
         if (typeof unsubscribe === 'function') {
           unsubscribe();
         }
       };
-    } catch (error) {
-      console.error('❌ AuthContext useEffect 執行失敗:', error);
+    } catch (err) {
+      error('AuthContext useEffect 執行失敗', err as Error);
       setIsLoading(false);
     }
   }, []);

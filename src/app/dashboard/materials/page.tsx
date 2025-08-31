@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { collection, getDocs, DocumentReference, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
+import { CartItem } from '@/types';
 
 import { MaterialDialog, MaterialData } from './MaterialDialog';
 import { MaterialCategoryDialog } from './MaterialCategoryDialog';
@@ -500,11 +501,12 @@ function MaterialsPageContent() {
         unit: material.unit || '',
         quantity: 1,
         costPerUnit: material.costPerUnit || 0,
+        currentStock: material.currentStock || 0,
       };
 
       // 從 localStorage 讀取現有採購車
       const existingCart = localStorage.getItem('purchaseCart');
-      let currentCart: any[] = [];
+      let currentCart: CartItem[] = [];
       if (existingCart) {
         try {
           currentCart = JSON.parse(existingCart);
@@ -552,7 +554,7 @@ function MaterialsPageContent() {
       
       // 將選中的物料加入採購車
       selectedMaterials.forEach(material => {
-        const existingItem = cartItems.find((item: any) => 
+        const existingItem = cartItems.find((item: CartItem) => 
           item.id === material.id && item.type === 'material'
         );
         
@@ -571,6 +573,7 @@ function MaterialsPageContent() {
             unit: material.unit || '個',
             quantity: 1,
             costPerUnit: material.costPerUnit || 0,
+            currentStock: material.currentStock || 0,
           });
         }
       });
@@ -1297,7 +1300,7 @@ function MaterialsPageContent() {
       <ImportExportDialog
         isOpen={isImportExportOpen}
         onOpenChange={setIsImportExportOpen}
-        onImport={async (data: any[], options?: { updateMode?: boolean }, onProgress?: (current: number, total: number) => void) => {
+        onImport={async (data: MaterialData[], options?: { updateMode?: boolean }, onProgress?: (current: number, total: number) => void) => {
           const functions = getFunctions();
           
           try {
@@ -1361,11 +1364,11 @@ function MaterialsPageContent() {
                   }
                   
                   // 處理數值欄位
-                  const currentStock = item.currentStock !== undefined && item.currentStock !== null && item.currentStock !== '' ? Number(item.currentStock) : 0;
-                  const safetyStockLevel = item.safetyStockLevel !== undefined && item.safetyStockLevel !== null && item.safetyStockLevel !== '' ? Number(item.safetyStockLevel) : 0;
-                  const costPerUnit = item.costPerUnit !== undefined && item.costPerUnit !== null && item.costPerUnit !== '' ? Number(item.costPerUnit) : 0;
+                  const currentStock = item.currentStock !== undefined && item.currentStock !== null && String(item.currentStock) !== '' ? Number(item.currentStock) : 0;
+                  const safetyStockLevel = item.safetyStockLevel !== undefined && item.safetyStockLevel !== null && String(item.safetyStockLevel) !== '' ? Number(item.safetyStockLevel) : 0;
+                  const costPerUnit = item.costPerUnit !== undefined && item.costPerUnit !== null && String(item.costPerUnit) !== '' ? Number(item.costPerUnit) : 0;
                   
-                  const processedItem: any = {
+                  const processedItem: Partial<MaterialData> = {
                     code: item.code,
                     name: item.name,
                     category: item.category || '',

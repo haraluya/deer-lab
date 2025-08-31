@@ -86,97 +86,187 @@ export function InventoryTable({ items, loading, onQuickUpdate, type }: Inventor
   }
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-gray-50">
-            <TableHead className="font-semibold">代碼</TableHead>
-            <TableHead className="font-semibold">名稱</TableHead>
-            <TableHead className="font-semibold">分類</TableHead>
-            <TableHead className="font-semibold text-right">當前庫存</TableHead>
-            <TableHead className="font-semibold text-right">安全庫存</TableHead>
-            <TableHead className="font-semibold text-right">單價</TableHead>
-            <TableHead className="font-semibold text-right">庫存價值</TableHead>
-            <TableHead className="font-semibold text-center">狀態</TableHead>
-            <TableHead className="font-semibold text-center">操作</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {items.map((item) => {
-            const stockStatus = getStockStatus(item)
-            const stockValue = item.currentStock * item.costPerUnit
-            
-            return (
-              <TableRow 
-                key={item.id}
-                className="hover:bg-gray-50 transition-colors"
-              >
-                <TableCell className="font-mono text-sm font-medium">
-                  {item.code}
-                </TableCell>
+    <div>
+      {/* 桌面版表格 */}
+      <div className="hidden md:block rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-gray-50">
+              <TableHead className="font-semibold">代碼</TableHead>
+              <TableHead className="font-semibold">名稱</TableHead>
+              <TableHead className="font-semibold">分類</TableHead>
+              <TableHead className="font-semibold text-right">當前庫存</TableHead>
+              <TableHead className="font-semibold text-right">安全庫存</TableHead>
+              <TableHead className="font-semibold text-right">單價</TableHead>
+              <TableHead className="font-semibold text-right">庫存價值</TableHead>
+              <TableHead className="font-semibold text-center">狀態</TableHead>
+              <TableHead className="font-semibold text-center">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((item) => {
+              const stockStatus = getStockStatus(item)
+              const stockValue = item.currentStock * item.costPerUnit
+              
+              return (
+                <TableRow 
+                  key={item.id}
+                  className="hover:bg-gray-50 transition-colors"
+                >
+                  <TableCell className="font-mono text-sm font-medium">
+                    {item.code}
+                  </TableCell>
+                  
+                  <TableCell>
+                    <div>
+                      <div className="font-medium text-gray-900">{item.name}</div>
+                      {item.series && (
+                        <div className="text-sm text-gray-500">系列: {item.series}</div>
+                      )}
+                    </div>
+                  </TableCell>
+                  
+                  <TableCell>
+                    <span className="text-sm text-gray-600">{item.category || '-'}</span>
+                  </TableCell>
+                  
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      className="h-auto p-2 font-semibold hover:bg-blue-50"
+                      onClick={() => onQuickUpdate(item)}
+                    >
+                      <span className="text-blue-600">
+                        {item.currentStock} {item.unit}
+                      </span>
+                    </Button>
+                  </TableCell>
+                  
+                  <TableCell className="text-right text-sm text-gray-600">
+                    {item.minStock} {item.unit}
+                  </TableCell>
+                  
+                  <TableCell className="text-right text-sm text-gray-600">
+                    NT$ {item.costPerUnit.toLocaleString()}
+                  </TableCell>
+                  
+                  <TableCell className="text-right font-medium text-gray-900">
+                    NT$ {stockValue.toLocaleString()}
+                  </TableCell>
+                  
+                  <TableCell className="text-center">
+                    <Badge 
+                      variant="outline" 
+                      className={`${stockStatus.badgeColor} text-xs flex items-center gap-1 w-fit mx-auto`}
+                    >
+                      {stockStatus.icon}
+                      {stockStatus.text}
+                    </Badge>
+                  </TableCell>
+                  
+                  <TableCell className="text-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onQuickUpdate(item)}
+                      className="text-xs"
+                    >
+                      快速調整
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* 手機版卡片 */}
+      <div className="md:hidden space-y-4">
+        {items.map((item) => {
+          const stockStatus = getStockStatus(item)
+          const stockValue = item.currentStock * item.costPerUnit
+          
+          return (
+            <div 
+              key={item.id}
+              className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+            >
+              {/* 卡片標題區 */}
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex-1">
+                  <div className="font-medium text-gray-900 text-lg mb-1">{item.name}</div>
+                  <div className="font-mono text-sm text-gray-600 mb-1">代碼: {item.code}</div>
+                  {item.series && (
+                    <div className="text-sm text-gray-500">系列: {item.series}</div>
+                  )}
+                </div>
+                <Badge 
+                  variant="outline" 
+                  className={`${stockStatus.badgeColor} text-xs flex items-center gap-1 shrink-0 ml-2`}
+                >
+                  {stockStatus.icon}
+                  {stockStatus.text}
+                </Badge>
+              </div>
+
+              {/* 分類資訊 */}
+              {item.category && (
+                <div className="mb-3 py-1 px-2 bg-gray-100 rounded text-sm text-gray-700 inline-block">
+                  {item.category}
+                </div>
+              )}
+
+              {/* 庫存資訊區 */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="bg-blue-50 rounded-lg p-3">
+                  <div className="text-xs text-blue-600 font-medium mb-1">當前庫存</div>
+                  <button
+                    onClick={() => onQuickUpdate(item)}
+                    className="text-lg font-bold text-blue-700 hover:text-blue-800 transition-colors"
+                  >
+                    {item.currentStock} {item.unit}
+                  </button>
+                </div>
                 
-                <TableCell>
-                  <div>
-                    <div className="font-medium text-gray-900">{item.name}</div>
-                    {item.series && (
-                      <div className="text-sm text-gray-500">系列: {item.series}</div>
-                    )}
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="text-xs text-gray-600 font-medium mb-1">安全庫存</div>
+                  <div className="text-lg font-semibold text-gray-700">
+                    {item.minStock} {item.unit}
                   </div>
-                </TableCell>
+                </div>
+              </div>
+
+              {/* 價格資訊區 */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="bg-green-50 rounded-lg p-3">
+                  <div className="text-xs text-green-600 font-medium mb-1">單價</div>
+                  <div className="text-lg font-semibold text-green-700">
+                    NT$ {item.costPerUnit.toLocaleString()}
+                  </div>
+                </div>
                 
-                <TableCell>
-                  <span className="text-sm text-gray-600">{item.category || '-'}</span>
-                </TableCell>
-                
-                <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    className="h-auto p-2 font-semibold hover:bg-blue-50"
-                    onClick={() => onQuickUpdate(item)}
-                  >
-                    <span className="text-blue-600">
-                      {item.currentStock} {item.unit}
-                    </span>
-                  </Button>
-                </TableCell>
-                
-                <TableCell className="text-right text-sm text-gray-600">
-                  {item.minStock} {item.unit}
-                </TableCell>
-                
-                <TableCell className="text-right text-sm text-gray-600">
-                  NT$ {item.costPerUnit.toLocaleString()}
-                </TableCell>
-                
-                <TableCell className="text-right font-medium text-gray-900">
-                  NT$ {stockValue.toLocaleString()}
-                </TableCell>
-                
-                <TableCell className="text-center">
-                  <Badge 
-                    variant="outline" 
-                    className={`${stockStatus.badgeColor} text-xs flex items-center gap-1 w-fit mx-auto`}
-                  >
-                    {stockStatus.icon}
-                    {stockStatus.text}
-                  </Badge>
-                </TableCell>
-                
-                <TableCell className="text-center">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onQuickUpdate(item)}
-                    className="text-xs"
-                  >
-                    快速調整
-                  </Button>
-                </TableCell>
-              </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
+                <div className="bg-purple-50 rounded-lg p-3">
+                  <div className="text-xs text-purple-600 font-medium mb-1">庫存價值</div>
+                  <div className="text-lg font-bold text-purple-700">
+                    NT$ {stockValue.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+
+              {/* 操作按鈕 */}
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => onQuickUpdate(item)}
+                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-2 rounded-lg font-medium shadow-sm hover:shadow transition-all duration-200 min-h-[44px]"
+                >
+                  快速調整
+                </Button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

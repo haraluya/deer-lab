@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { collection, addDoc, getDocs, query, where, orderBy, doc, deleteDoc, updateDoc, Timestamp } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
+import { Personnel, TimeEntry as TimeEntryType } from "@/types"
 import { Clock, User, Plus, Trash2, Edit2, Calendar, Save, X, ChevronDown, ChevronUp, Users, Timer, ClipboardList, Zap, AlertTriangle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -16,30 +17,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Loader2 } from "lucide-react"
 
-interface Personnel {
-  id: string
-  name: string
-  employeeId: string
-}
-
-interface TimeEntry {
-  id: string
-  workOrderId: string
-  workOrderNumber?: string
-  personnelId: string
-  personnelName: string
-  startDate: string
-  startTime: string
-  endDate: string
-  endTime: string
-  startDateTime?: Timestamp
-  endDateTime?: Timestamp
-  duration: number // 小時
-  overtimeHours?: number
-  notes?: string
-  status?: 'draft' | 'confirmed' | 'locked'
-  createdAt: any
-  updatedAt?: any
+// 擴展 TimeEntry 類型以適應此對話框
+interface LocalTimeEntry extends TimeEntryType {
+  workOrderNumber?: string;
+  startDateTime?: Timestamp;
+  endDateTime?: Timestamp;
+  overtimeHours?: number;
+  status?: 'draft' | 'confirmed' | 'locked';
 }
 
 interface TimeTrackingDialogProps {
@@ -52,7 +36,7 @@ interface TimeTrackingDialogProps {
 
 export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrderNumber, isLocked = false }: TimeTrackingDialogProps) {
   const [personnel, setPersonnel] = useState<Personnel[]>([])
-  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([])
+  const [timeEntries, setTimeEntries] = useState<LocalTimeEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -69,7 +53,7 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
     notes: ""
   })
   
-  const [editEntry, setEditEntry] = useState<TimeEntry | null>(null)
+  const [editEntry, setEditEntry] = useState<LocalTimeEntry | null>(null)
 
   useEffect(() => {
     if (isOpen) {
@@ -104,7 +88,7 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
       const timeEntriesList = timeEntriesSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })) as TimeEntry[]
+      })) as LocalTimeEntry[]
       setTimeEntries(timeEntriesList)
     } catch (error) {
       console.error("載入資料失敗:", error)
@@ -247,7 +231,7 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
     return Math.max(0, totalHours - 8)
   }
 
-  const handleEditTimeEntry = async (entry: TimeEntry) => {
+  const handleEditTimeEntry = async (entry: LocalTimeEntry) => {
     if (isLocked) {
       toast.error("工單已入庫，無法編輯工時記錄")
       return

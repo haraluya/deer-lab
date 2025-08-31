@@ -4,8 +4,9 @@ import { getAuth, Auth } from 'firebase/auth'
 import { getFirestore, Firestore } from 'firebase/firestore'
 import { getFunctions, Functions } from 'firebase/functions'
 import { getStorage } from 'firebase/storage'
+import { firebase } from '@/utils/logger'
 
-console.log('🔧 Firebase 模組載入...');
+firebase('Firebase 模組載入...');
 
 // 延遲初始化變數
 let app: FirebaseApp | null = null;
@@ -26,13 +27,13 @@ function getFirebaseConfig() {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
   };
 
-  console.log('🔧 Firebase 配置檢查:');
-  console.log('  API Key:', config.apiKey ? '✅ 已設置' : '❌ 未設置');
-  console.log('  Auth Domain:', config.authDomain ? '✅ 已設置' : '❌ 未設置');
-  console.log('  Project ID:', config.projectId ? '✅ 已設置' : '❌ 未設置');
-  console.log('  Storage Bucket:', config.storageBucket ? '✅ 已設置' : '❌ 未設置');
-  console.log('  Messaging Sender ID:', config.messagingSenderId ? '✅ 已設置' : '❌ 未設置');
-  console.log('  App ID:', config.appId ? '✅ 已設置' : '❌ 未設置');
+  firebase('Firebase 配置檢查:');
+  firebase(`  API Key: ${config.apiKey ? '✅ 已設置' : '❌ 未設置'}`);
+  firebase(`  Auth Domain: ${config.authDomain ? '✅ 已設置' : '❌ 未設置'}`);
+  firebase(`  Project ID: ${config.projectId ? '✅ 已設置' : '❌ 未設置'}`);
+  firebase(`  Storage Bucket: ${config.storageBucket ? '✅ 已設置' : '❌ 未設置'}`);
+  firebase(`  Messaging Sender ID: ${config.messagingSenderId ? '✅ 已設置' : '❌ 未設置'}`);
+  firebase(`  App ID: ${config.appId ? '✅ 已設置' : '❌ 未設置'}`);
 
   return config;
 }
@@ -40,12 +41,12 @@ function getFirebaseConfig() {
 // 初始化 Firebase
 function initializeFirebase() {
   if (isInitialized) {
-    console.log('✅ Firebase 已經初始化');
+    firebase('Firebase 已經初始化');
     return { app, auth: authInstance, db: dbInstance, functions: functionsInstance, storage: storageInstance };
   }
 
   try {
-    console.log('🔧 開始初始化 Firebase...');
+    firebase('開始初始化 Firebase...');
     
     const firebaseConfig = getFirebaseConfig();
 
@@ -63,28 +64,28 @@ function initializeFirebase() {
     }
 
     // 初始化 Firebase
-    console.log('🚀 正在初始化 Firebase App...');
+    firebase('正在初始化 Firebase App...');
     app = initializeApp(firebaseConfig);
-    console.log('✅ Firebase App 初始化成功');
+    firebase('Firebase App 初始化成功');
 
-    console.log('🚀 正在初始化 Firebase Auth...');
+    firebase('正在初始化 Firebase Auth...');
     authInstance = getAuth(app);
-    console.log('✅ Firebase Auth 初始化成功');
+    firebase('Firebase Auth 初始化成功');
 
-    console.log('🚀 正在初始化 Firestore...');
+    firebase('正在初始化 Firestore...');
     dbInstance = getFirestore(app);
-    console.log('✅ Firestore 初始化成功');
+    firebase('Firestore 初始化成功');
 
-    console.log('🚀 正在初始化 Firebase Functions...');
+    firebase('正在初始化 Firebase Functions...');
     functionsInstance = getFunctions(app);
-    console.log('✅ Firebase Functions 初始化成功');
+    firebase('Firebase Functions 初始化成功');
 
-    console.log('🚀 正在初始化 Firebase Storage...');
+    firebase('正在初始化 Firebase Storage...');
     storageInstance = getStorage(app);
-    console.log('✅ Firebase Storage 初始化成功');
+    firebase('Firebase Storage 初始化成功');
 
     isInitialized = true;
-    console.log('🎉 Firebase 所有服務初始化完成！');
+    firebase('Firebase 所有服務初始化完成！');
     
     return { app, auth: authInstance, db: dbInstance, functions: functionsInstance, storage: storageInstance };
   } catch (error) {

@@ -2,9 +2,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, getDocs, query, orderBy, where, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, where, doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
+import { TimeEntry as TimeEntryType } from '@/types';
 import { 
   Clock, Users, Factory, Calendar, Filter, Search, 
   ChevronDown, ChevronUp, FileText, BarChart3, TrendingUp,
@@ -21,23 +22,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// 介面定義
-interface TimeEntry {
-  id: string;
-  workOrderId: string;
+// 擴展 TimeEntry 類型以適應此頁面
+interface LocalTimeEntry extends TimeEntryType {
   workOrderNumber: string;
-  personnelId: string;
-  personnelName: string;
-  startDate: string;
-  startTime: string;
-  endDate: string;
-  endTime: string;
-  duration: number; // 小時
   overtimeHours?: number;
-  notes?: string;
   status?: 'draft' | 'confirmed' | 'locked';
-  createdAt: any;
-  updatedAt?: any;
 }
 
 interface WorkOrderSummary {
@@ -47,9 +36,9 @@ interface WorkOrderSummary {
   totalHours: number;
   totalOvertime: number;
   personnelCount: number;
-  timeEntries: TimeEntry[];
+  timeEntries: LocalTimeEntry[];
   status: string;
-  completedAt?: any;
+  completedAt?: Timestamp;
 }
 
 interface TimeReportStats {
@@ -117,7 +106,7 @@ export default function TimeReportsPage() {
       const timeEntries = timeEntriesSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })) as TimeEntry[];
+      })) as LocalTimeEntry[];
 
       // 載入工單資訊
       const workOrderIds = [...new Set(timeEntries.map(entry => entry.workOrderId))];
@@ -125,6 +114,7 @@ export default function TimeReportsPage() {
 
       await Promise.all(workOrderIds.map(async (workOrderId) => {
         try {
+          if (!db) return;
           const workOrderDoc = await getDoc(doc(db, 'workOrders', workOrderId));
           if (workOrderDoc.exists()) {
             const data = workOrderDoc.data();
@@ -195,7 +185,7 @@ export default function TimeReportsPage() {
     }
   };
 
-  const calculateStats = (summaries: WorkOrderSummary[], entries: TimeEntry[]) => {
+  const calculateStats = (summaries: WorkOrderSummary[], entries: LocalTimeEntry[]) => {
     const totalHours = summaries.reduce((sum, order) => sum + order.totalHours, 0);
     const totalOvertime = summaries.reduce((sum, order) => sum + order.totalOvertime, 0);
     const allPersonnel = new Set(entries.map(entry => entry.personnelId));

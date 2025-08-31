@@ -6,7 +6,9 @@ import { doc, getDoc, updateDoc, collection, getDocs, addDoc, Timestamp, query, 
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
 import { uploadImage, uploadMultipleImages } from "@/lib/imageUpload"
+import { error, debug, info } from "@/utils/logger"
 import { findMaterialByCategory } from "@/lib/systemConfig"
+import { Material, Fragrance, Personnel, WorkOrder, TimeEntry, BillOfMaterialsItem } from "@/types"
 import { 
   ArrowLeft, Edit, Save, CheckCircle, AlertCircle, Clock, Package, Users, 
   Droplets, Calculator, MessageSquare, Calendar, User, Plus, X, Loader2, Upload, Trash2,
@@ -60,8 +62,8 @@ interface WorkOrderData {
   actualQuantity: number
   status: string
   qcStatus: string
-  createdAt: any
-  createdByRef: any
+  createdAt: Timestamp
+  createdByRef: any // TODO: 需要定義具體的 DocumentReference 類型
   createdByName?: string
   notes?: string
   timeRecords?: Array<{
@@ -78,11 +80,6 @@ interface WorkOrderData {
   comments?: Comment[]
 }
 
-interface Personnel {
-  id: string
-  name: string
-  employeeId: string
-}
 
 const statusOptions = [
   { value: "預報", label: "預報", color: "bg-orange-100 text-orange-800 border-orange-200" },
@@ -184,8 +181,8 @@ export default function WorkOrderDetailPage() {
       setIsEditingQuantity(false);
       
       toast.success("使用數量已更新");
-    } catch (error) {
-      console.error("更新使用數量失敗:", error);
+    } catch (err) {
+      error("更新使用數量失敗", err as Error);
       toast.error("更新使用數量失敗");
     }
   };
@@ -269,10 +266,10 @@ export default function WorkOrderDetailPage() {
                 currentStock: newStock,
                 updatedAt: Timestamp.now()
               });
-              console.log(`香精 ${item.name} 庫存已扣除: ${currentStock} -> ${newStock} (使用: ${usedQuantity})`);
+              debug(`香精庫存已扣除: ${item.name}`, { currentStock, newStock, usedQuantity });
             }
-          } catch (error) {
-            console.error(`更新香精 ${item.name} 庫存失敗:`, error);
+          } catch (err) {
+            error(`更新香精庫存失敗: ${item.name}`, err as Error);
             toast.error(`更新香精 ${item.name} 庫存失敗`);
           }
         } else {
@@ -288,10 +285,10 @@ export default function WorkOrderDetailPage() {
                 currentStock: newStock,
                 updatedAt: Timestamp.now()
               });
-              console.log(`物料 ${item.name} 庫存已扣除: ${currentStock} -> ${newStock} (使用: ${usedQuantity})`);
+              debug(`物料庫存已扣除: ${item.name}`, { currentStock, newStock, usedQuantity });
             }
-          } catch (error) {
-            console.error(`更新物料 ${item.name} 庫存失敗:`, error);
+          } catch (err) {
+            error(`更新物料庫存失敗: ${item.name}`, err as Error);
             toast.error(`更新物料 ${item.name} 庫存失敗`);
           }
         }
@@ -306,8 +303,8 @@ export default function WorkOrderDetailPage() {
       setIsCompleteDialogOpen(false);
       setIsEditing(false);
       toast.success("工單已完工，庫存已扣除");
-    } catch (error) {
-      console.error("完工操作失敗:", error);
+    } catch (err) {
+      error("完工操作失敗", err as Error);
       toast.error("完工操作失敗");
     } finally {
       setIsCompleting(false);
@@ -338,8 +335,8 @@ export default function WorkOrderDetailPage() {
 
       setIsWarehouseDialogOpen(false);
       toast.success("工單已入庫");
-    } catch (error) {
-      console.error("入庫操作失敗:", error);
+    } catch (err) {
+      error("入庫操作失敗", err as Error);
       toast.error("入庫操作失敗");
     } finally {
       setIsWarehousing(false);
@@ -410,8 +407,8 @@ export default function WorkOrderDetailPage() {
         ...doc.data()
       }));
       setTimeEntries(entries);
-    } catch (error) {
-      console.error('載入工時記錄失敗:', error);
+    } catch (err) {
+      error('載入工時記錄失敗', err as Error);
     }
   }, [workOrderId]);
 
@@ -424,8 +421,8 @@ export default function WorkOrderDetailPage() {
       const workOrderDoc = await getDoc(doc(db, 'workOrders', workOrderId));
       if (workOrderDoc.exists()) {
         const data = workOrderDoc.data();
-        console.log('工單資料:', data); // 調試日誌
-        console.log('產品快照:', data.productSnapshot); // 調試日誌
+        debug('工單資料載入成功', { id: workOrderId, data });
+        debug('產品快照', data.productSnapshot);
         
         // 載入物料和香精的當前庫存資訊
         const materialsSnapshot = await getDocs(collection(db, "materials"));
@@ -434,14 +431,14 @@ export default function WorkOrderDetailPage() {
         const materialsList = materialsSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
-        })) as any[];
+        })) as Material[];
         const fragrancesList = fragrancesSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
-        })) as any[];
+        })) as Fragrance[];
         
         // 分別處理物料和香精資料
-        const allMaterials: any[] = [...materialsList, ...fragrancesList];
+        const allMaterials: (Material | Fragrance)[] = [...materialsList, ...fragrancesList];
         
         setWorkOrder({
           id: workOrderDoc.id,
@@ -454,13 +451,13 @@ export default function WorkOrderDetailPage() {
             fragranceCode: data.productSnapshot?.fragranceCode || '未指定',
             nicotineMg: data.productSnapshot?.nicotineMg || 0,
           },
-          billOfMaterials: (data.billOfMaterials || []).map((item: any) => {
+          billOfMaterials: (data.billOfMaterials || []).map((item: BillOfMaterialsItem) => {
             // 查找對應的物料或香精，獲取當前庫存
             let material = null;
             
             // 如果是香精類別，優先從香精集合中查找
             if (item.category === 'fragrance') {
-              material = fragrancesList.find((f: any) => 
+              material = fragrancesList.find((f: Fragrance) => 
                 f.id === item.id || 
                 f.code === item.code || 
                 f.name === item.name
@@ -469,7 +466,7 @@ export default function WorkOrderDetailPage() {
             
             // 如果沒找到或不是香精，從物料集合中查找
             if (!material) {
-              material = materialsList.find((m: any) => 
+              material = materialsList.find((m: Material) => 
                 m.id === item.id || 
                 m.code === item.code || 
                 m.name === item.name
@@ -528,13 +525,13 @@ export default function WorkOrderDetailPage() {
         .map(doc => ({
           id: doc.id,
           ...doc.data()
-        }))
-        .filter((person: any) => person.status === 'active') // 只顯示啟用狀態的人員
-        .map((person: any) => ({
+        }) as Personnel)
+        .filter((person: Personnel) => person.isActive) // 只顯示啟用狀態的人員
+        .map((person: Personnel) => ({
           id: person.id,
           name: person.name,
           employeeId: person.employeeId,
-        })) as Personnel[]
+        }) as Personnel)
       
       setPersonnel(personnelList)
     } catch (error) {
@@ -681,7 +678,7 @@ export default function WorkOrderDetailPage() {
         
         // 如果是香精類別，優先從香精集合中查找
         if (item.category === 'fragrance') {
-          material = fragrancesList.find((f: any) => 
+          material = fragrancesList.find((f: Fragrance) => 
             f.id === item.id || 
             f.code === item.code || 
             f.name === item.name
@@ -690,7 +687,7 @@ export default function WorkOrderDetailPage() {
         
         // 如果沒找到或不是香精，從物料集合中查找
         if (!material) {
-          material = materialsList.find((m: any) => 
+          material = materialsList.find((m: Material) => 
             m.id === item.id || 
             m.code === item.code || 
             m.name === item.name
@@ -722,7 +719,13 @@ export default function WorkOrderDetailPage() {
   }, [workOrder, db, workOrderId, fetchWorkOrder]);
 
   // 計算物料需求的輔助函數 - 完全重新計算，如同建立工單時一樣
-  const calculateMaterialRequirements = async (productData: any, targetQuantity: number) => {
+  const calculateMaterialRequirements = async (productData: {
+    name: string;
+    fragranceName: string;
+    fragranceCode: string;
+    nicotineMg: number;
+    fragranceFormula?: any;
+  }, targetQuantity: number) => {
     if (!db) return [];
     
     console.log('重新載入BOM表 - 開始重新計算物料需求:', {
@@ -796,7 +799,7 @@ export default function WorkOrderDetailPage() {
       const fragranceQuantity = targetQuantity * (fragranceRatios.fragrance / 100); // 35.7% = 0.357
       
       // 查找香精的實際庫存 - 從香精集合中查找
-      const fragranceMaterial = fragrancesList.find((f: any) => 
+      const fragranceMaterial = fragrancesList.find((f: Fragrance) => 
         f.code === productData.fragranceCode || 
         f.name === productData.fragranceName
       );
@@ -810,7 +813,7 @@ export default function WorkOrderDetailPage() {
             name: fragranceMaterial.name,
             currentStock: fragranceMaterial.currentStock
           } : null,
-          allFragrances: fragrancesList.map((f: any) => ({ code: f.code, name: f.name, currentStock: f.currentStock }))
+          allFragrances: fragrancesList.map((f: Fragrance) => ({ code: f.code, name: f.name, currentStock: f.currentStock }))
         });
       
       const currentStock = fragranceMaterial ? (fragranceMaterial.currentStock || 0) : 0;
@@ -907,7 +910,7 @@ export default function WorkOrderDetailPage() {
       const existingSpecificMaterials = workOrder?.billOfMaterials?.filter(item => item.category === 'specific') || [];
       existingSpecificMaterials.forEach(item => {
         // 查找對應的物料，獲取當前庫存
-        const material = materialsList.find((m: any) => 
+        const material = materialsList.find((m: Material) => 
           m.id === item.id || 
           m.code === item.code || 
           m.name === item.name
@@ -927,7 +930,7 @@ export default function WorkOrderDetailPage() {
       const existingCommonMaterials = workOrder?.billOfMaterials?.filter(item => item.category === 'common') || [];
       existingCommonMaterials.forEach(item => {
         // 查找對應的物料，獲取當前庫存
-        const material = materialsList.find((m: any) => 
+        const material = materialsList.find((m: Material) => 
           m.id === item.id || 
           m.code === item.code || 
           m.name === item.name
@@ -1114,18 +1117,6 @@ export default function WorkOrderDetailPage() {
     loadTimeEntries()
   }, [fetchWorkOrder, fetchPersonnel, loadTimeEntries])
 
-  // 初始化新增工時紀錄表單
-  useEffect(() => {
-    if (isAddTimeRecordOpen) {
-      const today = new Date().toISOString().split('T')[0]
-      setNewTimeRecord({
-        personnelId: "",
-        workDate: today, // 預設今天
-        startTime: "",
-        endTime: ""
-      })
-    }
-  }, [isAddTimeRecordOpen])
 
   // 初始化編輯資料
   const handleStartEditing = () => {
@@ -2191,7 +2182,7 @@ export default function WorkOrderDetailPage() {
             loadTimeEntries();
           }
         }}
-        workOrderId={id!}
+        workOrderId={workOrderId}
         workOrderNumber={workOrder?.code}
         isLocked={workOrder?.status === "入庫"}
       />
@@ -2598,12 +2589,12 @@ export default function WorkOrderDetailPage() {
                     <TableBody>
                       {timeEntries.map((entry, index) => (
                         <TableRow key={index}>
-                          <TableCell className="font-medium">{record.personnelName}</TableCell>
-                          <TableCell>{record.workDate}</TableCell>
-                          <TableCell>{record.startTime}</TableCell>
-                          <TableCell>{record.endTime}</TableCell>
+                          <TableCell className="font-medium">{entry.personnelName}</TableCell>
+                          <TableCell>{entry.workDate}</TableCell>
+                          <TableCell>{entry.startTime}</TableCell>
+                          <TableCell>{entry.endTime}</TableCell>
                           <TableCell className="font-medium">
-                            {record.hours} 小時 {record.minutes} 分鐘
+                            {entry.duration} 小時
                           </TableCell>
                         </TableRow>
                       ))}

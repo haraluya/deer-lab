@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { collection, getDocs, Timestamp, query, where, orderBy, limit, startAfter } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { CartItem } from '@/types';
 
 import { toast } from 'sonner';
 import { 
@@ -34,18 +35,6 @@ interface PurchaseOrderView {
   totalAmount?: number;
 }
 
-// 採購車項目介面
-interface CartItem {
-  id: string;
-  name: string;
-  code: string;
-  type: 'material' | 'fragrance';
-  supplierId: string;
-  supplierName: string;
-  unit: string;
-  quantity: number;
-  costPerUnit: number;
-}
 
 // 供應商分組的採購車
 interface SupplierCartGroup {
@@ -589,8 +578,8 @@ function PurchaseOrdersPageContent() {
             </Button>
           </div>
 
-          {/* 採購單表格 */}
-          <div className="overflow-x-auto">
+          {/* 桌面版採購單表格 */}
+          <div className="hidden md:block overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -684,6 +673,107 @@ function PurchaseOrdersPageContent() {
                 )}
               </TableBody>
             </Table>
+          </div>
+
+          {/* 手機版採購單卡片 */}
+          <div className="md:hidden">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-8 h-8 border-2 border-amber-200 border-t-amber-600 rounded-full animate-spin"></div>
+                  <span className="text-sm text-gray-600">載入中...</span>
+                </div>
+              </div>
+            ) : paginatedPurchaseOrders.length > 0 ? (
+              <div className="space-y-4">
+                {paginatedPurchaseOrders.map((order) => (
+                  <div 
+                    key={order.id}
+                    onClick={() => router.push(`/dashboard/purchase-orders/${order.id}`)}
+                    className="bg-white border border-amber-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+                  >
+                    {/* 卡片標題區 */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center shrink-0">
+                          <ShoppingCart className="h-6 w-6 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-gray-900 text-lg mb-1 truncate">{order.code}</div>
+                          <div className="text-xs text-gray-500">
+                            <Calendar className="inline h-3 w-3 mr-1" />
+                            {order.createdAt}
+                          </div>
+                        </div>
+                      </div>
+                      <Badge className={`shrink-0 ml-2 ${
+                        order.status === '預報單' ? 'bg-purple-100 text-purple-800' : 
+                        order.status === '已訂購' ? 'bg-green-100 text-green-800' : 
+                        order.status === '已收貨' ? 'bg-gray-600 text-white' : 
+                        order.status === '已取消' ? 'bg-red-100 text-red-800' : 
+                        'bg-gray-600 text-white'
+                      }`}>
+                        {order.status}
+                      </Badge>
+                    </div>
+
+                    {/* 詳細資訊區 */}
+                    <div className="space-y-3">
+                      {/* 供應商資訊 */}
+                      <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+                        <Building className="h-4 w-4 text-blue-600 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs text-blue-600 font-medium mb-1">供應商</div>
+                          <div className="text-sm font-semibold text-blue-800 truncate">{order.supplierName}</div>
+                        </div>
+                      </div>
+
+                      {/* 建立人員與金額 */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="p-3 bg-gray-50 rounded-lg">
+                          <div className="flex items-center gap-2 mb-1">
+                            <User className="h-3 w-3 text-gray-500" />
+                            <span className="text-xs text-gray-600 font-medium">建立人員</span>
+                          </div>
+                          <div className="text-sm font-semibold text-gray-800 truncate">{order.createdByName}</div>
+                        </div>
+                        
+                        <div className="p-3 bg-amber-50 rounded-lg">
+                          <div className="text-xs text-amber-600 font-medium mb-1">採購金額</div>
+                          <div className="text-sm font-bold text-amber-800">
+                            NT$ {order.totalAmount ? order.totalAmount.toLocaleString() : '0'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 操作按鈕 */}
+                    <div className="flex justify-end mt-4 pt-3 border-t border-gray-100">
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/dashboard/purchase-orders/${order.id}`);
+                        }}
+                        className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm hover:shadow transition-all duration-200 min-h-[44px]"
+                      >
+                        <Eye className="mr-2 h-4 w-4" />
+                        檢視採購單
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <ShoppingCart className="h-8 w-8 text-amber-500" />
+                </div>
+                <div className="text-lg font-medium text-gray-800 mb-2">
+                  {statusFilter === 'all' ? '沒有採購單資料' : `沒有${statusFilter}狀態的採購單`}
+                </div>
+                <p className="text-sm text-gray-500">建立第一個採購單開始管理採購流程</p>
+              </div>
+            )}
           </div>
 
           {/* 分頁控制 */}
@@ -1015,7 +1105,7 @@ function PurchaseOrdersPageContent() {
                         </div>
                       </div>
                       <div className="divide-y divide-amber-100">
-                        {group.items.map((item: any) => (
+                        {group.items.map((item: CartItem) => (
                           <div key={`${item.id}-${item.type}`} className="p-3">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">

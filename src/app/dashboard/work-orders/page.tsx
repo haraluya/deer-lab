@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { collection, getDocs, query, orderBy, where } from "firebase/firestore"
+import { collection, getDocs, query, orderBy, where, limit, startAfter, DocumentSnapshot } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 
 import { toast } from "sonner"
+import { error } from "@/utils/logger"
 import { DataTable } from "./data-table"
 import { columns } from "./columns"
 import { WorkOrderColumn } from "./columns"
@@ -15,26 +16,51 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Factory, Filter, Search, TrendingUp, Clock, CheckCircle, Package, AlertCircle } from "lucide-react"
 
+const ITEMS_PER_PAGE = 20;
+
 function WorkOrdersPageContent() {
   const router = useRouter()
   const [workOrders, setWorkOrders] = useState<WorkOrderColumn[]>([])
   const [filteredWorkOrders, setFilteredWorkOrders] = useState<WorkOrderColumn[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null)
   
   // 篩選狀態
   const [statusFilter, setStatusFilter] = useState<string>("all")
 
-  const loadWorkOrders = useCallback(async () => {
-    setLoading(true)
+  const loadWorkOrders = useCallback(async (reset = false) => {
+    if (reset) {
+      setLoading(true)
+      setWorkOrders([])
+      setLastDoc(null)
+      setHasMore(true)
+    } else {
+      setLoadingMore(true)
+    }
+    
     try {
       if (!db) {
         throw new Error("Firebase 未初始化")
       }
       
-      const workOrdersQuery = query(
+      let workOrdersQuery = query(
         collection(db, "workOrders"),
-        orderBy("createdAt", "desc")
-      )
+        orderBy("createdAt", "desc"),
+        limit(ITEMS_PER_PAGE)
+      );
+      
+      // 如果不是重置載入且有上一頁的最後文檔，則從該文檔之後開始
+      if (!reset && lastDoc) {
+        workOrdersQuery = query(
+          collection(db, "workOrders"),
+          orderBy("createdAt", "desc"),
+          startAfter(lastDoc),
+          limit(ITEMS_PER_PAGE)
+        );
+      }
+      
       const querySnapshot = await getDocs(workOrdersQuery)
       
       const workOrdersList = querySnapshot.docs.map(doc => {
@@ -50,14 +76,26 @@ function WorkOrdersPageContent() {
         }
       }) as WorkOrderColumn[]
       
-      setWorkOrders(workOrdersList)
-    } catch (error) {
-      console.error("讀取工單資料失敗:", error)
+      // 更新狀態
+      if (reset) {
+        setWorkOrders(workOrdersList)
+      } else {
+        setWorkOrders(prev => [...prev, ...workOrdersList])
+      }
+      
+      // 更新分頁狀態
+      const lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1]
+      setLastDoc(lastVisible || null)
+      setHasMore(querySnapshot.docs.length === ITEMS_PER_PAGE)
+      
+    } catch (err) {
+      error("讀取工單資料失敗", err as Error)
       toast.error("讀取工單資料失敗")
     } finally {
       setLoading(false)
+      setLoadingMore(false)
     }
-  }, [])
+  }, [lastDoc])
 
   // 篩選工單
   useEffect(() => {
@@ -72,8 +110,15 @@ function WorkOrdersPageContent() {
   }, [workOrders, statusFilter])
 
   useEffect(() => {
-    loadWorkOrders()
-  }, [loadWorkOrders])
+    loadWorkOrders(true)
+  }, [])
+  
+  // 載入更多資料
+  const loadMore = () => {
+    if (!loadingMore && hasMore) {
+      loadWorkOrders(false)
+    }
+  }
 
   const handleCreateWorkOrder = () => {
     router.push("/dashboard/work-orders/create")
@@ -282,8 +327,38 @@ function WorkOrdersPageContent() {
             </div>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-gray-200">
-            <DataTable columns={columns} data={filteredWorkOrders} />
+          <div className="space-y-4">
+            <div className="overflow-hidden rounded-xl border border-gray-200">
+              <DataTable columns={columns} data={filteredWorkOrders} />
+            </div>
+            
+            {/* 載入更多按鈕 */}
+            {hasMore && (
+              <div className="flex justify-center">
+                <Button 
+                  onClick={loadMore} 
+                  disabled={loadingMore}
+                  variant="outline"
+                  className="px-8 py-2"
+                >
+                  {loadingMore ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                      載入中...
+                    </>
+                  ) : (
+                    '載入更多工單'
+                  )}
+                </Button>
+              </div>
+            )}
+            
+            {/* 已載入所有資料的提示 */}
+            {!hasMore && workOrders.length > ITEMS_PER_PAGE && (
+              <div className="text-center text-gray-500 py-4">
+                已載入所有 {workOrders.length} 筆工單
+              </div>
+            )}
           </div>
         )}
       </div>
