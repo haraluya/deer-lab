@@ -183,6 +183,20 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
         return
       }
 
+      // 檢查批量新增是否有時間重疊
+      const conflictPersonnel: string[] = []
+      selectedPersonnel.forEach(personId => {
+        const person = personnel.find(p => p.id === personId)
+        if (person && checkTimeOverlap(personId, newEntry.startDate, newEntry.startTime, newEntry.endDate, newEntry.endTime)) {
+          conflictPersonnel.push(person.name)
+        }
+      })
+
+      if (conflictPersonnel.length > 0) {
+        toast.error(`以下人員時間有重疊，無法新增：${conflictPersonnel.join(', ')}`)
+        return
+      }
+
       const duration = calculateDuration(newEntry.startDate, newEntry.startTime, newEntry.endDate, newEntry.endTime)
       if (duration <= 0) {
         toast.error("結束時間必須晚於開始時間")
@@ -240,6 +254,12 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
         return
       }
 
+      // 檢查時間重疊
+      if (checkTimeOverlap(newEntry.personnelId, newEntry.startDate, newEntry.startTime, newEntry.endDate, newEntry.endTime)) {
+        toast.error("此時間段與該人員的其他工時記錄重疊，請調整時間")
+        return
+      }
+
       const selectedPerson = personnel.find(p => p.id === newEntry.personnelId)
       if (!selectedPerson) {
         toast.error("找不到指定人員")
@@ -292,6 +312,26 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
   const calculateOvertimeHours = (totalHours: number): number => {
     // 超過 8 小時算加班
     return Math.max(0, totalHours - 8)
+  }
+
+  // 檢查時間重疊的函數
+  const checkTimeOverlap = (personnelId: string, startDate: string, startTime: string, endDate: string, endTime: string, excludeId?: string): boolean => {
+    const newStartDateTime = new Date(`${startDate}T${startTime}`)
+    const newEndDateTime = new Date(`${endDate}T${endTime}`)
+    
+    return timeEntries.some(entry => {
+      // 排除正在編輯的記錄
+      if (excludeId && entry.id === excludeId) return false
+      
+      // 只檢查同一人員的記錄
+      if (entry.personnelId !== personnelId) return false
+      
+      const existingStartDateTime = new Date(`${entry.startDate}T${entry.startTime}`)
+      const existingEndDateTime = new Date(`${entry.endDate}T${entry.endTime}`)
+      
+      // 檢查時間範圍是否重疊
+      return (newStartDateTime < existingEndDateTime) && (newEndDateTime > existingStartDateTime)
+    })
   }
 
   const handleEditTimeEntry = async (entry: LocalTimeEntry) => {
@@ -393,7 +433,7 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto" aria-describedby="time-tracking-dialog-description">
+      <DialogContent className="max-w-4xl sm:max-w-4xl max-w-[calc(100vw-1rem)] max-h-[90vh] sm:max-h-[80vh] overflow-y-auto" aria-describedby="time-tracking-dialog-description">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
