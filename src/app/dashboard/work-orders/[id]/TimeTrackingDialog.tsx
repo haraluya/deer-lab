@@ -516,8 +516,8 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                           type="time"
                           value={newEntry.startTime}
                           onChange={(e) => setNewEntry({...newEntry, startTime: e.target.value})}
-                          className="text-lg font-mono bg-white border-2 border-green-300 focus:border-green-500 focus:ring-green-200 pl-12 text-gray-900 [&::-webkit-calendar-picker-indicator]:opacity-60 [&::-webkit-calendar-picker-indicator]:hover:opacity-80"
-                          style={{ colorScheme: 'light' }}
+                          className="text-lg font-mono bg-white border-2 border-green-300 focus:border-green-500 focus:ring-green-200 pl-12 text-gray-900 [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-datetime-edit]:text-gray-900 [&::-webkit-datetime-edit-text]:text-gray-900 [&::-webkit-datetime-edit-hour-field]:text-gray-900 [&::-webkit-datetime-edit-minute-field]:text-gray-900 [color:black] dark:[color-scheme:dark]"
+                          style={{ colorScheme: 'light', color: 'black' }}
                           placeholder="09:00"
                         />
                         <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-green-500" />
@@ -551,8 +551,8 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                             endTime: e.target.value,
                             endDate: newEntry.startDate // 自動同步結束日期
                           })}
-                          className="text-lg font-mono bg-white border-2 border-red-300 focus:border-red-500 focus:ring-red-200 pl-12 text-gray-900 [&::-webkit-calendar-picker-indicator]:opacity-60 [&::-webkit-calendar-picker-indicator]:hover:opacity-80"
-                          style={{ colorScheme: 'light' }}
+                          className="text-lg font-mono bg-white border-2 border-red-300 focus:border-red-500 focus:ring-red-200 pl-12 text-gray-900 [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-datetime-edit]:text-gray-900 [&::-webkit-datetime-edit-text]:text-gray-900 [&::-webkit-datetime-edit-hour-field]:text-gray-900 [&::-webkit-datetime-edit-minute-field]:text-gray-900 [color:black] dark:[color-scheme:dark]"
+                          style={{ colorScheme: 'light', color: 'black' }}
                           placeholder="18:00"
                         />
                         <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-red-500" />
@@ -749,8 +749,8 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                                       type="time"
                                       value={editEntry?.startTime}
                                       onChange={(e) => setEditEntry({...editEntry!, startTime: e.target.value})}
-                                      className="h-8 text-xs text-gray-900 [&::-webkit-calendar-picker-indicator]:opacity-60"
-                                      style={{ colorScheme: 'light' }}
+                                      className="h-8 text-xs text-gray-900 [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-datetime-edit]:text-gray-900 [&::-webkit-datetime-edit-text]:text-gray-900 [&::-webkit-datetime-edit-hour-field]:text-gray-900 [&::-webkit-datetime-edit-minute-field]:text-gray-900 [color:black]"
+                                      style={{ colorScheme: 'light', color: 'black' }}
                                     />
                                   </div>
                                 </TableCell>
@@ -766,8 +766,8 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                                       type="time"
                                       value={editEntry?.endTime}
                                       onChange={(e) => setEditEntry({...editEntry!, endTime: e.target.value})}
-                                      className="h-8 text-xs text-gray-900 [&::-webkit-calendar-picker-indicator]:opacity-60"
-                                      style={{ colorScheme: 'light' }}
+                                      className="h-8 text-xs text-gray-900 [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-datetime-edit]:text-gray-900 [&::-webkit-datetime-edit-text]:text-gray-900 [&::-webkit-datetime-edit-hour-field]:text-gray-900 [&::-webkit-datetime-edit-minute-field]:text-gray-900 [color:black]"
+                                      style={{ colorScheme: 'light', color: 'black' }}
                                     />
                                   </div>
                                 </TableCell>

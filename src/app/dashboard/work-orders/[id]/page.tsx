@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { doc, getDoc, updateDoc, collection, getDocs, addDoc, Timestamp, query, where } from "firebase/firestore"
+import { doc, getDoc, updateDoc, collection, getDocs, addDoc, Timestamp, query, where, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
 import { uploadImage, uploadMultipleImages } from "@/lib/imageUpload"
@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { TimeTrackingDialog } from "./TimeTrackingDialog"
 
 interface Comment {
   id: string
@@ -103,23 +104,18 @@ export default function WorkOrderDetailPage() {
   const workOrderId = params.id as string
 
   const [workOrder, setWorkOrder] = useState<WorkOrderData | null>(null)
+  const [timeEntries, setTimeEntries] = useState<any[]>([])
   const [personnel, setPersonnel] = useState<Personnel[]>([])
   const [loading, setLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [isAddTimeRecordOpen, setIsAddTimeRecordOpen] = useState(false)
+  const [isTimeTrackingOpen, setIsTimeTrackingOpen] = useState(false)
   const [editData, setEditData] = useState({
     status: "",
     qcStatus: "",
     actualQuantity: 0,
     targetQuantity: 0,
     notes: ""
-  })
-  const [newTimeRecord, setNewTimeRecord] = useState({
-    personnelId: "",
-    workDate: "",
-    startTime: "",
-    endTime: ""
   })
   
   // 留言相關狀態
@@ -392,16 +388,32 @@ export default function WorkOrderDetailPage() {
     return workOrder.status === "預報" || workOrder.status === "進行";
   };
 
-  // 檢查是否可以新增工時
-  const canAddTimeRecord = () => {
-    if (!workOrder) return false;
-    return workOrder.status !== "入庫";
-  };
 
   // 檢查是否可以新增留言
   const canAddComment = () => {
     return true; // 任何狀態都可以新增留言
   };
+
+  // 載入工時記錄
+  const loadTimeEntries = useCallback(async () => {
+    if (!workOrderId || !db) return;
+    
+    try {
+      const timeEntriesQuery = query(
+        collection(db, 'timeEntries'),
+        where('workOrderId', '==', workOrderId),
+        orderBy('createdAt', 'desc')
+      );
+      const timeEntriesSnapshot = await getDocs(timeEntriesQuery);
+      const entries = timeEntriesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setTimeEntries(entries);
+    } catch (error) {
+      console.error('載入工時記錄失敗:', error);
+    }
+  }, [workOrderId]);
 
   // 載入工單資料
   const fetchWorkOrder = useCallback(async () => {
@@ -1099,7 +1111,8 @@ export default function WorkOrderDetailPage() {
   useEffect(() => {
     fetchWorkOrder()
     fetchPersonnel()
-  }, [fetchWorkOrder, fetchPersonnel])
+    loadTimeEntries()
+  }, [fetchWorkOrder, fetchPersonnel, loadTimeEntries])
 
   // 初始化新增工時紀錄表單
   useEffect(() => {
@@ -1168,92 +1181,14 @@ export default function WorkOrderDetailPage() {
     }
   }
 
-  // 新增工時紀錄
-  const handleAddTimeRecord = async () => {
-    if (!newTimeRecord.personnelId || !newTimeRecord.workDate || !newTimeRecord.startTime || !newTimeRecord.endTime) {
-      toast.error("請填寫完整的工時資訊")
-      return
-    }
 
-    if (!db) {
-      toast.error("資料庫連線錯誤")
-      return
-    }
-
-    try {
-      // 驗證時間格式
-      const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/
-      if (!timeRegex.test(newTimeRecord.startTime) || !timeRegex.test(newTimeRecord.endTime)) {
-        toast.error("請輸入正確的時間格式 (HH:MM)")
-        return
-      }
-
-      // 計算工時
-      const startDateTime = new Date(`${newTimeRecord.workDate}T${newTimeRecord.startTime}`)
-      const endDateTime = new Date(`${newTimeRecord.workDate}T${newTimeRecord.endTime}`)
-      
-      if (endDateTime <= startDateTime) {
-        toast.error("結束時間必須晚於開始時間")
-        return
-      }
-
-      const diffMs = endDateTime.getTime() - startDateTime.getTime()
-      const totalMinutes = Math.floor(diffMs / (1000 * 60))
-      const hours = Math.floor(totalMinutes / 60)
-      const minutes = totalMinutes % 60
-
-      const selectedPersonnel = personnel.find(p => p.id === newTimeRecord.personnelId)
-      if (!selectedPersonnel) {
-        toast.error("找不到指定人員")
-        return
-      }
-
-      const timeRecord = {
-        personnelId: newTimeRecord.personnelId,
-        personnelName: selectedPersonnel.name,
-        workDate: newTimeRecord.workDate,
-        startTime: newTimeRecord.startTime,
-        endTime: newTimeRecord.endTime,
-        hours,
-        minutes,
-        totalMinutes,
-        createdAt: Timestamp.now()
-      }
-
-      // 儲存到資料庫
-      await addDoc(collection(db, 'workOrderTimeRecords'), {
-        workOrderId: workOrderId,
-        ...timeRecord
-      })
-
-      // 更新本地狀態
-      setWorkOrder(prev => prev ? {
-        ...prev,
-        timeRecords: [...(prev.timeRecords || []), { id: Date.now().toString(), ...timeRecord }]
-      } : null)
-
-      // 重置表單
-      setNewTimeRecord({
-        personnelId: "",
-        workDate: new Date().toISOString().split('T')[0], // 重置為今天
-        startTime: "",
-        endTime: ""
-      })
-      setIsAddTimeRecordOpen(false)
-      toast.success("工時紀錄已新增")
-    } catch (error) {
-      console.error("新增工時紀錄失敗:", error)
-      toast.error("新增工時紀錄失敗")
-    }
-  }
-
-  // 計算總人工小時
-  const totalWorkHours = workOrder?.timeRecords?.reduce((total, record) => {
-    return total + record.totalMinutes
-  }, 0) || 0
+  // 計算總人工小時 (從 timeEntries)
+  const totalWorkHours = timeEntries.reduce((total, entry) => {
+    return total + (entry.duration * 60) // duration 是小時，轉換為分鐘
+  }, 0)
 
   const totalHours = Math.floor(totalWorkHours / 60)
-  const totalMinutes = totalWorkHours % 60
+  const totalMinutes = Math.floor(totalWorkHours % 60)
 
   // 列印功能
   const handlePrint = () => {
@@ -1631,7 +1566,7 @@ export default function WorkOrderDetailPage() {
         
                  <div class="time-section">
            <h3>工時申報表</h3>
-           ${workOrder.timeRecords && workOrder.timeRecords.length > 0 ? `
+           ${timeEntries && timeEntries.length > 0 ? `
              <table>
                <thead>
                  <tr>
@@ -1643,19 +1578,19 @@ export default function WorkOrderDetailPage() {
                  </tr>
                </thead>
                <tbody>
-                 ${workOrder.timeRecords.map(record => `
+                 ${timeEntries.map(entry => `
                    <tr>
-                     <td>${record.personnelName}</td>
-                     <td>${record.workDate}</td>
-                     <td>${record.startTime}</td>
-                     <td>${record.endTime}</td>
-                     <td>${record.hours}小時${record.minutes}分鐘</td>
+                     <td>${entry.personnelName}</td>
+                     <td>${entry.startDate}</td>
+                     <td>${entry.startTime}</td>
+                     <td>${entry.endTime}</td>
+                     <td>${Math.floor(entry.duration)}小時${Math.round((entry.duration % 1) * 60)}分鐘</td>
                    </tr>
                  `).join('')}
                </tbody>
              </table>
              <div class="total-time">
-               總人工小時：${Math.floor(totalWorkHours / 60)} 小時 ${totalWorkHours % 60} 分鐘 (共 ${workOrder.timeRecords.length} 筆紀錄)
+               總人工小時：${Math.floor(totalWorkHours / 60)} 小時 ${Math.floor(totalWorkHours % 60)} 分鐘 (共 ${timeEntries.length} 筆紀錄)
              </div>
            ` : `
              <div style="text-align: center; padding: 15px; color: #666; font-size: 16px;">
@@ -2186,13 +2121,11 @@ export default function WorkOrderDetailPage() {
               )}
             </CardTitle>
             <Button
-              onClick={() => setIsAddTimeRecordOpen(true)}
-              disabled={!canAddTimeRecord()}
+              onClick={() => setIsTimeTrackingOpen(true)}
               className="bg-orange-600 hover:bg-orange-700 w-full sm:w-auto"
-              title={!canAddTimeRecord() ? "入庫狀態無法新增工時紀錄" : "點擊新增工時紀錄"}
             >
-              <Plus className="mr-2 h-4 w-4" />
-              新增工時紀錄
+              <Clock className="mr-2 h-4 w-4" />
+              工時管理
             </Button>
           </div>
         </CardHeader>
@@ -2204,12 +2137,12 @@ export default function WorkOrderDetailPage() {
               <div className="text-xl sm:text-2xl font-bold text-orange-600">
                 {totalHours} 小時 {totalMinutes} 分鐘
               </div>
-              <div className="text-xs text-gray-500">共 {workOrder.timeRecords?.length || 0} 筆紀錄</div>
+              <div className="text-xs text-gray-500">共 {timeEntries.length} 筆紀錄</div>
             </div>
           </div>
 
           {/* 工時紀錄列表 */}
-          {workOrder.timeRecords && workOrder.timeRecords.length > 0 ? (
+          {timeEntries && timeEntries.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -2222,14 +2155,14 @@ export default function WorkOrderDetailPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {workOrder.timeRecords.map((record, index) => (
+                  {timeEntries.map((entry, index) => (
                     <TableRow key={index}>
-                      <TableCell className="font-medium">{record.personnelName}</TableCell>
-                      <TableCell>{record.workDate}</TableCell>
-                      <TableCell>{record.startTime}</TableCell>
-                      <TableCell>{record.endTime}</TableCell>
+                      <TableCell className="font-medium">{entry.personnelName}</TableCell>
+                      <TableCell>{entry.startDate}</TableCell>
+                      <TableCell>{entry.startTime}</TableCell>
+                      <TableCell>{entry.endTime}</TableCell>
                       <TableCell className="font-medium">
-                        {record.hours} 小時 {record.minutes} 分鐘
+                        {Math.floor(entry.duration)} 小時 {Math.round((entry.duration % 1) * 60)} 分鐘
                       </TableCell>
                     </TableRow>
                   ))}
@@ -2248,193 +2181,20 @@ export default function WorkOrderDetailPage() {
 
 
 
-      {/* 新增工時紀錄對話框 */}
-      <Dialog open={isAddTimeRecordOpen} onOpenChange={setIsAddTimeRecordOpen}>
-        <DialogContent className="w-[95vw] max-w-md sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">新增工時紀錄</DialogTitle>
-            <DialogDescription>
-              請填寫工時紀錄的詳細資訊
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="personnel">選擇人員</Label>
-              <Select value={newTimeRecord.personnelId} onValueChange={(value) => setNewTimeRecord(prev => ({ ...prev, personnelId: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="請選擇人員" />
-                </SelectTrigger>
-                <SelectContent>
-                  {personnel.map(person => (
-                    <SelectItem key={person.id} value={person.id}>
-                      {person.name} ({person.employeeId})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="workDate">工作日期</Label>
-              <Input
-                id="workDate"
-                type="date"
-                value={newTimeRecord.workDate}
-                onChange={(e) => setNewTimeRecord(prev => ({ ...prev, workDate: e.target.value }))}
-                className="mt-1"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="startTime">開始時間 (24小時制)</Label>
-                <div className="flex gap-2 mt-1">
-                  <Select 
-                    value={newTimeRecord.startTime.split(':')[0] || ''} 
-                    onValueChange={(hour) => {
-                      const currentMinute = newTimeRecord.startTime.split(':')[1] || '00'
-                      setNewTimeRecord(prev => ({ 
-                        ...prev, 
-                        startTime: `${hour.padStart(2, '0')}:${currentMinute}` 
-                      }))
-                    }}
-                  >
-                    <SelectTrigger className="w-20">
-                      <SelectValue placeholder="時" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 24 }, (_, i) => (
-                        <SelectItem key={i} value={i.toString()}>
-                          {i.toString().padStart(2, '0')}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <span className="flex items-center text-gray-500">:</span>
-                  <Select 
-                    value={newTimeRecord.startTime.split(':')[1] || ''} 
-                    onValueChange={(minute) => {
-                      const currentHour = newTimeRecord.startTime.split(':')[0] || '00'
-                      setNewTimeRecord(prev => ({ 
-                        ...prev, 
-                        startTime: `${currentHour}:${minute.padStart(2, '0')}` 
-                      }))
-                    }}
-                  >
-                    <SelectTrigger className="w-20">
-                      <SelectValue placeholder="分" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 60 }, (_, i) => (
-                        <SelectItem key={i} value={i.toString()}>
-                          {i.toString().padStart(2, '0')}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">格式：HH:MM (例如：09:30, 14:00)</p>
-              </div>
-              <div>
-                <Label htmlFor="endTime">結束時間 (24小時制)</Label>
-                <div className="flex gap-2 mt-1">
-                  <Select 
-                    value={newTimeRecord.endTime.split(':')[0] || ''} 
-                    onValueChange={(hour) => {
-                      const currentMinute = newTimeRecord.endTime.split(':')[1] || '00'
-                      setNewTimeRecord(prev => ({ 
-                        ...prev, 
-                        endTime: `${hour.padStart(2, '0')}:${currentMinute}` 
-                      }))
-                    }}
-                  >
-                    <SelectTrigger className="w-20">
-                      <SelectValue placeholder="時" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 24 }, (_, i) => (
-                        <SelectItem key={i} value={i.toString()}>
-                          {i.toString().padStart(2, '0')}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <span className="flex items-center text-gray-500">:</span>
-                  <Select 
-                    value={newTimeRecord.endTime.split(':')[1] || ''} 
-                    onValueChange={(minute) => {
-                      const currentHour = newTimeRecord.endTime.split(':')[0] || '00'
-                      setNewTimeRecord(prev => ({ 
-                        ...prev, 
-                        endTime: `${currentHour}:${minute.padStart(2, '0')}` 
-                      }))
-                    }}
-                  >
-                    <SelectTrigger className="w-20">
-                      <SelectValue placeholder="分" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 60 }, (_, i) => (
-                        <SelectItem key={i} value={i.toString()}>
-                          {i.toString().padStart(2, '0')}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">格式：HH:MM (例如：17:30, 18:00)</p>
-              </div>
-            </div>
-
-            {/* 預覽工時計算 */}
-            {newTimeRecord.startTime && newTimeRecord.endTime && (
-              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="text-sm text-blue-800">
-                  <div className="font-medium mb-1">工時預覽：</div>
-                  <div>開始：{newTimeRecord.startTime}</div>
-                  <div>結束：{newTimeRecord.endTime}</div>
-                  {(() => {
-                    try {
-                      const startDateTime = new Date(`${newTimeRecord.workDate}T${newTimeRecord.startTime}`)
-                      const endDateTime = new Date(`${newTimeRecord.workDate}T${newTimeRecord.endTime}`)
-                      if (endDateTime > startDateTime) {
-                        const diffMs = endDateTime.getTime() - startDateTime.getTime()
-                        const totalMinutes = Math.floor(diffMs / (1000 * 60))
-                        const hours = Math.floor(totalMinutes / 60)
-                        const minutes = totalMinutes % 60
-                        return (
-                          <div className="font-semibold text-green-700 mt-1">
-                            工時：{hours} 小時 {minutes} 分鐘
-                          </div>
-                        )
-                      } else {
-                        return <div className="text-red-600 mt-1">⚠️ 結束時間必須晚於開始時間</div>
-                      }
-                    } catch (error) {
-                      return <div className="text-red-600 mt-1">⚠️ 時間格式錯誤</div>
-                    }
-                  })()}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <DialogFooter className="flex flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setIsAddTimeRecordOpen(false)} className="w-full sm:w-auto">
-              取消
-            </Button>
-            <Button 
-              onClick={handleAddTimeRecord} 
-              className="bg-orange-600 hover:bg-orange-700 w-full sm:w-auto"
-              disabled={!newTimeRecord.personnelId || !newTimeRecord.workDate || !newTimeRecord.startTime || !newTimeRecord.endTime}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              新增紀錄
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* 工時管理對話框 */}
+      <TimeTrackingDialog
+        isOpen={isTimeTrackingOpen}
+        onOpenChange={(open) => {
+          setIsTimeTrackingOpen(open);
+          if (!open) {
+            // 對話框關閉時重新載入工時記錄
+            loadTimeEntries();
+          }
+        }}
+        workOrderId={id!}
+        workOrderNumber={workOrder?.code}
+        isLocked={workOrder?.status === "入庫"}
+      />
 
       {/* 留言功能 */}
       <Card className="mb-6 bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200">
@@ -2823,7 +2583,7 @@ export default function WorkOrderDetailPage() {
             {/* 工時記錄 */}
             <div>
               <h3 className="text-lg font-semibold text-gray-800 mb-3">工時記錄</h3>
-              {workOrder?.timeRecords && workOrder.timeRecords.length > 0 ? (
+              {timeEntries && timeEntries.length > 0 ? (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
@@ -2836,7 +2596,7 @@ export default function WorkOrderDetailPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {workOrder.timeRecords.map((record, index) => (
+                      {timeEntries.map((entry, index) => (
                         <TableRow key={index}>
                           <TableCell className="font-medium">{record.personnelName}</TableCell>
                           <TableCell>{record.workDate}</TableCell>
@@ -2855,7 +2615,7 @@ export default function WorkOrderDetailPage() {
                       <div className="text-lg font-bold text-blue-600">
                         {Math.floor(totalWorkHours / 60)} 小時 {totalWorkHours % 60} 分鐘
                       </div>
-                      <div className="text-xs text-gray-500">共 {workOrder.timeRecords.length} 筆紀錄</div>
+                      <div className="text-xs text-gray-500">共 {timeEntries.length} 筆紀錄</div>
                     </div>
                   </div>
                 </div>
@@ -2881,7 +2641,7 @@ export default function WorkOrderDetailPage() {
                 <div>
                   <div className="text-sm text-blue-600 mb-1">總工時記錄</div>
                   <div className="text-lg font-bold text-blue-800">
-                    {workOrder?.timeRecords?.length || 0} 筆
+                    {timeEntries?.length || 0} 筆
                   </div>
                 </div>
                 <div>

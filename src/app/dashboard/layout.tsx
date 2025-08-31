@@ -55,7 +55,7 @@ const navLinks: NavItem[] = [
   { href: '/dashboard/inventory', label: '庫存監控', icon: PackageSearch },
   { href: '/dashboard/inventory-records', label: '庫存歷史', icon: ClipboardList },
   { href: '/dashboard/cost-management', label: '成本分析', icon: TrendingUp },
-  { href: '/dashboard/time-records', label: '工時報表', icon: FileBarChart },
+  { href: '/dashboard/time-reports', label: '工時報表', icon: FileBarChart },
 ];
 
 function SidebarNav() {
