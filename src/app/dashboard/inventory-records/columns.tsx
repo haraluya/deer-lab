@@ -1,7 +1,7 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { ArrowUpDown, Eye, Package, Users } from "lucide-react"
+import { ArrowUpDown, Package, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { InventoryRecord, getChangeReasonLabel } from "@/lib/inventoryRecords"
@@ -150,28 +150,6 @@ export const createColumns = (onRecordClick: InventoryRecordClickHandler): Colum
     enableColumnFilter: true,
     enableSorting: true,
     filterFn: "includesString",
-  },
-  {
-    id: "actions",
-    header: () => <div className="font-semibold text-gray-700">操作</div>,
-    cell: ({ row }) => {
-      const record = row.original
-      
-      return (
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200"
-            onClick={() => onRecordClick(record)}
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-        </div>
-      )
-    },
-    enableSorting: false,
-    enableColumnFilter: false,
   },
 ]
 

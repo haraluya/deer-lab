@@ -54,8 +54,19 @@ function InventoryRecordsPageContent() {
     const workorder = records.filter(r => r.changeReason === 'workorder').length
     const inventoryCheck = records.filter(r => r.changeReason === 'inventory_check').length
     const manualAdjustment = records.filter(r => r.changeReason === 'manual_adjustment').length
-    const materials = records.filter(r => r.itemType === 'material').length
-    const fragrances = records.filter(r => r.itemType === 'fragrance').length
+    
+    // 計算物料和香精數量（從details中統計）
+    let materials = 0
+    let fragrances = 0
+    records.forEach(record => {
+      record.details.forEach(detail => {
+        if (detail.itemType === 'material') {
+          materials++
+        } else if (detail.itemType === 'fragrance') {
+          fragrances++
+        }
+      })
+    })
 
     return { total, purchase, workorder, inventoryCheck, manualAdjustment, materials, fragrances }
   }, [records])
@@ -83,17 +94,11 @@ function InventoryRecordsPageContent() {
     let filtered = records
 
     // 搜尋篩選
-    if (filters.itemCode) {
+    if (filters.remarks) {
       filtered = filtered.filter(r => 
-        r.itemCode.toLowerCase().includes(filters.itemCode!.toLowerCase()) ||
-        r.itemName.toLowerCase().includes(filters.itemCode!.toLowerCase()) ||
-        (r.remarks && r.remarks.toLowerCase().includes(filters.itemCode!.toLowerCase()))
+        (r.remarks && r.remarks.toLowerCase().includes(filters.remarks!.toLowerCase())) ||
+        (r.operatorName && r.operatorName.toLowerCase().includes(filters.remarks!.toLowerCase()))
       )
-    }
-
-    // 類型篩選
-    if (filters.itemType) {
-      filtered = filtered.filter(r => r.itemType === filters.itemType)
     }
 
     // 原因篩選
@@ -246,33 +251,16 @@ function InventoryRecordsPageContent() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="search" className="text-sm font-medium text-gray-700">搜尋</Label>
                   <Input
                     id="search"
-                    placeholder="編號、名稱、備註..."
-                    value={filters.itemCode || ''}
-                    onChange={(e) => handleFilterChange('itemCode', e.target.value)}
+                    placeholder="備註、操作人員..."
+                    value={filters.remarks || ''}
+                    onChange={(e) => handleFilterChange('remarks', e.target.value)}
                     className="mt-1"
                   />
-                </div>
-                
-                <div>
-                  <Label htmlFor="itemType" className="text-sm font-medium text-gray-700">物料類型</Label>
-                  <Select
-                    value={filters.itemType || 'all'}
-                    onValueChange={(value) => handleFilterChange('itemType', value === 'all' ? undefined : value)}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="選擇類型" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">全部類型</SelectItem>
-                      <SelectItem value="material">物料</SelectItem>
-                      <SelectItem value="fragrance">香精</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
 
                 <div>
@@ -322,7 +310,11 @@ function InventoryRecordsPageContent() {
           </div>
         ) : (
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm">
-            <DataTable columns={columns} data={filteredRecords} />
+            <DataTable 
+              columns={columns} 
+              data={filteredRecords} 
+              onRowClick={handleRecordClick}
+            />
           </div>
         )}
       </div>
