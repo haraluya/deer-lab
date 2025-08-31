@@ -111,9 +111,9 @@ export default function PersonnelTimesheet() {
       const monthEnd = endOfMonth(selectedMonth);
       
       const timeEntriesQuery = query(
-        collection(db, 'time_entries'),
-        where('userId', '==', userId),
-        orderBy('date', 'desc')
+        collection(db, 'timeEntries'),
+        where('personnelId', '==', userId),
+        orderBy('createdAt', 'desc')
       );
       
       const querySnapshot = await getDocs(timeEntriesQuery);
@@ -124,12 +124,22 @@ export default function PersonnelTimesheet() {
       
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        const entryDate = parseISO(data.date);
+        // 使用 startDate 而不是 date，並且檢查是否在選定月份內
+        const entryDate = data.startDate ? parseISO(data.startDate) : null;
         
-        if (isWithinInterval(entryDate, { start: monthStart, end: monthEnd })) {
+        if (entryDate && isWithinInterval(entryDate, { start: monthStart, end: monthEnd })) {
           entries.push({
             id: doc.id,
-            ...data
+            workOrderId: data.workOrderId,
+            userId: data.personnelId,
+            userName: data.personnelName,
+            date: data.startDate,
+            startTime: data.startTime,
+            endTime: data.endTime,
+            breakTime: 0, // 暫時設為 0，如果需要可以後續加入
+            totalHours: data.duration || 0,
+            overtime: data.overtimeHours || 0,
+            notes: data.notes
           } as TimeEntry);
           
           if (data.workOrderId) {

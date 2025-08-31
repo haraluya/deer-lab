@@ -85,9 +85,11 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
       }
       
       // 載入人員資料
-      const personnelSnapshot = await getDocs(collection(db, "personnel"))
+      const personnelSnapshot = await getDocs(collection(db, "users"))
       const personnelList = personnelSnapshot.docs.map(doc => ({
         id: doc.id,
+        name: doc.data().name,
+        employeeId: doc.data().employeeId,
         ...doc.data()
       })) as Personnel[]
       setPersonnel(personnelList)
@@ -514,7 +516,8 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                           type="time"
                           value={newEntry.startTime}
                           onChange={(e) => setNewEntry({...newEntry, startTime: e.target.value})}
-                          className="text-lg font-mono bg-white border-2 border-green-300 focus:border-green-500 focus:ring-green-200 pl-12"
+                          className="text-lg font-mono bg-white border-2 border-green-300 focus:border-green-500 focus:ring-green-200 pl-12 text-gray-900 [&::-webkit-calendar-picker-indicator]:opacity-60 [&::-webkit-calendar-picker-indicator]:hover:opacity-80"
+                          style={{ colorScheme: 'light' }}
                           placeholder="09:00"
                         />
                         <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-green-500" />
@@ -548,7 +551,8 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                             endTime: e.target.value,
                             endDate: newEntry.startDate // 自動同步結束日期
                           })}
-                          className="text-lg font-mono bg-white border-2 border-red-300 focus:border-red-500 focus:ring-red-200 pl-12"
+                          className="text-lg font-mono bg-white border-2 border-red-300 focus:border-red-500 focus:ring-red-200 pl-12 text-gray-900 [&::-webkit-calendar-picker-indicator]:opacity-60 [&::-webkit-calendar-picker-indicator]:hover:opacity-80"
+                          style={{ colorScheme: 'light' }}
                           placeholder="18:00"
                         />
                         <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-red-500" />
@@ -745,7 +749,8 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                                       type="time"
                                       value={editEntry?.startTime}
                                       onChange={(e) => setEditEntry({...editEntry!, startTime: e.target.value})}
-                                      className="h-8 text-xs"
+                                      className="h-8 text-xs text-gray-900 [&::-webkit-calendar-picker-indicator]:opacity-60"
+                                      style={{ colorScheme: 'light' }}
                                     />
                                   </div>
                                 </TableCell>
@@ -761,7 +766,8 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                                       type="time"
                                       value={editEntry?.endTime}
                                       onChange={(e) => setEditEntry({...editEntry!, endTime: e.target.value})}
-                                      className="h-8 text-xs"
+                                      className="h-8 text-xs text-gray-900 [&::-webkit-calendar-picker-indicator]:opacity-60"
+                                      style={{ colorScheme: 'light' }}
                                     />
                                   </div>
                                 </TableCell>
