@@ -134,8 +134,9 @@ export const createColumns = (onRecordClick: InventoryRecordClickHandler): Colum
     accessorKey: "relatedDocumentId",
     header: () => <div className="font-semibold text-gray-700">相關文件</div>,
     cell: ({ row }) => {
-      const documentId = row.getValue("relatedDocumentId") as string
-      const documentType = row.getValue("relatedDocumentType") as string
+      const record = row.original
+      const documentId = record.relatedDocumentId
+      const documentType = record.relatedDocumentType
       
       if (!documentId) {
         return <div className="text-gray-400 text-sm">-</div>

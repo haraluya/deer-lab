@@ -36,7 +36,8 @@ export const performStocktake = onCall(async (request) => {
       // 收集所有盤點項目的明細
       const itemDetails = [];
       
-      const promises = items.map(async (item: StocktakeItemPayload) => {
+      // 處理每個盤點項目
+      for (const item of items) {
         // Basic validation for each item in the array
         if (!item.itemRefPath || typeof item.newStock !== 'number' || item.newStock < 0) {
           // We throw an error here which will cause the transaction to fail.
@@ -68,10 +69,7 @@ export const performStocktake = onCall(async (request) => {
             quantityAfter: item.newStock
           });
         }
-      });
-      
-      // Wait for all reads and writes in the transaction to be staged
-      await Promise.all(promises);
+      }
       
       // 建立統一的庫存紀錄（以動作為單位）
       if (itemDetails.length > 0) {
