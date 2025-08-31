@@ -9,11 +9,12 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
-import { usePurchaseCart } from '@/hooks/usePurchaseCart';
+import { usePurchaseCart } from '@/hooks/useGlobalCart';
 import {
   Home, Users, Building, Package, FlaskConical, Library, Box,
   ShoppingCart, Factory, Calculator, ClipboardList, LogOut, ChevronDown,
-  LucideIcon, Loader2, Warehouse, Shield, Tag
+  LucideIcon, Loader2, Warehouse, Shield, Tag, Clock, FileBarChart, 
+  Beaker, PackageSearch, TrendingUp, UserCheck
 } from 'lucide-react';
 
 // ... (SidebarNav 和 UserNav 元件保持不變) ...
@@ -34,22 +35,27 @@ interface NavSeparator {
 type NavItem = NavLink | NavSeparator;
 
 const navLinks: NavItem[] = [
-  { href: '/dashboard', label: '系統總覽', icon: Home },
-  { href: '/dashboard/personnel', label: '人員管理', icon: Users },
-  // { href: '/dashboard/roles', label: '角色管理', icon: Shield }, // 已移除角色管理
-  { isSeparator: true, label: '基礎資料管理' },
-  { href: '/dashboard/suppliers', label: '供應商管理', icon: Building },
-  { href: '/dashboard/materials', label: '物料管理', icon: Package },
-  { href: '/dashboard/fragrances', label: '香精管理', icon: FlaskConical },
-  { href: '/dashboard/products', label: '產品管理', icon: Box },
-  { isSeparator: true, label: '生產作業管理' },
-  { href: '/dashboard/purchase-orders', label: '採購管理', icon: ShoppingCart },
-
-  { href: '/dashboard/work-orders', label: '工單管理', icon: ClipboardList },
-  { href: '/dashboard/inventory', label: '庫存管理', icon: Warehouse },
-  { isSeparator: true, label: '數據分析' },
-  { href: '/dashboard/inventory-records', label: '庫存紀錄', icon: ClipboardList },
-  { href: '/dashboard/cost-management', label: '成本管理', icon: Calculator },
+  { href: '/dashboard', label: '工作台', icon: Home },
+  
+  { isSeparator: true, label: '團隊管理' },
+  { href: '/dashboard/personnel', label: '成員管理', icon: UserCheck },
+  { href: '/dashboard/time-records', label: '工時統計', icon: Clock },
+  
+  { isSeparator: true, label: '供應鏈' },
+  { href: '/dashboard/suppliers', label: '供應商', icon: Building },
+  { href: '/dashboard/purchase-orders', label: '採購訂單', icon: ShoppingCart },
+  
+  { isSeparator: true, label: '生產中心' },
+  { href: '/dashboard/materials', label: '原料庫', icon: Package },
+  { href: '/dashboard/fragrances', label: '配方庫', icon: Beaker },
+  { href: '/dashboard/products', label: '產品目錄', icon: Box },
+  { href: '/dashboard/work-orders', label: '生產工單', icon: Factory },
+  
+  { isSeparator: true, label: '營運分析' },
+  { href: '/dashboard/inventory', label: '庫存監控', icon: PackageSearch },
+  { href: '/dashboard/inventory-records', label: '庫存歷史', icon: ClipboardList },
+  { href: '/dashboard/cost-management', label: '成本分析', icon: TrendingUp },
+  { href: '/dashboard/time-reports', label: '工時報表', icon: FileBarChart },
 ];
 
 function SidebarNav() {

@@ -3,23 +3,172 @@
 
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { LowStockNotification } from "@/components/LowStockNotification";
-import { BarChart3, Users, Package, Factory, ShoppingCart, TrendingUp } from "lucide-react";
+import { 
+  BarChart3, Users, Package, Factory, ShoppingCart, TrendingUp, 
+  Clock, Beaker, Building, AlertTriangle, CheckCircle, 
+  Calendar, DollarSign, Activity, ArrowUp, ArrowDown,
+  PackageSearch, UserCheck, Zap, Eye
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { toast } from 'sonner';
+
+// 統計數據介面
+interface DashboardStats {
+  totalMaterials: number;
+  totalFragrances: number;
+  activeWorkOrders: number;
+  pendingPurchaseOrders: number;
+  lowStockItems: number;
+  totalPersonnel: number;
+  todayTimeEntries: number;
+  thisMonthWorkOrders: number;
+}
+
+// 最近活動介面
+interface RecentActivity {
+  id: string;
+  type: 'work_order' | 'purchase_order' | 'inventory' | 'time_entry';
+  title: string;
+  description: string;
+  timestamp: any;
+  status?: string;
+  user?: string;
+}
 
 
 export default function DashboardPage() {
   const { appUser, isLoading } = useAuth();
   const router = useRouter();
+  const [stats, setStats] = useState<DashboardStats>({
+    totalMaterials: 0,
+    totalFragrances: 0,
+    activeWorkOrders: 0,
+    pendingPurchaseOrders: 0,
+    lowStockItems: 0,
+    totalPersonnel: 0,
+    todayTimeEntries: 0,
+    thisMonthWorkOrders: 0
+  });
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
 
-  // 移除重複的認證檢查，讓 AuthGuard 處理
+  // 載入儀表板統計數據
+  useEffect(() => {
+    if (!isLoading && appUser) {
+      loadDashboardStats();
+      loadRecentActivities();
+    }
+  }, [isLoading, appUser]);
 
-  const handleCardClick = (path: string) => {
-          window.location.href = path;
+  const loadDashboardStats = async () => {
+    try {
+      if (!db) return;
+      
+      const promises = [
+        getDocs(collection(db, 'materials')),
+        getDocs(collection(db, 'fragrances')),
+        getDocs(query(collection(db, 'work_orders'), where('status', '!=', 'completed'))),
+        getDocs(query(collection(db, 'purchase_orders'), where('status', '==', 'pending'))),
+        getDocs(collection(db, 'users')),
+      ];
+
+      const [
+        materialsSnap,
+        fragrancesSnap, 
+        workOrdersSnap,
+        purchaseOrdersSnap,
+        personnelSnap
+      ] = await Promise.all(promises);
+
+      // 計算今日工時記錄
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayTimeEntries = await getDocs(
+        query(
+          collection(db, 'timeEntries'),
+          where('createdAt', '>=', today)
+        )
+      );
+
+      // 計算本月工單數
+      const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const thisMonthWorkOrders = await getDocs(
+        query(
+          collection(db, 'work_orders'),
+          where('createdAt', '>=', firstDayOfMonth)
+        )
+      );
+
+      // 計算低庫存項目 (這裡需要實際的庫存邏輯)
+      let lowStockCount = 0;
+      const materialsWithLowStock = materialsSnap.docs.filter(doc => {
+        const data = doc.data();
+        return data.minStock > 0 && data.stock < data.minStock;
+      });
+      const fragrancesWithLowStock = fragrancesSnap.docs.filter(doc => {
+        const data = doc.data();
+        return data.minStock > 0 && data.stock < data.minStock;
+      });
+      lowStockCount = materialsWithLowStock.length + fragrancesWithLowStock.length;
+
+      setStats({
+        totalMaterials: materialsSnap.size,
+        totalFragrances: fragrancesSnap.size,
+        activeWorkOrders: workOrdersSnap.size,
+        pendingPurchaseOrders: purchaseOrdersSnap.size,
+        lowStockItems: lowStockCount,
+        totalPersonnel: personnelSnap.size,
+        todayTimeEntries: todayTimeEntries.size,
+        thisMonthWorkOrders: thisMonthWorkOrders.size
+      });
+    } catch (error) {
+      console.error('載入統計數據失敗:', error);
+      toast.error('載入統計數據失敗');
+    } finally {
+      setIsLoadingStats(false);
+    }
   };
 
-  // 移除重複的載入檢查，讓 AuthGuard 處理
+  const loadRecentActivities = async () => {
+    try {
+      if (!db) return;
+      
+      // 載入最近的活動（這裡簡化處理）
+      const recentWorkOrders = await getDocs(
+        query(collection(db, 'work_orders'), orderBy('createdAt', 'desc'), limit(3))
+      );
+      
+      const activities: RecentActivity[] = [];
+      
+      recentWorkOrders.docs.forEach(doc => {
+        const data = doc.data();
+        activities.push({
+          id: doc.id,
+          type: 'work_order',
+          title: `工單 ${data.workOrderNumber}`,
+          description: `產品: ${data.productName}`,
+          timestamp: data.createdAt,
+          status: data.status
+        });
+      });
+
+      setRecentActivities(activities);
+    } catch (error) {
+      console.error('載入最近活動失敗:', error);
+    }
+  };
+
+  const handleCardClick = (path: string) => {
+    window.location.href = path;
+  };
 
   return (
     <div className="container mx-auto py-10">
