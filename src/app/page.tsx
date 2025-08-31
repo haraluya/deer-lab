@@ -62,7 +62,7 @@ export default function LoginPage() {
               德科斯特的實驗室
             </CardTitle>
             <div className="text-sm text-gray-600 mt-2 px-4 py-1 bg-gray-100 rounded-full">
-              Dexter's Lab Production Management
+              Dexter&apos;s Lab Production Management
             </div>
           </div>
           <CardDescription className="text-base text-gray-600 font-medium">
