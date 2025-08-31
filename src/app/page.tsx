@@ -55,14 +55,14 @@ export default function LoginPage() {
         <CardHeader className="text-center pb-6">
           {/* Logo 和品牌區域 */}
           <div className="flex flex-col items-center mb-4">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center mb-4 shadow-lg">
-              <Image src="/icon.png" alt="Deer Lab Logo" width={40} height={40} className="rounded-lg" />
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500 via-blue-500 to-purple-600 flex items-center justify-center mb-4 shadow-lg">
+              <Image src="/dexter-lab-logo.svg" alt="德科斯特的實驗室" width={40} height={40} className="rounded-lg" />
             </div>
-            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-              鹿鹿小作坊
+            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-purple-700 bg-clip-text text-transparent">
+              德科斯特的實驗室
             </CardTitle>
             <div className="text-sm text-gray-600 mt-2 px-4 py-1 bg-gray-100 rounded-full">
-              Deer Lab Production Management
+              Dexter's Lab Production Management
             </div>
           </div>
           <CardDescription className="text-base text-gray-600 font-medium">
@@ -139,7 +139,7 @@ export default function LoginPage() {
           <div className="mt-6 pt-6 border-t border-gray-100">
             <div className="text-center">
               <p className="text-xs text-gray-500">
-                © 2024 鹿鹿小作坊 · 生產管理系統
+                © 2024 德科斯特的實驗室 · 生產管理系統
               </p>
               <div className="flex items-center justify-center gap-1 mt-2">
                 <div className="w-1 h-1 rounded-full bg-blue-400"></div>
