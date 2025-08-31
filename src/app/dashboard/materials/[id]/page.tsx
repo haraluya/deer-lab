@@ -238,26 +238,29 @@ export default function MaterialDetailPage() {
   }
 
   return (
-    <div className="container mx-auto py-10">
-      {/* 頁面標題區域 */}
-      <div className="flex items-center gap-4 mb-8">
+    <div className="container mx-auto py-4 px-4 sm:py-10 sm:px-6">
+      {/* 頁面標題區域 - 手機版優化 */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={() => router.back()}
+            className="hover:bg-primary/10 hover:border-primary/20 flex-shrink-0"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex-grow sm:flex-grow-0">
+            <h1 className="text-xl sm:text-3xl font-bold text-primary">
+              物料詳情
+            </h1>
+            <p className="text-sm sm:text-lg text-muted-foreground font-mono">{material.name}</p>
+          </div>
+        </div>
         <Button 
-          variant="outline" 
-          size="icon" 
-          onClick={() => router.back()}
-          className="hover:bg-primary/10 hover:border-primary/20"
+          onClick={handleEdit} 
+          className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
         >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-                 <div className="flex-grow">
-           <h1 className="text-3xl font-bold text-primary">
-             物料詳情
-           </h1>
-                       <div className="flex items-center gap-2">
-              <p className="text-muted-foreground font-mono text-lg">{material.name}</p>
-            </div>
-         </div>
-        <Button onClick={handleEdit} className="bg-primary hover:bg-primary/90">
           <Edit className="mr-2 h-4 w-4" />
           編輯物料
         </Button>
@@ -271,59 +274,59 @@ export default function MaterialDetailPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-             {/* 第1個欄位：物料名稱 + 物料代碼 */}
-             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg">
-               <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                 <Package className="h-5 w-5 text-white" />
-               </div>
-               <div className="flex-1">
-                 <p className="text-sm text-blue-600 font-medium">物料名稱</p>
-                 <p className="text-xl font-bold text-blue-800">{material.name}</p>
-                 <p className="text-xs text-blue-600 mt-1">代碼：{material.code}</p>
-               </div>
-             </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            {/* 第1個欄位：物料名稱 + 物料代碼 */}
+            <div className="flex items-center gap-3 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Package className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm text-blue-600 font-medium">物料名稱</p>
+                <p className="text-lg sm:text-xl font-bold text-blue-800 truncate">{material.name}</p>
+                <p className="text-xs text-blue-600 mt-1 truncate">代碼：{material.code}</p>
+              </div>
+            </div>
 
-             {/* 第2個欄位：主分類 + 細分分類 */}
-             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg">
-               <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
-                 <Warehouse className="h-5 w-5 text-white" />
-               </div>
-                               <div className="flex-1">
-                  <p className="text-sm text-green-600 font-medium">分類資訊</p>
-                  <p className="text-xl font-bold text-green-800">{material.category || '未分類'}</p>
-                  <p className="text-sm text-green-700">{material.subCategory || '未分類'}</p>
-                </div>
-             </div>
+            {/* 第2個欄位：主分類 + 細分分類 */}
+            <div className="flex items-center gap-3 p-3 sm:p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Warehouse className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm text-green-600 font-medium">分類資訊</p>
+                <p className="text-lg sm:text-xl font-bold text-green-800 truncate">{material.category || '未分類'}</p>
+                <p className="text-xs sm:text-sm text-green-700 truncate">{material.subCategory || '未分類'}</p>
+              </div>
+            </div>
 
-             {/* 第3個欄位：現有庫存 + 單位 */}
-             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg">
-               <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
-                 <Tag className="h-5 w-5 text-white" />
-               </div>
-               <div className="flex-1">
-                 <p className="text-sm text-purple-600 font-medium">現有庫存</p>
-                 <p className="text-xl font-bold text-purple-800">{material.currentStock}</p>
-                 <p className="text-sm text-purple-700">{material.unit || '未指定'}</p>
-               </div>
-             </div>
+            {/* 第3個欄位：現有庫存 + 單位 */}
+            <div className="flex items-center gap-3 p-3 sm:p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Tag className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm text-purple-600 font-medium">現有庫存</p>
+                <p className="text-lg sm:text-xl font-bold text-purple-800">{material.currentStock}</p>
+                <p className="text-xs sm:text-sm text-purple-700 truncate">{material.unit || '未指定'}</p>
+              </div>
+            </div>
 
-             {/* 第4個欄位：供應商 */}
-             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg">
-               <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-                 <Building className="h-5 w-5 text-white" />
-               </div>
-               <div className="flex-1">
-                 <p className="text-sm text-orange-600 font-medium">供應商</p>
-                 <p className="text-xl font-bold text-orange-800">{material.supplierName}</p>
-               </div>
-             </div>
-           </div>
+            {/* 第4個欄位：供應商 */}
+            <div className="flex items-center gap-3 p-3 sm:p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Building className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm text-orange-600 font-medium">供應商</p>
+                <p className="text-lg sm:text-xl font-bold text-orange-800 truncate">{material.supplierName}</p>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
       {/* 物料詳細資訊 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* 基本資訊 */}
         <Card className="border-0 shadow-lg">
           <CardHeader>
@@ -428,12 +431,13 @@ export default function MaterialDetailPage() {
                 placeholder="輸入備註內容..."
                 className="min-h-[100px] resize-none"
               />
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleCancelEditNotes}
                   disabled={isSavingNotes}
+                  className="w-full sm:w-auto"
                 >
                   <X className="mr-1 h-3 w-3" />
                   取消
@@ -442,6 +446,7 @@ export default function MaterialDetailPage() {
                   size="sm"
                   onClick={handleSaveNotes}
                   disabled={isSavingNotes}
+                  className="w-full sm:w-auto"
                 >
                   <Save className="mr-1 h-3 w-3" />
                   {isSavingNotes ? '儲存中...' : '儲存'}

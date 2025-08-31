@@ -97,7 +97,7 @@ export default function InventoryPage() {
       setOverviewLoading(false)
       setGlobalLoading(false)
     }
-  }, [overviewLoading, setGlobalLoading])
+  }, [setGlobalLoading]) // 移除 overviewLoading 依賴，避免無限循環
 
   // 重新載入庫存數據
   const reloadInventoryData = useCallback(async () => {

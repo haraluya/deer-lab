@@ -232,11 +232,11 @@ export function FragranceDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white">
+      <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto bg-white sm:max-w-4xl max-w-[calc(100vw-1rem)]">
         <DialogHeader className="pb-4 border-b border-gray-200">
-          <DialogTitle className="flex items-center gap-3 text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-            <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
-              <FlaskConical className="h-5 w-5 text-white" />
+          <DialogTitle className="flex items-center gap-2 sm:gap-3 text-lg sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
+              <FlaskConical className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
             </div>
             {isEditMode ? '編輯香精' : '新增香精'}
           </DialogTitle>
@@ -248,15 +248,15 @@ export function FragranceDialog({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* 基本資料 */}
-            <div className="space-y-6 p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200 shadow-sm">
-              <h3 className="text-xl font-bold flex items-center gap-3 text-purple-800">
-                <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <Tag className="h-4 w-4 text-purple-600" />
+            <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200 shadow-sm">
+              <h3 className="text-lg sm:text-xl font-bold flex items-center gap-2 sm:gap-3 text-purple-800">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Tag className="h-3 w-3 sm:h-4 sm:w-4 text-purple-600" />
                 </div>
                 基本資料
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <FormField
                   control={form.control}
                   name="code"
@@ -369,15 +369,15 @@ export function FragranceDialog({
             </div>
 
             {/* 庫存與成本 */}
-            <div className="space-y-6 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200 shadow-sm">
-              <h3 className="text-xl font-bold flex items-center gap-3 text-green-800">
-                <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                  <Package className="h-4 w-4 text-green-600" />
+            <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200 shadow-sm">
+              <h3 className="text-lg sm:text-xl font-bold flex items-center gap-2 sm:gap-3 text-green-800">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Package className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
                 </div>
                 庫存與成本
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 <FormField
                   control={form.control}
                   name="currentStock"
@@ -439,17 +439,17 @@ export function FragranceDialog({
             </div>
 
             {/* 香精比例 */}
-            <div className="space-y-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm">
-              <h3 className="text-xl font-bold flex items-center gap-3 text-blue-800">
-                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Droplets className="h-4 w-4 text-blue-600" />
+            <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm">
+              <h3 className="text-lg sm:text-xl font-bold flex items-center gap-2 sm:gap-3 text-blue-800">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Droplets className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
                 </div>
                 香精比例
               </h3>
               
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h4 className="text-lg font-semibold text-blue-700">配方比例設定</h4>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
+                  <h4 className="text-base sm:text-lg font-semibold text-blue-700">配方比例設定</h4>
                   {isEditMode && (
                     <Button
                       type="button"
@@ -462,13 +462,13 @@ export function FragranceDialog({
                         form.setValue("vgRatio", vgRatio);
                         toast.success("PG和VG比例已重新計算");
                       }}
-                      className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                      className="text-blue-600 border-blue-300 hover:bg-blue-50 w-full sm:w-auto"
                     >
                       重新計算PG/VG
                     </Button>
                   )}
                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   <FormField
                     control={form.control}
                     name="percentage"
@@ -542,10 +542,10 @@ export function FragranceDialog({
             </div>
 
             {/* 備註 */}
-            <div className="space-y-6 p-6 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl border border-yellow-200 shadow-sm">
-              <h3 className="text-xl font-bold flex items-center gap-3 text-yellow-800">
-                <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                  <Tag className="h-4 w-4 text-yellow-600" />
+            <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl border border-yellow-200 shadow-sm">
+              <h3 className="text-lg sm:text-xl font-bold flex items-center gap-2 sm:gap-3 text-yellow-800">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                  <Tag className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-600" />
                 </div>
                 備註
               </h3>
@@ -567,19 +567,19 @@ export function FragranceDialog({
               />
             </div>
 
-            <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-4 sm:pt-6 border-t border-gray-200">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 w-full sm:w-auto"
               >
                 取消
               </Button>
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 w-full sm:w-auto"
               >
                 {isSubmitting ? (
                   <>

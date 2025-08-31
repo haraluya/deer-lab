@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
-import { usePurchaseCart } from '@/hooks/useGlobalCart';
+import { useGlobalCart } from '@/hooks/useGlobalCart';
 import {
   Home, Users, Building, Package, FlaskConical, Library, Box,
   ShoppingCart, Factory, Calculator, ClipboardList, LogOut, ChevronDown,
@@ -60,7 +60,7 @@ const navLinks: NavItem[] = [
 
 function SidebarNav() {
   const pathname = usePathname();
-  const cartItemCount = usePurchaseCart();
+  const { cartItemCount, isLoading } = useGlobalCart();
   
   // 添加調試信息和購物車狀態監控
   useEffect(() => {
@@ -121,7 +121,7 @@ function SidebarNav() {
             <Icon className={cn("h-4 w-4", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
             <span className="truncate">{link.label}</span>
             {/* 採購管理數量氣泡 - 重新設計 */}
-            {link.href === '/dashboard/purchase-orders' && cartItemCount > 0 && (
+            {link.href === '/dashboard/purchase-orders' && !isLoading && cartItemCount > 0 && (
               <div className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center font-bold border-2 border-white shadow-lg z-10">
                 <span className="animate-pulse">
                   {cartItemCount > 99 ? '99+' : cartItemCount}
@@ -302,7 +302,7 @@ export default function DashboardLayout({
         </header>
 
                  {/* 移動版側邊欄 */}
-         <aside className="lg:hidden fixed inset-y-0 left-0 z-20 h-full w-64 flex-col border-r bg-white shadow-xl transform -translate-x-full transition-transform duration-300 touch-none" id="mobile-sidebar">
+         <aside className="lg:hidden fixed inset-y-0 left-0 z-20 h-full w-64 flex-col border-r bg-white shadow-xl transform -translate-x-full transition-transform duration-300 flex" id="mobile-sidebar">
           <div className="flex h-16 shrink-0 items-center justify-between border-b px-6 bg-gradient-to-r from-blue-600 to-indigo-600">
             <div className="flex items-center">
               <Factory className="h-6 w-6 text-white" />

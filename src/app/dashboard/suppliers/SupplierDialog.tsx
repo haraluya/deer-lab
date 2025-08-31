@@ -196,30 +196,29 @@ export function SupplierDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" aria-describedby="supplier-dialog-description">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle className="flex items-center gap-2">
-                <Building className="h-5 w-5" />
-                {isEditMode ? '編輯供應商資料' : '新增供應商'}
-              </DialogTitle>
-              <DialogDescription id="supplier-dialog-description">
-                {isEditMode ? '修改供應商的詳細聯絡資訊。' : '請填寫新供應商的詳細聯絡資訊。'}
-              </DialogDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                關閉
-              </Button>
-              <Button 
-                form="supplier-form"
-                type="submit" 
-                disabled={isSubmitting}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
-              >
-                {isSubmitting ? "處理中..." : (isEditMode ? "更新" : "新增")}
-              </Button>
-            </div>
+        <DialogHeader className="relative">
+          <DialogTitle className="flex items-center gap-2 pr-20">
+            <Building className="h-5 w-5" />
+            {isEditMode ? '編輯供應商資料' : '新增供應商'}
+          </DialogTitle>
+          <DialogDescription id="supplier-dialog-description" className="pr-20">
+            {isEditMode ? '修改供應商的詳細聯絡資訊。' : '請填寫新供應商的詳細聯絡資訊。'}
+          </DialogDescription>
+          
+          {/* 右上角按鈕組 */}
+          <div className="absolute top-0 right-0 flex gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+              關閉
+            </Button>
+            <Button 
+              form="supplier-form"
+              type="submit" 
+              size="sm"
+              disabled={isSubmitting}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+            >
+              {isSubmitting ? "處理中..." : (isEditMode ? "更新" : "新增")}
+            </Button>
           </div>
         </DialogHeader>
         
