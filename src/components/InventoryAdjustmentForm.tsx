@@ -63,15 +63,17 @@ export function InventoryAdjustmentForm({
       }
 
       await createInventoryRecordByReason('manual_adjustment', {
-        itemType,
-        itemId,
-        itemCode,
-        itemName,
-        quantityChange,
-        quantityAfter: newStock,
         operatorId: appUser.uid,
         operatorName: appUser.name || '未知用戶',
-        remarks: remarks || undefined
+        remarks: remarks || undefined,
+        details: [{
+          itemId,
+          itemType,
+          itemCode,
+          itemName,
+          quantityChange,
+          quantityAfter: newStock
+        }]
       });
 
       toast.success('庫存調整成功');
