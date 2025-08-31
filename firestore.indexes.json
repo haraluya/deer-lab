@@ -1,0 +1,51 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "inventory_records",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "itemId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "itemType",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "changeDate",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "inventory_records",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "itemType",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "changeDate",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "inventory_records",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "changeReason",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "changeDate",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

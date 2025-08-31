@@ -282,6 +282,11 @@ export const updateMaterial = onCall(async (request) => {
       logger.info(`物料 ${materialId} 分類改變，更新代號從 ${currentMaterial.code} 到 ${updatedCode}`);
     }
 
+    // 檢查庫存是否有變更
+    const oldStock = currentMaterial.currentStock || 0;
+    const newStock = Number(currentStock) || 0;
+    const stockChanged = oldStock !== newStock;
+
     const updateData: Partial<MaterialData> = {
       name,
       category: category || "",
@@ -304,6 +309,37 @@ export const updateMaterial = onCall(async (request) => {
     }
 
     await materialRef.update(updateData);
+    
+    // 如果庫存有變更，建立庫存紀錄（以動作為單位）
+    if (stockChanged) {
+      try {
+        const inventoryRecordRef = db.collection("inventory_records").doc();
+        await inventoryRecordRef.set({
+          changeDate: FieldValue.serverTimestamp(),
+          changeReason: 'manual_adjustment',
+          operatorId: contextAuth?.uid || 'unknown',
+          operatorName: contextAuth?.token?.name || '未知用戶',
+          remarks: '透過編輯對話框直接修改庫存',
+          relatedDocumentId: materialId,
+          relatedDocumentType: 'material_edit',
+          details: [{
+            itemId: materialId,
+            itemType: 'material',
+            itemCode: updatedCode,
+            itemName: name,
+            quantityChange: newStock - oldStock,
+            quantityAfter: newStock
+          }],
+          createdAt: FieldValue.serverTimestamp(),
+        });
+        
+        logger.info(`已建立庫存紀錄，庫存從 ${oldStock} 變更為 ${newStock}`);
+      } catch (error) {
+        logger.error(`建立庫存紀錄失敗:`, error);
+        // 不阻擋主要更新流程，只記錄錯誤
+      }
+    }
+    
     logger.info(`管理員 ${contextAuth?.uid} 成功更新物料: ${materialId}`);
     logger.info(`更新完成，返回結果:`, { status: "success", message: `物料 ${name} 已成功更新。`, updatedCode });
     

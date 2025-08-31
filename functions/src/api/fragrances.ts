@@ -92,13 +92,20 @@ export const updateFragrance = onCall(async (request) => {
   
   try {
     const fragranceRef = db.collection("fragrances").doc(fragranceId);
+    
+    // 先獲取當前香精資料以檢查庫存變更
+    const currentFragrance = await fragranceRef.get();
+    const oldStock = currentFragrance.data()?.currentStock || 0;
+    const newStock = Number(currentStock) || 0;
+    const stockChanged = oldStock !== newStock;
+    
     const updateData: any = { 
       code, 
       name, 
       status: finalStatus, 
       fragranceType: finalFragranceType,
       fragranceStatus: finalFragranceStatus,
-      currentStock: Number(currentStock) || 0,
+      currentStock: newStock,
       safetyStockLevel: Number(safetyStockLevel) || 0, 
       costPerUnit: Number(costPerUnit) || 0, 
       percentage: Number(percentage) || 0, 
@@ -115,6 +122,37 @@ export const updateFragrance = onCall(async (request) => {
       updateData.supplierRef = FieldValue.delete(); 
     }
     await fragranceRef.update(updateData);
+    
+    // 如果庫存有變更，建立庫存紀錄（以動作為單位）
+    if (stockChanged) {
+      try {
+        const inventoryRecordRef = db.collection("inventory_records").doc();
+        await inventoryRecordRef.set({
+          changeDate: FieldValue.serverTimestamp(),
+          changeReason: 'manual_adjustment',
+          operatorId: contextAuth?.uid || 'unknown',
+          operatorName: contextAuth?.token?.name || '未知用戶',
+          remarks: '透過編輯對話框直接修改庫存',
+          relatedDocumentId: fragranceId,
+          relatedDocumentType: 'fragrance_edit',
+          details: [{
+            itemId: fragranceId,
+            itemType: 'fragrance',
+            itemCode: code,
+            itemName: name,
+            quantityChange: newStock - oldStock,
+            quantityAfter: newStock
+          }],
+          createdAt: FieldValue.serverTimestamp(),
+        });
+        
+        logger.info(`已建立庫存紀錄，庫存從 ${oldStock} 變更為 ${newStock}`);
+      } catch (error) {
+        logger.error(`建立庫存紀錄失敗:`, error);
+        // 不阻擋主要更新流程，只記錄錯誤
+      }
+    }
+    
     logger.info(`管理員 ${contextAuth?.uid} 成功更新香精資料: ${fragranceId}`);
     return { status: "success", message: `香精 ${name} 的資料已成功更新。`, };
   } catch (error) { logger.error(`更新香精 ${fragranceId} 時發生錯誤:`, error); throw new HttpsError("internal", "更新香精資料時發生未知錯誤。"); }

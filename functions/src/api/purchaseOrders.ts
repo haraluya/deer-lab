@@ -136,6 +136,9 @@ export const receivePurchaseOrderItems = onCall(async (request) => {
         receivedByRef,
       });
 
+      // 收集所有入庫項目的明細
+      const itemDetails = [];
+      
       for (const item of items) {
         if (!item.itemRefPath) continue;
         
@@ -143,9 +146,24 @@ export const receivePurchaseOrderItems = onCall(async (request) => {
         const receivedQuantity = Number(item.receivedQuantity);
 
         if (receivedQuantity > 0) {
+          // 先獲取當前庫存，然後計算新庫存
+          const itemDoc = await transaction.get(itemRef);
+          const currentStock = itemDoc.data()?.currentStock || 0;
+          const newStock = currentStock + receivedQuantity;
+
           transaction.update(itemRef, {
-            currentStock: FieldValue.increment(receivedQuantity),
+            currentStock: newStock,
             lastStockUpdate: FieldValue.serverTimestamp(),
+          });
+
+          // 收集項目明細
+          itemDetails.push({
+            itemId: itemRef.id,
+            itemType: item.itemRefPath.includes('materials') ? 'material' : 'fragrance',
+            itemCode: item.code || '',
+            itemName: item.name || '',
+            quantityChange: receivedQuantity,
+            quantityAfter: newStock
           });
 
           const movementRef = db.collection("inventoryMovements").doc();
@@ -159,6 +177,22 @@ export const receivePurchaseOrderItems = onCall(async (request) => {
             createdByRef: receivedByRef,
           });
         }
+      }
+
+      // 建立統一的庫存紀錄（以動作為單位）
+      if (itemDetails.length > 0) {
+        const inventoryRecordRef = db.collection("inventory_records").doc();
+        transaction.set(inventoryRecordRef, {
+          changeDate: FieldValue.serverTimestamp(),
+          changeReason: 'purchase',
+          operatorId: contextAuth.uid,
+          operatorName: contextAuth.token?.name || '未知用戶',
+          remarks: `採購單 ${purchaseOrderId} 入庫`,
+          relatedDocumentId: purchaseOrderId,
+          relatedDocumentType: 'purchase_order',
+          details: itemDetails,
+          createdAt: FieldValue.serverTimestamp(),
+        });
       }
     });
 

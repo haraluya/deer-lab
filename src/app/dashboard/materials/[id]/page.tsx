@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { MaterialDialog, MaterialData } from '../MaterialDialog';
 import { toast } from 'sonner';
+import { InventoryHistorySection } from '@/components/InventoryHistorySection';
 
 interface Material {
   id: string;
@@ -390,6 +391,15 @@ export default function MaterialDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* 庫存歷史 */}
+      <InventoryHistorySection
+        itemId={material.id}
+        itemType="material"
+        itemCode={material.code}
+        itemName={material.name}
+        currentStock={material.currentStock || 0}
+      />
 
       {/* 備註 */}
       <Card className="mt-6 border-0 shadow-lg">

@@ -33,6 +33,9 @@ export const performStocktake = onCall(async (request) => {
 
   try {
     await db.runTransaction(async (transaction) => {
+      // 收集所有盤點項目的明細
+      const itemDetails = [];
+      
       const promises = items.map(async (item: StocktakeItemPayload) => {
         // Basic validation for each item in the array
         if (!item.itemRefPath || typeof item.newStock !== 'number' || item.newStock < 0) {
@@ -45,29 +48,46 @@ export const performStocktake = onCall(async (request) => {
 
         // Only process if there is an actual change in stock
         if (changeQuantity !== 0) {
+          // Get item details for the inventory record
+          const itemDoc = await transaction.get(itemRef);
+          const itemData = itemDoc.data();
+          
           // Update the item's stock level
           transaction.update(itemRef, {
             currentStock: item.newStock,
             lastStockUpdate: FieldValue.serverTimestamp(),
           });
 
-          // Create an inventory movement log for traceability
-          const movementRef = db.collection("inventoryMovements").doc();
-          transaction.set(movementRef, {
-            itemRef: itemRef,
+          // 收集項目明細
+          itemDetails.push({
+            itemId: itemRef.id,
             itemType: item.itemRefPath.includes('materials') ? 'material' : 'fragrance',
-            changeQuantity: changeQuantity, // Can be positive or negative
-            stockBefore: item.currentStock,
-            stockAfter: item.newStock,
-            type: "stocktake_adjustment", // A new type for stocktake
-            relatedDocRef: null, // No related document for a stocktake
-            createdAt: FieldValue.serverTimestamp(),
-            createdByRef: stocktakerRef,
+            itemCode: itemData?.code || '',
+            itemName: itemData?.name || '',
+            quantityChange: changeQuantity,
+            quantityAfter: item.newStock
           });
         }
       });
+      
       // Wait for all reads and writes in the transaction to be staged
       await Promise.all(promises);
+      
+      // 建立統一的庫存紀錄（以動作為單位）
+      if (itemDetails.length > 0) {
+        const inventoryRecordRef = db.collection("inventory_records").doc();
+        transaction.set(inventoryRecordRef, {
+          changeDate: FieldValue.serverTimestamp(),
+          changeReason: 'inventory_check',
+          operatorId: contextAuth.uid,
+          operatorName: contextAuth.token?.name || '未知用戶',
+          remarks: `盤點調整，共 ${itemDetails.length} 個項目`,
+          relatedDocumentId: null,
+          relatedDocumentType: 'stocktake',
+          details: itemDetails,
+          createdAt: FieldValue.serverTimestamp(),
+        });
+      }
     });
 
     logger.info(`管理員 ${contextAuth.uid} 成功完成了 ${items.length} 個品項的盤點更新。`);

@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 庫存紀錄集合規則
+    match /inventory_records/{document} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null;
+      allow delete: if false; // 不允許刪除庫存紀錄
+    }
+    
+    // 其他集合的規則
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

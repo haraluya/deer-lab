@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FragranceDialog, FragranceData } from '../FragranceDialog';
 import { DetailViewDialog } from '@/components/DetailViewDialog';
+import { InventoryHistorySection } from '@/components/InventoryHistorySection';
 
 interface Fragrance {
   id: string;
@@ -653,6 +654,15 @@ export default function FragranceDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* 庫存歷史 */}
+      <InventoryHistorySection
+        itemId={fragrance.id}
+        itemType="fragrance"
+        itemCode={fragrance.code}
+        itemName={fragrance.name}
+        currentStock={fragrance.currentStock || 0}
+      />
 
       {/* 描述和備註 */}
       {(fragrance.description || fragrance.notes) && (

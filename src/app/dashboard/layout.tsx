@@ -50,6 +50,7 @@ const navLinks: NavItem[] = [
   { href: '/dashboard/inventory', label: '庫存管理', icon: Warehouse },
   { isSeparator: true, label: '數據分析' },
   { href: '/dashboard/reports', label: '報表分析', icon: BarChart3 },
+  { href: '/dashboard/inventory-records', label: '庫存紀錄', icon: ClipboardList },
   { href: '/dashboard/cost-management', label: '成本管理', icon: Calculator },
 ];
 
