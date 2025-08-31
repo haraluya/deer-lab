@@ -1,10 +1,9 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { collection, getDocs, query, orderBy, where, limit, startAfter, DocumentSnapshot } from "firebase/firestore"
-import { db } from "@/lib/firebase"
 import { getFunctions, httpsCallable } from "firebase/functions"
 import { toast } from "sonner"
+import { useMaterials, useFragrances } from "@/hooks/useFirebaseCache"
 import { 
   Search, Package, FlaskConical, DollarSign, AlertTriangle, 
   TrendingUp, RefreshCw, Settings, Calculator, Eye
@@ -50,12 +49,16 @@ interface InventoryItem {
 export default function InventoryPage() {
   const { appUser } = useAuth()
   const [overview, setOverview] = useState<InventoryOverview | null>(null)
-  const [materials, setMaterials] = useState<InventoryItem[]>([])
-  const [fragrances, setFragrances] = useState<InventoryItem[]>([])
-  const [loading, setLoading] = useState(true)
   const [overviewLoading, setOverviewLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'materials' | 'fragrances'>('materials')
   const [searchTerm, setSearchTerm] = useState('')
+  
+  // 使用快取 hooks
+  const { data: materials, loading: materialsLoading, refetch: refetchMaterials } = useMaterials()
+  const { data: fragrances, loading: fragrancesLoading, refetch: refetchFragrances } = useFragrances()
+  
+  // 計算整體載入狀態
+  const loading = materialsLoading || fragrancesLoading
   
   // 對話框狀態
   const [isLowStockDialogOpen, setIsLowStockDialogOpen] = useState(false)
@@ -84,46 +87,18 @@ export default function InventoryPage() {
     }
   }, [])
 
-  // 載入庫存數據
-  const loadInventoryData = useCallback(async () => {
-    setLoading(true)
-    try {
-      if (!db) {
-        throw new Error("Firebase 未初始化")
-      }
-      
-      // 並行載入物料和香精
-      const [materialsSnapshot, fragrancesSnapshot] = await Promise.all([
-        getDocs(query(collection(db, "materials"), orderBy("name"))),
-        getDocs(query(collection(db, "fragrances"), orderBy("name")))
-      ])
-      
-      const materialsList = materialsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        type: 'material' as const,
-        ...doc.data()
-      })) as InventoryItem[]
-      
-      const fragrancesList = fragrancesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        type: 'fragrance' as const,
-        ...doc.data()
-      })) as InventoryItem[]
-      
-      setMaterials(materialsList)
-      setFragrances(fragrancesList)
-    } catch (error) {
-      console.error("讀取庫存資料失敗:", error)
-      toast.error("讀取庫存資料失敗")
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  // 重新載入庫存數據
+  const reloadInventoryData = useCallback(async () => {
+    await Promise.all([
+      refetchMaterials(),
+      refetchFragrances()
+    ])
+  }, [refetchMaterials, refetchFragrances])
 
   // 重新整理所有數據
   const refreshAll = useCallback(async () => {
-    await Promise.all([loadOverview(), loadInventoryData()])
-  }, [loadOverview, loadInventoryData])
+    await Promise.all([loadOverview(), reloadInventoryData()])
+  }, [loadOverview, reloadInventoryData])
 
   // 開啟快速更新對話框
   const openQuickUpdateDialog = useCallback((item: InventoryItem) => {
@@ -133,7 +108,7 @@ export default function InventoryPage() {
 
   // 篩選項目
   const filteredItems = useCallback(() => {
-    const items = activeTab === 'materials' ? materials : fragrances
+    const items = activeTab === 'materials' ? (materials || []) : (fragrances || [])
     if (!searchTerm.trim()) return items
     
     const term = searchTerm.toLowerCase()
@@ -146,8 +121,8 @@ export default function InventoryPage() {
   }, [activeTab, materials, fragrances, searchTerm])
 
   useEffect(() => {
-    refreshAll()
-  }, [refreshAll])
+    loadOverview()
+  }, [loadOverview])
 
   const filteredItemsList = filteredItems()
 
@@ -236,11 +211,11 @@ export default function InventoryPage() {
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="materials" className="flex items-center gap-2">
                 <Package className="h-4 w-4" />
-                物料 ({materials.length})
+                物料 ({materials?.length || 0})
               </TabsTrigger>
               <TabsTrigger value="fragrances" className="flex items-center gap-2">
                 <FlaskConical className="h-4 w-4" />
-                香精 ({fragrances.length})
+                香精 ({fragrances?.length || 0})
               </TabsTrigger>
             </TabsList>
             
