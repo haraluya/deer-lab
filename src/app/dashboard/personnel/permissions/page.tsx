@@ -18,8 +18,9 @@ import { Separator } from '@/components/ui/separator';
 import { 
   Shield, Users, Settings, Plus, Edit3, Trash2, 
   Eye, UserCheck, AlertTriangle, CheckCircle, 
-  Lock, Unlock, Crown, User, X, ArrowLeft
+  Lock, Unlock, Crown, User, X, ArrowLeft, Info
 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -484,6 +485,42 @@ function PermissionsPageContent() {
           )}
         </div>
       </div>
+
+      {/* 新手引導提示 */}
+      {roles.length === 0 && (
+        <Alert className="border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50">
+          <Info className="h-4 w-4 text-amber-600" />
+          <AlertTitle className="text-amber-800 font-semibold">
+            🚀 歡迎使用權限管理系統
+          </AlertTitle>
+          <AlertDescription className="text-amber-700 text-sm">
+            <div className="space-y-2">
+              <div><strong>首次使用提醒</strong>：系統檢測到您是第一次使用權限管理功能</div>
+              <div className="space-y-1">
+                <div>📋 <strong>初始化步驟</strong>：</div>
+                <div className="ml-4 space-y-1">
+                  <div>1️⃣ 點擊右上角「初始化預設角色」按鈕</div>
+                  <div>2️⃣ 系統會自動建立三種角色：系統管理員、生產領班、計時人員</div>
+                  <div>3️⃣ 完成後您可以在「用戶分配」標籤中為成員指派角色</div>
+                </div>
+                <div>💡 <strong>權限說明</strong>：角色系統將控制用戶在系統中可以訪問的功能範圍</div>
+              </div>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {roles.length > 0 && roles.filter(r => r.isDefault).length < 3 && (
+        <Alert className="border-yellow-300 bg-gradient-to-r from-yellow-50 to-amber-50">
+          <AlertTriangle className="h-4 w-4 text-yellow-600" />
+          <AlertTitle className="text-yellow-800 font-semibold">
+            ⚠️ 預設角色不完整
+          </AlertTitle>
+          <AlertDescription className="text-yellow-700 text-sm">
+            <div>系統偵測到預設角色配置可能不完整。建議點擊「修復預設角色標記」按鈕來確保權限系統正常運作。</div>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* 統計卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

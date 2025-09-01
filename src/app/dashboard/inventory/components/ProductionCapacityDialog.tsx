@@ -9,6 +9,7 @@ import { findMaterialByCategory } from "@/lib/systemConfig"
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -566,6 +567,28 @@ export function ProductionCapacityDialog({ isOpen, onClose }: ProductionCapacity
             選擇多個產品及其目標產量，系統會計算所需物料和香精，並評估是否有足夠庫存進行生產
           </DialogDescription>
         </DialogHeader>
+
+        {/* 使用說明卡片 */}
+        <Card className="mb-4 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+          <CardContent className="pt-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-blue-500 rounded-lg">
+                <Calculator className="h-4 w-4 text-white" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-blue-800 font-semibold mb-2">💡 使用說明</h4>
+                <div className="text-blue-700 text-sm space-y-1">
+                  <div>• <strong>新增產品</strong>：點擊「新增產品」按鈕，選擇要生產的產品</div>
+                  <div>• <strong>產品搜尋</strong>：可按產品名稱、代碼或系列名稱搜尋</div>
+                  <div>• <strong>設定數量</strong>：輸入目標生產數量（瓶數）</div>
+                  <div>• <strong>自動計算</strong>：系統會自動計算所需香精、PG、VG、尼古丁及專屬材料需求</div>
+                  <div>• <strong>庫存檢查</strong>：綠色表示庫存充足，紅色表示庫存不足，黃色表示警告</div>
+                  <div>• <strong>缺料統計</strong>：底部會顯示總共缺少的物料清單和數量</div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="flex-1 overflow-y-auto space-y-6">
           {/* 生產計畫區 */}

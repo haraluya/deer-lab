@@ -8,7 +8,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 import { FragranceDialog, FragranceData } from './FragranceDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { MoreHorizontal, ShoppingCart, Search, Package, Calculator, FileSpreadsheet, Warehouse, Plus, Eye, Edit, Droplets, Building, Calendar, AlertTriangle, X, Shield } from 'lucide-react';
+import { MoreHorizontal, ShoppingCart, Search, Package, Calculator, FileSpreadsheet, Warehouse, Plus, Eye, Edit, Droplets, Building, Calendar, AlertTriangle, X, Shield, HelpCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ImportExportDialog } from '@/components/ImportExportDialog';
 import { DetailViewDialog } from '@/components/DetailViewDialog';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useGlobalCart } from '@/hooks/useGlobalCart';
 
 interface FragranceWithSupplier extends FragranceData {
@@ -826,10 +827,38 @@ function FragrancesPageContent() {
           ) : (
             <>
               {canManageFragrances && (
-                <Button variant="outline" onClick={() => setIsImportExportOpen(true)} className="w-full">
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  匯入/匯出
-                </Button>
+                <div className="flex w-full gap-2">
+                  <Button variant="outline" onClick={() => setIsImportExportOpen(true)} className="flex-1">
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    匯入/匯出
+                  </Button>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="px-3">
+                        <HelpCircle className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80">
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-pink-800">📋 智能匯入匯出說明</h4>
+                        <div className="text-sm text-gray-700 space-y-1">
+                          <div><strong>🧠 智能判斷</strong></div>
+                          <div className="ml-2 text-xs">• 根據「代號」自動判斷新增或更新</div>
+                          <div className="ml-2 text-xs">• 代號存在：覆蓋更新現有資料</div>
+                          <div className="ml-2 text-xs">• 代號不存在：新增資料並自動生成代號</div>
+                          <div className="mt-2"><strong>🏢 供應商篩選</strong></div>
+                          <div className="ml-2 text-xs">• 編輯香精時只顯示「生技」類供應商</div>
+                          <div className="mt-2"><strong>📊 處理結果</strong></div>
+                          <div className="ml-2 text-xs">• 完整的新增/更新統計報告</div>
+                          <div className="ml-2 text-xs">• 詳細的錯誤和成功信息</div>
+                          <div className="mt-2"><strong>💡 使用建議</strong></div>
+                          <div className="ml-2 text-xs">• 確保必要欄位已填寫完整</div>
+                          <div className="ml-2 text-xs">• 建議先匯出範本作為格式參考</div>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
               )}
               <Button onClick={handleAddToPurchaseCart} disabled={purchaseCart.size === 0 || cartLoading} variant="outline" className="w-full">
                 <ShoppingCart className="mr-2 h-4 w-4" />
@@ -871,10 +900,38 @@ function FragrancesPageContent() {
           ) : (
             <>
               {canManageFragrances && (
-                <Button variant="outline" onClick={() => setIsImportExportOpen(true)}>
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  匯入/匯出
-                </Button>
+                <div className="flex gap-1">
+                  <Button variant="outline" onClick={() => setIsImportExportOpen(true)}>
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    匯入/匯出
+                  </Button>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="px-2">
+                        <HelpCircle className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80">
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-pink-800">📋 智能匯入匯出說明</h4>
+                        <div className="text-sm text-gray-700 space-y-1">
+                          <div><strong>🧠 智能判斷</strong></div>
+                          <div className="ml-2 text-xs">• 根據「代號」自動判斷新增或更新</div>
+                          <div className="ml-2 text-xs">• 代號存在：覆蓋更新現有資料</div>
+                          <div className="ml-2 text-xs">• 代號不存在：新增資料並自動生成代號</div>
+                          <div className="mt-2"><strong>🏢 供應商篩選</strong></div>
+                          <div className="ml-2 text-xs">• 編輯香精時只顯示「生技」類供應商</div>
+                          <div className="mt-2"><strong>📊 處理結果</strong></div>
+                          <div className="ml-2 text-xs">• 完整的新增/更新統計報告</div>
+                          <div className="ml-2 text-xs">• 詳細的錯誤和成功信息</div>
+                          <div className="mt-2"><strong>💡 使用建議</strong></div>
+                          <div className="ml-2 text-xs">• 確保必要欄位已填寫完整</div>
+                          <div className="ml-2 text-xs">• 建議先匯出範本作為格式參考</div>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
               )}
               <Button onClick={handleAddToPurchaseCart} disabled={purchaseCart.size === 0 || cartLoading} variant="outline">
                 <ShoppingCart className="mr-2 h-4 w-4" />

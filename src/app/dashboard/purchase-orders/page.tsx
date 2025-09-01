@@ -937,6 +937,21 @@ function PurchaseOrdersPageContent() {
           </div>
         </CardHeader>
         <CardContent>
+          {/* 購物車說明提示 */}
+          <Alert className="mb-4 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <ShoppingCart className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-700 text-sm">
+              <div className="font-semibold mb-1">🛒 全域購物車說明</div>
+              <div className="space-y-1 text-xs">
+                <div>• 購物車會在所有裝置間即時同步，支援多人協作採購</div>
+                <div>• 在原料庫或配方庫添加的項目都會自動出現在這裡</div>
+                <div>• 側邊欄的紅色氣泡會顯示目前購物車項目數量</div>
+                <div>• 建立採購單後，相關項目會自動從購物車中移除</div>
+                <div>• 可以選擇部分項目建立採購單，其餘項目保留在購物車中</div>
+              </div>
+            </AlertDescription>
+          </Alert>
+
           {cartItems.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <ShoppingCart className="h-12 w-12 mx-auto mb-3 text-gray-300" />

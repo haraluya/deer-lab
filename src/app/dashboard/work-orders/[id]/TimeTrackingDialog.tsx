@@ -5,7 +5,7 @@ import { collection, addDoc, getDocs, query, where, orderBy, doc, deleteDoc, upd
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
 import { Personnel, TimeEntry as TimeEntryType } from "@/types"
-import { Clock, User, Plus, Trash2, Edit2, Calendar, Save, X, ChevronDown, ChevronUp, Users, Timer, ClipboardList, Zap, AlertTriangle } from "lucide-react"
+import { Clock, User, Plus, Trash2, Edit2, Calendar, Save, X, ChevronDown, ChevronUp, Users, Timer, ClipboardList, Zap, AlertTriangle, HelpCircle, Info } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -15,6 +15,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Loader2 } from "lucide-react"
 
 // 擴展 TimeEntry 類型以適應此對話框
@@ -437,12 +439,35 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
-            工時追蹤
+            工時申報 {workOrderNumber && `- ${workOrderNumber}`}
           </DialogTitle>
           <DialogDescription id="time-tracking-dialog-description">
-            記錄工單的工時資訊，包含人員、時間段和備註
+            {isLocked ? "已入庫工單，工時記錄已鎖定" : "記錄工作時間，支援單一或批量新增模式"}
           </DialogDescription>
         </DialogHeader>
+
+        {/* 操作說明提示 */}
+        <TooltipProvider>
+          <Alert className="border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <AlertTitle className="text-amber-800 font-semibold">
+              {isLocked ? "🔒 工時記錄已鎖定" : "📝 工時申報使用說明"}
+            </AlertTitle>
+            <AlertDescription className="text-amber-700 text-sm">
+              {isLocked ? (
+                <div>工單已入庫，工時記錄已被鎖定無法修改。如需調整請聯繫系統管理員。</div>
+              ) : (
+                <div className="space-y-1">
+                  <div>• <strong>單一模式</strong>：一次為一個人員新增工時記錄</div>
+                  <div>• <strong>批量模式</strong>：一次為多個人員新增相同時間段的工時記錄</div>
+                  <div>• <strong>自動計算</strong>：系統會自動計算總工時和加班時數（超過8小時）</div>
+                  <div>• <strong>快速設定</strong>：使用預設按鈕快速設定常用時間（日班/夜班）</div>
+                  <div>• <strong>即時編輯</strong>：工單入庫前可隨時編輯或刪除工時記錄</div>
+                </div>
+              )}
+            </AlertDescription>
+          </Alert>
+        </TooltipProvider>
 
         <div className="space-y-6">
           {/* 統計資訊 */}
@@ -505,15 +530,27 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                     <Plus className="h-4 w-4" />
                     新增工時記錄
                   </CardTitle>
-                  <Button
-                    variant={batchMode ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setBatchMode(!batchMode)}
-                    className="gap-2"
-                  >
-                    <Users className="h-4 w-4" />
-                    {batchMode ? "批量模式" : "單一模式"}
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={batchMode ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setBatchMode(!batchMode)}
+                        className="gap-2"
+                      >
+                        <Users className="h-4 w-4" />
+                        {batchMode ? "批量模式" : "單一模式"}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        {batchMode 
+                          ? "批量模式：為多個人員新增相同時間段的工時記錄" 
+                          : "單一模式：逐個新增每個人員的工時記錄"
+                        }
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
