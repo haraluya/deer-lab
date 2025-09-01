@@ -71,10 +71,6 @@ export const PAGE_PERMISSIONS: Record<string, PagePermissionConfig> = {
     view: [PERMISSIONS.ROLES_MANAGE],
     manage: [PERMISSIONS.ROLES_MANAGE],
   },
-  '/dashboard/debug-permissions': {
-    view: [PERMISSIONS.ROLES_MANAGE, PERMISSIONS.SYSTEM_SETTINGS],
-    manage: [PERMISSIONS.ROLES_MANAGE, PERMISSIONS.SYSTEM_SETTINGS],
-  },
   '/dashboard/time-records': {
     view: [PERMISSIONS.TIME_VIEW, PERMISSIONS.TIME_MANAGE],
   },
@@ -106,6 +102,10 @@ export const PAGE_PERMISSIONS: Record<string, PagePermissionConfig> = {
     view: [PERMISSIONS.WORK_ORDERS_VIEW, PERMISSIONS.WORK_ORDERS_MANAGE],
     manage: [PERMISSIONS.WORK_ORDERS_MANAGE],
   },
+  '/dashboard/work-orders/create': {
+    view: [PERMISSIONS.WORK_ORDERS_MANAGE],
+    manage: [PERMISSIONS.WORK_ORDERS_MANAGE],
+  },
   
   // 營運分析
   '/dashboard/inventory': {
@@ -120,6 +120,23 @@ export const PAGE_PERMISSIONS: Record<string, PagePermissionConfig> = {
   },
   '/dashboard/time-reports': {
     view: [PERMISSIONS.TIME_REPORTS_VIEW],
+  },
+  
+  // 其他頁面
+  '/dashboard/material-categories': {
+    view: [PERMISSIONS.MATERIALS_VIEW, PERMISSIONS.MATERIALS_MANAGE],
+    manage: [PERMISSIONS.MATERIALS_MANAGE],
+  },
+  '/dashboard/product-series': {
+    view: [PERMISSIONS.PRODUCTS_VIEW, PERMISSIONS.PRODUCTS_MANAGE],
+    manage: [PERMISSIONS.PRODUCTS_MANAGE],
+  },
+  '/dashboard/production-calculator': {
+    view: [PERMISSIONS.PRODUCTS_VIEW], // 只需要產品查看權限
+  },
+  '/dashboard/inventory-old': {
+    view: [PERMISSIONS.INVENTORY_VIEW, PERMISSIONS.INVENTORY_MANAGE],
+    manage: [PERMISSIONS.INVENTORY_MANAGE],
   },
 };
 

@@ -42,8 +42,6 @@ const navLinks: NavItem[] = [
   
   { isSeparator: true, label: '團隊管理' },
   { href: '/dashboard/personnel', label: '成員管理', icon: UserCheck },
-  { href: '/dashboard/personnel/permissions', label: '權限管理', icon: Shield },
-  { href: '/dashboard/debug-permissions', label: '🔧 權限調試', icon: Settings },
   { href: '/dashboard/time-records', label: '工時統計', icon: Clock },
   
   { isSeparator: true, label: '供應鏈' },
@@ -122,8 +120,8 @@ function SidebarNav() {
         
         if (link.href === '/dashboard') {
           hasAccess = true; // 工作台對所有人開放
-        } else if (link.href === '/dashboard/personnel/permissions' || link.href === '/dashboard/debug-permissions') {
-          // 權限管理和調試頁面需要特殊檢查
+        } else if (link.href === '/dashboard/personnel/permissions') {
+          // 權限管理頁面需要特殊檢查
           hasAccess = canAccess(link.href) || isAdmin();
         } else {
           // 一般頁面權限檢查，加入容錯處理

@@ -49,6 +49,9 @@ function PermissionsPageContent() {
   const [showRoleDetailDialog, setShowRoleDetailDialog] = useState(false);
   const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
+  const [showEditRoleDialog, setShowEditRoleDialog] = useState(false);
+  const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [showCreateRoleDialog, setShowCreateRoleDialog] = useState(false);
   
   const { isAdmin } = usePermission();
 
@@ -283,6 +286,17 @@ function PermissionsPageContent() {
     setShowRoleDetailDialog(true);
   };
 
+  // 處理角色編輯
+  const handleEditRole = (role: Role) => {
+    setEditingRole(role);
+    setShowEditRoleDialog(true);
+  };
+
+  // 處理新增角色
+  const handleCreateRole = () => {
+    setShowCreateRoleDialog(true);
+  };
+
   // 處理角色刪除
   const handleDeleteRole = (role: Role) => {
     setRoleToDelete(role);
@@ -469,6 +483,17 @@ function PermissionsPageContent() {
 
         {/* 角色管理分頁 */}
         <TabsContent value="roles" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-lg font-semibold">角色列表</h3>
+              <p className="text-sm text-muted-foreground">管理系統角色和權限配置</p>
+            </div>
+            <Button onClick={handleCreateRole} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              新增角色
+            </Button>
+          </div>
+          
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -527,7 +552,7 @@ function PermissionsPageContent() {
                             <Button 
                               size="sm" 
                               variant="outline"
-                              onClick={() => toast.info('編輯功能開發中...')}
+                              onClick={() => handleEditRole(role)}
                             >
                               <Edit3 className="h-4 w-4" />
                             </Button>
@@ -557,10 +582,54 @@ function PermissionsPageContent() {
               <p className="text-muted-foreground">為用戶指派角色和權限</p>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">用戶角色分配功能開發中...</p>
-              </div>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {users.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">目前沒有用戶資料</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {users.map((user) => (
+                        <Card key={user.id} className="hover:shadow-md transition-shadow">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <CardTitle className="text-base">{user.name}</CardTitle>
+                                <p className="text-sm text-muted-foreground">#{user.employeeId}</p>
+                              </div>
+                              <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
+                                {user.status === 'active' ? '活躍' : '非活躍'}
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <div>
+                              <p className="text-sm font-medium">當前角色</p>
+                              <Badge variant="outline" className="mt-1">
+                                {user.roleName || '未設定'}
+                              </Badge>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="w-full"
+                              onClick={() => toast.info(`編輯 ${user.name} 的角色分配功能即將推出...`)}
+                            >
+                              編輯角色
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -632,6 +701,44 @@ function PermissionsPageContent() {
               關閉
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 角色編輯對話框 */}
+      <Dialog open={showEditRoleDialog} onOpenChange={setShowEditRoleDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>編輯角色</DialogTitle>
+            <DialogDescription>
+              編輯角色資訊和權限配置
+            </DialogDescription>
+          </DialogHeader>
+          <div className="text-center py-8">
+            <Settings className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">角色編輯功能正在開發中...</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              預計將支援角色名稱、描述、權限配置的完整編輯功能
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 新增角色對話框 */}
+      <Dialog open={showCreateRoleDialog} onOpenChange={setShowCreateRoleDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>新增角色</DialogTitle>
+            <DialogDescription>
+              創建新的系統角色和權限配置
+            </DialogDescription>
+          </DialogHeader>
+          <div className="text-center py-8">
+            <Plus className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">新增角色功能正在開發中...</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              預計將支援自訂角色名稱、描述、圖示、顏色和權限配置
+            </p>
+          </div>
         </DialogContent>
       </Dialog>
 

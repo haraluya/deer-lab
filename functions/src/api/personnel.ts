@@ -10,7 +10,7 @@ const auth = getAuth();
 
 export const createPersonnel = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  // await ensureCanManagePersonnel(contextAuth?.uid);
+  await ensureCanManagePersonnel(contextAuth?.uid);
   
   const { name, employeeId, phone, roleId, password, status } = data;
   
@@ -42,15 +42,28 @@ export const createPersonnel = onCall(async (request) => {
 
     const userRecord = await auth.createUser(authData);
 
-    // 創建角色引用
+    // 創建角色引用並載入角色資料
     const roleRef = db.collection("roles").doc(roleId);
+    const roleDoc = await roleRef.get();
     
-    // 儲存到 Firestore
+    if (!roleDoc.exists) {
+      throw new HttpsError("not-found", "指定的角色不存在。");
+    }
+    
+    const roleData = roleDoc.data();
+    const roleName = roleData?.displayName || roleData?.name || '未知角色';
+    const rolePermissions = Array.isArray(roleData?.permissions) ? roleData.permissions : [];
+    
+    logger.info(`為新用戶 ${name} 設定角色: ${roleName} (${rolePermissions.length} 項權限)`);
+    
+    // 儲存到 Firestore，同時設定角色引用和權限副本
     const personnelData = {
       name,
       employeeId,
       phone,
       roleRef,
+      roleName, // 直接儲存角色名稱
+      permissions: rolePermissions, // 直接儲存權限陣列
       status,
       createdAt: FieldValue.serverTimestamp(),
       createdBy: contextAuth?.uid
@@ -76,7 +89,7 @@ export const createPersonnel = onCall(async (request) => {
 
 export const updatePersonnel = onCall(async (request) => {
   const { data, auth: contextAuth } = request;
-  // await ensureCanManagePersonnel(contextAuth?.uid);
+  await ensureCanManagePersonnel(contextAuth?.uid);
   
   const { personnelId, name, employeeId, phone, roleId, password, status } = data;
   
@@ -124,15 +137,28 @@ export const updatePersonnel = onCall(async (request) => {
 
     await auth.updateUser(personnelId, updateAuthData);
 
-    // 創建角色引用
+    // 創建角色引用並載入角色資料
     const roleRef = db.collection("roles").doc(roleId);
+    const roleDoc = await roleRef.get();
     
-    // 更新 Firestore 資料
+    if (!roleDoc.exists) {
+      throw new HttpsError("not-found", "指定的角色不存在。");
+    }
+    
+    const roleData = roleDoc.data();
+    const roleName = roleData?.displayName || roleData?.name || '未知角色';
+    const rolePermissions = Array.isArray(roleData?.permissions) ? roleData.permissions : [];
+    
+    logger.info(`為用戶 ${name} 更新角色: ${roleName} (${rolePermissions.length} 項權限)`);
+    
+    // 更新 Firestore 資料，同時設定角色引用和權限副本
     const updateData = {
       name,
       employeeId,
       phone,
       roleRef,
+      roleName, // 直接儲存角色名稱
+      permissions: rolePermissions, // 直接儲存權限陣列
       status,
       updatedAt: FieldValue.serverTimestamp(),
       updatedBy: contextAuth?.uid

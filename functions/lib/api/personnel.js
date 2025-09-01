@@ -6,11 +6,12 @@ const firebase_functions_1 = require("firebase-functions");
 const https_1 = require("firebase-functions/v2/https");
 const auth_1 = require("firebase-admin/auth");
 const firestore_1 = require("firebase-admin/firestore");
+const auth_2 = require("../utils/auth");
 const db = (0, firestore_1.getFirestore)();
 const auth = (0, auth_1.getAuth)();
 exports.createPersonnel = (0, https_1.onCall)(async (request) => {
     const { data, auth: contextAuth } = request;
-    // await ensureCanManagePersonnel(contextAuth?.uid);
+    await (0, auth_2.ensureCanManagePersonnel)(contextAuth === null || contextAuth === void 0 ? void 0 : contextAuth.uid);
     const { name, employeeId, phone, roleId, password, status } = data;
     if (!name || !employeeId || !phone || !roleId || !password || !status) {
         throw new https_1.HttpsError("invalid-argument", "請求缺少必要的欄位 (姓名、員工編號、電話、角色、密碼、狀態)。");
@@ -33,14 +34,24 @@ exports.createPersonnel = (0, https_1.onCall)(async (request) => {
             disabled: status === "inactive"
         };
         const userRecord = await auth.createUser(authData);
-        // 創建角色引用
+        // 創建角色引用並載入角色資料
         const roleRef = db.collection("roles").doc(roleId);
-        // 儲存到 Firestore
+        const roleDoc = await roleRef.get();
+        if (!roleDoc.exists) {
+            throw new https_1.HttpsError("not-found", "指定的角色不存在。");
+        }
+        const roleData = roleDoc.data();
+        const roleName = (roleData === null || roleData === void 0 ? void 0 : roleData.displayName) || (roleData === null || roleData === void 0 ? void 0 : roleData.name) || '未知角色';
+        const rolePermissions = Array.isArray(roleData === null || roleData === void 0 ? void 0 : roleData.permissions) ? roleData.permissions : [];
+        firebase_functions_1.logger.info(`為新用戶 ${name} 設定角色: ${roleName} (${rolePermissions.length} 項權限)`);
+        // 儲存到 Firestore，同時設定角色引用和權限副本
         const personnelData = {
             name,
             employeeId,
             phone,
             roleRef,
+            roleName,
+            permissions: rolePermissions,
             status,
             createdAt: firestore_1.FieldValue.serverTimestamp(),
             createdBy: contextAuth === null || contextAuth === void 0 ? void 0 : contextAuth.uid
@@ -63,7 +74,7 @@ exports.createPersonnel = (0, https_1.onCall)(async (request) => {
 });
 exports.updatePersonnel = (0, https_1.onCall)(async (request) => {
     const { data, auth: contextAuth } = request;
-    // await ensureCanManagePersonnel(contextAuth?.uid);
+    await (0, auth_2.ensureCanManagePersonnel)(contextAuth === null || contextAuth === void 0 ? void 0 : contextAuth.uid);
     const { personnelId, name, employeeId, phone, roleId, password, status } = data;
     if (!personnelId || !name || !employeeId || !phone || !roleId || !status) {
         throw new https_1.HttpsError("invalid-argument", "請求缺少必要的欄位 (人員ID、姓名、員工編號、電話、角色、狀態)。");
@@ -94,14 +105,24 @@ exports.updatePersonnel = (0, https_1.onCall)(async (request) => {
             updateAuthData.password = password;
         }
         await auth.updateUser(personnelId, updateAuthData);
-        // 創建角色引用
+        // 創建角色引用並載入角色資料
         const roleRef = db.collection("roles").doc(roleId);
-        // 更新 Firestore 資料
+        const roleDoc = await roleRef.get();
+        if (!roleDoc.exists) {
+            throw new https_1.HttpsError("not-found", "指定的角色不存在。");
+        }
+        const roleData = roleDoc.data();
+        const roleName = (roleData === null || roleData === void 0 ? void 0 : roleData.displayName) || (roleData === null || roleData === void 0 ? void 0 : roleData.name) || '未知角色';
+        const rolePermissions = Array.isArray(roleData === null || roleData === void 0 ? void 0 : roleData.permissions) ? roleData.permissions : [];
+        firebase_functions_1.logger.info(`為用戶 ${name} 更新角色: ${roleName} (${rolePermissions.length} 項權限)`);
+        // 更新 Firestore 資料，同時設定角色引用和權限副本
         const updateData = {
             name,
             employeeId,
             phone,
             roleRef,
+            roleName,
+            permissions: rolePermissions,
             status,
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
             updatedBy: contextAuth === null || contextAuth === void 0 ? void 0 : contextAuth.uid

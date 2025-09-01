@@ -68,43 +68,61 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userData = userDoc.data() as AppUser;
         debug('用戶資料', userData);
         
-        // 初始化權限為空陣列（防止 undefined）
-        userData.permissions = [];
-        userData.roleName = '未設定';
+        // 保留現有的權限設定，如果沒有則初始化為空陣列
+        if (!userData.permissions || !Array.isArray(userData.permissions)) {
+          userData.permissions = [];
+        }
+        if (!userData.roleName || typeof userData.roleName !== 'string') {
+          userData.roleName = '未設定';
+        }
         
-        // 如果有角色引用，獲取角色資料
-        if (userData.roleRef) {
-          debug('用戶有角色引用，獲取角色資料');
+        debug('保留現有權限設定', { 
+          existingRole: userData.roleName,
+          existingPermissions: userData.permissions?.length || 0
+        });
+        
+        // 如果沒有直接設定的權限且有角色引用，則從角色引用獲取權限
+        if (userData.permissions.length === 0 && userData.roleRef) {
+          debug('用戶沒有直接權限設定，嘗試從角色引用獲取');
           try {
             const roleDoc = await getDoc(userData.roleRef);
             if (roleDoc.exists()) {
               const roleData = roleDoc.data();
               userData.roleName = roleData.displayName || roleData.name || '未設定';
               userData.permissions = Array.isArray(roleData.permissions) ? roleData.permissions : [];
-              debug('✅ 角色資料載入成功', { 
+              debug('✅ 從角色引用載入權限', { 
                 role: userData.roleName, 
                 permissions: userData.permissions,
                 permissionCount: userData.permissions.length 
               });
             } else {
-              warn('角色文檔不存在，使用預設值');
+              warn('角色文檔不存在，保持現有設定');
             }
           } catch (err) {
-            error('載入角色資料失敗，使用預設值', err as Error);
+            error('載入角色資料失敗，保持現有設定', err as Error);
           }
+        } else if (userData.permissions.length > 0) {
+          debug('✅ 使用現有的直接權限設定', {
+            role: userData.roleName,
+            permissionCount: userData.permissions.length
+          });
         } else {
-          warn('用戶沒有角色引用，可能是新用戶或未分配角色');
+          debug('用戶沒有角色引用也沒有直接權限，可能是新用戶');
         }
         
-        // 臨時權限分配：為管理員類型的帳號提供完整權限
-        const isAdminAccount = userData.employeeId === 'admin' || 
-                              userData.name === '系統管理員' || 
-                              userData.employeeId === 'administrator' ||
-                              userData.email?.includes('admin') ||
-                              userData.name?.includes('管理員');
-                              
-        if (isAdminAccount && (!userData.permissions || userData.permissions.length === 0)) {
-          debug('檢測到管理員類型帳號，給予完整臨時權限');
+        // 最終權限檢查：為特定管理員帳號提供備用權限
+        const isSpecificAdminAccount = (
+          userData.employeeId === '052' || 
+          userData.employeeId === 'admin' || 
+          userData.name === '系統管理員' || 
+          userData.employeeId === 'administrator' ||
+          userData.email?.includes('admin') ||
+          userData.name?.includes('管理員')
+        );
+        
+        // 只有在完全沒有權限的情況下才給予臨時權限
+        if (isSpecificAdminAccount && (!userData.permissions || userData.permissions.length === 0)) {
+          debug('⚠️  管理員帳號沒有權限，給予完整臨時權限');
           userData.roleName = '系統管理員';
           userData.permissions = [
             'personnel.view', 'personnel.manage', 'time.view', 'time.manage',
