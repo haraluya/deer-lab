@@ -297,6 +297,7 @@ function FragrancesPageContent() {
   const addToPurchaseCart = async (fragrance: FragranceWithSupplier) => {
     try {
       const cartItem = {
+        id: fragrance.id,
         type: 'fragrance' as const,
         code: fragrance.code,
         name: fragrance.name,
@@ -305,13 +306,12 @@ function FragrancesPageContent() {
         quantity: 1,
         unit: fragrance.unit || 'KG',
         currentStock: fragrance.currentStock || 0,
-        costPerUnit: fragrance.costPerUnit || 0
+        costPerUnit: fragrance.costPerUnit || 0,
+        price: fragrance.costPerUnit || 0
       };
 
-      const success = await addToCart(cartItem);
-      if (!success) {
-        toast.error("添加到採購車失敗");
-      }
+      await addToCart(cartItem);
+      toast.success(`已將 ${fragrance.name} 加入採購車`);
     } catch (error) {
       console.error("添加到採購車失敗:", error);
       toast.error("添加到採購車失敗");
@@ -332,6 +332,7 @@ function FragrancesPageContent() {
       // 逐一添加到全域購物車
       for (const fragrance of selectedFragrances) {
         const cartItem = {
+          id: fragrance.id,
           type: 'fragrance' as const,
           code: fragrance.code,
           name: fragrance.name,
@@ -340,11 +341,12 @@ function FragrancesPageContent() {
           quantity: 1,
           unit: fragrance.unit || 'KG',
           currentStock: fragrance.currentStock || 0,
-          costPerUnit: fragrance.costPerUnit || 0
+          costPerUnit: fragrance.costPerUnit || 0,
+          price: fragrance.costPerUnit || 0
         };
         
-        const success = await addToCart(cartItem);
-        if (success) successCount++;
+        await addToCart(cartItem);
+        successCount++;
       }
       
       if (successCount > 0) {

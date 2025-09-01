@@ -522,51 +522,34 @@ function MaterialsPageContent() {
     }
   };
   
-  const handleAddToPurchaseCart = () => {
+  const handleAddToPurchaseCart = async () => {
     if (purchaseCart.size === 0) {
       toast.info("請至少選擇一個物料加入採購車。");
       return;
     }
     
     try {
-      // 從 localStorage 讀取現有的採購車
-      const existingCart = localStorage.getItem('purchaseCart');
-      const cartItems = existingCart ? JSON.parse(existingCart) : [];
-      
       // 獲取選中的物料資料
       const selectedMaterials = materials.filter(m => purchaseCart.has(m.id));
       
-      // 將選中的物料加入採購車
-      selectedMaterials.forEach(material => {
-        const existingItem = cartItems.find((item: CartItem) => 
-          item.id === material.id && item.type === 'material'
-        );
+      // 將選中的物料逐一加入全域採購車
+      for (const material of selectedMaterials) {
+        const cartItem = {
+          id: material.id,
+          name: material.name,
+          code: material.code,
+          type: 'material' as const,
+          supplierId: material.supplierRef?.id || '',
+          supplierName: material.supplierName || '未指定',
+          unit: material.unit || '',
+          quantity: 1,
+          costPerUnit: material.costPerUnit || 0,
+          price: material.costPerUnit || 0,
+          currentStock: material.currentStock || 0,
+        };
         
-        if (existingItem) {
-          // 如果已存在，增加數量
-          existingItem.quantity += 1;
-        } else {
-          // 新增項目
-          cartItems.push({
-            id: material.id,
-            name: material.name,
-            code: material.code,
-            type: 'material',
-            supplierId: material.supplierRef?.id || '',
-            supplierName: material.supplierName,
-            unit: material.unit || '個',
-            quantity: 1,
-            costPerUnit: material.costPerUnit || 0,
-            currentStock: material.currentStock || 0,
-          });
-        }
-      });
-      
-      // 保存到 localStorage
-      localStorage.setItem('purchaseCart', JSON.stringify(cartItems));
-      
-      // 觸發自定義事件，通知其他組件採購車已更新
-      window.dispatchEvent(new CustomEvent('purchaseCartUpdated'));
+        await addToCart(cartItem);
+      }
       
       toast.success(`已將 ${selectedMaterials.length} 個物料加入採購車`);
       setPurchaseCart(new Set()); // 清空選中的項目

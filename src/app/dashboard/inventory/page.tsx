@@ -81,12 +81,10 @@ export default function InventoryPage() {
 
   // 載入庫存總覽
   const loadOverview = useCallback(async () => {
-    if (overviewLoading) return // 防止重複調用
-    
-    setOverviewLoading(true)
-    setGlobalLoading(true, '載入庫存統計中...')
-    
     try {
+      setOverviewLoading(true)
+      setGlobalLoading(true, '載入庫存統計中...')
+      
       const functions = getFunctions()
       const getInventoryOverview = httpsCallable(functions, 'getInventoryOverview')
       
@@ -104,7 +102,7 @@ export default function InventoryPage() {
       setOverviewLoading(false)
       setGlobalLoading(false)
     }
-  }, [setGlobalLoading]) // 移除 overviewLoading 依賴，避免無限循環
+  }, [setGlobalLoading])
 
   // 重新載入庫存數據
   const reloadInventoryData = useCallback(async () => {
@@ -189,7 +187,7 @@ export default function InventoryPage() {
       setIsInitialized(true)
       loadOverview()
     }
-  }, [isInitialized]) // 移除 loadOverview 依賴，避免無限循環
+  }, [isInitialized, loadOverview])
 
   const filteredItemsList = filteredItems()
 
