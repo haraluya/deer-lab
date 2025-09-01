@@ -44,8 +44,14 @@ jobs:
         NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
       run: npm run build
 
-    - name: Copy .next to functions directory
-      run: cp -r .next functions/
+    - name: Copy .next to functions directory (excluding cache)
+      run: |
+        # Copy .next directory but exclude the cache directory to reduce size
+        mkdir -p functions/.next
+        cp -r .next/server functions/.next/
+        cp -r .next/static functions/.next/
+        cp .next/*.json functions/.next/ 2>/dev/null || true
+        echo "Copied .next directory excluding cache (saved ~566MB)"
 
     - name: Build Cloud Functions
       run: |
