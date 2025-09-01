@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { getFunctions, httpsCallable } from "firebase/functions"
 import { toast } from "sonner"
 import { useMaterials, useFragrances } from "@/hooks/useFirebaseCache"
@@ -23,9 +23,7 @@ import { LowStockDialog } from "./components/LowStockDialog"
 import { ProductionCapacityDialog } from "./components/ProductionCapacityDialog"
 import { QuickUpdateDialog } from "./components/QuickUpdateDialog"
 import { BatchOperationsPanel } from "./components/BatchOperationsPanel"
-import { GlobalLoadingOverlay, ProgressIndicators } from "@/components/GlobalLoadingOverlay"
 import { useAuth } from "@/context/AuthContext"
-import { useUIStore } from "@/stores/uiStore"
 
 interface InventoryOverview {
   totalMaterials: number
@@ -53,7 +51,6 @@ interface InventoryItem {
 
 export default function InventoryPage() {
   const { appUser } = useAuth()
-  const { setGlobalLoading, addProgressIndicator, updateProgressIndicator, removeProgressIndicator } = useUIStore()
   const [overview, setOverview] = useState<InventoryOverview | null>(null)
   const [overviewLoading, setOverviewLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'materials' | 'fragrances'>('materials')
@@ -83,7 +80,6 @@ export default function InventoryPage() {
   const loadOverview = useCallback(async () => {
     try {
       setOverviewLoading(true)
-      setGlobalLoading(true, '載入庫存統計中...')
       
       const functions = getFunctions()
       const getInventoryOverview = httpsCallable(functions, 'getInventoryOverview')
@@ -100,48 +96,22 @@ export default function InventoryPage() {
       toast.error('載入庫存總覽失敗')
     } finally {
       setOverviewLoading(false)
-      setGlobalLoading(false)
     }
-  }, [setGlobalLoading])
+  }, [])
 
   // 重新載入庫存數據
   const reloadInventoryData = useCallback(async () => {
-    const progressId = 'inventory-reload'
-    
-    addProgressIndicator(progressId, {
-      isVisible: true,
-      progress: 0,
-      message: '載入庫存資料...',
-      type: 'determinate'
-    })
-    
     try {
-      updateProgressIndicator(progressId, { progress: 30, message: '載入物料清單...' })
       await refetchMaterials()
-      
-      updateProgressIndicator(progressId, { progress: 70, message: '載入香精清單...' })
       await refetchFragrances()
-      
-      updateProgressIndicator(progressId, { progress: 100, message: '載入完成' })
-      
-      setTimeout(() => {
-        removeProgressIndicator(progressId)
-      }, 1000)
-      
       toast.success('庫存資料重新載入完成')
     } catch (error) {
-      updateProgressIndicator(progressId, { progress: -1, message: '載入失敗' })
-      setTimeout(() => {
-        removeProgressIndicator(progressId)
-      }, 2000)
       toast.error('重新載入失敗')
     }
-  }, [refetchMaterials, refetchFragrances, addProgressIndicator, updateProgressIndicator, removeProgressIndicator])
+  }, [refetchMaterials, refetchFragrances])
 
   // 重新整理所有數據  
   const refreshAll = useCallback(async () => {
-    setGlobalLoading(true, '正在刷新所有資料...')
-    
     try {
       // 避免循環依賴，直接調用而不依賴 loadOverview
       await Promise.all([
@@ -156,10 +126,11 @@ export default function InventoryPage() {
         })(),
         reloadInventoryData()
       ])
-    } finally {
-      setGlobalLoading(false)
+      toast.success('所有資料刷新完成')
+    } catch (error) {
+      toast.error('資料刷新失敗')
     }
-  }, [reloadInventoryData, setGlobalLoading])
+  }, [reloadInventoryData])
 
   // 開啟快速更新對話框
   const openQuickUpdateDialog = useCallback((item: InventoryItem) => {
@@ -167,8 +138,38 @@ export default function InventoryPage() {
     setIsQuickUpdateDialogOpen(true)
   }, [])
 
-  // 篩選項目
-  const filteredItems = useCallback(() => {
+
+  useEffect(() => {
+    // 初始化載入，只執行一次
+    if (!isInitialized) {
+      setIsInitialized(true)
+      // 直接調用載入函數，避免依賴循環
+      const initializeOverview = async () => {
+        try {
+          setOverviewLoading(true)
+          
+          const functions = getFunctions()
+          const getInventoryOverview = httpsCallable(functions, 'getInventoryOverview')
+          
+          const result = await getInventoryOverview({})
+          const data = result.data as any
+          
+          if (data.success) {
+            setOverview(data.overview)
+            toast.success('庫存統計載入完成')
+          }
+        } catch (error) {
+          console.error('載入庫存總覽失敗:', error)
+          toast.error('載入庫存總覽失敗')
+        } finally {
+          setOverviewLoading(false)
+        }
+      }
+      initializeOverview()
+    }
+  }, [isInitialized])
+
+  const filteredItemsList = useMemo(() => {
     const items = activeTab === 'materials' ? (materials || []) : (fragrances || [])
     if (!searchTerm.trim()) return items
     
@@ -180,16 +181,6 @@ export default function InventoryPage() {
       item.series?.toLowerCase().includes(term)
     )
   }, [activeTab, materials, fragrances, searchTerm])
-
-  useEffect(() => {
-    // 初始化載入，只執行一次
-    if (!isInitialized) {
-      setIsInitialized(true)
-      loadOverview()
-    }
-  }, [isInitialized, loadOverview])
-
-  const filteredItemsList = filteredItems()
 
   // 權限保護：如果沒有查看權限，顯示無權限頁面
   if (!canViewInventory) {
@@ -381,9 +372,6 @@ export default function InventoryPage() {
         </div>
       )}
       
-      {/* 全域載入覆蓋和進度指示器 */}
-      <GlobalLoadingOverlay />
-      <ProgressIndicators />
     </div>
   )
 }
