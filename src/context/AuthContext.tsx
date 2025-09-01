@@ -17,6 +17,7 @@ export interface AppUser {
   status: 'active' | 'inactive';
   roleRef?: DocumentReference;
   roleName?: string;
+  permissions?: string[]; // 新增權限陣列
 }
 
 interface AuthContextType {
@@ -25,6 +26,10 @@ interface AuthContextType {
   isLoading: boolean;
   login: (employeeId: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
+  // 權限檢查函數
+  hasPermission: (permission: string) => boolean;
+  hasAnyPermission: (permissions: string[]) => boolean;
+  hasAllPermissions: (permissions: string[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -33,6 +38,9 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   login: async () => false,
   logout: async () => {},
+  hasPermission: () => false,
+  hasAnyPermission: () => false,
+  hasAllPermissions: () => false,
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -66,8 +74,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const roleDoc = await getDoc(userData.roleRef);
             if (roleDoc.exists()) {
               const roleData = roleDoc.data();
-              userData.roleName = roleData.name;
-              debug('角色資料載入成功', roleData);
+              userData.roleName = roleData.displayName || roleData.name;
+              userData.permissions = roleData.permissions || [];
+              debug('角色資料載入成功', { role: userData.roleName, permissions: userData.permissions });
             } else {
               warn('角色文檔不存在');
             }
@@ -176,12 +185,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  // 權限檢查函數
+  const hasPermission = (permission: string): boolean => {
+    if (!appUser?.permissions) return false;
+    return appUser.permissions.includes(permission);
+  };
+
+  const hasAnyPermission = (permissions: string[]): boolean => {
+    if (!appUser?.permissions) return false;
+    return permissions.some(permission => appUser.permissions!.includes(permission));
+  };
+
+  const hasAllPermissions = (permissions: string[]): boolean => {
+    if (!appUser?.permissions) return false;
+    return permissions.every(permission => appUser.permissions!.includes(permission));
+  };
+
   const value = {
     user,
     appUser,
     isLoading,
     login,
     logout,
+    hasPermission,
+    hasAnyPermission,
+    hasAllPermissions,
   };
 
   return (

@@ -11,6 +11,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useGlobalCart } from '@/hooks/useGlobalCart';
+import { usePermission } from '@/hooks/usePermission';
+import { PAGE_PERMISSIONS } from '@/utils/permissions';
 import {
   Home, Users, Building, Package, FlaskConical, Library, Box,
   ShoppingCart, Factory, Calculator, ClipboardList, LogOut, ChevronDown,
@@ -62,6 +64,7 @@ const navLinks: NavItem[] = [
 function SidebarNav() {
   const pathname = usePathname();
   const { cartItemCount, isLoading } = useGlobalCart();
+  const { canAccess } = usePermission();
   
   // 添加調試信息和購物車狀態監控
   useEffect(() => {
@@ -89,9 +92,48 @@ function SidebarNav() {
     }
   };
 
+  // 智能過濾導航項目，包括分組管理
+  const getFilteredNavLinks = () => {
+    const result: NavItem[] = [];
+    let currentGroupHasVisibleItems = false;
+    let pendingGroup: NavSeparator | null = null;
+
+    for (let i = 0; i < navLinks.length; i++) {
+      const link = navLinks[i];
+      
+      if (link.isSeparator) {
+        // 如果之前的分組有可見項目，先加入該分組
+        if (pendingGroup && currentGroupHasVisibleItems) {
+          result.push(pendingGroup);
+        }
+        
+        // 重置狀態並記住當前分組
+        pendingGroup = link;
+        currentGroupHasVisibleItems = false;
+      } else {
+        // 檢查是否有權限訪問此頁面
+        const hasAccess = link.href === '/dashboard' || canAccess(link.href);
+        
+        if (hasAccess) {
+          // 如果有權限且還沒加入分組標題，先加入標題
+          if (pendingGroup && !currentGroupHasVisibleItems) {
+            result.push(pendingGroup);
+            currentGroupHasVisibleItems = true;
+          }
+          
+          result.push(link);
+        }
+      }
+    }
+
+    return result;
+  };
+
+  const filteredNavLinks = getFilteredNavLinks();
+
   return (
     <nav className="flex flex-col gap-1 px-4 py-4">
-      {navLinks.map((link, index) => {
+      {filteredNavLinks.map((link, index) => {
         if (link.isSeparator) {
           return (
             <h2 key={`sep-${index}`} className="px-2 mt-4 mb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">

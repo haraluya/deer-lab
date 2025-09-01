@@ -10,7 +10,9 @@ import { AppUser } from '@/context/AuthContext';
 import { PersonnelDialog } from './PersonnelDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { MoreHorizontal, Trash2, Eye, Edit, User, Shield, Calendar, Users, UserCheck, UserX, Search, Filter, Plus, Activity, TrendingUp } from 'lucide-react';
+import { MoreHorizontal, Trash2, Eye, Edit, User, Shield, Calendar, Users, UserCheck, UserX, Search, Filter, Plus, Activity, TrendingUp, Settings } from 'lucide-react';
+import { usePermission } from '@/hooks/usePermission';
+import Link from 'next/link';
 
 import {
   Table,
@@ -55,8 +57,7 @@ function PersonnelPageContent() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
   
-  // 暫時移除權限檢查
-  const hasPermission = true;
+  const { isAdmin } = usePermission();
   const [isPersonnelDialogOpen, setIsPersonnelDialogOpen] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -233,14 +234,32 @@ function PersonnelPageContent() {
           </h1>
           <p className="text-gray-600 mt-2 text-lg">管理團隊成員資訊與權限設定</p>
         </div>
-        <Button 
-          onClick={handleAdd}
-          className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-200"
-          size="lg"
-        >
-          <Plus className="h-5 w-5" />
-          新增成員
-        </Button>
+        
+        <div className="flex gap-3">
+          {/* 權限管理按鈕 - 僅系統管理員可見 */}
+          {isAdmin() && (
+            <Link href="/dashboard/personnel/permissions">
+              <Button 
+                variant="outline"
+                className="gap-2 border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-300 shadow-sm hover:shadow-md transition-all duration-200"
+                size="lg"
+              >
+                <Settings className="h-5 w-5" />
+                權限管理
+              </Button>
+            </Link>
+          )}
+          
+          {/* 新增成員按鈕 */}
+          <Button 
+            onClick={handleAdd}
+            className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-200"
+            size="lg"
+          >
+            <Plus className="h-5 w-5" />
+            新增成員
+          </Button>
+        </div>
       </div>
 
       {/* 統計卡片區 */}
