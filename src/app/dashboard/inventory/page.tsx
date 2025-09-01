@@ -170,17 +170,51 @@ export default function InventoryPage() {
   }, [isInitialized])
 
   const filteredItemsList = useMemo(() => {
-    const items = activeTab === 'materials' ? (materials || []) : (fragrances || [])
-    if (!searchTerm.trim()) return items
+    const rawItems = activeTab === 'materials' ? (materials || []) : (fragrances || [])
     
+    // 調試資料載入狀態
+    console.log('庫存監控頁面資料載入狀態:', {
+      activeTab,
+      materialsCount: materials?.length || 0,
+      fragrancesCount: fragrances?.length || 0,
+      rawItemsCount: rawItems.length,
+      loading: loading,
+      materialsLoading,
+      fragrancesLoading
+    })
+    
+    // 將資料轉換為 InventoryTable 期望的格式
+    const convertedItems = rawItems.map(item => ({
+      id: item.id,
+      code: item.code || '',
+      name: item.name || '',
+      currentStock: item.currentStock || 0,
+      unit: item.unit || '',
+      minStock: item.minStock || item.safetyStockLevel || 0,
+      maxStock: item.maxStock || 0,
+      costPerUnit: item.costPerUnit || 0,
+      category: item.category || '',
+      series: item.series || '',
+      type: activeTab === 'materials' ? 'material' as const : 'fragrance' as const
+    }))
+    
+    console.log('轉換後的項目數量:', convertedItems.length)
+    
+    // 如果沒有搜尋條件，直接返回轉換後的資料
+    if (!searchTerm.trim()) return convertedItems
+    
+    // 搜尋篩選
     const term = searchTerm.toLowerCase()
-    return items.filter(item =>
+    const filteredItems = convertedItems.filter(item =>
       item.name.toLowerCase().includes(term) ||
       item.code.toLowerCase().includes(term) ||
       item.category?.toLowerCase().includes(term) ||
       item.series?.toLowerCase().includes(term)
     )
-  }, [activeTab, materials, fragrances, searchTerm])
+    
+    console.log('篩選後的項目數量:', filteredItems.length, '搜尋詞:', term)
+    return filteredItems
+  }, [activeTab, materials, fragrances, searchTerm, loading, materialsLoading, fragrancesLoading])
 
   // 權限保護：如果沒有查看權限，顯示無權限頁面
   if (!canViewInventory) {
