@@ -71,6 +71,10 @@ export const PAGE_PERMISSIONS: Record<string, PagePermissionConfig> = {
     view: [PERMISSIONS.ROLES_MANAGE],
     manage: [PERMISSIONS.ROLES_MANAGE],
   },
+  '/dashboard/debug-permissions': {
+    view: [PERMISSIONS.ROLES_MANAGE, PERMISSIONS.SYSTEM_SETTINGS],
+    manage: [PERMISSIONS.ROLES_MANAGE, PERMISSIONS.SYSTEM_SETTINGS],
+  },
   '/dashboard/time-records': {
     view: [PERMISSIONS.TIME_VIEW, PERMISSIONS.TIME_MANAGE],
   },

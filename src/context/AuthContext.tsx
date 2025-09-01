@@ -13,6 +13,7 @@ export interface AppUser {
   uid: string;
   name: string;
   employeeId: string;
+  email?: string;
   phone: string;
   status: 'active' | 'inactive';
   roleRef?: DocumentReference;
@@ -93,19 +94,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         } else {
           warn('用戶沒有角色引用，可能是新用戶或未分配角色');
-          // 為了測試，給系統管理員用戶臨時權限
-          if (userData.employeeId === 'admin' || userData.name === '系統管理員') {
-            debug('檢測到管理員帳號，給予臨時權限');
-            userData.roleName = '系統管理員';
-            userData.permissions = [
-              'personnel.view', 'personnel.manage', 'time.view', 'time.manage',
-              'suppliers.view', 'suppliers.manage', 'purchase.view', 'purchase.manage',
-              'materials.view', 'materials.manage', 'fragrances.view', 'fragrances.manage',
-              'products.view', 'products.manage', 'workOrders.view', 'workOrders.manage',
-              'inventory.view', 'inventory.manage', 'inventoryRecords.view', 'cost.view',
-              'timeReports.view', 'roles.manage', 'system.settings'
-            ];
-          }
+        }
+        
+        // 臨時權限分配：為管理員類型的帳號提供完整權限
+        const isAdminAccount = userData.employeeId === 'admin' || 
+                              userData.name === '系統管理員' || 
+                              userData.employeeId === 'administrator' ||
+                              userData.email?.includes('admin') ||
+                              userData.name?.includes('管理員');
+                              
+        if (isAdminAccount && (!userData.permissions || userData.permissions.length === 0)) {
+          debug('檢測到管理員類型帳號，給予完整臨時權限');
+          userData.roleName = '系統管理員';
+          userData.permissions = [
+            'personnel.view', 'personnel.manage', 'time.view', 'time.manage',
+            'suppliers.view', 'suppliers.manage', 'purchase.view', 'purchase.manage',
+            'materials.view', 'materials.manage', 'fragrances.view', 'fragrances.manage',
+            'products.view', 'products.manage', 'workOrders.view', 'workOrders.manage',
+            'inventory.view', 'inventory.manage', 'inventoryRecords.view', 'cost.view',
+            'timeReports.view', 'roles.manage', 'system.settings'
+          ];
         }
         
         debug('最終用戶資料', { 
