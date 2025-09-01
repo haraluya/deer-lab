@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { 
   Shield, Users, Settings, Plus, Edit3, Trash2, 
@@ -608,7 +607,7 @@ function PermissionsPageContent() {
 
               <div>
                 <p className="text-sm font-medium mb-3">權限列表</p>
-                <ScrollArea className="h-48 w-full border rounded-md p-3">
+                <div className="max-h-48 overflow-y-auto w-full border rounded-md p-3">
                   <div className="space-y-2">
                     {selectedRole.permissions && selectedRole.permissions.length > 0 ? (
                       selectedRole.permissions.map((permission, index) => (
@@ -623,7 +622,7 @@ function PermissionsPageContent() {
                       <p className="text-sm text-muted-foreground">此角色尚未設定任何權限</p>
                     )}
                   </div>
-                </ScrollArea>
+                </div>
               </div>
             </div>
           )}
