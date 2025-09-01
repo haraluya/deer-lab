@@ -13,8 +13,10 @@ import { WorkOrderColumn } from "./columns"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { usePermission } from '@/hooks/usePermission'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Factory, Filter, Search, TrendingUp, Clock, CheckCircle, Package, AlertCircle } from "lucide-react"
+import { Plus, Factory, Filter, Search, TrendingUp, Clock, CheckCircle, Package, AlertCircle, Shield } from "lucide-react"
 
 const ITEMS_PER_PAGE = 20;
 
@@ -29,6 +31,11 @@ function WorkOrdersPageContent() {
   
   // 篩選狀態
   const [statusFilter, setStatusFilter] = useState<string>("all")
+
+  // 權限檢查
+  const { hasPermission, isAdmin } = usePermission();
+  const canViewWorkOrders = hasPermission('workOrders.view') || hasPermission('workOrders:view');
+  const canManageWorkOrders = hasPermission('workOrders.manage') || hasPermission('workOrders:manage') || hasPermission('workOrders:create') || hasPermission('workOrders:edit');
 
   const loadWorkOrders = useCallback(async (reset = false) => {
     if (reset) {
@@ -135,6 +142,20 @@ function WorkOrdersPageContent() {
     return { total, forecast, inProgress, completed, warehoused }
   }, [workOrders])
 
+  // 權限保護：如果沒有查看權限，顯示無權限頁面
+  if (!canViewWorkOrders && !isAdmin()) {
+    return (
+      <div className="container mx-auto py-6">
+        <Alert className="max-w-2xl mx-auto">
+          <Shield className="h-4 w-4" />
+          <AlertDescription>
+            您沒有權限查看工單管理頁面。請聯繫系統管理員獲取相關權限。
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       <div className="container mx-auto p-4 sm:p-6 lg:p-8">
@@ -147,13 +168,15 @@ function WorkOrdersPageContent() {
               </h1>
               <p className="text-gray-600 mt-2 text-lg font-medium">專業的生產工單管理與進度追蹤系統</p>
             </div>
-            <Button 
-              onClick={handleCreateWorkOrder}
-              className="bg-gradient-to-r from-pink-400 to-purple-500 hover:from-pink-500 hover:to-purple-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 h-12 px-6 text-base font-semibold"
-            >
-              <Plus className="mr-2 h-5 w-5" />
-              建立新工單
-            </Button>
+            {canManageWorkOrders && (
+              <Button 
+                onClick={handleCreateWorkOrder}
+                className="bg-gradient-to-r from-pink-400 to-purple-500 hover:from-pink-500 hover:to-purple-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 h-12 px-6 text-base font-semibold"
+              >
+                <Plus className="mr-2 h-5 w-5" />
+                建立新工單
+              </Button>
+            )}
           </div>
 
           {/* 統計卡片 */}

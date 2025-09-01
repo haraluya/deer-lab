@@ -8,11 +8,13 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 import { FragranceDialog, FragranceData } from './FragranceDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { MoreHorizontal, ShoppingCart, Search, Package, Calculator, FileSpreadsheet, Warehouse, Plus, Eye, Edit, Droplets, Building, Calendar, AlertTriangle, X } from 'lucide-react';
+import { MoreHorizontal, ShoppingCart, Search, Package, Calculator, FileSpreadsheet, Warehouse, Plus, Eye, Edit, Droplets, Building, Calendar, AlertTriangle, X, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
+import { usePermission } from '@/hooks/usePermission';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from "@/components/ui/checkbox";
@@ -47,6 +49,11 @@ function FragrancesPageContent() {
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [isBatchDeleteOpen, setIsBatchDeleteOpen] = useState(false);
 
+  // 權限檢查
+  const { hasPermission, isAdmin } = usePermission();
+  const canViewFragrances = hasPermission('fragrances.view') || hasPermission('fragrances.manage');
+  const canManageFragrances = hasPermission('fragrances.manage');
+  
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -808,6 +815,20 @@ function FragrancesPageContent() {
     });
   };
 
+  // 權限保護：如果沒有查看權限，顯示無權限頁面
+  if (!canViewFragrances && !isAdmin()) {
+    return (
+      <div className="container mx-auto py-6">
+        <Alert className="max-w-2xl mx-auto">
+          <Shield className="h-4 w-4" />
+          <AlertDescription>
+            您沒有權限查看香精管理頁面。請聯繫系統管理員獲取相關權限。
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-10 fragrances-page">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
@@ -834,25 +855,31 @@ function FragrancesPageContent() {
             </>
           ) : (
             <>
-              <Button variant="outline" onClick={() => setIsImportExportOpen(true)} className="w-full">
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                匯入/匯出
-              </Button>
+              {canManageFragrances && (
+                <Button variant="outline" onClick={() => setIsImportExportOpen(true)} className="w-full">
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  匯入/匯出
+                </Button>
+              )}
               <Button onClick={handleAddToPurchaseCart} disabled={purchaseCart.size === 0} variant="outline" className="w-full">
                 <ShoppingCart className="mr-2 h-4 w-4" />
                 加入採購車 ({purchaseCart.size})
               </Button>
-              <Button variant="outline" onClick={() => setIsStocktakeMode(true)} className="w-full">
-                <Calculator className="mr-2 h-4 w-4" />
-                盤點模式
-              </Button>
-              <Button 
-                onClick={handleAdd}
-                className="w-full bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                新增香精
-              </Button>
+              {canManageFragrances && (
+                <Button variant="outline" onClick={() => setIsStocktakeMode(true)} className="w-full">
+                  <Calculator className="mr-2 h-4 w-4" />
+                  盤點模式
+                </Button>
+              )}
+              {canManageFragrances && (
+                <Button 
+                  onClick={handleAdd}
+                  className="w-full bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  新增香精
+                </Button>
+              )}
             </>
           )}
         </div>
@@ -873,25 +900,31 @@ function FragrancesPageContent() {
             </>
           ) : (
             <>
-              <Button variant="outline" onClick={() => setIsImportExportOpen(true)}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                匯入/匯出
-              </Button>
+              {canManageFragrances && (
+                <Button variant="outline" onClick={() => setIsImportExportOpen(true)}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  匯入/匯出
+                </Button>
+              )}
               <Button onClick={handleAddToPurchaseCart} disabled={purchaseCart.size === 0} variant="outline">
                 <ShoppingCart className="mr-2 h-4 w-4" />
                 加入採購車 ({purchaseCart.size})
               </Button>
-              <Button variant="outline" onClick={() => setIsStocktakeMode(true)}>
-                <Calculator className="mr-2 h-4 w-4" />
-                盤點模式
-              </Button>
-              <Button 
-                onClick={handleAdd}
-                className="bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                新增香精
-              </Button>
+              {canManageFragrances && (
+                <Button variant="outline" onClick={() => setIsStocktakeMode(true)}>
+                  <Calculator className="mr-2 h-4 w-4" />
+                  盤點模式
+                </Button>
+              )}
+              {canManageFragrances && (
+                <Button 
+                  onClick={handleAdd}
+                  className="bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  新增香精
+                </Button>
+              )}
             </>
           )}
         </div>
@@ -1019,15 +1052,17 @@ function FragrancesPageContent() {
               <ShoppingCart className="h-4 w-4" />
               加入採購車 ({purchaseCart.size})
             </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleBatchDelete}
-              className="flex items-center gap-2"
-            >
-              <X className="h-4 w-4" />
-              批量刪除 ({purchaseCart.size})
-            </Button>
+            {canManageFragrances && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBatchDelete}
+                className="flex items-center gap-2"
+              >
+                <X className="h-4 w-4" />
+                批量刪除 ({purchaseCart.size})
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -1104,11 +1139,15 @@ function FragrancesPageContent() {
                                   <Eye className="mr-2 h-4 w-4" />
                                   查看詳細
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleEdit(fragrance)}>
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  編輯
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleDelete(fragrance)} className="text-red-600">刪除</DropdownMenuItem>
+                                {canManageFragrances && (
+                                  <DropdownMenuItem onClick={() => handleEdit(fragrance)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    編輯
+                                  </DropdownMenuItem>
+                                )}
+                                {canManageFragrances && (
+                                  <DropdownMenuItem onClick={() => handleDelete(fragrance)} className="text-red-600">刪除</DropdownMenuItem>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
@@ -1415,17 +1454,21 @@ function FragrancesPageContent() {
                               <Eye className="h-4 w-4 mr-2" />
                               查看詳細
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(fragrance)}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              編輯香精
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              onClick={() => handleDelete(fragrance)}
-                              className="text-red-600 focus:text-red-600"
-                            >
-                              刪除香精
-                            </DropdownMenuItem>
+                            {canManageFragrances && (
+                              <DropdownMenuItem onClick={() => handleEdit(fragrance)}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                編輯香精
+                              </DropdownMenuItem>
+                            )}
+                            {canManageFragrances && <DropdownMenuSeparator />}
+                            {canManageFragrances && (
+                              <DropdownMenuItem 
+                                onClick={() => handleDelete(fragrance)}
+                                className="text-red-600 focus:text-red-600"
+                              >
+                                刪除香精
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -1441,14 +1484,16 @@ function FragrancesPageContent() {
                       </div>
                                               <h3 className="text-lg font-medium text-foreground mb-2">沒有香精資料</h3>
                         <p className="text-muted-foreground mb-4">開始建立第一個香精來管理配方</p>
-                      <Button 
-                        onClick={handleAdd}
-                        variant="outline"
-                        className="border-pink-200 text-pink-600 hover:bg-pink-50"
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        新增香精
-                      </Button>
+                      {canManageFragrances && (
+                        <Button 
+                          onClick={handleAdd}
+                          variant="outline"
+                          className="border-pink-200 text-pink-600 hover:bg-pink-50"
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          新增香精
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

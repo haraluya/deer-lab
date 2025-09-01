@@ -67,6 +67,10 @@ export const PAGE_PERMISSIONS: Record<string, PagePermissionConfig> = {
     view: [PERMISSIONS.PERSONNEL_VIEW, PERMISSIONS.PERSONNEL_MANAGE],
     manage: [PERMISSIONS.PERSONNEL_MANAGE],
   },
+  '/dashboard/personnel/permissions': {
+    view: [PERMISSIONS.ROLES_MANAGE],
+    manage: [PERMISSIONS.ROLES_MANAGE],
+  },
   '/dashboard/time-records': {
     view: [PERMISSIONS.TIME_VIEW, PERMISSIONS.TIME_MANAGE],
   },

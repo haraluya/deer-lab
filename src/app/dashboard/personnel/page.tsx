@@ -57,7 +57,9 @@ function PersonnelPageContent() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
   
-  const { isAdmin } = usePermission();
+  const { isAdmin, userRole, userPermissions } = usePermission();
+  
+  // 調試：顯示當前用戶權限狀態
   const [isPersonnelDialogOpen, setIsPersonnelDialogOpen] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -226,6 +228,7 @@ function PersonnelPageContent() {
 
   return (
     <div className="container mx-auto py-6">
+
       {/* 標題區 */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
         <div>
@@ -237,7 +240,7 @@ function PersonnelPageContent() {
         
         <div className="flex gap-3">
           {/* 權限管理按鈕 - 僅系統管理員可見 */}
-          {isAdmin() && (
+          {(isAdmin() || userPermissions.includes('roles.manage') || userPermissions.includes('roles:manage') || userPermissions.includes('roles:create') || userPermissions.includes('roles:edit') || userPermissions.includes('roles:delete')) && (
             <Link href="/dashboard/personnel/permissions">
               <Button 
                 variant="outline"

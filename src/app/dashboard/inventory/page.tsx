@@ -6,11 +6,13 @@ import { toast } from "sonner"
 import { useMaterials, useFragrances } from "@/hooks/useFirebaseCache"
 import { 
   Search, Package, FlaskConical, DollarSign, AlertTriangle, 
-  TrendingUp, RefreshCw, Settings, Calculator, Eye, Loader2
+  TrendingUp, RefreshCw, Settings, Calculator, Eye, Loader2, Shield
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { usePermission } from '@/hooks/usePermission'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -56,6 +58,11 @@ export default function InventoryPage() {
   const [overviewLoading, setOverviewLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'materials' | 'fragrances'>('materials')
   const [searchTerm, setSearchTerm] = useState('')
+  
+  // 權限檢查
+  const { hasPermission, isAdmin } = usePermission();
+  const canViewInventory = hasPermission('inventory.view') || hasPermission('inventory:view');
+  const canManageInventory = hasPermission('inventory.manage') || hasPermission('inventory:manage');
   
   // 使用快取 hooks
   const { data: materials, loading: materialsLoading, refetch: refetchMaterials } = useMaterials()
@@ -186,6 +193,20 @@ export default function InventoryPage() {
 
   const filteredItemsList = filteredItems()
 
+  // 權限保護：如果沒有查看權限，顯示無權限頁面
+  if (!canViewInventory && !isAdmin()) {
+    return (
+      <div className="container mx-auto py-6">
+        <Alert className="max-w-2xl mx-auto">
+          <Shield className="h-4 w-4" />
+          <AlertDescription>
+            您沒有權限查看庫存監控頁面。請聯繫系統管理員獲取相關權限。
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-8 space-y-8">
       {/* 頁面標題與重新整理按鈕 */}
@@ -241,13 +262,15 @@ export default function InventoryPage() {
               <Calculator className="mr-2 h-4 w-4" />
               生產能力評估
             </Button>
-            <Button
-              onClick={() => setIsBatchOperationsPanelOpen(true)}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
-            >
-              <Package className="mr-2 h-4 w-4" />
-              批量操作
-            </Button>
+            {canManageInventory && (
+              <Button
+                onClick={() => setIsBatchOperationsPanelOpen(true)}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                <Package className="mr-2 h-4 w-4" />
+                批量操作
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

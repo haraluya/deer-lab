@@ -348,7 +348,7 @@ export function getRoleColor(roleName: string): string {
  * @returns boolean
  */
 export function isValidPermission(permission: string): boolean {
-  return ALL_PERMISSIONS.includes(permission);
+  return ALL_PERMISSIONS.includes(permission as any);
 }
 
 /**

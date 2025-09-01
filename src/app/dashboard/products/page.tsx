@@ -7,11 +7,13 @@ import { collection, getDocs, DocumentReference, query, where } from 'firebase/f
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 
-import { MoreHorizontal, Droplets, FileSpreadsheet, Eye, Edit, Package, Factory, Calendar, Plus, Tag, Library, Search } from 'lucide-react';
+import { MoreHorizontal, Droplets, FileSpreadsheet, Eye, Edit, Package, Factory, Calendar, Plus, Tag, Library, Search, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
+import { usePermission } from '@/hooks/usePermission';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from "@/components/ui/checkbox";
@@ -52,6 +54,11 @@ function ProductsPageContent() {
   const [selectedProductTypes, setSelectedProductTypes] = useState<Set<string>>(new Set());
   const [selectedSeries, setSelectedSeries] = useState<Set<string>>(new Set());
 
+  // 權限檢查
+  const { hasPermission, isAdmin } = usePermission();
+  const canViewProducts = hasPermission('products.view') || hasPermission('products:view');
+  const canManageProducts = hasPermission('products.manage') || hasPermission('products:manage') || hasPermission('products:create') || hasPermission('products:edit');
+  
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -406,6 +413,20 @@ function ProductsPageContent() {
     }));
   };
 
+  // 權限保護：如果沒有查看權限，顯示無權限頁面
+  if (!canViewProducts && !isAdmin()) {
+    return (
+      <div className="container mx-auto py-6">
+        <Alert className="max-w-2xl mx-auto">
+          <Shield className="h-4 w-4" />
+          <AlertDescription>
+            您沒有權限查看產品管理頁面。請聯繫系統管理員獲取相關權限。
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-10">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
@@ -419,7 +440,7 @@ function ProductsPageContent() {
 
       {/* 手機版功能按鈕區域 */}
       <div className="lg:hidden mb-6">
-        {selectedProducts.size > 0 && (
+        {selectedProducts.size > 0 && canManageProducts && (
           <div className="mb-3">
             <Button 
               variant="destructive" 
@@ -432,32 +453,38 @@ function ProductsPageContent() {
           </div>
         )}
         <div className="grid grid-cols-3 gap-3">
-          <Button 
-            variant="outline" 
-            onClick={handleSeriesManagement}
-            className="border-purple-200 text-purple-600 hover:bg-purple-100 hover:border-purple-300 hover:shadow-sm transition-all duration-200"
-          >
-            <Library className="mr-2 h-4 w-4" />
-            系列管理
-          </Button>
-          <Button variant="outline" onClick={() => setIsImportExportOpen(true)} className="w-full">
-            <FileSpreadsheet className="mr-2 h-4 w-4" />
-            匯入/匯出
-          </Button>
-          <Button 
-            onClick={handleAdd}
-            className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            新增產品
-          </Button>
+          {canManageProducts && (
+            <Button 
+              variant="outline" 
+              onClick={handleSeriesManagement}
+              className="border-purple-200 text-purple-600 hover:bg-purple-100 hover:border-purple-300 hover:shadow-sm transition-all duration-200"
+            >
+              <Library className="mr-2 h-4 w-4" />
+              系列管理
+            </Button>
+          )}
+          {canManageProducts && (
+            <Button variant="outline" onClick={() => setIsImportExportOpen(true)} className="w-full">
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              匯入/匯出
+            </Button>
+          )}
+          {canManageProducts && (
+            <Button 
+              onClick={handleAdd}
+              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              新增產品
+            </Button>
+          )}
         </div>
       </div>
 
       {/* 桌面版功能按鈕區域 */}
       <div className="hidden lg:block mb-6">
         <div className="flex flex-wrap items-center gap-2 justify-end">
-          {selectedProducts.size > 0 && (
+          {selectedProducts.size > 0 && canManageProducts && (
             <Button 
               variant="destructive" 
               onClick={() => setIsBatchDeleteOpen(true)}
@@ -467,25 +494,31 @@ function ProductsPageContent() {
               批次刪除 ({selectedProducts.size})
             </Button>
           )}
-          <Button 
-            variant="outline" 
-            onClick={handleSeriesManagement}
-            className="border-purple-200 text-purple-600 hover:bg-purple-600 hover:text-white hover:border-purple-600 transition-all duration-200"
-          >
-            <Library className="mr-2 h-4 w-4" />
-            系列管理
-          </Button>
-          <Button variant="outline" onClick={() => setIsImportExportOpen(true)}>
-            <FileSpreadsheet className="mr-2 h-4 w-4" />
-            匯入/匯出
-          </Button>
-          <Button 
-            onClick={handleAdd}
-            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            新增產品
-          </Button>
+          {canManageProducts && (
+            <Button 
+              variant="outline" 
+              onClick={handleSeriesManagement}
+              className="border-purple-200 text-purple-600 hover:bg-purple-600 hover:text-white hover:border-purple-600 transition-all duration-200"
+            >
+              <Library className="mr-2 h-4 w-4" />
+              系列管理
+            </Button>
+          )}
+          {canManageProducts && (
+            <Button variant="outline" onClick={() => setIsImportExportOpen(true)}>
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              匯入/匯出
+            </Button>
+          )}
+          {canManageProducts && (
+            <Button 
+              onClick={handleAdd}
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              新增產品
+            </Button>
+          )}
         </div>
       </div>
 
@@ -596,15 +629,19 @@ function ProductsPageContent() {
                                 <Eye className="mr-2 h-4 w-4" />
                                 查看詳細
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleEdit(product)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                編輯產品
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => handleDelete(product)} className="text-red-600">
-                                <Package className="h-4 w-4 mr-2" />
-                                刪除產品
-                              </DropdownMenuItem>
+                              {canManageProducts && (
+                                <DropdownMenuItem onClick={() => handleEdit(product)}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  編輯產品
+                                </DropdownMenuItem>
+                              )}
+                              {canManageProducts && <DropdownMenuSeparator />}
+                              {canManageProducts && (
+                                <DropdownMenuItem onClick={() => handleDelete(product)} className="text-red-600">
+                                  <Package className="h-4 w-4 mr-2" />
+                                  刪除產品
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -789,17 +826,21 @@ function ProductsPageContent() {
                             <Eye className="h-4 w-4 mr-2" />
                             查看詳細
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEdit(product)}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            編輯產品
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            onClick={() => handleDelete(product)}
-                            className="text-red-600 focus:text-red-600"
-                          >
-                            刪除產品
-                          </DropdownMenuItem>
+                          {canManageProducts && (
+                            <DropdownMenuItem onClick={() => handleEdit(product)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              編輯產品
+                            </DropdownMenuItem>
+                          )}
+                          {canManageProducts && <DropdownMenuSeparator />}
+                          {canManageProducts && (
+                            <DropdownMenuItem 
+                              onClick={() => handleDelete(product)}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              刪除產品
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -814,14 +855,16 @@ function ProductsPageContent() {
                       </div>
                       <h3 className="text-lg font-medium text-foreground mb-2">沒有產品資料</h3>
                       <p className="text-muted-foreground mb-4">開始建立第一個產品來管理產品資訊</p>
-                      <Button 
-                        onClick={handleAdd}
-                        variant="outline"
-                        className="border-purple-200 text-purple-600 hover:bg-purple-50"
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        新增產品
-                      </Button>
+                      {canManageProducts && (
+                        <Button 
+                          onClick={handleAdd}
+                          variant="outline"
+                          className="border-purple-200 text-purple-600 hover:bg-purple-50"
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          新增產品
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

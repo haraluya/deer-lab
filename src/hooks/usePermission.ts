@@ -19,7 +19,18 @@ export function usePermission() {
    * @returns 是否有權限
    */
   const canAccess = (pathname: string): boolean => {
-    if (!appUser?.permissions) return false;
+    // 工作台對所有已登入用戶開放
+    if (pathname === '/dashboard') {
+      return true;
+    }
+    
+    // 如果沒有權限陣列，預設拒絕訪問（除了工作台）
+    if (!appUser?.permissions || !Array.isArray(appUser.permissions)) {
+      console.log('⚠️  權限檢查失敗: 無權限陣列', { pathname, user: appUser?.name });
+      return false;
+    }
+    
+    console.log('🔍 權限檢查:', { pathname, permissions: appUser.permissions });
     return canAccessPage(pathname, appUser.permissions);
   };
 
@@ -38,7 +49,18 @@ export function usePermission() {
    * @returns 是否為管理員
    */
   const isAdmin = (): boolean => {
-    return appUser?.roleName === '系統管理員';
+    // 檢查多種可能的管理員角色名稱
+    const adminRoleNames = ['系統管理員', '管理員', 'admin', 'Admin', 'ADMIN'];
+    const currentRole = appUser?.roleName || '';
+    
+    // 支援新舊權限格式
+    const hasRoleManagePermission = hasPermission('roles.manage') || 
+                                   hasPermission('roles:manage') ||
+                                   hasPermission('roles:create') ||
+                                   hasPermission('roles:edit') ||
+                                   hasPermission('roles:delete');
+    
+    return adminRoleNames.includes(currentRole) || hasRoleManagePermission;
   };
 
   /**
@@ -46,7 +68,9 @@ export function usePermission() {
    * @returns 是否為領班
    */
   const isForeman = (): boolean => {
-    return appUser?.roleName === '生產領班';
+    const foremanRoleNames = ['生產領班', '領班', 'foreman', 'Foreman', '主管'];
+    const currentRole = appUser?.roleName || '';
+    return foremanRoleNames.includes(currentRole) || hasPermission('workOrders.manage');
   };
 
   /**
@@ -54,7 +78,10 @@ export function usePermission() {
    * @returns 是否為計時人員
    */
   const isTimekeeper = (): boolean => {
-    return appUser?.roleName === '計時人員';
+    const timekeeperRoleNames = ['計時人員', '時間記錄員', 'timekeeper', 'Timekeeper'];
+    const currentRole = appUser?.roleName || '';
+    return timekeeperRoleNames.includes(currentRole) || 
+           (hasPermission('time.manage') && !hasPermission('personnel.manage'));
   };
 
   return {

@@ -1,13 +1,18 @@
 // functions/src/api/roles.ts
 import { logger } from "firebase-functions";
-import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { onCall, HttpsError, CallableOptions } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { ensureCanManageRoles, ensureCanManagePersonnel } from "../utils/auth";
 import { DEFAULT_ROLES, Role } from "../utils/permissions";
 
+// CORS 設定選項
+const corsOptions: CallableOptions = {
+  cors: true
+};
+
 const db = getFirestore();
 
-export const createRole = onCall(async (request) => {
+export const createRole = onCall(corsOptions, async (request) => {
   const { data, auth: contextAuth } = request;
   await ensureCanManageRoles(contextAuth?.uid);
   
@@ -54,7 +59,7 @@ export const createRole = onCall(async (request) => {
   }
 });
 
-export const updateRole = onCall(async (request) => {
+export const updateRole = onCall(corsOptions, async (request) => {
   const { data, auth: contextAuth } = request;
   await ensureCanManageRoles(contextAuth?.uid);
   
@@ -107,7 +112,7 @@ export const updateRole = onCall(async (request) => {
   }
 });
 
-export const checkRoleUsage = onCall(async (request) => {
+export const checkRoleUsage = onCall(corsOptions, async (request) => {
   const { data, auth: contextAuth } = request;
   await ensureCanManageRoles(contextAuth?.uid);
   
@@ -148,7 +153,7 @@ export const checkRoleUsage = onCall(async (request) => {
   }
 });
 
-export const deleteRole = onCall(async (request) => {
+export const deleteRole = onCall(corsOptions, async (request) => {
   const { data, auth: contextAuth } = request;
   await ensureCanManageRoles(contextAuth?.uid);
   
@@ -196,13 +201,18 @@ export const deleteRole = onCall(async (request) => {
  * 初始化預設角色
  * 僅在角色集合為空時執行
  */
-export const initializeDefaultRoles = onCall(async (request) => {
+export const initializeDefaultRoles = onCall(corsOptions, async (request) => {
   const { auth: contextAuth } = request;
-  await ensureCanManageRoles(contextAuth?.uid);
   
   try {
     // 檢查是否已有角色存在
     const existingRoles = await db.collection("roles").get();
+    
+    // 如果已有角色，則需要權限檢查
+    if (!existingRoles.empty) {
+      await ensureCanManageRoles(contextAuth?.uid);
+    }
+    // 如果沒有角色，允許任何已登入的用戶初始化（首次設定）
     
     if (!existingRoles.empty) {
       logger.info("角色已存在，跳過初始化");
@@ -250,14 +260,23 @@ export const initializeDefaultRoles = onCall(async (request) => {
 /**
  * 取得所有角色列表
  */
-export const getRoles = onCall(async (request) => {
+export const getRoles = onCall(corsOptions, async (request) => {
   const { auth: contextAuth } = request;
-  await ensureCanManageRoles(contextAuth?.uid);
   
   try {
     const rolesSnapshot = await db.collection("roles")
       .orderBy("createdAt", "asc")
       .get();
+    
+    // 如果沒有角色存在，允許任何已登入用戶查看（用於初始設定）
+    if (rolesSnapshot.empty) {
+      if (!contextAuth?.uid) {
+        throw new HttpsError("unauthenticated", "需要登入才能查看角色列表");
+      }
+    } else {
+      // 如果已有角色，需要權限檢查
+      await ensureCanManageRoles(contextAuth?.uid);
+    }
     
     const roles = rolesSnapshot.docs.map(doc => ({
       id: doc.id,
@@ -282,7 +301,7 @@ export const getRoles = onCall(async (request) => {
 /**
  * 取得角色詳細資訊
  */
-export const getRole = onCall(async (request) => {
+export const getRole = onCall(corsOptions, async (request) => {
   const { data, auth: contextAuth } = request;
   await ensureCanManageRoles(contextAuth?.uid);
   
@@ -322,7 +341,7 @@ export const getRole = onCall(async (request) => {
 /**
  * 指派角色給使用者
  */
-export const assignUserRole = onCall(async (request) => {
+export const assignUserRole = onCall(corsOptions, async (request) => {
   const { data, auth: contextAuth } = request;
   await ensureCanManagePersonnel(contextAuth?.uid);
   

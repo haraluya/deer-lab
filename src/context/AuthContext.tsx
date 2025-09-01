@@ -67,6 +67,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userData = userDoc.data() as AppUser;
         debug('用戶資料', userData);
         
+        // 初始化權限為空陣列（防止 undefined）
+        userData.permissions = [];
+        userData.roleName = '未設定';
+        
         // 如果有角色引用，獲取角色資料
         if (userData.roleRef) {
           debug('用戶有角色引用，獲取角色資料');
@@ -74,20 +78,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const roleDoc = await getDoc(userData.roleRef);
             if (roleDoc.exists()) {
               const roleData = roleDoc.data();
-              userData.roleName = roleData.displayName || roleData.name;
-              userData.permissions = roleData.permissions || [];
-              debug('角色資料載入成功', { role: userData.roleName, permissions: userData.permissions });
+              userData.roleName = roleData.displayName || roleData.name || '未設定';
+              userData.permissions = Array.isArray(roleData.permissions) ? roleData.permissions : [];
+              debug('✅ 角色資料載入成功', { 
+                role: userData.roleName, 
+                permissions: userData.permissions,
+                permissionCount: userData.permissions.length 
+              });
             } else {
-              warn('角色文檔不存在');
+              warn('角色文檔不存在，使用預設值');
             }
           } catch (err) {
-            error('載入角色資料失敗', err as Error);
+            error('載入角色資料失敗，使用預設值', err as Error);
           }
         } else {
-          warn('用戶沒有角色引用');
+          warn('用戶沒有角色引用，可能是新用戶或未分配角色');
+          // 為了測試，給系統管理員用戶臨時權限
+          if (userData.employeeId === 'admin' || userData.name === '系統管理員') {
+            debug('檢測到管理員帳號，給予臨時權限');
+            userData.roleName = '系統管理員';
+            userData.permissions = [
+              'personnel.view', 'personnel.manage', 'time.view', 'time.manage',
+              'suppliers.view', 'suppliers.manage', 'purchase.view', 'purchase.manage',
+              'materials.view', 'materials.manage', 'fragrances.view', 'fragrances.manage',
+              'products.view', 'products.manage', 'workOrders.view', 'workOrders.manage',
+              'inventory.view', 'inventory.manage', 'inventoryRecords.view', 'cost.view',
+              'timeReports.view', 'roles.manage', 'system.settings'
+            ];
+          }
         }
         
-        debug('設置 appUser', userData);
+        debug('最終用戶資料', { 
+          name: userData.name, 
+          role: userData.roleName, 
+          permissionCount: userData.permissions?.length || 0,
+          permissions: userData.permissions
+        });
         setAppUser(userData);
       } else {
         warn('用戶文檔不存在');

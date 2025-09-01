@@ -16,6 +16,8 @@ import { toast } from 'sonner';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
+import { usePermission } from '@/hooks/usePermission';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,6 +68,11 @@ function MaterialsPageContent() {
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   // -------------------------
 
+  // 權限檢查
+  const { hasPermission, isAdmin } = usePermission();
+  const canViewMaterials = hasPermission('materials.view') || hasPermission('materials.manage');
+  const canManageMaterials = hasPermission('materials.manage');
+  
   const fetchSuppliers = useCallback(async () => {
     const suppliersMap = new Map<string, string>();
     try {
@@ -680,6 +687,20 @@ function MaterialsPageContent() {
 
   const { categories, subCategories } = useMemo(() => getAvailableFilterOptions(), [getAvailableFilterOptions]);
 
+  // 權限保護：如果沒有查看權限，顯示無權限頁面
+  if (!canViewMaterials && !isAdmin()) {
+    return (
+      <div className="container mx-auto py-6">
+        <Alert className="max-w-2xl mx-auto">
+          <Shield className="h-4 w-4" />
+          <AlertDescription>
+            您沒有權限查看原料庫頁面。請聯繫系統管理員獲取相關權限。
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-10 materials-page">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
@@ -853,15 +874,17 @@ function MaterialsPageContent() {
                <ShoppingCart className="h-4 w-4" />
                加入採購車 ({purchaseCart.size})
              </Button>
-             <Button
-               variant="destructive"
-               size="sm"
-               onClick={() => setIsBatchDeleteOpen(true)}
-               className="flex items-center gap-2"
-             >
-               <X className="h-4 w-4" />
-               批量刪除 ({purchaseCart.size})
-             </Button>
+             {canManageMaterials && (
+               <Button
+                 variant="destructive"
+                 size="sm"
+                 onClick={() => setIsBatchDeleteOpen(true)}
+                 className="flex items-center gap-2"
+               >
+                 <X className="h-4 w-4" />
+                 批量刪除 ({purchaseCart.size})
+               </Button>
+             )}
            </div>
          </div>
        )}

@@ -7,6 +7,8 @@ import { DataTable } from "./data-table"
 import { createColumns, InventoryRecordColumn } from "./columns"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { usePermission } from '@/hooks/usePermission'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
@@ -21,7 +23,8 @@ import {
   Plus,
   Minus,
   RefreshCw,
-  Eye
+  Eye,
+  Shield
 } from "lucide-react"
 import { 
   getInventoryRecords, 
@@ -47,6 +50,10 @@ function InventoryRecordsPageContent() {
   const [selectedRecord, setSelectedRecord] = useState<InventoryRecord | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
+  // 權限檢查
+  const { hasPermission, isAdmin } = usePermission();
+  const canViewInventoryRecords = hasPermission('inventoryRecords.view') || hasPermission('inventoryRecords:view');
+  
   // 統計數據
   const stats = useCallback(() => {
     const total = records.length
@@ -130,6 +137,20 @@ function InventoryRecordsPageContent() {
   const columns = createColumns(handleRecordClick)
 
   const currentStats = stats()
+
+  // 權限保護：如果沒有查看權限，顯示無權限頁面
+  if (!canViewInventoryRecords && !isAdmin()) {
+    return (
+      <div className="container mx-auto py-6">
+        <Alert className="max-w-2xl mx-auto">
+          <Shield className="h-4 w-4" />
+          <AlertDescription>
+            您沒有權限查看庫存歷史頁面。請聯繫系統管理員獲取相關權限。
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">

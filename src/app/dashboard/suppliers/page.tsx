@@ -14,6 +14,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { usePermission } from '@/hooks/usePermission';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Shield } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,7 +43,12 @@ function SuppliersPageContent() {
   const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<SupplierData | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-
+  
+  // 權限檢查
+  const { hasPermission, isAdmin } = usePermission();
+  const canViewSuppliers = hasPermission('suppliers.view') || hasPermission('suppliers:view');
+  const canManageSuppliers = hasPermission('suppliers.manage') || hasPermission('suppliers:manage') || hasPermission('suppliers:create') || hasPermission('suppliers:edit');
+  
   const fetchSuppliers = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -159,6 +167,20 @@ function SuppliersPageContent() {
     }
   };
 
+  // 權限保護：如果沒有查看權限，顯示無權限頁面
+  if (!canViewSuppliers && !isAdmin()) {
+    return (
+      <div className="container mx-auto py-6">
+        <Alert className="max-w-2xl mx-auto">
+          <Shield className="h-4 w-4" />
+          <AlertDescription>
+            您沒有權限查看供應商管理頁面。請聯繫系統管理員獲取相關權限。
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-6 suppliers-page">
       {/* 頁面標題和操作區域 */}
@@ -169,13 +191,15 @@ function SuppliersPageContent() {
           </h1>
           <p className="text-gray-600 mt-1 text-sm lg:text-base">管理合作供應商與聯絡資訊</p>
         </div>
-        <Button 
-          onClick={handleAdd}
-          className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 w-full sm:w-auto"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          新增供應商
-        </Button>
+        {canManageSuppliers && (
+          <Button 
+            onClick={handleAdd}
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 w-full sm:w-auto"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            新增供應商
+          </Button>
+        )}
       </div>
 
       {/* 搜尋欄 */}
@@ -267,20 +291,24 @@ function SuppliersPageContent() {
                               <Eye className="h-4 w-4 mr-2" />
                               查看詳細
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => {
-                              e.stopPropagation();
-                              handleEdit(supplier);
-                            }}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              編輯
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              onClick={() => handleDelete(supplier)}
-                              className="text-red-600 focus:text-red-600"
-                            >
-                              刪除
-                            </DropdownMenuItem>
+                            {canManageSuppliers && (
+                              <>
+                                <DropdownMenuItem onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEdit(supplier);
+                                }}>
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  編輯
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => handleDelete(supplier)}
+                                  className="text-red-600 focus:text-red-600"
+                                >
+                                  刪除
+                                </DropdownMenuItem>
+                              </>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -319,14 +347,18 @@ function SuppliersPageContent() {
                           <Eye className="h-4 w-4 mr-2" />
                           查看詳細
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEdit(supplier)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          編輯
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleDelete(supplier)} className="text-red-600">
-                          刪除
-                        </DropdownMenuItem>
+                        {canManageSuppliers && (
+                          <>
+                            <DropdownMenuItem onClick={() => handleEdit(supplier)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              編輯
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleDelete(supplier)} className="text-red-600">
+                              刪除
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -383,7 +415,7 @@ function SuppliersPageContent() {
             <p className="text-gray-500 mb-4 text-center">
               {searchTerm ? '請嘗試不同的搜尋條件' : '開始建立第一個供應商來管理合作關係'}
             </p>
-            {!searchTerm && (
+            {!searchTerm && canManageSuppliers && (
               <Button 
                 onClick={handleAdd}
                 variant="outline"
@@ -510,18 +542,20 @@ function SuppliersPageContent() {
               >
                 關閉
               </Button>
-              <Button 
-                onClick={() => {
-                  setIsDetailViewOpen(false);
-                  setTimeout(() => {
-                    handleEdit(selectedDetailSupplier);
-                  }, 100);
-                }}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                <Edit className="mr-2 h-4 w-4" />
-                編輯
-              </Button>
+              {canManageSuppliers && (
+                <Button 
+                  onClick={() => {
+                    setIsDetailViewOpen(false);
+                    setTimeout(() => {
+                      handleEdit(selectedDetailSupplier);
+                    }, 100);
+                  }}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  編輯
+                </Button>
+              )}
             </div>
           </DialogContent>
         </Dialog>

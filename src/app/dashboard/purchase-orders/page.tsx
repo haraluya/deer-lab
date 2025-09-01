@@ -11,11 +11,13 @@ import { CartItem } from '@/types';
 import { toast } from 'sonner';
 import { 
   MoreHorizontal, Eye, Edit, Trash2, ShoppingCart, Calendar, Building, User, Plus, 
-  Search, Package, Droplets, X, ChevronLeft, ChevronRight, Filter
+  Search, Package, Droplets, X, ChevronLeft, ChevronRight, Filter, Shield
 } from 'lucide-react';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
+import { usePermission } from '@/hooks/usePermission';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -75,6 +77,11 @@ function PurchaseOrdersPageContent() {
   const [fragrances, setFragrances] = useState<SearchResult[]>([]);
   const [suppliers, setSuppliers] = useState<{ id: string; name: string }[]>([]);
   const [searchType, setSearchType] = useState<'items' | 'suppliers'>('items');
+  
+  // 權限檢查
+  const { hasPermission, isAdmin } = usePermission();
+  const canViewPurchase = hasPermission('purchase.view') || hasPermission('purchase:view');
+  const canManagePurchase = hasPermission('purchase.manage') || hasPermission('purchase:manage') || hasPermission('purchase:create') || hasPermission('purchase:edit');
   
   // 採購車相關狀態
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -516,6 +523,20 @@ function PurchaseOrdersPageContent() {
     setCurrentPage(1);
   }, [statusFilter]);
 
+  // 權限保護：如果沒有查看權限，顯示無權限頁面
+  if (!canViewPurchase && !isAdmin()) {
+    return (
+      <div className="container mx-auto py-6">
+        <Alert className="max-w-2xl mx-auto">
+          <Shield className="h-4 w-4" />
+          <AlertDescription>
+            您沒有權限查看採購訂單頁面。請聯繫系統管理員獲取相關權限。
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-10 purchase-orders-page">
       {/* 頁面標題 */}
@@ -943,7 +964,7 @@ function PurchaseOrdersPageContent() {
                 ({cartItems.length} 個項目，總計 NT$ {totalAmount.toLocaleString()})
               </span>
             </div>
-            {cartItems.length > 0 && (
+            {cartItems.length > 0 && canManagePurchase && (
               <Button
                 onClick={showConfirmDialog}
                 disabled={isCreatingOrder}

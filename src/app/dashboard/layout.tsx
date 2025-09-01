@@ -42,6 +42,7 @@ const navLinks: NavItem[] = [
   
   { isSeparator: true, label: '團隊管理' },
   { href: '/dashboard/personnel', label: '成員管理', icon: UserCheck },
+  { href: '/dashboard/personnel/permissions', label: '權限管理', icon: Shield },
   { href: '/dashboard/time-records', label: '工時統計', icon: Clock },
   
   { isSeparator: true, label: '供應鏈' },
@@ -98,6 +99,9 @@ function SidebarNav() {
     let currentGroupHasVisibleItems = false;
     let pendingGroup: NavSeparator | null = null;
 
+    // 添加除錯資訊
+    console.log('🔍 SidebarNav 權限過濾開始');
+
     for (let i = 0; i < navLinks.length; i++) {
       const link = navLinks[i];
       
@@ -110,9 +114,27 @@ function SidebarNav() {
         // 重置狀態並記住當前分組
         pendingGroup = link;
         currentGroupHasVisibleItems = false;
+        console.log('📁 分組:', link.label);
       } else {
-        // 檢查是否有權限訪問此頁面
-        const hasAccess = link.href === '/dashboard' || canAccess(link.href);
+        // 特殊處理：工作台和權限管理頁面
+        let hasAccess = false;
+        
+        if (link.href === '/dashboard') {
+          hasAccess = true; // 工作台對所有人開放
+        } else if (link.href === '/dashboard/personnel/permissions') {
+          // 權限管理頁面需要特殊檢查
+          hasAccess = canAccess('/dashboard/personnel/permissions');
+        } else {
+          // 一般頁面權限檢查，加入容錯處理
+          try {
+            hasAccess = canAccess(link.href);
+          } catch (error) {
+            console.warn(`⚠️  權限檢查失敗: ${link.href}`, error);
+            hasAccess = false; // 預設拒絕訪問
+          }
+        }
+        
+        console.log(`📄 ${link.label} (${link.href}): ${hasAccess ? '✅' : '❌'}`);
         
         if (hasAccess) {
           // 如果有權限且還沒加入分組標題，先加入標題
@@ -126,6 +148,7 @@ function SidebarNav() {
       }
     }
 
+    console.log(`✅ 過濾完成，顯示 ${result.filter(item => !item.isSeparator).length} 個導航項目`);
     return result;
   };
 

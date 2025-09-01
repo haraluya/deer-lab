@@ -121,11 +121,15 @@ export const RoleGate: React.FC<{
 };
 
 // 便捷的角色檢查元件
-export const AdminOnly: React.FC<{ children: React.ReactNode; fallback?: React.ReactNode }> = ({ children, fallback = null }) => (
-  <RoleGate roles={['系統管理員']} fallback={fallback}>
-    {children}
-  </RoleGate>
-);
+export const AdminOnly: React.FC<{ children: React.ReactNode; fallback?: React.ReactNode }> = ({ children, fallback = null }) => {
+  const { isAdmin } = usePermission();
+  
+  if (isAdmin()) {
+    return <>{children}</>;
+  }
+  
+  return <>{fallback}</>;
+};
 
 export const ForemanOnly: React.FC<{ children: React.ReactNode; fallback?: React.ReactNode }> = ({ children, fallback = null }) => (
   <RoleGate roles={['生產領班']} fallback={fallback}>
