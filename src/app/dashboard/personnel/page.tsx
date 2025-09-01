@@ -82,16 +82,23 @@ function PersonnelPageContent() {
           const userData = userDoc.data();
           const uid = userDoc.id;
           let roleName = '未設定';
-          const roleRef = userData.roleRef;
-          if (roleRef && roleRef instanceof DocumentReference) {
-            try {
-              const roleDocSnap = await getDoc(roleRef);
-              if (roleDocSnap.exists()) {
-                roleName = roleDocSnap.data()?.name || '未知角色';
+          
+          // 優先使用直接設定的 roleName 欄位
+          if (userData.roleName && typeof userData.roleName === 'string') {
+            roleName = userData.roleName;
+          } else {
+            // 如果沒有直接的 roleName，嘗試從 roleRef 讀取
+            const roleRef = userData.roleRef;
+            if (roleRef && roleRef instanceof DocumentReference) {
+              try {
+                const roleDocSnap = await getDoc(roleRef);
+                if (roleDocSnap.exists()) {
+                  roleName = roleDocSnap.data()?.name || '未知角色';
+                }
+              } catch (roleError) {
+                console.error(`無法讀取角色資料 for user ${uid}:`, roleError);
+                roleName = '讀取失敗';
               }
-            } catch (roleError) {
-              console.error(`無法讀取角色資料 for user ${uid}:`, roleError);
-              roleName = '讀取失敗';
             }
           }
           return { ...userData, id: uid, uid, roleName } as UserWithRole;
@@ -240,7 +247,7 @@ function PersonnelPageContent() {
         
         <div className="flex gap-3">
           {/* 權限管理按鈕 - 僅系統管理員可見 */}
-          {(isAdmin() || userPermissions.includes('roles.manage') || userPermissions.includes('roles:manage') || userPermissions.includes('roles:create') || userPermissions.includes('roles:edit') || userPermissions.includes('roles:delete')) && (
+          {isAdmin() && (
             <Link href="/dashboard/personnel/permissions">
               <Button 
                 variant="outline"

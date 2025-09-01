@@ -1,9 +1,17 @@
 {
+  "app\\dashboard\\debug-permissions\\page.tsx -> firebase/firestore": {
+    "id": 5978,
+    "files": []
+  },
   "app\\dashboard\\materials\\MaterialDialog.tsx -> @/lib/utils": {
     "id": 93448,
     "files": []
   },
   "app\\dashboard\\materials\\MaterialDialog.tsx -> firebase/firestore": {
+    "id": 5978,
+    "files": []
+  },
+  "app\\dashboard\\personnel\\permissions\\page.tsx -> firebase/firestore": {
     "id": 5978,
     "files": []
   },
