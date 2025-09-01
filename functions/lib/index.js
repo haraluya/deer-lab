@@ -17,7 +17,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.testFunction = exports.nextServer = void 0;
+exports.healthCheck = exports.nextServer = void 0;
 // functions/src/index.ts
 const app_1 = require("firebase-admin/app");
 const https_1 = require("firebase-functions/v2/https");
@@ -40,15 +40,15 @@ exports.nextServer = (0, https_1.onRequest)({ maxInstances: 10 }, async (req, re
         res.status(500).send('Internal Server Error');
     }
 });
-// 創建一個簡單的測試函數
-exports.testFunction = (0, https_1.onRequest)((request, response) => {
+// 創建一個簡單的健康檢查函數
+exports.healthCheck = (0, https_1.onRequest)((request, response) => {
     response.json({
-        message: "Firebase Functions are working!",
+        status: "healthy",
+        service: "鹿鹿小作坊 API Service",
+        version: "1.0.0",
         timestamp: new Date().toISOString()
     });
 });
-// 匯出測試函數
-__exportStar(require("./api/test"), exports);
 // 匯出所有 API 函數
 __exportStar(require("./api/users"), exports);
 __exportStar(require("./api/suppliers"), exports);

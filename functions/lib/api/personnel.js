@@ -50,8 +50,8 @@ exports.createPersonnel = (0, https_1.onCall)(async (request) => {
             employeeId,
             phone,
             roleRef,
-            roleName,
-            permissions: rolePermissions,
+            roleName, // 直接儲存角色名稱
+            permissions: rolePermissions, // 直接儲存權限陣列
             status,
             createdAt: firestore_1.FieldValue.serverTimestamp(),
             createdBy: contextAuth === null || contextAuth === void 0 ? void 0 : contextAuth.uid
@@ -121,8 +121,8 @@ exports.updatePersonnel = (0, https_1.onCall)(async (request) => {
             employeeId,
             phone,
             roleRef,
-            roleName,
-            permissions: rolePermissions,
+            roleName, // 直接儲存角色名稱
+            permissions: rolePermissions, // 直接儲存權限陣列
             status,
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
             updatedBy: contextAuth === null || contextAuth === void 0 ? void 0 : contextAuth.uid

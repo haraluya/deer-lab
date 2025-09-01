@@ -94,7 +94,7 @@ exports.createWorkOrder = (0, https_1.onCall)(async (request) => {
                             name: materialData.name,
                             code: materialData.code,
                             type: bomItem.materialType,
-                            category: materialData.category || 'common',
+                            category: materialData.category || 'common', // 預設為 'common'
                             unit: bomItem.unit,
                             quantity: bomItem.requiredQuantity,
                             ratio: materialData.percentage || materialData.pgRatio || materialData.vgRatio || nicotineMg,
@@ -310,7 +310,7 @@ exports.completeWorkOrder = (0, https_1.onCall)(async (request) => {
                             itemType: 'material',
                             itemCode: materialData.code || '',
                             itemName: materialData.name || '',
-                            quantityChange: -material.consumedQuantity,
+                            quantityChange: -material.consumedQuantity, // 負數表示消耗
                             quantityAfter: newStock
                         });
                     }
@@ -342,7 +342,7 @@ exports.completeWorkOrder = (0, https_1.onCall)(async (request) => {
                                     itemType: 'fragrance',
                                     itemCode: fragranceData.code || '',
                                     itemName: fragranceData.name || '',
-                                    quantityChange: -consumedFragrance,
+                                    quantityChange: -consumedFragrance, // 負數表示消耗
                                     quantityAfter: newStock
                                 });
                             }
