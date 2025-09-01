@@ -5,6 +5,9 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { AdminOnly } from '@/components/PermissionGate';
 import { usePermission } from '@/hooks/usePermission';
+import { RoleEditDialog } from '@/components/RoleEditDialog';
+import { RoleCreateDialog } from '@/components/RoleCreateDialog';
+import { UserRoleAssignDialog } from '@/components/UserRoleAssignDialog';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,9 +18,10 @@ import { Separator } from '@/components/ui/separator';
 import { 
   Shield, Users, Settings, Plus, Edit3, Trash2, 
   Eye, UserCheck, AlertTriangle, CheckCircle, 
-  Lock, Unlock, Crown, User, X
+  Lock, Unlock, Crown, User, X, ArrowLeft
 } from 'lucide-react';
 import { toast } from 'sonner';
+import Link from 'next/link';
 
 interface Role {
   id: string;
@@ -33,11 +37,14 @@ interface Role {
 
 interface UserWithRole {
   id: string;
+  uid: string;
   name: string;
   employeeId: string;
+  phone?: string;
   roleName?: string;
   roleId?: string;
   status: string;
+  permissions?: string[];
 }
 
 function PermissionsPageContent() {
@@ -52,6 +59,8 @@ function PermissionsPageContent() {
   const [showEditRoleDialog, setShowEditRoleDialog] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [showCreateRoleDialog, setShowCreateRoleDialog] = useState(false);
+  const [showUserRoleAssignDialog, setShowUserRoleAssignDialog] = useState(false);
+  const [assigningUser, setAssigningUser] = useState<UserWithRole | null>(null);
   
   const { isAdmin } = usePermission();
 
@@ -106,11 +115,60 @@ function PermissionsPageContent() {
     }
   }, []);
 
-  // 載入用戶列表（簡化版）
+  // 載入用戶列表
   const fetchUsers = useCallback(async () => {
-    // 這裡可以調用現有的用戶載入邏輯
-    // 暫時使用空陣列
-    setUsers([]);
+    console.log('📋 開始載入用戶列表');
+    
+    try {
+      const { getFirestore, collection, getDocs, orderBy, query } = await import('firebase/firestore');
+      const db = getFirestore();
+      
+      const usersQuery = query(collection(db, 'users'), orderBy('name', 'asc'));
+      const usersSnapshot = await getDocs(usersQuery);
+      
+      const usersList: UserWithRole[] = [];
+      
+      for (const userDoc of usersSnapshot.docs) {
+        const userData = userDoc.data();
+        
+        // 解析角色資訊
+        let roleName = userData.roleName || '未設定';
+        let roleId = '';
+        
+        if (userData.roleRef) {
+          try {
+            const { getDoc } = await import('firebase/firestore');
+            const roleDoc = await getDoc(userData.roleRef);
+            if (roleDoc.exists()) {
+              const roleData = roleDoc.data() as any;
+              roleName = roleData?.displayName || roleData?.name || '未知角色';
+              roleId = roleDoc.id;
+            }
+          } catch (roleError) {
+            console.warn('載入角色資訊失敗:', roleError);
+          }
+        }
+        
+        usersList.push({
+          id: userDoc.id,
+          uid: userData.uid || userDoc.id,
+          name: userData.name || '未知用戶',
+          employeeId: userData.employeeId || '',
+          phone: userData.phone || '',
+          roleName,
+          roleId,
+          status: userData.status || 'active',
+          permissions: userData.permissions || [],
+        });
+      }
+      
+      setUsers(usersList);
+      console.log(`✅ 成功載入 ${usersList.length} 個用戶`);
+      
+    } catch (error) {
+      console.error('❌ 載入用戶列表失敗:', error);
+      toast.error('載入用戶列表失敗');
+    }
   }, []);
 
   // 初始化預設角色
@@ -291,6 +349,12 @@ function PermissionsPageContent() {
     setEditingRole(role);
     setShowEditRoleDialog(true);
   };
+  
+  // 處理用戶角色分配
+  const handleAssignUserRole = (user: UserWithRole) => {
+    setAssigningUser(user);
+    setShowUserRoleAssignDialog(true);
+  };
 
   // 處理新增角色
   const handleCreateRole = () => {
@@ -387,9 +451,17 @@ function PermissionsPageContent() {
     <div className="p-6 space-y-6">
       {/* 頁面標題 */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">權限管理</h1>
-          <p className="text-muted-foreground">管理系統角色和使用者權限分配</p>
+        <div className="flex items-center gap-4">
+          <Link href="/dashboard/personnel">
+            <Button variant="ghost" size="sm" className="flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              返回成員管理
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">權限管理</h1>
+            <p className="text-muted-foreground">管理系統角色和使用者權限分配</p>
+          </div>
         </div>
         
         {/* 操作按鈕 */}
@@ -619,7 +691,7 @@ function PermissionsPageContent() {
                               size="sm" 
                               variant="outline" 
                               className="w-full"
-                              onClick={() => toast.info(`編輯 ${user.name} 的角色分配功能即將推出...`)}
+                              onClick={() => handleAssignUserRole(user)}
                             >
                               編輯角色
                             </Button>
@@ -705,42 +777,27 @@ function PermissionsPageContent() {
       </Dialog>
 
       {/* 角色編輯對話框 */}
-      <Dialog open={showEditRoleDialog} onOpenChange={setShowEditRoleDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>編輯角色</DialogTitle>
-            <DialogDescription>
-              編輯角色資訊和權限配置
-            </DialogDescription>
-          </DialogHeader>
-          <div className="text-center py-8">
-            <Settings className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">角色編輯功能正在開發中...</p>
-            <p className="text-sm text-muted-foreground mt-2">
-              預計將支援角色名稱、描述、權限配置的完整編輯功能
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <RoleEditDialog
+        role={editingRole}
+        open={showEditRoleDialog}
+        onOpenChange={setShowEditRoleDialog}
+        onSuccess={fetchRoles}
+      />
 
       {/* 新增角色對話框 */}
-      <Dialog open={showCreateRoleDialog} onOpenChange={setShowCreateRoleDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>新增角色</DialogTitle>
-            <DialogDescription>
-              創建新的系統角色和權限配置
-            </DialogDescription>
-          </DialogHeader>
-          <div className="text-center py-8">
-            <Plus className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">新增角色功能正在開發中...</p>
-            <p className="text-sm text-muted-foreground mt-2">
-              預計將支援自訂角色名稱、描述、圖示、顏色和權限配置
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <RoleCreateDialog
+        open={showCreateRoleDialog}
+        onOpenChange={setShowCreateRoleDialog}
+        onSuccess={fetchRoles}
+      />
+      
+      {/* 用戶角色分配對話框 */}
+      <UserRoleAssignDialog
+        user={assigningUser}
+        open={showUserRoleAssignDialog}
+        onOpenChange={setShowUserRoleAssignDialog}
+        onSuccess={fetchUsers}
+      />
 
       {/* 刪除確認對話框 */}
       <Dialog open={showDeleteConfirmDialog} onOpenChange={setShowDeleteConfirmDialog}>

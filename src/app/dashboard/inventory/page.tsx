@@ -60,9 +60,9 @@ export default function InventoryPage() {
   const [searchTerm, setSearchTerm] = useState('')
   
   // 權限檢查
-  const { hasPermission, isAdmin } = usePermission();
-  const canViewInventory = hasPermission('inventory.view') || hasPermission('inventory:view');
-  const canManageInventory = hasPermission('inventory.manage') || hasPermission('inventory:manage');
+  const { hasPermission, isAdmin, canAccess } = usePermission();
+  const canViewInventory = canAccess('/dashboard/inventory') || hasPermission('inventory.view') || hasPermission('inventory.manage') || isAdmin();
+  const canManageInventory = hasPermission('inventory.manage') || isAdmin();
   
   // 使用快取 hooks
   const { data: materials, loading: materialsLoading, refetch: refetchMaterials } = useMaterials()
@@ -189,12 +189,12 @@ export default function InventoryPage() {
       setIsInitialized(true)
       loadOverview()
     }
-  }, [isInitialized, loadOverview])
+  }, [isInitialized]) // 移除 loadOverview 依賴，避免無限循環
 
   const filteredItemsList = filteredItems()
 
   // 權限保護：如果沒有查看權限，顯示無權限頁面
-  if (!canViewInventory && !isAdmin()) {
+  if (!canViewInventory) {
     return (
       <div className="container mx-auto py-6">
         <Alert className="max-w-2xl mx-auto">
@@ -213,7 +213,7 @@ export default function InventoryPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            庫存管理中心
+            庫存監控
           </h1>
           <p className="text-gray-600 mt-2">全方位庫存監控與管理系統</p>
         </div>
@@ -358,7 +358,18 @@ export default function InventoryPage() {
           onSuccess={async () => {
             // 避免循環依賴，使用簡化的刷新邏輯
             await reloadInventoryData()
-            await loadOverview()
+            // 直接調用 overview 載入，而不使用 loadOverview 函數
+            try {
+              const functions = getFunctions()
+              const getInventoryOverview = httpsCallable(functions, 'getInventoryOverview')
+              const result = await getInventoryOverview({})
+              const data = result.data as any
+              if (data.success) {
+                setOverview(data.overview)
+              }
+            } catch (error) {
+              console.error('刷新庫存統計失敗:', error)
+            }
           }}
         />
       )}

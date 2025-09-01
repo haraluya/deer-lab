@@ -177,7 +177,8 @@ export interface CartItem {
   supplierName: string;
   unit: string;
   quantity: number;
-  costPerUnit: number;
+  costPerUnit?: number; // 改為可選，以與 useGlobalCart 相容
+  price?: number; // 新增以支援全域購物車
   currentStock: number;
 }
 

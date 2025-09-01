@@ -7,6 +7,7 @@ import { collection, getDocs, Timestamp, query, where, orderBy, limit, startAfte
 import { db } from '@/lib/firebase';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { CartItem } from '@/types';
+import { useGlobalCart } from '@/hooks/useGlobalCart';
 
 import { toast } from 'sonner';
 import { 
@@ -83,8 +84,16 @@ function PurchaseOrdersPageContent() {
   const canViewPurchase = hasPermission('purchase.view') || hasPermission('purchase:view');
   const canManagePurchase = hasPermission('purchase.manage') || hasPermission('purchase:manage') || hasPermission('purchase:create') || hasPermission('purchase:edit');
   
-  // 採購車相關狀態
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  // 採購車相關狀態 - 使用全域購物車
+  const { 
+    cartItems, 
+    cartItemCount,
+    addToCart: globalAddToCart, 
+    removeFromCart: globalRemoveFromCart, 
+    updateCartItem: globalUpdateCartItem,
+    clearCart: globalClearCart,
+    isSyncing 
+  } = useGlobalCart();
   const [selectedCartItems, setSelectedCartItems] = useState<Set<string>>(new Set());
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
@@ -199,28 +208,7 @@ function PurchaseOrdersPageContent() {
     }
   }, []);
 
-  // 從 localStorage 載入採購車
-  const loadCartFromStorage = useCallback(() => {
-    try {
-      const savedCart = localStorage.getItem('purchaseCart');
-      if (savedCart) {
-        setCartItems(JSON.parse(savedCart));
-      }
-    } catch (error) {
-      console.error("載入採購車失敗:", error);
-    }
-  }, []);
-
-  // 保存採購車到 localStorage
-  const saveCartToStorage = useCallback((items: CartItem[]) => {
-    try {
-      localStorage.setItem('purchaseCart', JSON.stringify(items));
-      // 觸發自定義事件，通知其他組件採購車已更新
-      window.dispatchEvent(new CustomEvent('purchaseCartUpdated'));
-    } catch (error) {
-      console.error("保存採購車失敗:", error);
-    }
-  }, []);
+  // 全域購物車已經自動同步，不需要本地存儲函數
 
   // 搜尋功能
   const handleSearch = useCallback((term: string) => {
@@ -264,8 +252,8 @@ function PurchaseOrdersPageContent() {
     }
   }, [materials, fragrances, suppliers, searchType]);
 
-  // 添加項目到採購車
-  const addToCart = useCallback((item: SearchResult) => {
+  // 添加項目到採購車 - 使用全域購物車
+  const addToCart = useCallback(async (item: SearchResult) => {
     // 如果是供應商，不直接加入採購車，而是顯示該供應商的所有物料和香精
     if (item.type === 'supplier') {
       const supplierItems = [...materials, ...fragrances].filter(
@@ -288,70 +276,43 @@ function PurchaseOrdersPageContent() {
       return;
     }
 
-    const existingItem = cartItems.find(cartItem => 
-      cartItem.id === item.id && cartItem.type === item.type
-    );
-
-    if (existingItem) {
-      // 如果已存在，增加數量
-      const updatedItems = cartItems.map(cartItem =>
-        cartItem.id === item.id && cartItem.type === item.type
-          ? { ...cartItem, quantity: cartItem.quantity + 1 }
-          : cartItem
-      );
-      setCartItems(updatedItems);
-      saveCartToStorage(updatedItems);
-      toast.success(`已增加 ${item.name} 的數量`);
-    } else {
-      // 新增項目 - 使用類型斷言來創建 CartItem
-      const newCartItem = {
-        id: item.id,
-        name: item.name,
-        code: item.code,
-        type: item.type as 'material' | 'fragrance',
-        supplierId: item.supplierId,
-        supplierName: item.supplierName,
-        unit: item.unit,
-        costPerUnit: item.costPerUnit,
-        quantity: 1,
-      } as CartItem;
-      
-      const updatedItems = [...cartItems, newCartItem];
-      setCartItems(updatedItems);
-      saveCartToStorage(updatedItems);
-      toast.success(`已將 ${item.name} 加入採購車`);
-    }
+    // 使用全域購物車的 addToCart 函數
+    const cartItemData = {
+      type: item.type as 'material' | 'fragrance',
+      code: item.code,
+      name: item.name,
+      supplierId: item.supplierId,
+      supplierName: item.supplierName,
+      quantity: 1,
+      unit: item.unit,
+      currentStock: item.currentStock,
+      price: item.costPerUnit,
+      costPerUnit: item.costPerUnit
+    };
     
-    // 不清空搜尋結果，讓用戶可以繼續搜尋和加入
-    // setSearchTerm('');
-    // setSearchResults([]);
-  }, [cartItems, saveCartToStorage, materials, fragrances]);
+    await globalAddToCart(cartItemData);
+  }, [globalAddToCart, materials, fragrances, setSearchResults, setSearchType]);
 
-  // 從採購車移除項目
-  const removeFromCart = useCallback((itemId: string, type: 'material' | 'fragrance') => {
-    const updatedItems = cartItems.filter(item => 
-      !(item.id === itemId && item.type === type)
-    );
-    setCartItems(updatedItems);
-    saveCartToStorage(updatedItems);
-    toast.success("已從採購車移除");
-  }, [cartItems, saveCartToStorage]);
+  // 從採購車移除項目 - 使用全域購物車
+  const removeFromCart = useCallback(async (itemId: string, type: 'material' | 'fragrance') => {
+    const item = cartItems.find(item => item.id === itemId && item.type === type);
+    if (item) {
+      await globalRemoveFromCart(item.id);
+    }
+  }, [cartItems, globalRemoveFromCart]);
 
-  // 更新採購車項目數量
-  const updateCartItemQuantity = useCallback((itemId: string, type: 'material' | 'fragrance', quantity: number) => {
+  // 更新採購車項目數量 - 使用全域購物車
+  const updateCartItemQuantity = useCallback(async (itemId: string, type: 'material' | 'fragrance', quantity: number) => {
     if (quantity <= 0) {
-      removeFromCart(itemId, type);
+      await removeFromCart(itemId, type);
       return;
     }
 
-    const updatedItems = cartItems.map(item =>
-      item.id === itemId && item.type === type
-        ? { ...item, quantity }
-        : item
-    );
-    setCartItems(updatedItems);
-    saveCartToStorage(updatedItems);
-  }, [cartItems, removeFromCart, saveCartToStorage]);
+    const item = cartItems.find(item => item.id === itemId && item.type === type);
+    if (item) {
+      await globalUpdateCartItem(item.id, { quantity });
+    }
+  }, [cartItems, removeFromCart, globalUpdateCartItem]);
 
   // 切換採購車項目選擇狀態
   const toggleCartItemSelection = useCallback((itemId: string, type: 'material' | 'fragrance') => {
@@ -433,6 +394,7 @@ function PurchaseOrdersPageContent() {
           code: item.code,
           quantity: item.quantity,
           unit: item.unit,
+          price: item.price || item.costPerUnit || 0,
           itemRefPath: `${item.type === 'material' ? 'materials' : 'fragrances'}/${item.id}`
         });
         return groups;
@@ -446,14 +408,10 @@ function PurchaseOrdersPageContent() {
       
       toast.success(`成功建立 ${Object.keys(supplierGroups).length} 張採購單`, { id: toastId });
       
-      // 從採購車中移除已使用的項目
-      const remainingItems = cartItems.filter(item => 
-        !itemsToProcess.some(processedItem => 
-          processedItem.id === item.id && processedItem.type === item.type
-        )
-      );
-      setCartItems(remainingItems);
-      saveCartToStorage(remainingItems);
+      // 從全域採購車中移除已使用的項目
+      for (const item of itemsToProcess) {
+        await globalRemoveFromCart(item.id);
+      }
       setSelectedCartItems(new Set());
       setIsConfirmDialogOpen(false);
       
@@ -466,7 +424,7 @@ function PurchaseOrdersPageContent() {
     } finally {
       setIsCreatingOrder(false);
     }
-  }, [selectedCartItems, cartItems, loadPurchaseOrders, saveCartToStorage]);
+  }, [selectedCartItems, cartItems, loadPurchaseOrders, globalRemoveFromCart]);
 
 
 
@@ -509,14 +467,16 @@ function PurchaseOrdersPageContent() {
 
   // 計算總金額
   const totalAmount = useMemo(() => {
-    return cartItems.reduce((total, item) => total + (item.costPerUnit * item.quantity), 0);
+    return cartItems.reduce((total, item) => {
+      const price = item.price || item.costPerUnit || 0;
+      return total + (price * item.quantity);
+    }, 0);
   }, [cartItems]);
 
   useEffect(() => {
     loadPurchaseOrders();
     loadItems();
-    loadCartFromStorage();
-  }, [loadPurchaseOrders, loadItems, loadCartFromStorage]);
+  }, [loadPurchaseOrders, loadItems]);
 
   // 篩選採購單
   useEffect(() => {
@@ -1024,19 +984,11 @@ function PurchaseOrdersPageContent() {
                           <div className="flex-1">
                             <div className="font-medium text-gray-900">{item.name}</div>
                             <div className="text-sm text-gray-500">
-                              {item.code} • NT$ {item.costPerUnit.toLocaleString()}/{item.unit}
+                              {item.code} • NT$ {(item.price || item.costPerUnit || 0).toLocaleString()}/{item.unit}
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-1">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => updateCartItemQuantity(item.id, item.type, item.quantity - 1)}
-                                className="h-8 w-8 p-0 border-amber-200 text-amber-600 hover:bg-amber-50"
-                              >
-                                -
-                              </Button>
+                            <div className="flex items-center gap-2">
                               <Input
                                 type="number"
                                 min="1"
@@ -1045,17 +997,9 @@ function PurchaseOrdersPageContent() {
                                   const newQuantity = parseInt(e.target.value) || 1;
                                   updateCartItemQuantity(item.id, item.type, newQuantity);
                                 }}
-                                className="w-16 h-8 text-center text-sm border-amber-200 focus:border-amber-500 focus:ring-amber-500"
+                                className="w-20 h-8 text-center text-sm border-amber-200 focus:border-amber-500 focus:ring-amber-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                               />
                               <span className="text-sm text-gray-500">{item.unit}</span>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => updateCartItemQuantity(item.id, item.type, item.quantity + 1)}
-                                className="h-8 w-8 p-0 border-amber-200 text-amber-600 hover:bg-amber-50"
-                              >
-                                +
-                              </Button>
                             </div>
                             <Button
                               variant="ghost"
@@ -1140,7 +1084,7 @@ function PurchaseOrdersPageContent() {
                                 <div>
                                   <div className="font-medium text-gray-900">{item.name}</div>
                                   <div className="text-sm text-gray-500">
-                                    {item.code} • NT$ {item.costPerUnit.toLocaleString()}/{item.unit}
+                                    {item.code} • NT$ {(item.price || item.costPerUnit || 0).toLocaleString()}/{item.unit}
                                   </div>
                                 </div>
                               </div>
@@ -1149,7 +1093,7 @@ function PurchaseOrdersPageContent() {
                                   {item.quantity} {item.unit}
                                 </div>
                                 <div className="text-sm text-gray-500">
-                                  NT$ {(item.costPerUnit * item.quantity).toLocaleString()}
+                                  NT$ {((item.price || item.costPerUnit || 0) * item.quantity).toLocaleString()}
                                 </div>
                               </div>
                             </div>

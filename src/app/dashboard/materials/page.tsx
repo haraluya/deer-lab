@@ -6,6 +6,7 @@ import { collection, getDocs, DocumentReference, QueryDocumentSnapshot, Document
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 import { CartItem } from '@/types';
+import { useGlobalCart } from '@/hooks/useGlobalCart';
 
 import { MaterialDialog, MaterialData } from './MaterialDialog';
 import { MaterialCategoryDialog } from './MaterialCategoryDialog';
@@ -43,6 +44,7 @@ interface MaterialWithSupplier extends MaterialData {
 function MaterialsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { addToCart, isLoading: cartLoading } = useGlobalCart();
 
   const [materials, setMaterials] = useState<MaterialWithSupplier[]>([]);
   const [filteredMaterials, setFilteredMaterials] = useState<MaterialWithSupplier[]>([]);
@@ -496,7 +498,7 @@ function MaterialsPageContent() {
   };
   
   // 添加到採購車
-  const addToPurchaseCart = (material: MaterialWithSupplier) => {
+  const addToPurchaseCart = async (material: MaterialWithSupplier) => {
     try {
       const cartItem = {
         id: material.id,
@@ -508,37 +510,12 @@ function MaterialsPageContent() {
         unit: material.unit || '',
         quantity: 1,
         costPerUnit: material.costPerUnit || 0,
+        price: material.costPerUnit || 0,
         currentStock: material.currentStock || 0,
       };
 
-      // 從 localStorage 讀取現有採購車
-      const existingCart = localStorage.getItem('purchaseCart');
-      let currentCart: CartItem[] = [];
-      if (existingCart) {
-        try {
-          currentCart = JSON.parse(existingCart);
-        } catch (error) {
-          console.error("解析採購車資料失敗:", error);
-        }
-      }
-
-      // 檢查是否已存在
-      const existingIndex = currentCart.findIndex(item => 
-        item.id === material.id && item.type === 'material'
-      );
-
-      if (existingIndex >= 0) {
-        // 如果已存在，增加數量
-        currentCart[existingIndex].quantity += 1;
-        toast.success(`已增加 ${material.name} 的數量`);
-      } else {
-        // 新增項目
-        currentCart.push(cartItem);
-        toast.success(`已將 ${material.name} 加入採購車`);
-      }
-
-      // 保存到 localStorage
-      localStorage.setItem('purchaseCart', JSON.stringify(currentCart));
+      await addToCart(cartItem);
+      toast.success(`已將 ${material.name} 加入採購車`);
     } catch (error) {
       console.error("添加到採購車失敗:", error);
       toast.error("添加到採購車失敗");
@@ -706,7 +683,7 @@ function MaterialsPageContent() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold text-orange-600">
-            {isStocktakeMode ? "盤點模式中" : "物料管理"}
+            {isStocktakeMode ? "盤點模式中" : "原料庫"}
           </h1>
           <p className="text-muted-foreground mt-2">
             {isStocktakeMode ? "進行庫存盤點作業" : "管理系統中的所有物料資料"}
@@ -1029,6 +1006,7 @@ function MaterialsPageContent() {
                             variant="outline"
                             size="sm"
                             onClick={() => addToPurchaseCart(material)}
+                            disabled={cartLoading}
                             className="h-8 px-2 text-xs border-amber-200 text-amber-600 hover:bg-amber-50"
                           >
                             <ShoppingCart className="h-3 w-3 mr-1" />

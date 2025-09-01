@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 
 // 介面定義
 interface TimeEntry {
@@ -220,7 +221,7 @@ export default function PersonalTimeRecordsPage() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            個人工時統計
+            工時統計
           </h1>
           <p className="text-gray-600 mt-1">
             {appUser?.name} ({appUser?.employeeId}) 的工時記錄總覽
@@ -407,9 +408,12 @@ export default function PersonalTimeRecordsPage() {
                     <CardContent className="p-4">
                       <div className="grid grid-cols-10 gap-4 items-center">
                         <div className="col-span-2">
-                          <div className="font-medium text-blue-600">
+                          <Link 
+                            href={`/dashboard/work-orders/${entry.workOrderId}`}
+                            className="font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                          >
                             {entry.workOrderNumber}
-                          </div>
+                          </Link>
                         </div>
                         <div className="col-span-2">
                           <div className="text-sm">
@@ -467,9 +471,12 @@ export default function PersonalTimeRecordsPage() {
                       onClick={() => toggleExpanded(entry.id)}
                     >
                       <div className="flex justify-between items-start mb-2">
-                        <div className="font-medium text-blue-600">
+                        <Link 
+                          href={`/dashboard/work-orders/${entry.workOrderId}`}
+                          className="font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                        >
                           {entry.workOrderNumber}
-                        </div>
+                        </Link>
                         <Badge variant={entry.status === 'locked' ? 'secondary' : 'default'}>
                           {entry.status === 'locked' ? '已鎖定' : '正常'}
                         </Badge>

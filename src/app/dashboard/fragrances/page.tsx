@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ImportExportDialog } from '@/components/ImportExportDialog';
 import { DetailViewDialog } from '@/components/DetailViewDialog';
+import { useGlobalCart } from '@/hooks/useGlobalCart';
 
 interface FragranceWithSupplier extends FragranceData {
   supplierName: string;
@@ -53,6 +54,9 @@ function FragrancesPageContent() {
   const { hasPermission, isAdmin } = usePermission();
   const canViewFragrances = hasPermission('fragrances.view') || hasPermission('fragrances.manage');
   const canManageFragrances = hasPermission('fragrances.manage');
+  
+  // 全域購物車
+  const { addToCart, isLoading: cartLoading } = useGlobalCart();
   
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -289,102 +293,66 @@ function FragrancesPageContent() {
     });
   };
   
-  // 添加到採購車
-  const addToPurchaseCart = (fragrance: FragranceWithSupplier) => {
+  // 添加到採購車 - 使用全域購物車
+  const addToPurchaseCart = async (fragrance: FragranceWithSupplier) => {
     try {
       const cartItem = {
-        id: fragrance.id,
-        name: fragrance.name,
-        code: fragrance.code,
         type: 'fragrance' as const,
+        code: fragrance.code,
+        name: fragrance.name,
         supplierId: fragrance.supplierRef?.id || '',
         supplierName: fragrance.supplierName || '未指定',
-        unit: fragrance.unit || 'KG',
         quantity: 1,
-        costPerUnit: fragrance.costPerUnit || 0,
+        unit: fragrance.unit || 'KG',
+        currentStock: fragrance.currentStock || 0,
+        costPerUnit: fragrance.costPerUnit || 0
       };
 
-      // 從 localStorage 讀取現有採購車
-      const existingCart = localStorage.getItem('purchaseCart');
-      let currentCart: any[] = [];
-      if (existingCart) {
-        try {
-          currentCart = JSON.parse(existingCart);
-        } catch (error) {
-          console.error("解析採購車資料失敗:", error);
-        }
+      const success = await addToCart(cartItem);
+      if (!success) {
+        toast.error("添加到採購車失敗");
       }
-
-      // 檢查是否已存在
-      const existingIndex = currentCart.findIndex(item => 
-        item.id === fragrance.id && item.type === 'fragrance'
-      );
-
-      if (existingIndex >= 0) {
-        // 如果已存在，增加數量
-        currentCart[existingIndex].quantity += 1;
-        toast.success(`已增加 ${fragrance.name} 的數量`);
-      } else {
-        // 新增項目
-        currentCart.push(cartItem);
-        toast.success(`已將 ${fragrance.name} 加入採購車`);
-      }
-
-      // 保存到 localStorage
-      localStorage.setItem('purchaseCart', JSON.stringify(currentCart));
     } catch (error) {
       console.error("添加到採購車失敗:", error);
       toast.error("添加到採購車失敗");
     }
   };
   
-  const handleAddToPurchaseCart = () => {
+  const handleAddToPurchaseCart = async () => {
     if (purchaseCart.size === 0) {
       toast.info("請至少選擇一個香精加入採購車。");
       return;
     }
     
     try {
-      // 從 localStorage 讀取現有的採購車
-      const existingCart = localStorage.getItem('purchaseCart');
-      const cartItems = existingCart ? JSON.parse(existingCart) : [];
-      
       // 獲取選中的香精資料
       const selectedFragrances = fragrances.filter(f => purchaseCart.has(f.id));
+      let successCount = 0;
       
-      // 將選中的香精加入採購車
-      selectedFragrances.forEach(fragrance => {
-        const existingItem = cartItems.find((item: any) => 
-          item.id === fragrance.id && item.type === 'fragrance'
-        );
+      // 逐一添加到全域購物車
+      for (const fragrance of selectedFragrances) {
+        const cartItem = {
+          type: 'fragrance' as const,
+          code: fragrance.code,
+          name: fragrance.name,
+          supplierId: fragrance.supplierRef?.id || '',
+          supplierName: fragrance.supplierName,
+          quantity: 1,
+          unit: fragrance.unit || 'KG',
+          currentStock: fragrance.currentStock || 0,
+          costPerUnit: fragrance.costPerUnit || 0
+        };
         
-        if (existingItem) {
-          // 如果已存在，增加數量
-          existingItem.quantity += 1;
-        } else {
-          // 新增項目
-          cartItems.push({
-            id: fragrance.id,
-            name: fragrance.name,
-            code: fragrance.code,
-            type: 'fragrance',
-            supplierId: fragrance.supplierRef?.id || '',
-            supplierName: fragrance.supplierName,
-            unit: 'KG',
-            quantity: 1,
-            costPerUnit: fragrance.costPerUnit || 0,
-          });
-        }
-      });
+        const success = await addToCart(cartItem);
+        if (success) successCount++;
+      }
       
-      // 保存到 localStorage
-      localStorage.setItem('purchaseCart', JSON.stringify(cartItems));
-      
-      // 觸發自定義事件，通知其他組件採購車已更新
-      window.dispatchEvent(new CustomEvent('purchaseCartUpdated'));
-      
-      toast.success(`已將 ${selectedFragrances.length} 個香精加入採購車`);
-      setPurchaseCart(new Set()); // 清空選中的項目
+      if (successCount > 0) {
+        toast.success(`已將 ${successCount} 個香精加入採購車`);
+        setPurchaseCart(new Set()); // 清空選中的項目
+      } else {
+        toast.error("加入採購車失敗");
+      }
     } catch (error) {
       console.error("加入採購車失敗:", error);
       toast.error("加入採購車失敗");
@@ -834,7 +802,7 @@ function FragrancesPageContent() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
-            香精管理
+            配方庫
           </h1>
           <p className="text-gray-600 mt-2">管理香精配方與庫存</p>
         </div>
@@ -861,7 +829,7 @@ function FragrancesPageContent() {
                   匯入/匯出
                 </Button>
               )}
-              <Button onClick={handleAddToPurchaseCart} disabled={purchaseCart.size === 0} variant="outline" className="w-full">
+              <Button onClick={handleAddToPurchaseCart} disabled={purchaseCart.size === 0 || cartLoading} variant="outline" className="w-full">
                 <ShoppingCart className="mr-2 h-4 w-4" />
                 加入採購車 ({purchaseCart.size})
               </Button>
@@ -906,7 +874,7 @@ function FragrancesPageContent() {
                   匯入/匯出
                 </Button>
               )}
-              <Button onClick={handleAddToPurchaseCart} disabled={purchaseCart.size === 0} variant="outline">
+              <Button onClick={handleAddToPurchaseCart} disabled={purchaseCart.size === 0 || cartLoading} variant="outline">
                 <ShoppingCart className="mr-2 h-4 w-4" />
                 加入採購車 ({purchaseCart.size})
               </Button>
@@ -1047,6 +1015,7 @@ function FragrancesPageContent() {
               variant="outline"
               size="sm"
               onClick={handleAddToPurchaseCart}
+              disabled={cartLoading}
               className="flex items-center gap-2"
             >
               <ShoppingCart className="h-4 w-4" />
@@ -1131,7 +1100,10 @@ function FragrancesPageContent() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => addToPurchaseCart(fragrance)}>
+                                <DropdownMenuItem 
+                                  onClick={() => addToPurchaseCart(fragrance)}
+                                  disabled={cartLoading}
+                                >
                                   <ShoppingCart className="mr-2 h-4 w-4" />
                                   加入採購車
                                 </DropdownMenuItem>
@@ -1445,7 +1417,10 @@ function FragrancesPageContent() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>操作</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => addToPurchaseCart(fragrance)}>
+                            <DropdownMenuItem 
+                              onClick={() => addToPurchaseCart(fragrance)}
+                              disabled={cartLoading}
+                            >
                               <ShoppingCart className="h-4 w-4 mr-2" />
                               加入採購車
                             </DropdownMenuItem>

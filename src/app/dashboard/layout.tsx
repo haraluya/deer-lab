@@ -66,17 +66,13 @@ function SidebarNav() {
   const { cartItemCount, isLoading } = useGlobalCart();
   const { canAccess, isAdmin } = usePermission();
   
-  // 添加調試信息和購物車狀態監控
+  // 購物車狀態監控
   useEffect(() => {
-    console.log('SidebarNav: 當前路徑:', pathname);
-    console.log('SidebarNav: 導航連結:', navLinks.map(link => link.href));
-    console.log('SidebarNav: 購物車數量:', cartItemCount);
-    console.log('SidebarNav: 購物車數量類型:', typeof cartItemCount);
-    
+    // 只在有購物車項目時記錄
     if (cartItemCount > 0) {
-      console.log('SidebarNav: 購物車有項目，將顯示氣泡');
+      console.log('購物車項目數量:', cartItemCount);
     }
-  }, [pathname, cartItemCount]);
+  }, [cartItemCount]);
   
   const handleNavClick = () => {
     // 在移動版點擊導航項目後關閉側邊欄
@@ -95,58 +91,31 @@ function SidebarNav() {
   // 智能過濾導航項目，包括分組管理
   const getFilteredNavLinks = () => {
     const result: NavItem[] = [];
-    let currentGroupHasVisibleItems = false;
-    let pendingGroup: NavSeparator | null = null;
-
-    // 添加除錯資訊
-    console.log('🔍 SidebarNav 權限過濾開始');
+    let currentGroup: NavSeparator | null = null;
 
     for (let i = 0; i < navLinks.length; i++) {
       const link = navLinks[i];
       
       if (link.isSeparator) {
-        // 如果之前的分組有可見項目，先加入該分組
-        if (pendingGroup && currentGroupHasVisibleItems) {
-          result.push(pendingGroup);
-        }
-        
-        // 重置狀態並記住當前分組
-        pendingGroup = link;
-        currentGroupHasVisibleItems = false;
-        console.log('📁 分組:', link.label);
+        currentGroup = link;
       } else {
-        // 特殊處理：工作台和權限管理頁面
+        // 檢查權限
         let hasAccess = false;
         
         if (link.href === '/dashboard') {
           hasAccess = true; // 工作台對所有人開放
-        } else if (link.href === '/dashboard/personnel/permissions') {
-          // 權限管理頁面需要特殊檢查
-          hasAccess = canAccess(link.href) || isAdmin();
         } else {
-          // 一般頁面權限檢查，加入容錯處理
           try {
-            hasAccess = canAccess(link.href);
-            
-            // 如果沒有權限但是管理員，允許訪問
-            if (!hasAccess && isAdmin()) {
-              hasAccess = true;
-              console.log(`🔑 管理員權限允許訪問: ${link.label}`);
-            }
+            hasAccess = canAccess(link.href) || isAdmin();
           } catch (error) {
-            console.warn(`⚠️  權限檢查失敗: ${link.href}`, error);
-            // 如果是管理員，即使權限檢查失敗也允許訪問
             hasAccess = isAdmin();
           }
         }
         
-        console.log(`📄 ${link.label} (${link.href}): ${hasAccess ? '✅' : '❌'}`);
-        
         if (hasAccess) {
-          // 如果有權限且還沒加入分組標題，先加入標題
-          if (pendingGroup && !currentGroupHasVisibleItems) {
-            result.push(pendingGroup);
-            currentGroupHasVisibleItems = true;
+          // 如果這是該分組的第一個有權限的項目，先加入分組標題
+          if (currentGroup && !result.includes(currentGroup)) {
+            result.push(currentGroup);
           }
           
           result.push(link);
@@ -154,29 +123,38 @@ function SidebarNav() {
       }
     }
 
-    console.log(`✅ 過濾完成，顯示 ${result.filter(item => !item.isSeparator).length} 個導航項目`);
     return result;
   };
 
   const filteredNavLinks = getFilteredNavLinks();
 
   return (
-    <nav className="flex flex-col gap-1 px-4 py-4">
+    <nav className="flex flex-col gap-1 px-2 py-4">
       {filteredNavLinks.map((link, index) => {
         if (link.isSeparator) {
+          // 根據不同分組使用不同的顏色
+          const groupColors = {
+            '團隊管理': 'bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border-l-4 border-blue-500',
+            '供應鏈': 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 border-l-4 border-green-500', 
+            '生產中心': 'bg-gradient-to-r from-orange-100 to-orange-200 text-orange-800 border-l-4 border-orange-500',
+            '營運分析': 'bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800 border-l-4 border-purple-500'
+          };
+          
+          const colorClass = groupColors[link.label as keyof typeof groupColors] || 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border-l-4 border-gray-500';
+          
           return (
-            <h2 key={`sep-${index}`} className="px-2 mt-4 mb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              {link.label}
-            </h2>
+            <div 
+              key={`sep-${index}`} 
+              className={`mx-2 mt-6 mb-3 px-3 py-2 rounded-lg ${colorClass} shadow-sm`}
+            >
+              <h2 className="text-sm font-bold uppercase tracking-wide">
+                {link.label}
+              </h2>
+            </div>
           );
         }
         const Icon = link.icon;
         const isActive = pathname === link.href;
-        
-        // 添加調試信息
-        if (isActive) {
-          console.log('SidebarNav: 當前活動頁面:', link.href);
-        }
         
         return (
           <Link
@@ -184,10 +162,10 @@ function SidebarNav() {
             href={link.href}
             onClick={handleNavClick}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-all duration-200 relative",
+              "flex items-center gap-3 rounded-lg px-3 py-3 text-base font-medium transition-all duration-200 relative mx-2 mb-1",
               isActive
-                ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg transform scale-[0.98]"
+                : "text-muted-foreground hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-200 hover:text-foreground hover:shadow-sm"
             )}
           >
             <Icon className={cn("h-4 w-4", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
@@ -275,7 +253,6 @@ export default function DashboardLayout({
   // 認證檢查
   useEffect(() => {
     if (!isLoading && !appUser) {
-      console.log('❌ 未認證用戶嘗試訪問 dashboard，重定向到登入頁面');
       router.push('/');
     }
   }, [isLoading, appUser, router]);

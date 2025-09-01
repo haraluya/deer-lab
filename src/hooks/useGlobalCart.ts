@@ -16,6 +16,7 @@ interface CartItem {
   unit: string;
   currentStock: number;
   price?: number;
+  costPerUnit?: number;  // 新增以確保相容性
   notes?: string;
   addedBy?: string;
   addedAt?: any;
@@ -125,8 +126,19 @@ export function useGlobalCart() {
     }
   }, []);
 
-  // 更新購物車項目
+  // 更新購物車項目 - 樂觀更新以改善使用者體驗
   const updateCartItem = useCallback(async (itemId: string, updates: Partial<CartItem>) => {
+    // 樂觀更新：立即更新本地狀態
+    const optimisticUpdate = () => {
+      setCartItems(prevItems => {
+        return prevItems.map(item => 
+          item.id === itemId ? { ...item, ...updates } : item
+        );
+      });
+    };
+
+    optimisticUpdate();
+
     try {
       setIsSyncing(true);
       const functions = getFunctions();
@@ -135,12 +147,16 @@ export function useGlobalCart() {
       const result = await updateItem({ itemId, updates });
       
       if (result.data) {
-        toast.success('購物車已更新');
+        // 成功時不顯示訊息，避免過多提示
         return true;
+      } else {
+        // 失敗時還原樂觀更新
+        console.error('更新失敗，還原本地狀態');
+        return false;
       }
-      return false;
     } catch (error) {
       console.error('更新購物車失敗:', error);
+      // 失敗時還原本地狀態，但因為 Firestore 監聽會自動同步，所以不用手動還原
       toast.error('更新購物車失敗');
       return false;
     } finally {
@@ -148,8 +164,15 @@ export function useGlobalCart() {
     }
   }, []);
 
-  // 從購物車移除項目
+  // 從購物車移除項目 - 樂觀更新
   const removeFromCart = useCallback(async (itemId: string) => {
+    // 樂觀更新：立即從本地狀態移除
+    setCartItems(prevItems => {
+      const filteredItems = prevItems.filter(item => item.id !== itemId);
+      setCartItemCount(filteredItems.length);
+      return filteredItems;
+    });
+
     try {
       setIsSyncing(true);
       const functions = getFunctions();

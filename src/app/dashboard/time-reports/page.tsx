@@ -430,13 +430,13 @@ export default function TimeReportsPage() {
               <div className="hidden md:block overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-800 hover:bg-slate-800">
-                      <TableHead className="text-white font-bold text-base">工單號碼</TableHead>
-                      <TableHead className="text-white font-bold text-base">產品名稱</TableHead>
-                      <TableHead className="text-white font-bold text-base">總工時</TableHead>
-                      <TableHead className="text-white font-bold text-base">參與人數</TableHead>
-                      <TableHead className="text-white font-bold text-base">狀態</TableHead>
-                      <TableHead className="text-white font-bold text-base text-right">操作</TableHead>
+                    <TableRow className="bg-gray-100 hover:bg-gray-100">
+                      <TableHead className="text-black font-bold text-base">工單號碼</TableHead>
+                      <TableHead className="text-black font-bold text-base">產品名稱</TableHead>
+                      <TableHead className="text-black font-bold text-base">總工時</TableHead>
+                      <TableHead className="text-black font-bold text-base">參與人數</TableHead>
+                      <TableHead className="text-black font-bold text-base">狀態</TableHead>
+                      <TableHead className="text-black font-bold text-base text-right">操作</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
