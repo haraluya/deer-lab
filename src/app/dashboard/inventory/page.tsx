@@ -61,9 +61,61 @@ export default function InventoryPage() {
   const canViewInventory = canAccess('/dashboard/inventory') || hasPermission('inventory.view') || hasPermission('inventory.manage') || isAdmin();
   const canManageInventory = hasPermission('inventory.manage') || isAdmin();
   
-  // 使用快取 hooks
-  const { data: materials, loading: materialsLoading, refetch: refetchMaterials } = useMaterials()
-  const { data: fragrances, loading: fragrancesLoading, refetch: refetchFragrances } = useFragrances()
+  // 臨時直接從 Firebase 載入測試
+  const [directMaterials, setDirectMaterials] = useState<any[]>([])
+  const [directFragrances, setDirectFragrances] = useState<any[]>([])
+  const [directLoading, setDirectLoading] = useState(true)
+
+  useEffect(() => {
+    const testDirectLoad = async () => {
+      try {
+        console.log('開始直接從 Firebase 載入資料...')
+        const { db } = await import('@/lib/firebase')
+        const { collection, getDocs } = await import('firebase/firestore')
+        
+        if (!db) {
+          console.error('Firebase db 未初始化')
+          return
+        }
+
+        console.log('Firebase db 已初始化，開始查詢...')
+        
+        // 直接查詢 materials
+        const materialsSnapshot = await getDocs(collection(db, 'materials'))
+        const materialsList = materialsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        console.log('直接載入的物料數量:', materialsList.length)
+        setDirectMaterials(materialsList)
+
+        // 直接查詢 fragrances  
+        const fragrancesSnapshot = await getDocs(collection(db, 'fragrances'))
+        const fragrancesList = fragrancesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        console.log('直接載入的香精數量:', fragrancesList.length)
+        setDirectFragrances(fragrancesList)
+        
+      } catch (error) {
+        console.error('直接載入資料失敗:', error)
+      } finally {
+        setDirectLoading(false)
+      }
+    }
+    
+    testDirectLoad()
+  }, [])
+
+  // 使用直接載入的資料替代快取 hooks
+  const materials = directMaterials
+  const fragrances = directFragrances
+  const materialsLoading = directLoading
+  const fragrancesLoading = directLoading
+  const refetchMaterials = async () => {}
+  const refetchFragrances = async () => {}
+  
   
   // 計算整體載入狀態
   const loading = materialsLoading || fragrancesLoading
