@@ -23,16 +23,15 @@ export const nextServer = onRequest({ maxInstances: 10 }, async (req, res) => {
   }
 });
 
-// 創建一個簡單的測試函數
-export const testFunction = onRequest((request, response) => {
+// 創建一個簡單的健康檢查函數
+export const healthCheck = onRequest((request, response) => {
   response.json({ 
-    message: "Firebase Functions are working!",
+    status: "healthy",
+    service: "鹿鹿小作坊 API Service",
+    version: "1.0.0",
     timestamp: new Date().toISOString()
   });
 });
-
-// 匯出測試函數
-export * from "./api/test";
 
 // 匯出所有 API 函數
 export * from "./api/users";

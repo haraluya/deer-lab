@@ -1,6 +1,23 @@
 {
   "name": "deer-lab",
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "description": "鹿鹿小作坊 - 全方位生產管理系統 | 專為小型製造工坊設計的完整生產流程管理解決方案",
+  "author": "鹿鹿小作坊開發團隊",
+  "license": "MIT",
+  "homepage": "https://deer-lab.web.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/haraluya/deer-lab.git"
+  },
+  "keywords": [
+    "production-management",
+    "inventory-management",
+    "manufacturing",
+    "taiwan",
+    "nextjs",
+    "firebase",
+    "typescript"
+  ],
   "private": true,
   "scripts": {
     "dev": "next dev --port 8080",
@@ -11,11 +28,9 @@
     "install:functions": "cd functions && npm install",
     "deploy": "npm run build && ncp public .next && firebase deploy --only hosting",
     "deploy-full": "npm run build && ncp public .next && ncp .next functions && ncp public functions && firebase deploy",
-    "deploy-only": "firebase deploy --only hosting",
-    "mcp-puppeteer": "npx mcp-server-puppeteer"
+    "deploy-only": "firebase deploy --only hosting"
   },
   "dependencies": {
-    "@hisma/server-puppeteer": "^0.6.5",
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-avatar": "^1.1.0",
@@ -29,6 +44,7 @@
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tabs": "^1.1.13",
+    "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/react-table": "^8.21.3",
     "@types/papaparse": "^5.3.16",
     "class-variance-authority": "^0.7.0",
