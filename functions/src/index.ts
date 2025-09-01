@@ -48,3 +48,4 @@ export * from "./api/roles";
 export * from "./api/personnel";
 export * from "./api/auth";
 export * from "./api/globalCart";
+export * from "./api/resetPermissions";
