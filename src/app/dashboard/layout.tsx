@@ -280,14 +280,16 @@ export default function DashboardLayout({
       {/* 側邊欄 - 桌面版 */}
       <aside className="hidden lg:flex fixed inset-y-0 left-0 z-20 h-full w-64 flex-col border-r bg-white/95 backdrop-blur-sm shadow-lg">
         <div className="flex h-16 shrink-0 items-center border-b px-6 bg-gradient-to-r from-purple-600 to-blue-600">
-            <Image 
-              src="/dexter-lab-logo.svg" 
-              alt="德科斯特的實驗室" 
-              width={24} 
-              height={24} 
-              className="text-white"
-            />
-            <span className="ml-2 font-semibold text-white text-sm">德科斯特的實驗室</span>
+            <div className="w-8 h-8 rounded-lg overflow-hidden bg-white/10 p-0.5">
+              <Image 
+                src="/Dexter's.png" 
+                alt="Dexter's Laboratory" 
+                width={32} 
+                height={32} 
+                className="w-full h-full object-contain rounded-md"
+              />
+            </div>
+            <span className="ml-3 font-semibold text-white text-sm">德科斯特的實驗室</span>
         </div>
         <div className="flex-1 overflow-y-auto">
             <SidebarNav />
@@ -351,12 +353,15 @@ export default function DashboardLayout({
                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
              </svg>
            </button>
-            <Image 
-              src="/dexter-lab-logo.svg" 
-              alt="德科斯特的實驗室" 
-              width={24} 
-              height={24} 
-            />
+            <div className="w-6 h-6 rounded-md overflow-hidden bg-gray-100 p-0.5">
+              <Image 
+                src="/Dexter's.png" 
+                alt="Dexter's Laboratory" 
+                width={24} 
+                height={24} 
+                className="w-full h-full object-contain rounded-sm"
+              />
+            </div>
             <span className="font-semibold text-gray-900 text-sm">德科斯特的實驗室</span>
           </div>
         </header>
@@ -365,13 +370,15 @@ export default function DashboardLayout({
          <aside className="lg:hidden fixed inset-y-0 left-0 z-20 h-full w-64 flex-col border-r bg-white shadow-xl transform -translate-x-full transition-transform duration-300 flex" id="mobile-sidebar">
           <div className="flex h-16 shrink-0 items-center justify-between border-b px-6 bg-gradient-to-r from-purple-600 to-blue-600">
             <div className="flex items-center">
-              <Image 
-                src="/dexter-lab-logo.svg" 
-                alt="德科斯特的實驗室" 
-                width={24} 
-                height={24} 
-                className="text-white"
-              />
+              <div className="w-6 h-6 rounded-md overflow-hidden bg-white/10 p-0.5">
+                <Image 
+                  src="/Dexter's.png" 
+                  alt="Dexter's Laboratory" 
+                  width={24} 
+                  height={24} 
+                  className="w-full h-full object-contain rounded-sm"
+                />
+              </div>
               <span className="ml-2 font-semibold text-white text-sm">德科斯特的實驗室</span>
             </div>
                          <button 

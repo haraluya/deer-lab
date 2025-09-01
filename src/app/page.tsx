@@ -55,8 +55,14 @@ export default function LoginPage() {
         <CardHeader className="text-center pb-6">
           {/* Logo 和品牌區域 */}
           <div className="flex flex-col items-center mb-4">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500 via-blue-500 to-purple-600 flex items-center justify-center mb-4 shadow-lg">
-              <Image src="/dexter-lab-logo.svg" alt="德科斯特的實驗室" width={40} height={40} className="rounded-lg" />
+            <div className="w-24 h-24 rounded-2xl overflow-hidden mb-4 shadow-lg border-2 border-gray-200 bg-white p-1">
+              <Image 
+                src="/Dexter's.png" 
+                alt="Dexter's Laboratory" 
+                width={88} 
+                height={88} 
+                className="w-full h-full object-contain rounded-xl" 
+              />
             </div>
             <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-purple-700 bg-clip-text text-transparent">
               德科斯特的實驗室
