@@ -24,9 +24,10 @@ const https_1 = require("firebase-functions/v2/https");
 const next_1 = __importDefault(require("next"));
 // 初始化 Firebase Admin SDK，只需一次
 (0, app_1.initializeApp)();
-// 初始化 Next.js App
+// 初始化 Next.js App 在全域範圍
 const nextApp = (0, next_1.default)({
     dev: false,
+    dir: process.cwd(),
 });
 const nextHandle = nextApp.getRequestHandler();
 // 建立 nextServer 雲端函數
