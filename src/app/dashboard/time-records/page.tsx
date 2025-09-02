@@ -237,32 +237,32 @@ export default function PersonalTimeRecordsPage() {
       </div>
 
       {/* 統計卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-        <Card className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-blue-200">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-50 to-green-100 border-2 border-emerald-200">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-bold text-blue-800">總工時記錄</CardTitle>
-              <div className="p-2 bg-blue-500 rounded-lg">
-                <Activity className="h-4 w-4 text-white" />
+              <CardTitle className="text-sm font-bold text-emerald-800">本月總工時</CardTitle>
+              <div className="p-2 bg-emerald-500 rounded-lg">
+                <Calendar className="h-4 w-4 text-white" />
               </div>
             </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <Skeleton className="h-8 w-16 mb-2" />
+              <Skeleton className="h-8 w-24 mb-2" />
             ) : (
-              <div className="text-3xl font-bold text-blue-900 mb-1">{stats.totalEntries}</div>
+              <div className="text-3xl font-bold text-emerald-900 mb-1">{formatDuration(stats.monthlyHours)}</div>
             )}
-            <p className="text-xs text-blue-600 font-medium">筆工時紀錄</p>
+            <p className="text-xs text-emerald-600 font-medium">本月工作時間</p>
           </CardContent>
-          <div className="absolute inset-0 bg-gradient-to-br from-transparent to-blue-600/10 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-br from-transparent to-emerald-600/10 pointer-events-none" />
         </Card>
 
-        <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-50 to-green-100 border-2 border-emerald-200">
+        <Card className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-blue-200">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-bold text-emerald-800">總工時</CardTitle>
-              <div className="p-2 bg-emerald-500 rounded-lg">
+              <CardTitle className="text-sm font-bold text-blue-800">累計總工時</CardTitle>
+              <div className="p-2 bg-blue-500 rounded-lg">
                 <Clock className="h-4 w-4 text-white" />
               </div>
             </div>
@@ -271,32 +271,13 @@ export default function PersonalTimeRecordsPage() {
             {isLoading ? (
               <Skeleton className="h-8 w-24 mb-2" />
             ) : (
-              <div className="text-3xl font-bold text-emerald-900 mb-1">{formatDuration(stats.totalHours)}</div>
+              <div className="text-3xl font-bold text-blue-900 mb-1">{formatDuration(stats.totalHours)}</div>
             )}
-            <p className="text-xs text-emerald-600 font-medium">累計工作時間</p>
+            <p className="text-xs text-blue-600 font-medium">累計工作時間</p>
           </CardContent>
-          <div className="absolute inset-0 bg-gradient-to-br from-transparent to-emerald-600/10 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-br from-transparent to-blue-600/10 pointer-events-none" />
         </Card>
 
-        <Card className="relative overflow-hidden bg-gradient-to-br from-orange-50 to-amber-100 border-2 border-orange-200">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-bold text-orange-800">本月總工時</CardTitle>
-              <div className="p-2 bg-orange-500 rounded-lg">
-                <Calendar className="h-4 w-4 text-white" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-20 mb-2" />
-            ) : (
-              <div className="text-3xl font-bold text-orange-900 mb-1">{formatDuration(stats.monthlyHours)}</div>
-            )}
-            <p className="text-xs text-orange-600 font-medium">本月工作時間</p>
-          </CardContent>
-          <div className="absolute inset-0 bg-gradient-to-br from-transparent to-orange-600/10 pointer-events-none" />
-        </Card>
 
         <Card className="relative overflow-hidden bg-gradient-to-br from-purple-50 to-violet-100 border-2 border-purple-200">
           <CardHeader className="pb-2">
