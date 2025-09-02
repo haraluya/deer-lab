@@ -30,53 +30,137 @@
 - **認證**: Firebase Authentication
 - **部署**: Firebase Hosting
 
-## 🚀 快速開始
+## 🚀 快速部署指南
+
+### ⚠️ 重要提醒：SSR 架構系統
+本系統採用 **Server-Side Rendering (SSR)** 架構，必須部署到支援 Node.js 的伺服器環境，**不可使用靜態網站部署**。
 
 ### 前置需求
-- Node.js 18+ 
-- Firebase CLI
-- Git
+- **Node.js 20+** （推薦使用 20.x LTS）
+- **Firebase CLI** (`npm install -g firebase-tools`)
+- **Git** 版本控制系統
+- **Firebase 專案**（需要 Blaze 付費計劃支援 Functions）
 
-### 安裝步驟
+### 🔥 Firebase 專案設定
 
-1. **克隆專案**
+1. **建立 Firebase 專案**
+```bash
+# 前往 Firebase Console 建立新專案
+# https://console.firebase.google.com/
+
+# 啟用以下服務：
+# ✅ Authentication (啟用 Email/Password 登入)
+# ✅ Firestore Database (生產模式)
+# ✅ Storage (預設規則)
+# ✅ Functions (需要 Blaze 計劃)
+# ✅ Hosting
+```
+
+2. **安裝與登入 Firebase CLI**
+```bash
+# 安裝 Firebase CLI
+npm install -g firebase-tools
+
+# 登入 Firebase 帳號
+firebase login
+
+# 驗證登入狀態
+firebase projects:list
+```
+
+### 📦 專案安裝與設定
+
+1. **克隆並安裝專案**
 ```bash
 git clone https://github.com/haraluya/deer-lab.git
 cd deer-lab
-```
 
-2. **安裝依賴**
-```bash
+# 安裝主專案依賴
 npm install
+
+# 安裝 Firebase Functions 依賴
 npm run install:functions
 ```
 
-3. **設定 Firebase**
+2. **選擇 Firebase 專案**
 ```bash
-# 登入 Firebase
-firebase login
-
-# 選擇或創建 Firebase 專案
+# 選擇您的 Firebase 專案
 firebase use --add
+
+# 選擇專案並設定別名（例如：production）
+# 確認選擇正確的專案
+firebase use --list
 ```
 
-4. **環境變數設定**
+3. **環境變數配置**
 ```bash
-# 複製環境變數範本
-cp .env.local.example .env.local
+# 在專案根目錄建立 .env.local 檔案
+# 填入以下必要的 Firebase 配置：
 
-# 填入您的 Firebase 配置
-# NEXT_PUBLIC_FIREBASE_API_KEY=your-api-key
-# NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-domain
-# ...
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key_here
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+
+# 🔍 如何取得這些配置值：
+# 1. 前往 Firebase Console > 專案設定
+# 2. 向下捲動至「您的應用程式」區域
+# 3. 選擇網路應用程式，複製配置物件
 ```
 
-5. **啟動開發伺服器**
+### 🚀 部署流程
+
+#### 完整部署（推薦用於首次部署）
 ```bash
-npm run dev
+# 建構並部署 Functions + Hosting
+npm run deploy-full
+
+# 如果出現權限錯誤，請確保：
+# 1. Firebase 專案已升級至 Blaze 計劃
+# 2. 已啟用必要的 API 服務
 ```
 
-應用程式將在 [http://localhost:8080](http://localhost:8080) 啟動。
+#### 僅部署前端 Hosting
+```bash
+# 適用於僅前端程式碼變更
+npm run deploy
+```
+
+#### 僅部署 Firebase Functions
+```bash
+# 適用於僅後端邏輯變更
+cd functions
+npm run deploy
+```
+
+### 🔧 初始系統設定
+
+部署完成後，需要進行以下設定：
+
+1. **建立第一個管理員帳號**
+```bash
+# 訪問您的部署網址
+# 註冊第一個帳號（自動成為系統管理員）
+```
+
+2. **初始化權限系統**
+```bash
+# 登入後進入：成員管理 > 權限管理
+# 點擊「初始化預設角色」按鈕
+# 系統將自動建立三種角色和權限配置
+```
+
+3. **驗證系統功能**
+```bash
+# 測試以下核心功能：
+# ✅ 使用者註冊/登入
+# ✅ 權限系統運作
+# ✅ 資料庫讀寫正常
+# ✅ 檔案上傳功能
+# ✅ 即時同步功能
+```
 
 ## 📋 主要功能模組
 
@@ -122,9 +206,17 @@ npm run lint:functions         # 檢查 Functions 程式碼
 npm run install:functions      # 安裝 Functions 依賴
 ```
 
-### 部署
+### 本地開發
 ```bash
-npm run deploy                 # 部署到 Firebase Hosting
+npm run dev                    # 啟動開發伺服器 (端口 8080)
+npm run build                  # 建構生產版本
+npm run start                  # 啟動生產伺服器
+npm run lint                   # ESLint 程式碼檢查
+```
+
+### 部署相關
+```bash
+npm run deploy                 # 部署到 Firebase Hosting  
 npm run deploy-full           # 完整部署 (hosting + functions)
 npm run deploy-only           # 僅部署 hosting
 ```
@@ -190,18 +282,217 @@ deer-lab/
 - **平板適配**: 最佳化觸控介面
 - **手機支援**: 卡片式設計，完美行動體驗
 
+## 🎨 自定義品牌設定
+
+### 更換 LOGO 和 ICON
+
+系統支援完整的品牌自定義，您需要替換以下檔案：
+
+#### 必要的 ICON 檔案
+```bash
+public/
+├── favicon.png              # 32x32 網站圖示
+├── icon-16x16.png          # 16x16 瀏覽器標籤圖示
+├── icon-32x32.png          # 32x32 瀏覽器圖示
+├── icon-192x192.png        # 192x192 PWA 圖示
+├── icon-512x512.png        # 512x512 PWA 圖示
+└── apple-touch-icon.png    # 180x180 Apple 裝置圖示
+```
+
+#### 主要 LOGO 檔案
+```bash
+public/
+├── dexter-lab-logo.svg     # 主要 LOGO (SVG 格式)
+├── Dexter's.png           # 替代 LOGO (PNG 格式)
+└── buck.svg               # 品牌圖示 (可選)
+```
+
+#### 應用程式設定檔案
+```bash
+# 1. 修改應用程式標題和描述
+src/app/layout.tsx          # 更新 metadata 物件
+
+# 2. 修改 PWA 設定
+public/manifest.json        # 更新應用程式名稱和描述
+
+# 3. 修改主題顏色
+src/app/layout.tsx          # 更新 theme-color meta 標籤
+```
+
+#### 替換步驟
+1. **準備您的品牌檔案**：確保所有圖示符合指定尺寸
+2. **替換檔案**：使用相同檔名覆蓋 public/ 目錄中的檔案
+3. **更新設定**：修改 layout.tsx 和 manifest.json 中的品牌資訊
+4. **重新部署**：執行 `npm run deploy` 套用變更
+
+### 主題色彩自定義
+
+系統使用 Tailwind CSS，主要色彩定義在：
+```bash
+tailwind.config.ts          # 主題色彩配置
+src/app/globals.css         # CSS 變數定義
+```
+
 ## 🌐 部署資訊
 
 - **生產環境**: [https://deer-lab.web.app](https://deer-lab.web.app)
-- **Firebase 專案**: 支援自動擴展和全球 CDN
+- **架構**: SSR (Server-Side Rendering) + Firebase Functions
 - **SSL 憑證**: 自動 HTTPS 支援
+- **CDN**: Firebase Hosting 全球內容分發網路
+
+## ⚠️ 故障排除與常見問題
+
+### 🔧 部署常見問題
+
+#### 1. Firebase Functions 部署失敗
+**錯誤**: `Error: HTTP Error: 403, The caller does not have permission`
+
+**解決方案**:
+```bash
+# 確認 Firebase 專案已升級至 Blaze 計劃
+# 檢查是否啟用必要的 API
+gcloud services enable cloudfunctions.googleapis.com
+gcloud services enable cloudscheduler.googleapis.com
+
+# 重新認證
+firebase logout
+firebase login
+```
+
+#### 2. 建構錯誤 - Module not found
+**錯誤**: `Module not found: Can't resolve 'firebase/app'`
+
+**解決方案**:
+```bash
+# 清理並重新安裝依賴
+rm -rf node_modules package-lock.json
+rm -rf functions/node_modules functions/package-lock.json
+npm install
+npm run install:functions
+```
+
+#### 3. SSR 部署後頁面空白
+**錯誤**: 部署後網站顯示空白頁面
+
+**解決方案**:
+```bash
+# 檢查 firebase.json 配置
+# 確保 rewrites 設定指向正確的 function
+# 檢查 Functions 部署狀態
+firebase functions:log --limit 50
+```
+
+#### 4. Firestore 權限錯誤
+**錯誤**: `Missing or insufficient permissions`
+
+**解決方案**:
+```bash
+# 確認 Firestore 安全規則
+# 檢查用戶認證狀態
+# 確認 Firebase Auth 設定正確
+```
+
+### 💻 開發環境問題
+
+#### 1. 開發伺服器無法啟動
+**錯誤**: `Port 8080 is already in use`
+
+**解決方案**:
+```bash
+# 檢查並終止佔用的程序
+lsof -ti:8080 | xargs kill -9
+
+# 或使用不同端口
+npm run dev -- --port 3001
+```
+
+#### 2. TypeScript 編譯錯誤
+**錯誤**: 大量 TypeScript 類型錯誤
+
+**解決方案**:
+```bash
+# 檢查 TypeScript 版本
+npm list typescript
+
+# 重新生成類型檔案
+npm run build
+```
+
+#### 3. 環境變數未載入
+**錯誤**: Firebase 配置為 undefined
+
+**解決方案**:
+```bash
+# 確認 .env.local 檔案存在且格式正確
+# 檢查變數名稱必須以 NEXT_PUBLIC_ 開頭
+# 重新啟動開發伺服器
+```
+
+### 🔍 效能優化建議
+
+#### 1. 資料庫查詢優化
+```bash
+# 建立適當的 Firestore 索引
+# 限制查詢結果數量
+# 使用分頁載入大量資料
+```
+
+#### 2. 圖片檔案優化
+```bash
+# 壓縮上傳的圖片檔案
+# 使用適當的圖片格式
+# 實作延遲載入
+```
+
+#### 3. 快取策略
+```bash
+# 使用 Firebase Hosting 快取設定
+# 實作適當的瀏覽器快取標頭
+# 優化 Service Worker 快取策略
+```
+
+### 📋 系統需求檢查清單
+
+部署前請確認：
+- ✅ Node.js 版本 20.x 或更高
+- ✅ Firebase CLI 已安裝並登入
+- ✅ Firebase 專案已升級至 Blaze 計劃
+- ✅ 所有必要的 Firebase 服務已啟用
+- ✅ .env.local 檔案配置正確
+- ✅ 網路連接穩定，支援 HTTPS
+
+### 🆘 取得技術支援
+
+如果以上解決方案無法解決您的問題：
+
+1. **查看日誌**:
+```bash
+# Firebase Functions 日誌
+firebase functions:log --limit 100
+
+# 瀏覽器開發者工具 Console
+# 檢查網路請求和錯誤訊息
+```
+
+2. **系統資訊收集**:
+```bash
+# 收集環境資訊
+node --version
+npm --version
+firebase --version
+```
+
+3. **聯繫支援**:
+- 📝 [CLAUDE.md](./CLAUDE.md) - 開發者詳細文檔
+- 🐛 [GitHub Issues](https://github.com/haraluya/deer-lab/issues) - 問題回報
+- 📧 技術支援：在 Issues 中詳細描述問題和環境資訊
 
 ## 📞 支援與貢獻
 
 ### 取得幫助
-- 📚 [系統說明書](./系統說明書.md) - 完整使用指南
-- 📝 [CLAUDE.md](./CLAUDE.md) - 開發者文檔
-- 🐛 [Issues](https://github.com/haraluya/deer-lab/issues) - 問題回報
+- 📚 完整開發者文檔：[CLAUDE.md](./CLAUDE.md)
+- 🔧 故障排除：參考上方常見問題解決方案
+- 🐛 問題回報：[GitHub Issues](https://github.com/haraluya/deer-lab/issues)
 
 ### 貢獻指南
 1. Fork 這個專案
