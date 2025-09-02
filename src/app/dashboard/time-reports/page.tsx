@@ -19,7 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -589,6 +589,9 @@ export default function TimeReportsPage() {
               <FileText className="h-5 w-5" />
               {selectedOrder?.workOrderNumber} - 工時記錄詳情
             </DialogTitle>
+            <DialogDescription>
+              查看工單 {selectedOrder?.workOrderNumber} 的完整工時記錄和統計資訊
+            </DialogDescription>
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-6">

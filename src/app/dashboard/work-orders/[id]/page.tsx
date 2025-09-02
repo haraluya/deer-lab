@@ -2787,31 +2787,32 @@ export default function WorkOrderDetailPage() {
         <DialogContent className="w-[95vw] max-w-md sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-blue-600 text-lg sm:text-xl">確認入庫</DialogTitle>
-            <div className="text-sm text-gray-600">
-              <p className="mb-3">
-                即將將工單 &quot;{workOrder?.code}&quot; 設為入庫狀態。
-              </p>
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-medium text-yellow-800 mb-1">重要提醒</p>
-                    <p className="text-yellow-700 text-sm">
-                      入庫後將無法再修改任何資料，包括：
-                    </p>
-                    <ul className="list-disc list-inside mt-1 text-sm text-yellow-700 space-y-1">
-                      <li>目標產量和使用數量</li>
-                      <li>工時申報記錄</li>
-                      <li>工單狀態</li>
-                    </ul>
-                    <p className="text-yellow-700 text-sm mt-2">
-                      僅可繼續新增留言和查看資料。
-                    </p>
-                  </div>
+            <DialogDescription className="text-sm text-gray-600">
+              即將將工單 &quot;{workOrder?.code}&quot; 設為入庫狀態。
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-yellow-800 mb-1">重要提醒</p>
+                  <p className="text-yellow-700 text-sm">
+                    入庫後將無法再修改任何資料，包括：
+                  </p>
+                  <ul className="list-disc list-inside mt-1 text-sm text-yellow-700 space-y-1">
+                    <li>目標產量和使用數量</li>
+                    <li>工時申報記錄</li>
+                    <li>工單狀態</li>
+                  </ul>
+                  <p className="text-yellow-700 text-sm mt-2">
+                    僅可繼續新增留言和查看資料。
+                  </p>
                 </div>
               </div>
             </div>
-          </DialogHeader>
+          </div>
           <DialogFooter className="flex flex-col sm:flex-row gap-2">
             <Button 
               variant="outline" 
@@ -2848,9 +2849,15 @@ export default function WorkOrderDetailPage() {
         <DialogContent className="w-[95vw] max-w-md sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-red-600 text-lg sm:text-xl">確認刪除工單</DialogTitle>
+            <DialogDescription className="text-sm text-gray-600">
+              此操作將永久刪除工單 &quot;{workOrder.code}&quot; 及其所有相關資料。
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
             <div className="text-sm text-gray-600">
-              此操作將永久刪除工單 &quot;{workOrder.code}&quot; 及其所有相關資料，包括：
-              <ul className="list-disc list-inside mt-2 space-y-1">
+              <p className="mb-3">將刪除以下內容：</p>
+              <ul className="list-disc list-inside space-y-1">
                 <li>工單基本資料</li>
                 <li>所有留言記錄</li>
                 <li>所有上傳的圖片</li>
@@ -2860,7 +2867,7 @@ export default function WorkOrderDetailPage() {
                 此操作無法復原，請確認是否繼續？
               </p>
             </div>
-          </DialogHeader>
+          </div>
           <DialogFooter className="flex flex-col sm:flex-row gap-2">
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="w-full sm:w-auto">
               取消

@@ -25,7 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 // 供應商資料介面（包含對接人員資訊）
 interface SupplierWithLiaison extends SupplierData {
@@ -457,7 +457,9 @@ function SuppliersPageContent() {
                 </div>
                 供應商詳情
               </DialogTitle>
-              <p className="text-gray-600 mt-2">供應商詳細資訊</p>
+              <DialogDescription className="text-gray-600 mt-2">
+                供應商詳細資訊與聯絡方式
+              </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-6">
