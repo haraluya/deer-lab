@@ -6,20 +6,33 @@ import next from "next";
 // 初始化 Firebase Admin SDK，只需一次
 initializeApp();
 
-// 初始化 Next.js App
-const nextApp = next({
-  dev: false,
-});
-const nextHandle = nextApp.getRequestHandler();
-
 // 建立 nextServer 雲端函數
 export const nextServer = onRequest({ maxInstances: 10 }, async (req, res) => {
   try {
+    // 設定 Next.js 環境變量
+    process.env.NODE_ENV = 'production';
+    process.env.NEXT_TELEMETRY_DISABLED = '1';
+    
+    const nextApp = next({
+      dev: false,
+      quiet: true,
+      conf: {
+        distDir: '.next',
+        poweredByHeader: false,
+        compress: true,
+      },
+    });
+    
+    const nextHandle = nextApp.getRequestHandler();
     await nextApp.prepare();
     return nextHandle(req, res);
   } catch (error) {
     console.error('Next.js app preparation failed:', error);
-    res.status(500).send('Internal Server Error');
+    console.error('Error stack:', error?.stack);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Next.js application failed to initialize',
+    });
   }
 });
 

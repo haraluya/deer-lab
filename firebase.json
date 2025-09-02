@@ -9,7 +9,18 @@
     "rewrites": [
       {
         "source": "**",
-        "function": "nextServer"
+        "destination": "/server/app/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "/static/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000, immutable"
+          }
+        ]
       }
     ]
   },

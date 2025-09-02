@@ -2,6 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+
+// 動態參數配置
+export const dynamicParams = true;
+
+// 導出靜態參數生成函數
+export async function generateStaticParams() {
+  return [];
+}
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { ArrowLeft, Building, Edit, MapPin, Phone, Mail, Globe } from 'lucide-react';
