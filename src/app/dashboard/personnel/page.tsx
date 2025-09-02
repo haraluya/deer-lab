@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { AppUser } from '@/context/AuthContext';
 
 import { PersonnelDialog } from './PersonnelDialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { MoreHorizontal, Trash2, Eye, Edit, User, Shield, Calendar, Users, UserCheck, UserX, Search, Filter, Plus, Activity, TrendingUp, Settings } from 'lucide-react';
 import { usePermission } from '@/hooks/usePermission';
@@ -701,7 +701,9 @@ function PersonnelPageContent() {
                 </div>
                 員工詳情
               </DialogTitle>
-              <p className="text-gray-600 mt-2">工號: {selectedDetailUser.employeeId}</p>
+              <DialogDescription className="text-gray-600 mt-2">
+                工號: {selectedDetailUser.employeeId} - 查看員工的完整資訊和權限設定
+              </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-6">
