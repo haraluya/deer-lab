@@ -2251,16 +2251,6 @@ export default function WorkOrderDetailPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {/* 總人工小時統計 */}
-          <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-white rounded-lg border">
-            <div className="text-center">
-              <div className="text-sm text-gray-600 mb-1">總人工小時</div>
-              <div className="text-xl sm:text-2xl font-bold text-orange-600">
-                {totalHours} 小時 {totalMinutes} 分鐘
-              </div>
-              <div className="text-xs text-gray-500">共 {timeEntries.length} 筆紀錄</div>
-            </div>
-          </div>
 
           {/* 工時紀錄列表 */}
           {timeEntries && timeEntries.length > 0 ? (
@@ -2301,7 +2291,8 @@ export default function WorkOrderDetailPage() {
                             type="time"
                             value={quickEditData.startTime}
                             onChange={(e) => setQuickEditData({...quickEditData, startTime: e.target.value})}
-                            className="w-24 h-8 text-xs"
+                            className="w-24 h-8 text-xs [&::-webkit-datetime-edit-ampm-field]:hidden"
+                            step="1"
                           />
                         ) : (
                           entry.startTime
@@ -2313,7 +2304,8 @@ export default function WorkOrderDetailPage() {
                             type="time"
                             value={quickEditData.endTime}
                             onChange={(e) => setQuickEditData({...quickEditData, endTime: e.target.value})}
-                            className="w-24 h-8 text-xs"
+                            className="w-24 h-8 text-xs [&::-webkit-datetime-edit-ampm-field]:hidden"
+                            step="1"
                           />
                         ) : (
                           entry.endTime
