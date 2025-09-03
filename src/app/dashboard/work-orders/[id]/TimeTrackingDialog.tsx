@@ -56,19 +56,31 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
     try {
       setLoading(true)
       console.log("開始載入人員資料...")
-      const personnelSnapshot = await getDocs(collection(db!, "personnel"))
-      console.log("人員資料快照:", personnelSnapshot.size, "筆資料")
+      // 修正：使用 users 集合而非 personnel 集合
+      const usersSnapshot = await getDocs(collection(db!, "users"))
+      console.log("人員資料快照:", usersSnapshot.size, "筆資料")
       
-      const personnelList: Personnel[] = personnelSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Personnel[]
+      // 將 users 資料轉換為 Personnel 格式
+      const personnelList: Personnel[] = usersSnapshot.docs
+        .map(doc => {
+          const userData = doc.data()
+          return {
+            id: doc.id,
+            name: userData.name || '',
+            employeeId: userData.employeeId || '',
+            phone: userData.phone || '',
+            status: userData.status || 'active'
+          }
+        })
+        .filter(user => user.status === 'active') // 只載入啟用的用戶
       
       console.log("載入的人員清單:", personnelList)
       setPersonnel(personnelList)
       
       if (personnelList.length === 0) {
-        toast.error("找不到任何人員資料，請檢查人員管理頁面")
+        toast.error("找不到任何啟用的人員資料，請檢查人員管理頁面")
+      } else {
+        console.log(`成功載入 ${personnelList.length} 位啟用人員`)
       }
     } catch (error) {
       console.error("載入人員失敗:", error)

@@ -1347,9 +1347,9 @@ export default function WorkOrderDetailPage() {
       if (!date) return '';
       const d = date.toDate ? date.toDate() : new Date(date);
       return d.toLocaleDateString('zh-TW', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
+        month: 'long',
+        day: 'numeric',
+        weekday: 'long'
       });
     };
 
@@ -1580,9 +1580,9 @@ export default function WorkOrderDetailPage() {
           <div class="title">生產工單</div>
           <div class="subtitle">${workOrder.code}</div>
           <div>列印日期：${new Date().toLocaleDateString('zh-TW', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
+            month: 'long',
+            day: 'numeric',
+            weekday: 'long'
           })}</div>
         </div>
         
