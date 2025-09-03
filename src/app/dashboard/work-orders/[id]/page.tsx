@@ -1759,11 +1759,14 @@ export default function WorkOrderDetailPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto py-10">
-        <div className="flex justify-center items-center py-20">
-          <div className="text-center">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
-            <p className="text-gray-600">載入工單資料中...</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+        <div className="container mx-auto p-4 py-10">
+          <div className="flex justify-center items-center min-h-[60vh]">
+            <div className="text-center bg-white rounded-xl shadow-lg p-8 max-w-md mx-auto">
+              <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-blue-600" />
+              <p className="text-gray-600 text-lg font-medium">載入工單資料中...</p>
+              <p className="text-gray-400 text-sm mt-2">請稍候，正在獲取最新資料</p>
+            </div>
           </div>
         </div>
       </div>
@@ -1772,13 +1775,22 @@ export default function WorkOrderDetailPage() {
 
   if (!workOrder) {
     return (
-      <div className="container mx-auto py-10">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">工單不存在</p>
-          <Button onClick={() => router.push("/dashboard/work-orders")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            返回工單列表
-          </Button>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+        <div className="container mx-auto p-4 py-10">
+          <div className="flex justify-center items-center min-h-[60vh]">
+            <div className="text-center bg-white rounded-xl shadow-lg p-8 max-w-md mx-auto">
+              <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-500" />
+              <h2 className="text-xl font-bold text-gray-800 mb-2">工單不存在</h2>
+              <p className="text-gray-600 mb-6">找不到指定的工單，可能已被刪除或不存在</p>
+              <Button 
+                onClick={() => router.push("/dashboard/work-orders")}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                返回工單列表
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -1786,7 +1798,7 @@ export default function WorkOrderDetailPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-      <div className="container mx-auto p-2 sm:p-4 py-4 sm:py-10">
+      <div className="container mx-auto p-3 sm:p-4 lg:p-6 py-4 sm:py-6 lg:py-10 max-w-7xl force-mobile-layout">
         {/* 頁面標題 */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-8">
           <div className="flex items-center gap-2 sm:gap-4">
@@ -1807,11 +1819,11 @@ export default function WorkOrderDetailPage() {
           </div>
           
           {/* 按鈕組 - 手機版垂直排列 */}
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mobile-spacing">
             <Button 
               variant="outline"
               onClick={handlePrint}
-              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600 w-full sm:w-auto"
+              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600 w-full sm:w-auto mobile-button-full mobile-text-scale"
             >
               <Printer className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">列印工單</span>
@@ -1821,7 +1833,7 @@ export default function WorkOrderDetailPage() {
               <Button 
                 variant="outline"
                 onClick={getTopButtonHandler()}
-                className="bg-green-600 hover:bg-green-700 text-white border-green-600 w-full sm:w-auto"
+                className="bg-green-600 hover:bg-green-700 text-white border-green-600 w-full sm:w-auto mobile-button-full mobile-text-scale"
               >
                 <Check className="mr-2 h-4 w-4" />
                 {getTopButtonText()}
@@ -1830,7 +1842,7 @@ export default function WorkOrderDetailPage() {
             <Button 
               variant="destructive" 
               onClick={() => setIsDeleteDialogOpen(true)}
-              className="bg-red-500 hover:bg-red-600 w-full sm:w-auto"
+              className="bg-red-500 hover:bg-red-600 w-full sm:w-auto mobile-button-full mobile-text-scale"
             >
               <Trash2 className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">刪除工單</span>

@@ -157,6 +157,48 @@
     .mobile-card {
       @apply p-4;
     }
+    
+    /* 強制手機版佈局 */
+    .force-mobile-layout {
+      display: flex !important;
+      flex-direction: column !important;
+      width: 100% !important;
+    }
+    
+    /* 手機版表格強制隱藏 */
+    .mobile-hide-table {
+      display: none !important;
+    }
+    
+    /* 手機版卡片強制顯示 */
+    .mobile-show-cards {
+      display: block !important;
+    }
+    
+    /* 手機版按鈕調整 */
+    .mobile-button-full {
+      width: 100% !important;
+      margin-bottom: 8px !important;
+    }
+    
+    /* 手機版文字縮放 */
+    .mobile-text-scale {
+      font-size: 14px !important;
+      line-height: 1.4 !important;
+    }
+    
+    /* 手機版間距調整 */
+    .mobile-spacing {
+      padding: 12px !important;
+      margin: 8px 0 !important;
+    }
+  }
+  
+  /* 平板電腦響應式 */
+  @media (max-width: 1024px) and (min-width: 769px) {
+    .tablet-optimized {
+      @apply text-sm;
+    }
   }
   
   /* 動畫效果 */
