@@ -734,7 +734,6 @@ export default function PurchaseOrderDetailPage() {
                   );
                 })}
               </div>
-            </>
               
               {/* 總金額顯示 */}
               <div className="mt-4 pt-4 border-t border-gray-200">
@@ -816,7 +815,7 @@ export default function PurchaseOrderDetailPage() {
                   )}
                 </div>
               </div>
-            </div>
+            </>
           ) : (
             <div className="flex flex-col items-center justify-center py-12 bg-gray-50 rounded-lg">
               <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">

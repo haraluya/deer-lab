@@ -2074,8 +2074,7 @@ export default function WorkOrderDetailPage() {
                 <Droplets className="h-4 w-4" />
                 核心配方物料
               </h3>
-              {/* 桌面版表格 */}
-              <div className="hidden md:block overflow-x-auto">
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gradient-to-r from-gray-50 to-gray-100">
@@ -2128,61 +2127,6 @@ export default function WorkOrderDetailPage() {
                   </TableBody>
                 </Table>
               </div>
-
-              {/* 手機版卡片式佈局 */}
-              <div className="md:hidden space-y-3">
-                {workOrder.billOfMaterials
-                  .filter(item => ['fragrance', 'pg', 'vg', 'nicotine'].includes(item.category))
-                  .map((item, index) => (
-                    <Card key={index} className="bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            {item.category === 'fragrance' && <Droplets className="h-4 w-4 text-purple-600" />}
-                            {item.category === 'pg' && <div className="w-4 h-4 bg-blue-500 rounded" />}
-                            {item.category === 'vg' && <div className="w-4 h-4 bg-green-500 rounded" />}
-                            {item.category === 'nicotine' && <div className="w-4 h-4 bg-orange-500 rounded" />}
-                            <div>
-                              <div className="font-semibold text-gray-900">{item.name}</div>
-                              <div className="text-xs text-gray-500 font-mono">{item.code}</div>
-                            </div>
-                          </div>
-                          {item.ratio && (
-                            <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-300">
-                              {item.ratio}%
-                            </Badge>
-                          )}
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3 text-sm">
-                          <div className="bg-white/60 p-2 rounded-lg">
-                            <div className="text-xs text-gray-600 mb-1">需求數量</div>
-                            <div className="font-medium text-gray-900">{formatNumber(item.quantity)} {item.unit}</div>
-                          </div>
-                          <div className="bg-white/60 p-2 rounded-lg">
-                            <div className="text-xs text-gray-600 mb-1">使用數量</div>
-                            <div className="font-medium text-gray-900">
-                              {isEditingQuantity ? (
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  step="0.001"
-                                  value={editingQuantities[item.id] !== undefined ? editingQuantities[item.id] : (item.usedQuantity || 0)}
-                                  onChange={(e) => {
-                                    handleQuantityChange(item.id, e.target.value);
-                                  }}
-                                  className="w-full h-8 text-sm"
-                                />
-                              ) : (
-                                `${formatNumber(item.usedQuantity || 0)} ${item.unit}`
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-              </div>
             </div>
 
             {/* 產品專屬物料 */}
@@ -2192,8 +2136,7 @@ export default function WorkOrderDetailPage() {
                   <Package className="h-4 w-4" />
                   產品專屬物料
                 </h3>
-                {/* 桌面版表格 */}
-                <div className="hidden md:block overflow-x-auto">
+                <div className="overflow-x-auto">
                   <Table>
                                       <TableHeader>
                     <TableRow className="bg-gradient-to-r from-gray-50 to-gray-100">
@@ -2233,46 +2176,6 @@ export default function WorkOrderDetailPage() {
                     </TableBody>
                   </Table>
                 </div>
-
-                {/* 手機版卡片式佈局 */}
-                <div className="md:hidden space-y-3">
-                  {workOrder.billOfMaterials
-                    .filter(item => item.category === 'specific')
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .map((item, index) => (
-                      <Card key={index} className="bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200">
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-2 mb-3">
-                            <Package className="h-4 w-4 text-blue-600" />
-                            <div>
-                              <div className="font-semibold text-gray-900">{item.name}</div>
-                              <div className="text-xs text-gray-500 font-mono">{item.code}</div>
-                            </div>
-                          </div>
-
-                          <div className="bg-white/60 p-3 rounded-lg">
-                            <div className="text-xs text-gray-600 mb-1">使用數量</div>
-                            <div className="font-medium text-gray-900">
-                              {isEditingQuantity ? (
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  step="1"
-                                  value={editingQuantities[item.id] !== undefined ? editingQuantities[item.id] : (item.usedQuantity || 0)}
-                                  onChange={(e) => {
-                                    handleQuantityChange(item.id, e.target.value);
-                                  }}
-                                  className="w-full h-8 text-sm"
-                                />
-                              ) : (
-                                `${formatNumber(item.usedQuantity || 0)} ${item.unit}`
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                </div>
               </div>
             )}
 
@@ -2283,8 +2186,7 @@ export default function WorkOrderDetailPage() {
                   <Package className="h-4 w-4" />
                   系列通用物料
                 </h3>
-                {/* 桌面版表格 */}
-                <div className="hidden md:block overflow-x-auto">
+                <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-gradient-to-r from-green-100 to-emerald-100">
@@ -2323,46 +2225,6 @@ export default function WorkOrderDetailPage() {
                         ))}
                     </TableBody>
                   </Table>
-                </div>
-
-                {/* 手機版卡片式佈局 */}
-                <div className="md:hidden space-y-3">
-                  {workOrder.billOfMaterials
-                    .filter(item => item.category === 'common')
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .map((item, index) => (
-                      <Card key={index} className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200">
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-2 mb-3">
-                            <Package className="h-4 w-4 text-green-600" />
-                            <div>
-                              <div className="font-semibold text-gray-900">{item.name}</div>
-                              <div className="text-xs text-gray-500 font-mono">{item.code}</div>
-                            </div>
-                          </div>
-
-                          <div className="bg-white/60 p-3 rounded-lg">
-                            <div className="text-xs text-gray-600 mb-1">使用數量</div>
-                            <div className="font-medium text-gray-900">
-                              {isEditingQuantity ? (
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  step="1"
-                                  value={editingQuantities[item.id] !== undefined ? editingQuantities[item.id] : (item.usedQuantity || 0)}
-                                  onChange={(e) => {
-                                    handleQuantityChange(item.id, e.target.value);
-                                  }}
-                                  className="w-full h-8 text-sm"
-                                />
-                              ) : (
-                                `${formatNumber(item.usedQuantity || 0)} ${item.unit}`
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
                 </div>
               </div>
             )}
@@ -2888,8 +2750,7 @@ export default function WorkOrderDetailPage() {
                   </span>
                 )}
               </p>
-              {/* 桌面版表格 */}
-              <div className="hidden md:block overflow-x-auto">
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50">
@@ -2928,55 +2789,6 @@ export default function WorkOrderDetailPage() {
                       })}
                   </TableBody>
                 </Table>
-              </div>
-
-              {/* 手機版卡片式佈局 */}
-              <div className="md:hidden space-y-3">
-                {workOrder?.billOfMaterials
-                  .filter(item => (item.usedQuantity || 0) > 0)
-                  .map((item, index) => {
-                    // 計算庫存扣除後的剩餘數量
-                    const currentStock = item.currentStock || 0;
-                    const usedQuantity = item.usedQuantity || 0;
-                    const remainingStock = currentStock - usedQuantity;
-                    
-                    return (
-                      <Card key={index} className={`border-2 ${remainingStock < 0 ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}`}>
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-2 mb-3">
-                            <Package className="h-4 w-4 text-gray-600" />
-                            <div>
-                              <div className="font-semibold text-gray-900">{item.name}</div>
-                              <div className="text-xs text-gray-500 font-mono">{item.code}</div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-2 text-sm">
-                            <div className="bg-blue-50 p-2 rounded-lg text-center">
-                              <div className="text-xs text-blue-700 mb-1">現有數量</div>
-                              <div className="font-medium text-blue-800">{formatNumber(currentStock)} {item.unit}</div>
-                            </div>
-                            <div className="bg-red-50 p-2 rounded-lg text-center">
-                              <div className="text-xs text-red-700 mb-1">使用數量</div>
-                              <div className="font-medium text-red-800">-{formatNumber(usedQuantity)} {item.unit}</div>
-                            </div>
-                            <div className={`p-2 rounded-lg text-center ${remainingStock < 0 ? 'bg-red-100' : 'bg-green-50'}`}>
-                              <div className={`text-xs mb-1 ${remainingStock < 0 ? 'text-red-700' : 'text-green-700'}`}>扣完剩餘</div>
-                              <div className={`font-medium ${remainingStock < 0 ? 'text-red-800' : 'text-green-800'}`}>
-                                {formatNumber(remainingStock)} {item.unit}
-                              </div>
-                              {remainingStock < 0 && (
-                                <div className="text-xs bg-red-200 text-red-800 px-1 py-0.5 rounded mt-1">
-                                  庫存不足
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-              </div>
               </div>
               
               {/* 表格顏色說明 */}
@@ -3106,67 +2918,31 @@ export default function WorkOrderDetailPage() {
             <div>
               <h3 className="text-lg font-semibold text-gray-800 mb-3">工時記錄</h3>
               {timeEntries && timeEntries.length > 0 ? (
-                <>
-                  {/* 桌面版表格 */}
-                  <div className="hidden md:block overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-gray-50">
-                          <TableHead className="text-gray-700 font-bold">人員</TableHead>
-                          <TableHead className="text-gray-700 font-bold">工作日期</TableHead>
-                          <TableHead className="text-gray-700 font-bold">開始時間</TableHead>
-                          <TableHead className="text-gray-700 font-bold">結束時間</TableHead>
-                          <TableHead className="text-gray-700 font-bold">工時小計</TableHead>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50">
+                        <TableHead className="text-gray-700 font-bold">人員</TableHead>
+                        <TableHead className="text-gray-700 font-bold">工作日期</TableHead>
+                        <TableHead className="text-gray-700 font-bold">開始時間</TableHead>
+                        <TableHead className="text-gray-700 font-bold">結束時間</TableHead>
+                        <TableHead className="text-gray-700 font-bold">工時小計</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {timeEntries.map((entry, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">{entry.personnelName}</TableCell>
+                          <TableCell>{entry.workDate}</TableCell>
+                          <TableCell>{entry.startTime}</TableCell>
+                          <TableCell>{entry.endTime}</TableCell>
+                          <TableCell className="font-medium">
+                            {entry.duration} 小時
+                          </TableCell>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {timeEntries.map((entry, index) => (
-                          <TableRow key={index}>
-                            <TableCell className="font-medium">{entry.personnelName}</TableCell>
-                            <TableCell>{entry.workDate}</TableCell>
-                            <TableCell>{entry.startTime}</TableCell>
-                            <TableCell>{entry.endTime}</TableCell>
-                            <TableCell className="font-medium">
-                              {entry.duration} 小時
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  {/* 手機版卡片式佈局 */}
-                  <div className="md:hidden space-y-3">
-                    {timeEntries.map((entry, index) => (
-                      <Card key={index} className="bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200">
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-2 mb-3">
-                            <User className="h-4 w-4 text-orange-600" />
-                            <div>
-                              <div className="font-semibold text-gray-900">{entry.personnelName}</div>
-                              <div className="text-xs text-gray-500">{entry.workDate}</div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-2 text-sm">
-                            <div className="bg-white/60 p-2 rounded-lg text-center">
-                              <div className="text-xs text-gray-600 mb-1">開始時間</div>
-                              <div className="font-medium text-gray-900">{entry.startTime}</div>
-                            </div>
-                            <div className="bg-white/60 p-2 rounded-lg text-center">
-                              <div className="text-xs text-gray-600 mb-1">結束時間</div>
-                              <div className="font-medium text-gray-900">{entry.endTime}</div>
-                            </div>
-                            <div className="bg-orange-100 p-2 rounded-lg text-center">
-                              <div className="text-xs text-orange-700 mb-1">工時小計</div>
-                              <div className="font-medium text-orange-800">{entry.duration} 小時</div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                  
+                      ))}
+                    </TableBody>
+                  </Table>
                   <div className="mt-3 p-3 bg-blue-50 rounded-lg">
                     <div className="text-center">
                       <div className="text-sm text-gray-600">總人工小時</div>
@@ -3176,7 +2952,7 @@ export default function WorkOrderDetailPage() {
                       <div className="text-xs text-gray-500">共 {timeEntries.length} 筆紀錄</div>
                     </div>
                   </div>
-                </>
+                </div>
               ) : (
                 <div className="text-center py-4 text-orange-500 bg-orange-50 rounded-lg border border-orange-200">
                   <AlertCircle className="h-6 w-6 mx-auto mb-2" />
