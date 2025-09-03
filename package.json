@@ -26,7 +26,7 @@
     "lint": "next lint",
     "lint:functions": "cd functions && npm run lint",
     "install:functions": "cd functions && npm install",
-    "deploy": "npm run build && ncp public .next && firebase deploy --only hosting",
+    "deploy": "npm run deploy-full",
     "deploy-full": "npm run build && ncp public .next && ncp .next functions && ncp public functions && firebase deploy",
     "deploy-only": "firebase deploy --only hosting"
   },
