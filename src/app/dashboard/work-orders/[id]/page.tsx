@@ -2261,10 +2261,12 @@ export default function WorkOrderDetailPage() {
         </CardHeader>
         <CardContent>
 
-          {/* 工時紀錄列表 */}
+          {/* 工時紀錄列表 - 桌面版表格 */}
           {timeEntries && timeEntries.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
+            <>
+              {/* 桌面版表格 */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
                 <TableHeader>
                   <TableRow className="bg-gradient-to-r from-orange-100 to-amber-100">
                     <TableHead className="text-black font-bold text-xs sm:text-sm">人員</TableHead>
@@ -2372,7 +2374,135 @@ export default function WorkOrderDetailPage() {
                   ))}
                 </TableBody>
               </Table>
-            </div>
+              </div>
+
+              {/* 手機版卡片式佈局 */}
+              <div className="md:hidden space-y-4">
+                {timeEntries.map((entry, index) => (
+                  <Card key={index} className="bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
+                            <User className="h-4 w-4 text-white" />
+                          </div>
+                          <div>
+                            <div className="font-semibold text-gray-900">{entry.personnelName}</div>
+                            <div className="text-xs text-gray-500">排工人員：{entry.createdByName || '未知'}</div>
+                          </div>
+                        </div>
+                        {workOrder?.status !== "入庫" && (
+                          <div className="flex gap-1">
+                            {editingTimeEntryId === entry.id ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  onClick={handleSaveQuickEdit}
+                                  className="h-8 w-8 p-0 bg-green-600 hover:bg-green-700 text-white"
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={handleCancelQuickEdit}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleStartQuickEdit(entry)}
+                                  className="h-8 w-8 p-0 text-orange-600 border-orange-300 hover:bg-orange-50"
+                                >
+                                  <Edit2 className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleDeleteTimeEntry(entry.id)}
+                                  className="h-8 w-8 p-0 text-red-600 border-red-300 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">工作日期</span>
+                          {editingTimeEntryId === entry.id ? (
+                            <Input
+                              type="date"
+                              value={quickEditData.startDate}
+                              onChange={(e) => setQuickEditData({...quickEditData, startDate: e.target.value})}
+                              className="w-32 h-8 text-xs"
+                            />
+                          ) : (
+                            <span className="font-medium text-gray-900">{entry.startDate}</span>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">開始時間</span>
+                            {editingTimeEntryId === entry.id ? (
+                              <Input
+                                type="text"
+                                value={quickEditData.startTime}
+                                onChange={(e) => setQuickEditData({...quickEditData, startTime: e.target.value})}
+                                className="w-20 h-8 text-xs font-mono text-center"
+                                placeholder="HH:MM"
+                                pattern="^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
+                              />
+                            ) : (
+                              <span className="font-mono text-orange-700 font-medium">{entry.startTime}</span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">結束時間</span>
+                            {editingTimeEntryId === entry.id ? (
+                              <Input
+                                type="text"
+                                value={quickEditData.endTime}
+                                onChange={(e) => setQuickEditData({...quickEditData, endTime: e.target.value})}
+                                className="w-20 h-8 text-xs font-mono text-center"
+                                placeholder="HH:MM"
+                                pattern="^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
+                              />
+                            ) : (
+                              <span className="font-mono text-red-700 font-medium">{entry.endTime}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-orange-200">
+                          <span className="text-sm text-gray-600">工時小計</span>
+                          <div className="text-right">
+                            <div className="font-bold text-lg text-orange-900">
+                              {Math.floor(entry.duration)} 小時 {Math.round((entry.duration % 1) * 60)} 分鐘
+                            </div>
+                            {entry.overtimeHours > 0 && (
+                              <div className="text-xs text-red-600">
+                                加班 {Math.floor(entry.overtimeHours)} 小時 {Math.round((entry.overtimeHours % 1) * 60)} 分鐘
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </>
           ) : (
             <div className="text-center py-8 text-gray-500">
               <Clock className="h-12 w-12 mx-auto mb-3 text-gray-300" />

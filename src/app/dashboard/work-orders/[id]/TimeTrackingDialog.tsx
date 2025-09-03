@@ -5,6 +5,7 @@ import { collection, addDoc, getDocs, query, where, orderBy, Timestamp } from "f
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
 import { Personnel } from "@/types"
+import { useAuth } from "@/context/AuthContext"
 import { Clock, User, Plus, Users, Timer, Zap, Calendar } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -27,6 +28,7 @@ interface TimeTrackingDialogProps {
 }
 
 export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrderNumber, isLocked = false }: TimeTrackingDialogProps) {
+  const { user } = useAuth()
   const [personnel, setPersonnel] = useState<Personnel[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -145,7 +147,9 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
             overtimeHours: calculateOvertimeHours(duration),
             status: 'draft' as const,
             createdAt: Timestamp.now(),
-            updatedAt: Timestamp.now()
+            updatedAt: Timestamp.now(),
+            createdBy: user?.uid || '',
+            createdByName: user?.name || '系統用戶'
           }
 
           return addDoc(collection(db!, 'timeEntries'), timeEntryData)
@@ -163,6 +167,9 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
           endTime: ""
         })
         setSelectedPersonnel([])
+        
+        // 關閉對話框
+        onOpenChange(false)
         
       } catch (error) {
         console.error("批量新增工時記錄失敗:", error)
@@ -201,7 +208,9 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
           overtimeHours: calculateOvertimeHours(duration),
           status: 'draft' as const,
           createdAt: Timestamp.now(),
-          updatedAt: Timestamp.now()
+          updatedAt: Timestamp.now(),
+          createdBy: user?.uid || '',
+          createdByName: user?.name || '系統用戶'
         }
 
         await addDoc(collection(db!, 'timeEntries'), timeEntryData)
@@ -215,6 +224,9 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
           endDate: "",
           endTime: ""
         })
+        
+        // 關閉對話框
+        onOpenChange(false)
         
       } catch (error) {
         console.error("新增工時記錄失敗:", error)
