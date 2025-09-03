@@ -1346,7 +1346,11 @@ export default function WorkOrderDetailPage() {
     const formatDate = (date: any) => {
       if (!date) return '';
       const d = date.toDate ? date.toDate() : new Date(date);
-      return d.toLocaleDateString('zh-TW');
+      return d.toLocaleDateString('zh-TW', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
     };
 
     const coreMaterials = workOrder.billOfMaterials.filter(item => 
@@ -1575,7 +1579,11 @@ export default function WorkOrderDetailPage() {
         <div class="header">
           <div class="title">生產工單</div>
           <div class="subtitle">${workOrder.code}</div>
-          <div>列印日期：${new Date().toLocaleDateString('zh-TW')}</div>
+          <div>列印日期：${new Date().toLocaleDateString('zh-TW', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          })}</div>
         </div>
         
                  <div class="top-info">

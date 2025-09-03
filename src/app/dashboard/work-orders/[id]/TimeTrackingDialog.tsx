@@ -48,20 +48,31 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
   }, [isOpen, workOrderId])
 
   const loadPersonnel = async () => {
-    if (!db) return
+    if (!db) {
+      console.log("Database not initialized")
+      return
+    }
     
     try {
       setLoading(true)
+      console.log("開始載入人員資料...")
       const personnelSnapshot = await getDocs(collection(db!, "personnel"))
+      console.log("人員資料快照:", personnelSnapshot.size, "筆資料")
+      
       const personnelList: Personnel[] = personnelSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Personnel[]
       
+      console.log("載入的人員清單:", personnelList)
       setPersonnel(personnelList)
+      
+      if (personnelList.length === 0) {
+        toast.error("找不到任何人員資料，請檢查人員管理頁面")
+      }
     } catch (error) {
       console.error("載入人員失敗:", error)
-      toast.error("載入人員失敗")
+      toast.error(`載入人員失敗: ${error}`)
     } finally {
       setLoading(false)
     }
