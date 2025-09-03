@@ -4,13 +4,7 @@
  * 權限管理系統 - 權限定義與角色配置
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PERMISSION_GROUPS = exports.DEFAULT_ROLES = exports.ALL_PERMISSIONS = exports.PERMISSIONS = void 0;
-exports.roleHasPermission = roleHasPermission;
-exports.hasPermission = hasPermission;
-exports.getDefaultRoleByName = getDefaultRoleByName;
-exports.getRoleColor = getRoleColor;
-exports.isValidPermission = isValidPermission;
-exports.getPermissionDisplayName = getPermissionDisplayName;
+exports.getPermissionDisplayName = exports.isValidPermission = exports.getRoleColor = exports.getDefaultRoleByName = exports.hasPermission = exports.roleHasPermission = exports.PERMISSION_GROUPS = exports.DEFAULT_ROLES = exports.ALL_PERMISSIONS = exports.PERMISSIONS = void 0;
 // ==================== 權限定義 ====================
 /**
  * 系統所有權限定義
@@ -18,32 +12,32 @@ exports.getPermissionDisplayName = getPermissionDisplayName;
  */
 exports.PERMISSIONS = {
     // 團隊管理
-    PERSONNEL_VIEW: 'personnel.view', // 查看成員資料
-    PERSONNEL_MANAGE: 'personnel.manage', // 新增/編輯/刪除成員
-    TIME_VIEW: 'time.view', // 查看工時統計
-    TIME_MANAGE: 'time.manage', // 管理工時記錄
+    PERSONNEL_VIEW: 'personnel.view',
+    PERSONNEL_MANAGE: 'personnel.manage',
+    TIME_VIEW: 'time.view',
+    TIME_MANAGE: 'time.manage',
     // 供應鏈
-    SUPPLIERS_VIEW: 'suppliers.view', // 查看供應商
-    SUPPLIERS_MANAGE: 'suppliers.manage', // 管理供應商
-    PURCHASE_VIEW: 'purchase.view', // 查看採購訂單
-    PURCHASE_MANAGE: 'purchase.manage', // 管理採購訂單
+    SUPPLIERS_VIEW: 'suppliers.view',
+    SUPPLIERS_MANAGE: 'suppliers.manage',
+    PURCHASE_VIEW: 'purchase.view',
+    PURCHASE_MANAGE: 'purchase.manage',
     // 生產中心
-    MATERIALS_VIEW: 'materials.view', // 查看原料庫
-    MATERIALS_MANAGE: 'materials.manage', // 管理原料庫
-    FRAGRANCES_VIEW: 'fragrances.view', // 查看配方庫
-    FRAGRANCES_MANAGE: 'fragrances.manage', // 管理配方庫
-    PRODUCTS_VIEW: 'products.view', // 查看產品目錄
-    PRODUCTS_MANAGE: 'products.manage', // 管理產品目錄
-    WORK_ORDERS_VIEW: 'workOrders.view', // 查看生產工單
-    WORK_ORDERS_MANAGE: 'workOrders.manage', // 管理生產工單
+    MATERIALS_VIEW: 'materials.view',
+    MATERIALS_MANAGE: 'materials.manage',
+    FRAGRANCES_VIEW: 'fragrances.view',
+    FRAGRANCES_MANAGE: 'fragrances.manage',
+    PRODUCTS_VIEW: 'products.view',
+    PRODUCTS_MANAGE: 'products.manage',
+    WORK_ORDERS_VIEW: 'workOrders.view',
+    WORK_ORDERS_MANAGE: 'workOrders.manage',
     // 營運分析
-    INVENTORY_VIEW: 'inventory.view', // 查看庫存監控
-    INVENTORY_MANAGE: 'inventory.manage', // 管理庫存
-    INVENTORY_RECORDS_VIEW: 'inventoryRecords.view', // 查看庫存歷史
-    COST_VIEW: 'cost.view', // 查看成本分析
-    TIME_REPORTS_VIEW: 'timeReports.view', // 查看工時報表
+    INVENTORY_VIEW: 'inventory.view',
+    INVENTORY_MANAGE: 'inventory.manage',
+    INVENTORY_RECORDS_VIEW: 'inventoryRecords.view',
+    COST_VIEW: 'cost.view',
+    TIME_REPORTS_VIEW: 'timeReports.view',
     // 系統管理
-    ROLES_MANAGE: 'roles.manage', // 管理角色權限
+    ROLES_MANAGE: 'roles.manage',
     SYSTEM_SETTINGS: 'system.settings', // 系統設定
 };
 // 權限陣列（用於迭代）
@@ -277,6 +271,7 @@ exports.PERMISSION_GROUPS = [
 function roleHasPermission(role, permission) {
     return role.permissions.includes(permission);
 }
+exports.roleHasPermission = roleHasPermission;
 /**
  * 檢查權限列表是否包含特定權限
  * @param permissions 權限陣列
@@ -286,6 +281,7 @@ function roleHasPermission(role, permission) {
 function hasPermission(permissions, requiredPermission) {
     return permissions.includes(requiredPermission);
 }
+exports.hasPermission = hasPermission;
 /**
  * 根據角色名稱取得預設角色
  * @param roleName 角色名稱
@@ -294,6 +290,7 @@ function hasPermission(permissions, requiredPermission) {
 function getDefaultRoleByName(roleName) {
     return exports.DEFAULT_ROLES.find(role => role.name === roleName);
 }
+exports.getDefaultRoleByName = getDefaultRoleByName;
 /**
  * 取得角色的顏色類別
  * @param roleName 角色名稱
@@ -303,6 +300,7 @@ function getRoleColor(roleName) {
     const role = getDefaultRoleByName(roleName);
     return (role === null || role === void 0 ? void 0 : role.color) || '#6b7280'; // 預設為 gray-500
 }
+exports.getRoleColor = getRoleColor;
 /**
  * 驗證權限是否有效
  * @param permission 權限名稱
@@ -311,6 +309,7 @@ function getRoleColor(roleName) {
 function isValidPermission(permission) {
     return exports.ALL_PERMISSIONS.includes(permission);
 }
+exports.isValidPermission = isValidPermission;
 /**
  * 取得權限的顯示名稱
  * @param permission 權限名稱
@@ -325,4 +324,5 @@ function getPermissionDisplayName(permission) {
     }
     return permission;
 }
+exports.getPermissionDisplayName = getPermissionDisplayName;
 //# sourceMappingURL=permissions.js.map

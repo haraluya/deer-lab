@@ -47,8 +47,8 @@ function parseMaterialCode(code) {
         throw new Error('物料代號必須是9位');
     }
     return {
-        mainCategoryId: code.substring(0, 2), // 前2位是主分類ID
-        subCategoryId: code.substring(2, 5), // 中間3位是細分分類ID
+        mainCategoryId: code.substring(0, 2),
+        subCategoryId: code.substring(2, 5),
         randomCode: code.substring(5, 9) // 後4位是隨機生成碼
     };
 }
