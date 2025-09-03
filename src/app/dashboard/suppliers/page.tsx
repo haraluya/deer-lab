@@ -663,31 +663,31 @@ function SuppliersPageContent() {
         />
       )}
 
-        {/* 供應商詳細資料對話框 - 全新設計 */}
+        {/* 供應商詳細資料對話框 - 修正響應式設計 */}
         {selectedDetailSupplier && (
           <Dialog open={isDetailViewOpen} onOpenChange={setIsDetailViewOpen}>
-            <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden bg-gradient-to-br from-white via-slate-50/30 to-blue-50/20 border-0 shadow-2xl backdrop-blur-sm">
+            <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-hidden bg-gradient-to-br from-white via-slate-50/30 to-blue-50/20 border-0 shadow-2xl backdrop-blur-sm p-0">
               <div className="flex flex-col h-full max-h-[90vh]">
-                {/* 頭部區域 */}
-                <DialogHeader className="pb-6 border-b border-slate-200/50">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="relative">
-                        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
-                          <Building className="h-8 w-8 text-white" />
+                {/* 頭部區域 - 修正手機版排版 */}
+                <DialogHeader className="px-4 sm:px-6 py-4 sm:py-6 border-b border-slate-200/50 flex-shrink-0">
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+                    <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                      <div className="relative flex-shrink-0">
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+                          <Building className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
                         </div>
-                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full border-3 border-white flex items-center justify-center">
-                          <div className="w-2 h-2 bg-white rounded-full"></div>
+                        <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-4 h-4 sm:w-6 sm:h-6 bg-green-500 rounded-full border-2 sm:border-3 border-white flex items-center justify-center">
+                          <div className="w-1 h-1 sm:w-2 sm:h-2 bg-white rounded-full"></div>
                         </div>
                       </div>
-                      <div>
-                        <DialogTitle className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
+                      <div className="min-w-0 flex-1">
+                        <DialogTitle className="text-lg sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-1 sm:mb-2 truncate">
                           {selectedDetailSupplier.name}
                         </DialogTitle>
-                        <DialogDescription className="text-slate-600 text-base">
+                        <DialogDescription className="text-slate-600 text-sm sm:text-base">
                           供應商詳細資訊與合作關係管理
                         </DialogDescription>
-                        <div className="flex items-center gap-2 mt-2">
+                        <div className="flex items-center gap-2 mt-2 flex-wrap">
                           <span className="px-2 py-1 bg-blue-100/80 text-blue-700 rounded-full text-xs font-semibold">
                             ID: {selectedDetailSupplier.id.substring(0, 8)}
                           </span>
@@ -700,17 +700,17 @@ function SuppliersPageContent() {
                   </div>
                 </DialogHeader>
 
-                {/* 內容區域 */}
-                <div className="flex-1 overflow-y-auto py-6 space-y-8">
-                  {/* 快速資訊卡片 */}
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-2xl p-4 border border-blue-200/50">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                          <Package className="h-5 w-5 text-blue-600" />
+                {/* 內容區域 - 修正滾動和間距 */}
+                <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 space-y-6 sm:space-y-8 min-h-0">
+                  {/* 快速資訊卡片 - 修正手機版佈局 */}
+                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-blue-200/50">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Package className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                         </div>
-                        <div>
-                          <div className="text-lg font-bold text-blue-700">
+                        <div className="min-w-0">
+                          <div className="text-base sm:text-lg font-bold text-blue-700">
                             {selectedDetailSupplier.products ? selectedDetailSupplier.products.split(',').length : 0}
                           </div>
                           <div className="text-xs text-blue-600 font-medium">供應品項</div>
@@ -718,13 +718,13 @@ function SuppliersPageContent() {
                       </div>
                     </div>
                     
-                    <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 rounded-2xl p-4 border border-emerald-200/50">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center">
-                          <User className="h-5 w-5 text-emerald-600" />
+                    <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-emerald-200/50">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <User className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600" />
                         </div>
-                        <div>
-                          <div className="text-lg font-bold text-emerald-700">
+                        <div className="min-w-0">
+                          <div className="text-base sm:text-lg font-bold text-emerald-700">
                             {selectedDetailSupplier.contactWindow ? '1' : '0'}
                           </div>
                           <div className="text-xs text-emerald-600 font-medium">聯絡窗口</div>
@@ -732,13 +732,13 @@ function SuppliersPageContent() {
                       </div>
                     </div>
                     
-                    <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-2xl p-4 border border-purple-200/50">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                          <Phone className="h-5 w-5 text-purple-600" />
+                    <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-purple-200/50">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Phone className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
                         </div>
-                        <div>
-                          <div className="text-lg font-bold text-purple-700">
+                        <div className="min-w-0">
+                          <div className="text-xs sm:text-sm font-bold text-purple-700 truncate">
                             {selectedDetailSupplier.contactMethod ? '已建立' : '未建立'}
                           </div>
                           <div className="text-xs text-purple-600 font-medium">聯絡管道</div>
@@ -746,13 +746,13 @@ function SuppliersPageContent() {
                       </div>
                     </div>
                     
-                    <div className="bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-2xl p-4 border border-orange-200/50">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
-                          <User className="h-5 w-5 text-orange-600" />
+                    <div className="bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-orange-200/50">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <User className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
                         </div>
-                        <div>
-                          <div className="text-lg font-bold text-orange-700">
+                        <div className="min-w-0">
+                          <div className="text-xs sm:text-sm font-bold text-orange-700 truncate">
                             {selectedDetailSupplier.liaisonPersonName ? '已指派' : '未指派'}
                           </div>
                           <div className="text-xs text-orange-600 font-medium">對接人員</div>
@@ -761,67 +761,67 @@ function SuppliersPageContent() {
                     </div>
                   </div>
 
-                  {/* 主要資訊區域 */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* 基本資訊 */}
-                    <div className="space-y-6 p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-white/40 shadow-lg">
-                      <div className="flex items-center gap-4 mb-6">
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                          <Building className="h-6 w-6 text-white" />
+                  {/* 主要資訊區域 - 修正手機版佈局 */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+                    {/* 基本資訊 - 修正手機版佈局 */}
+                    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 lg:p-8 bg-white/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl border border-white/40 shadow-lg">
+                      <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                          <Building className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                         </div>
-                        <h3 className="text-xl font-bold text-slate-800">基本資訊</h3>
+                        <h3 className="text-lg sm:text-xl font-bold text-slate-800">基本資訊</h3>
                       </div>
                       
-                      <div className="space-y-6">
-                        <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
+                      <div className="space-y-4 sm:space-y-6">
+                        <div className="p-3 sm:p-4 bg-blue-50/50 rounded-xl sm:rounded-2xl border border-blue-100/50">
                           <label className="text-xs font-bold text-blue-600 uppercase tracking-wide mb-2 block">供應商名稱</label>
-                          <div className="text-xl font-bold text-slate-800">{selectedDetailSupplier.name || '-'}</div>
+                          <div className="text-base sm:text-lg lg:text-xl font-bold text-slate-800 break-words">{selectedDetailSupplier.name || '-'}</div>
                         </div>
                         
-                        <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/50">
+                        <div className="p-3 sm:p-4 bg-indigo-50/50 rounded-xl sm:rounded-2xl border border-indigo-100/50">
                           <label className="text-xs font-bold text-indigo-600 uppercase tracking-wide mb-2 block">供應商品</label>
                           <div className="flex flex-wrap gap-2 mt-2">
                             {selectedDetailSupplier.products ? (
                               selectedDetailSupplier.products.split(',').map((product, i) => (
-                                <span key={i} className="px-3 py-1 bg-indigo-100/80 text-indigo-700 rounded-full text-sm font-medium">
+                                <span key={i} className="px-2 sm:px-3 py-1 bg-indigo-100/80 text-indigo-700 rounded-full text-xs sm:text-sm font-medium">
                                   {product.trim()}
                                 </span>
                               ))
                             ) : (
-                              <span className="text-slate-500 italic">未指定商品</span>
+                              <span className="text-slate-500 italic text-sm">未指定商品</span>
                             )}
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* 聯絡資訊 */}
-                    <div className="space-y-6 p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-white/40 shadow-lg">
-                      <div className="flex items-center gap-4 mb-6">
-                        <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">
-                          <User className="h-6 w-6 text-white" />
+                    {/* 聯絡資訊 - 修正手機版佈局 */}
+                    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 lg:p-8 bg-white/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl border border-white/40 shadow-lg">
+                      <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                          <User className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                         </div>
-                        <h3 className="text-xl font-bold text-slate-800">聯絡資訊</h3>
+                        <h3 className="text-lg sm:text-xl font-bold text-slate-800">聯絡資訊</h3>
                       </div>
                       
-                      <div className="space-y-4">
-                        <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100/50">
+                      <div className="space-y-3 sm:space-y-4">
+                        <div className="p-3 sm:p-4 bg-emerald-50/50 rounded-xl sm:rounded-2xl border border-emerald-100/50">
                           <label className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-2 block">聯絡窗口</label>
-                          <div className="text-lg font-bold text-slate-800">
+                          <div className="text-base sm:text-lg font-bold text-slate-800 break-words">
                             {selectedDetailSupplier.contactWindow || '未指定'}
                           </div>
                         </div>
                         
-                        <div className="p-4 bg-purple-50/50 rounded-2xl border border-purple-100/50">
+                        <div className="p-3 sm:p-4 bg-purple-50/50 rounded-xl sm:rounded-2xl border border-purple-100/50">
                           <label className="text-xs font-bold text-purple-600 uppercase tracking-wide mb-2 block">聯絡方式</label>
-                          <div className="text-lg font-bold text-slate-800">
+                          <div className="text-base sm:text-lg font-bold text-slate-800 break-words">
                             {selectedDetailSupplier.contactMethod || '未提供'}
                           </div>
                         </div>
                         
-                        <div className="p-4 bg-orange-50/50 rounded-2xl border border-orange-100/50">
+                        <div className="p-3 sm:p-4 bg-orange-50/50 rounded-xl sm:rounded-2xl border border-orange-100/50">
                           <label className="text-xs font-bold text-orange-600 uppercase tracking-wide mb-2 block">對接人員</label>
-                          <div className="text-lg font-bold text-slate-800">
+                          <div className="text-base sm:text-lg font-bold text-slate-800 break-words">
                             {selectedDetailSupplier.liaisonPersonName || '未指定'}
                           </div>
                         </div>
@@ -829,39 +829,39 @@ function SuppliersPageContent() {
                     </div>
                   </div>
 
-                  {/* 備註區域 */}
+                  {/* 備註區域 - 修正手機版佈局 */}
                   {selectedDetailSupplier.notes && (
-                    <div className="p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-white/40 shadow-lg">
-                      <div className="flex items-center gap-4 mb-6">
-                        <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center">
-                          <Package className="h-6 w-6 text-white" />
+                    <div className="p-4 sm:p-6 lg:p-8 bg-white/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl border border-white/40 shadow-lg">
+                      <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                          <Package className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                         </div>
-                        <h3 className="text-xl font-bold text-slate-800">詳細備註</h3>
+                        <h3 className="text-lg sm:text-xl font-bold text-slate-800">詳細備註</h3>
                       </div>
                       
-                      <div className="p-6 bg-slate-50/50 rounded-2xl border border-slate-100/50">
-                        <div className="text-slate-700 leading-relaxed whitespace-pre-wrap">
+                      <div className="p-4 sm:p-6 bg-slate-50/50 rounded-xl sm:rounded-2xl border border-slate-100/50">
+                        <div className="text-slate-700 leading-relaxed whitespace-pre-wrap text-sm sm:text-base break-words">
                           {selectedDetailSupplier.notes}
                         </div>
                       </div>
                     </div>
                   )}
 
-                  {/* 相關物料和香精 */}
+                  {/* 相關物料和香精 - 修正手機版佈局 */}
                   <SupplierRelatedItems supplierId={selectedDetailSupplier.id} />
                 </div>
 
-                {/* 底部操作區域 */}
-                <div className="flex justify-between items-center pt-6 border-t border-slate-200/50">
-                  <div className="text-xs text-slate-500">
+                {/* 底部操作區域 - 修正響應式和固定位置 */}
+                <div className="flex-shrink-0 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 sm:pt-6 px-4 sm:px-6 pb-4 sm:pb-6 border-t border-slate-200/50 bg-white/50 backdrop-blur-sm">
+                  <div className="text-xs text-slate-500 order-2 sm:order-1">
                     最後更新: {new Date().toLocaleDateString('zh-TW')}
                   </div>
                   
-                  <div className="flex gap-3">
+                  <div className="flex gap-3 w-full sm:w-auto order-1 sm:order-2">
                     <Button 
                       variant="outline" 
                       onClick={() => setIsDetailViewOpen(false)}
-                      className="border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl px-6"
+                      className="flex-1 sm:flex-none border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl px-4 sm:px-6 py-2"
                     >
                       關閉
                     </Button>
@@ -873,7 +873,7 @@ function SuppliersPageContent() {
                             handleEdit(selectedDetailSupplier);
                           }, 100);
                         }}
-                        className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl px-6"
+                        className="flex-1 sm:flex-none bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl px-4 sm:px-6 py-2"
                       >
                         <Edit className="mr-2 h-4 w-4" />
                         編輯資料
@@ -947,25 +947,25 @@ function SupplierRelatedItems({ supplierId }: SupplierRelatedItemsProps) {
 
   if (isLoading) {
     return (
-      <div className="p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-white/40 shadow-lg">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center">
-            <Package className="h-6 w-6 text-white" />
+      <div className="p-4 sm:p-6 lg:p-8 bg-white/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl border border-white/40 shadow-lg">
+        <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center flex-shrink-0">
+            <Package className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
           </div>
-          <h3 className="text-xl font-bold text-slate-800">相關物料和香精</h3>
+          <h3 className="text-lg sm:text-xl font-bold text-slate-800">相關物料和香精</h3>
         </div>
         
-        <div className="flex items-center justify-center py-12">
+        <div className="flex flex-col sm:flex-row items-center justify-center py-8 sm:py-12 gap-3 sm:gap-0">
           <div className="relative">
-            <div className="w-12 h-12 border-4 border-orange-200/50 rounded-full animate-spin"></div>
-            <div className="absolute top-0 left-0 w-12 h-12 border-4 border-transparent border-t-orange-600 rounded-full animate-spin"></div>
+            <div className="w-10 h-10 sm:w-12 sm:h-12 border-4 border-orange-200/50 rounded-full animate-spin"></div>
+            <div className="absolute top-0 left-0 w-10 h-10 sm:w-12 sm:h-12 border-4 border-transparent border-t-orange-600 rounded-full animate-spin"></div>
           </div>
-          <div className="flex items-center gap-2 ml-4">
+          <div className="flex items-center gap-2 sm:ml-4">
             <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
             <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
             <div className="w-2 h-2 bg-yellow-500 rounded-full animate-bounce"></div>
           </div>
-          <span className="ml-4 text-base text-slate-600 font-medium">載入相關資料中...</span>
+          <span className="sm:ml-4 text-sm sm:text-base text-slate-600 font-medium">載入相關資料中...</span>
         </div>
       </div>
     );
@@ -974,27 +974,27 @@ function SupplierRelatedItems({ supplierId }: SupplierRelatedItemsProps) {
   const hasItems = materials.length > 0 || fragrances.length > 0;
 
   return (
-    <div className="p-8 bg-white/80 backdrop-blur-sm rounded-3xl border border-white/40 shadow-lg">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center">
-            <Package className="h-6 w-6 text-white" />
+    <div className="p-4 sm:p-6 lg:p-8 bg-white/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl border border-white/40 shadow-lg">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-4">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center flex-shrink-0">
+            <Package className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
           </div>
-          <div>
-            <h3 className="text-xl font-bold text-slate-800">相關物料和香精</h3>
-            <p className="text-sm text-slate-600">供應商提供的相關產品項目</p>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-lg sm:text-xl font-bold text-slate-800">相關物料和香精</h3>
+            <p className="text-xs sm:text-sm text-slate-600">供應商提供的相關產品項目</p>
           </div>
         </div>
         
         {hasItems && (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{materials.length}</div>
+              <div className="text-lg sm:text-2xl font-bold text-blue-600">{materials.length}</div>
               <div className="text-xs text-slate-600 font-medium">物料</div>
             </div>
-            <div className="w-px h-8 bg-slate-300"></div>
+            <div className="w-px h-6 sm:h-8 bg-slate-300"></div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{fragrances.length}</div>
+              <div className="text-lg sm:text-2xl font-bold text-purple-600">{fragrances.length}</div>
               <div className="text-xs text-slate-600 font-medium">香精</div>
             </div>
           </div>
@@ -1024,29 +1024,29 @@ function SupplierRelatedItems({ supplierId }: SupplierRelatedItemsProps) {
                 </span>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 {materials.map((material) => (
-                  <div key={material.id} className="group bg-gradient-to-br from-blue-50/50 to-cyan-50/30 rounded-2xl border border-blue-100/50 p-5 hover:shadow-lg transition-all duration-300">
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <div className="font-bold text-slate-800 text-base group-hover:text-blue-700 transition-colors">
+                  <div key={material.id} className="group bg-gradient-to-br from-blue-50/50 to-cyan-50/30 rounded-xl sm:rounded-2xl border border-blue-100/50 p-4 sm:p-5 hover:shadow-lg transition-all duration-300">
+                    <div className="flex flex-col sm:flex-row justify-between items-start mb-3 gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-slate-800 text-sm sm:text-base group-hover:text-blue-700 transition-colors truncate">
                           {material.name}
                         </div>
-                        <div className="text-xs text-slate-500 mt-1">{material.category} / {material.subCategory}</div>
+                        <div className="text-xs text-slate-500 mt-1 truncate">{material.category} / {material.subCategory}</div>
                       </div>
-                      <Badge variant="outline" className="text-xs font-semibold bg-white/80">
+                      <Badge variant="outline" className="text-xs font-semibold bg-white/80 flex-shrink-0">
                         {material.code}
                       </Badge>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3 text-sm">
                       <div className="p-2 bg-white/60 rounded-lg">
                         <div className="text-xs text-blue-600 font-medium uppercase tracking-wide">庫存</div>
-                        <div className="font-bold text-slate-700">{material.currentStock || 0} {material.unit}</div>
+                        <div className="font-bold text-slate-700 text-xs sm:text-sm truncate">{material.currentStock || 0} {material.unit}</div>
                       </div>
                       <div className="p-2 bg-white/60 rounded-lg">
                         <div className="text-xs text-green-600 font-medium uppercase tracking-wide">成本</div>
-                        <div className="font-bold text-slate-700">NT$ {material.costPerUnit || 0}</div>
+                        <div className="font-bold text-slate-700 text-xs sm:text-sm truncate">NT$ {material.costPerUnit || 0}</div>
                       </div>
                     </div>
                   </div>
@@ -1068,36 +1068,36 @@ function SupplierRelatedItems({ supplierId }: SupplierRelatedItemsProps) {
                 </span>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 {fragrances.map((fragrance) => (
-                  <div key={fragrance.id} className="group bg-gradient-to-br from-purple-50/50 to-pink-50/30 rounded-2xl border border-purple-100/50 p-5 hover:shadow-lg transition-all duration-300">
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <div className="font-bold text-slate-800 text-base group-hover:text-purple-700 transition-colors">
+                  <div key={fragrance.id} className="group bg-gradient-to-br from-purple-50/50 to-pink-50/30 rounded-xl sm:rounded-2xl border border-purple-100/50 p-4 sm:p-5 hover:shadow-lg transition-all duration-300">
+                    <div className="flex flex-col sm:flex-row justify-between items-start mb-3 gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-slate-800 text-sm sm:text-base group-hover:text-purple-700 transition-colors truncate">
                           {fragrance.name}
                         </div>
-                        <div className="text-xs text-slate-500 mt-1">{fragrance.fragranceType || fragrance.status}</div>
+                        <div className="text-xs text-slate-500 mt-1 truncate">{fragrance.fragranceType || fragrance.status}</div>
                       </div>
-                      <Badge variant="outline" className="text-xs font-semibold bg-white/80">
+                      <Badge variant="outline" className="text-xs font-semibold bg-white/80 flex-shrink-0">
                         {fragrance.code}
                       </Badge>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3 text-sm">
                       <div className="p-2 bg-white/60 rounded-lg">
                         <div className="text-xs text-purple-600 font-medium uppercase tracking-wide">庫存</div>
-                        <div className="font-bold text-slate-700">{fragrance.currentStock || 0} {fragrance.unit || 'KG'}</div>
+                        <div className="font-bold text-slate-700 text-xs sm:text-sm truncate">{fragrance.currentStock || 0} {fragrance.unit || 'KG'}</div>
                       </div>
                       <div className="p-2 bg-white/60 rounded-lg">
                         <div className="text-xs text-green-600 font-medium uppercase tracking-wide">成本</div>
-                        <div className="font-bold text-slate-700">NT$ {fragrance.costPerUnit || 0}</div>
+                        <div className="font-bold text-slate-700 text-xs sm:text-sm truncate">NT$ {fragrance.costPerUnit || 0}</div>
                       </div>
                     </div>
                     
                     {fragrance.percentage && (
-                      <div className="mt-3 p-2 bg-white/60 rounded-lg">
+                      <div className="mt-2 sm:mt-3 p-2 bg-white/60 rounded-lg">
                         <div className="text-xs text-indigo-600 font-medium uppercase tracking-wide">濃度</div>
-                        <div className="font-bold text-slate-700">{fragrance.percentage}%</div>
+                        <div className="font-bold text-slate-700 text-xs sm:text-sm">{fragrance.percentage}%</div>
                       </div>
                     )}
                   </div>
