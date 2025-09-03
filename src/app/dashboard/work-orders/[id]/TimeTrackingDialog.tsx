@@ -375,8 +375,8 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                           type="time"
                           value={newEntry.startTime}
                           onChange={(e) => setNewEntry({...newEntry, startTime: e.target.value})}
-                          step="1"
-                          className="text-lg font-mono bg-white border-2 border-green-300 focus:border-green-500 focus:ring-green-200 pl-12 text-black [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-datetime-edit]:text-black [&::-webkit-datetime-edit-text]:text-black [&::-webkit-datetime-edit-hour-field]:text-black [&::-webkit-datetime-edit-minute-field]:text-black [&::-webkit-datetime-edit-ampm-field]:hidden"
+                          step="60"
+                          className="text-lg font-mono bg-white border-2 border-green-300 focus:border-green-500 focus:ring-green-200 pl-12 text-black [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-datetime-edit]:text-black [&::-webkit-datetime-edit-text]:text-black [&::-webkit-datetime-edit-hour-field]:text-black [&::-webkit-datetime-edit-minute-field]:text-black [&::-webkit-datetime-edit-second-field]:hidden [&::-webkit-datetime-edit-ampm-field]:hidden"
                           style={{ 
                             colorScheme: 'light', 
                             color: '#000000 !important',
@@ -413,8 +413,8 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                             endTime: e.target.value,
                             endDate: newEntry.startDate // 自動同步結束日期
                           })}
-                          step="1"
-                          className="text-lg font-mono bg-white border-2 border-red-300 focus:border-red-500 focus:ring-red-200 pl-12 text-black [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-datetime-edit]:text-black [&::-webkit-datetime-edit-text]:text-black [&::-webkit-datetime-edit-hour-field]:text-black [&::-webkit-datetime-edit-minute-field]:text-black [&::-webkit-datetime-edit-ampm-field]:hidden"
+                          step="60"
+                          className="text-lg font-mono bg-white border-2 border-red-300 focus:border-red-500 focus:ring-red-200 pl-12 text-black [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-datetime-edit]:text-black [&::-webkit-datetime-edit-text]:text-black [&::-webkit-datetime-edit-hour-field]:text-black [&::-webkit-datetime-edit-minute-field]:text-black [&::-webkit-datetime-edit-second-field]:hidden [&::-webkit-datetime-edit-ampm-field]:hidden"
                           style={{ 
                             colorScheme: 'light', 
                             color: '#000000 !important',
