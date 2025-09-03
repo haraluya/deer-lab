@@ -526,14 +526,13 @@ export default function CreateWorkOrderPage() {
     }
 
     const materialRequirements = calculateMaterialRequirements()
-    // 只檢查核心配方物料的庫存
+    // 允許庫存不足時建立工單，但會警告
     const insufficientMaterials = materialRequirements.filter(m => 
       ['fragrance', 'pg', 'vg', 'nicotine'].includes(m.category) && !m.hasEnoughStock
     )
 
     if (insufficientMaterials.length > 0) {
-      toast.error(`以下核心物料庫存不足：${insufficientMaterials.map(m => m.materialName).join(", ")}`)
-      return
+      toast.warning(`庫存不足但仍允許建立：${insufficientMaterials.map(m => m.materialName).join(", ")}`)
     }
 
     setCreating(true)
@@ -846,7 +845,7 @@ export default function CreateWorkOrderPage() {
                     <div className="pt-6">
                       <Button 
                         onClick={handleCreateWorkOrder}
-                        disabled={!selectedProduct || hasInsufficientStock || creating}
+                        disabled={!selectedProduct || creating}
                         className="w-full h-16 text-xl font-bold bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         size="lg"
                       >

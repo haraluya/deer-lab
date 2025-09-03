@@ -57,6 +57,7 @@ export default function ProductDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [targetProduction, setTargetProduction] = useState<number>(1);
+  const [targetProductionInput, setTargetProductionInput] = useState<string>('1');
   const [isRemarksDialogOpen, setIsRemarksDialogOpen] = useState(false);
   const [remarks, setRemarks] = useState<string>('');
 
@@ -226,6 +227,7 @@ export default function ProductDetailPage() {
         
         setProduct(productData);
         setTargetProduction(data.targetProduction || 1);
+        setTargetProductionInput((data.targetProduction || 1).toString());
         setRemarks(data.notes || '');
       } catch (error) {
         console.error('Failed to fetch product:', error);
@@ -590,8 +592,17 @@ export default function ProductDetailPage() {
                   type="number"
                   step="0.1"
                   min="0.1"
-                  value={targetProduction}
-                  onChange={(e) => setTargetProduction(Number(e.target.value) || 1)}
+                  value={targetProductionInput}
+                  onChange={(e) => setTargetProductionInput(e.target.value)}
+                  onBlur={(e) => {
+                    const value = Number(e.target.value);
+                    if (value > 0) {
+                      setTargetProduction(value);
+                    } else {
+                      setTargetProduction(1);
+                      setTargetProductionInput('1');
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   placeholder="輸入目標產量"
                 />

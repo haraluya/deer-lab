@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { doc, getDoc, updateDoc, collection, getDocs, addDoc, Timestamp, query, where, orderBy } from "firebase/firestore"
+import { doc, getDoc, updateDoc, collection, getDocs, addDoc, Timestamp, query, where, orderBy, deleteDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
 import { uploadImage, uploadMultipleImages } from "@/lib/imageUpload"
@@ -12,7 +12,7 @@ import { Material, Fragrance, Personnel, WorkOrder, TimeEntry, BillOfMaterialsIt
 import { 
   ArrowLeft, Edit, Save, CheckCircle, AlertCircle, Clock, Package, Users, 
   Droplets, Calculator, MessageSquare, Calendar, User, Plus, X, Loader2, Upload, Trash2,
-  RefreshCw, Check, Printer, AlertTriangle
+  RefreshCw, Check, Printer, AlertTriangle, Edit2
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -131,6 +131,14 @@ export default function WorkOrderDetailPage() {
   const [isWarehouseDialogOpen, setIsWarehouseDialogOpen] = useState(false)
   const [isWarehousing, setIsWarehousing] = useState(false)
 
+  // 快速編輯工時相關狀態
+  const [editingTimeEntryId, setEditingTimeEntryId] = useState<string | null>(null)
+  const [quickEditData, setQuickEditData] = useState({
+    startDate: '',
+    startTime: '',
+    endTime: ''
+  })
+
   // 格式化數值顯示，智能去除尾隨的0，並處理浮點數精度問題
   const formatNumber = (value: number) => {
     if (value === 0) return '0';
@@ -240,6 +248,55 @@ export default function WorkOrderDetailPage() {
     
     setIsCompleting(true);
     try {
+      // 預先檢查庫存是否足夠
+      const materialsToUpdate = workOrder.billOfMaterials.filter(item => (item.usedQuantity || 0) > 0);
+      const insufficientItems = [];
+      
+      for (const item of materialsToUpdate) {
+        const usedQuantity = item.usedQuantity || 0;
+        
+        if (item.category === 'fragrance') {
+          // 檢查香精庫存
+          const fragranceRef = doc(db, "fragrances", item.id);
+          const fragranceDoc = await getDoc(fragranceRef);
+          if (fragranceDoc.exists()) {
+            const currentStock = fragranceDoc.data().currentStock || 0;
+            if (currentStock < usedQuantity) {
+              insufficientItems.push({
+                name: item.name,
+                currentStock,
+                requiredQuantity: usedQuantity,
+                shortage: usedQuantity - currentStock
+              });
+            }
+          }
+        } else {
+          // 檢查物料庫存
+          const materialRef = doc(db, "materials", item.id);
+          const materialDoc = await getDoc(materialRef);
+          if (materialDoc.exists()) {
+            const currentStock = materialDoc.data().currentStock || 0;
+            if (currentStock < usedQuantity) {
+              insufficientItems.push({
+                name: item.name,
+                currentStock,
+                requiredQuantity: usedQuantity,
+                shortage: usedQuantity - currentStock
+              });
+            }
+          }
+        }
+      }
+      
+      // 如果有庫存不足，顯示錯誤並停止完工
+      if (insufficientItems.length > 0) {
+        const errorMessage = insufficientItems
+          .map(item => `${item.name}: 庫存 ${item.currentStock}，需求 ${item.requiredQuantity}，缺少 ${item.shortage}`)
+          .join('\n');
+        toast.error(`庫存不足，無法完工：\n${errorMessage}`, { duration: 8000 });
+        setIsCompleting(false);
+        return;
+      }
       // 1. 更新工單狀態
       const docRef = doc(db, "workOrders", workOrderId);
       await updateDoc(docRef, {
@@ -248,7 +305,7 @@ export default function WorkOrderDetailPage() {
       });
 
       // 2. 扣除物料和香精庫存
-      const materialsToUpdate = workOrder.billOfMaterials.filter(item => (item.usedQuantity || 0) > 0);
+      // materialsToUpdate 已在上面定義，直接使用
       
       for (const item of materialsToUpdate) {
         const usedQuantity = item.usedQuantity || 0;
@@ -406,11 +463,84 @@ export default function WorkOrderDetailPage() {
         id: doc.id,
         ...doc.data()
       }));
+      
+      // 按工作日期和開始時間排序（最新的在上面）
+      entries.sort((a: any, b: any) => {
+        const dateA = new Date(`${a.startDate}T${a.startTime}`);
+        const dateB = new Date(`${b.startDate}T${b.startTime}`);
+        return dateB.getTime() - dateA.getTime();
+      });
+      
       setTimeEntries(entries);
     } catch (err) {
       error('載入工時記錄失敗', err as Error);
     }
   }, [workOrderId]);
+
+  // 快速編輯工時記錄
+  const handleQuickEditTimeEntry = (entry: any) => {
+    setEditingTimeEntryId(entry.id);
+    setQuickEditData({
+      startDate: entry.startDate,
+      startTime: entry.startTime,
+      endTime: entry.endTime
+    });
+  };
+
+  // 儲存快速編輯
+  const handleSaveQuickEdit = async () => {
+    if (!editingTimeEntryId || !db) return;
+    
+    try {
+      const duration = calculateTimeDuration(quickEditData.startTime, quickEditData.endTime);
+      await updateDoc(doc(db, 'timeEntries', editingTimeEntryId), {
+        startDate: quickEditData.startDate,
+        startTime: quickEditData.startTime,
+        endTime: quickEditData.endTime,
+        duration: duration,
+        overtimeHours: Math.max(0, duration - 8),
+        updatedAt: Timestamp.now()
+      });
+      
+      setEditingTimeEntryId(null);
+      toast.success('工時記錄已更新');
+      loadTimeEntries();
+    } catch (err) {
+      console.error('更新工時記錄失敗:', err);
+      toast.error('更新工時記錄失敗');
+    }
+  };
+
+  // 取消編輯
+  const handleCancelQuickEdit = () => {
+    setEditingTimeEntryId(null);
+    setQuickEditData({ startDate: '', startTime: '', endTime: '' });
+  };
+
+  // 刪除工時記錄
+  const handleDeleteTimeEntry = async (entryId: string) => {
+    if (!db) return;
+    
+    const confirmDelete = window.confirm('確定要刪除這筆工時記錄嗎？');
+    if (!confirmDelete) return;
+    
+    try {
+      await deleteDoc(doc(db, 'timeEntries', entryId));
+      toast.success('工時記錄已刪除');
+      loadTimeEntries();
+    } catch (err) {
+      console.error('刪除工時記錄失敗:', err);
+      toast.error('刪除工時記錄失敗');
+    }
+  };
+
+  // 計算工時差
+  const calculateTimeDuration = (startTime: string, endTime: string): number => {
+    const start = new Date(`2000-01-01T${startTime}`);
+    const end = new Date(`2000-01-01T${endTime}`);
+    const diffMs = end.getTime() - start.getTime();
+    return diffMs / (1000 * 60 * 60); // 轉換為小時
+  };
 
   // 載入工單資料
   const fetchWorkOrder = useCallback(async () => {
@@ -2050,11 +2180,11 @@ export default function WorkOrderDetailPage() {
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-gradient-to-r from-green-600 to-emerald-700">
-                        <TableHead className="text-white font-bold">物料名稱</TableHead>
-                        <TableHead className="text-white font-bold">料件代號</TableHead>
-                        <TableHead className="text-white font-bold">使用數量</TableHead>
-                        <TableHead className="text-white font-bold">單位</TableHead>
+                      <TableRow className="bg-gradient-to-r from-green-100 to-emerald-100">
+                        <TableHead className="text-black font-bold">物料名稱</TableHead>
+                        <TableHead className="text-black font-bold">料件代號</TableHead>
+                        <TableHead className="text-black font-bold">使用數量</TableHead>
+                        <TableHead className="text-black font-bold">單位</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -2116,7 +2246,7 @@ export default function WorkOrderDetailPage() {
               className="bg-orange-600 hover:bg-orange-700 w-full sm:w-auto"
             >
               <Clock className="mr-2 h-4 w-4" />
-              工時管理
+              新增工時
             </Button>
           </div>
         </CardHeader>
@@ -2137,24 +2267,104 @@ export default function WorkOrderDetailPage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gradient-to-r from-orange-600 to-amber-700">
-                    <TableHead className="text-white font-bold text-xs sm:text-sm">人員</TableHead>
-                    <TableHead className="text-white font-bold text-xs sm:text-sm">工作日期</TableHead>
-                    <TableHead className="text-white font-bold text-xs sm:text-sm">開始時間</TableHead>
-                    <TableHead className="text-white font-bold text-xs sm:text-sm">結束時間</TableHead>
-                    <TableHead className="text-white font-bold text-xs sm:text-sm">工時小計</TableHead>
+                  <TableRow className="bg-gradient-to-r from-orange-100 to-amber-100">
+                    <TableHead className="text-black font-bold text-xs sm:text-sm">人員</TableHead>
+                    <TableHead className="text-black font-bold text-xs sm:text-sm">工作日期</TableHead>
+                    <TableHead className="text-black font-bold text-xs sm:text-sm">開始時間</TableHead>
+                    <TableHead className="text-black font-bold text-xs sm:text-sm">結束時間</TableHead>
+                    <TableHead className="text-black font-bold text-xs sm:text-sm">工時小計</TableHead>
+                    <TableHead className="text-black font-bold text-xs sm:text-sm">排工人員</TableHead>
+                    {workOrder?.status !== "入庫" && (
+                      <TableHead className="text-black font-bold text-xs sm:text-sm text-right">操作</TableHead>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {timeEntries.map((entry, index) => (
                     <TableRow key={index}>
                       <TableCell className="font-medium">{entry.personnelName}</TableCell>
-                      <TableCell>{entry.startDate}</TableCell>
-                      <TableCell>{entry.startTime}</TableCell>
-                      <TableCell>{entry.endTime}</TableCell>
+                      <TableCell>
+                        {editingTimeEntryId === entry.id ? (
+                          <Input
+                            type="date"
+                            value={quickEditData.startDate}
+                            onChange={(e) => setQuickEditData({...quickEditData, startDate: e.target.value})}
+                            className="w-32 h-8 text-xs"
+                          />
+                        ) : (
+                          entry.startDate
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingTimeEntryId === entry.id ? (
+                          <Input
+                            type="time"
+                            value={quickEditData.startTime}
+                            onChange={(e) => setQuickEditData({...quickEditData, startTime: e.target.value})}
+                            className="w-24 h-8 text-xs"
+                          />
+                        ) : (
+                          entry.startTime
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingTimeEntryId === entry.id ? (
+                          <Input
+                            type="time"
+                            value={quickEditData.endTime}
+                            onChange={(e) => setQuickEditData({...quickEditData, endTime: e.target.value})}
+                            className="w-24 h-8 text-xs"
+                          />
+                        ) : (
+                          entry.endTime
+                        )}
+                      </TableCell>
                       <TableCell className="font-medium">
                         {Math.floor(entry.duration)} 小時 {Math.round((entry.duration % 1) * 60)} 分鐘
                       </TableCell>
+                      <TableCell className="text-gray-600 text-sm">{entry.createdByName || '未知'}</TableCell>
+                      {workOrder?.status !== "入庫" && (
+                        <TableCell className="text-right">
+                          {editingTimeEntryId === entry.id ? (
+                            <div className="flex gap-1 justify-end">
+                              <Button
+                                size="sm"
+                                onClick={handleSaveQuickEdit}
+                                className="h-7 px-2 bg-green-600 hover:bg-green-700 text-white text-xs"
+                              >
+                                <Check className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={handleCancelQuickEdit}
+                                className="h-7 px-2 text-xs"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex gap-1 justify-end">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleQuickEditTimeEntry(entry)}
+                                className="h-7 px-2 text-xs"
+                              >
+                                <Edit2 className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleDeleteTimeEntry(entry.id)}
+                                className="h-7 px-2 text-xs"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>

@@ -205,6 +205,12 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
         return
       }
 
+      // 檢查超時工作提醒
+      if (duration > 8) {
+        const overtime = duration - 8
+        toast.warning(`批量新增的工時超過8小時，每人將產生 ${overtime.toFixed(1)} 小時加班時數`)
+      }
+
       setSaving(true)
       try {
         const promises = selectedPersonnel.map(async (personId) => {
@@ -260,6 +266,12 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
       if (checkTimeOverlap(newEntry.personnelId, newEntry.startDate, newEntry.startTime, newEntry.endDate, newEntry.endTime)) {
         toast.error("此時間段與該人員的其他工時記錄重疊，請調整時間")
         return
+      }
+
+      // 檢查超時工作提醒
+      if (duration > 8) {
+        const overtime = duration - 8
+        toast.warning(`工時超過8小時，將產生 ${overtime.toFixed(1)} 小時加班時數`)
       }
 
       const selectedPerson = personnel.find(p => p.id === newEntry.personnelId)
@@ -434,9 +446,10 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl sm:max-w-4xl max-w-[calc(100vw-1rem)] max-h-[90vh] sm:max-h-[80vh] overflow-y-auto" aria-describedby="time-tracking-dialog-description">
-        <DialogHeader>
+    <TooltipProvider>
+      <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl sm:max-w-4xl max-w-[calc(100vw-1rem)] max-h-[90vh] sm:max-h-[80vh] overflow-y-auto" aria-describedby="time-tracking-dialog-description">
+          <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
             工時申報 {workOrderNumber && `- ${workOrderNumber}`}
@@ -447,8 +460,7 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
         </DialogHeader>
 
         {/* 操作說明提示 */}
-        <TooltipProvider>
-          <Alert className="border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50">
+        <Alert className="border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50">
             <AlertTriangle className="h-4 w-4 text-amber-600" />
             <AlertTitle className="text-amber-800 font-semibold">
               {isLocked ? "🔒 工時記錄已鎖定" : "📝 工時申報使用說明"}
@@ -467,7 +479,6 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
               )}
             </AlertDescription>
           </Alert>
-        </TooltipProvider>
 
         <div className="space-y-6">
           {/* 統計資訊 */}
@@ -1099,7 +1110,8 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
             </CardContent>
           </Card>
         </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </TooltipProvider>
   )
 }
