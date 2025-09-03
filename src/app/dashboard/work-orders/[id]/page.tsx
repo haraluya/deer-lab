@@ -2288,10 +2288,13 @@ export default function WorkOrderDetailPage() {
                       </TableCell>
                       <TableCell>
                         {editingTimeEntryId === entry.id ? (
-                          <TimePicker
+                          <Input
+                            type="text"
                             value={quickEditData.startTime}
-                            onChange={(value) => setQuickEditData({...quickEditData, startTime: value})}
-                            className="w-32 h-8 text-xs"
+                            onChange={(e) => setQuickEditData({...quickEditData, startTime: e.target.value})}
+                            className="w-20 h-8 text-xs font-mono text-center"
+                            placeholder="HH:MM"
+                            pattern="^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
                           />
                         ) : (
                           entry.startTime
@@ -2299,10 +2302,13 @@ export default function WorkOrderDetailPage() {
                       </TableCell>
                       <TableCell>
                         {editingTimeEntryId === entry.id ? (
-                          <TimePicker
+                          <Input
+                            type="text"
                             value={quickEditData.endTime}
-                            onChange={(value) => setQuickEditData({...quickEditData, endTime: value})}
-                            className="w-32 h-8 text-xs"
+                            onChange={(e) => setQuickEditData({...quickEditData, endTime: e.target.value})}
+                            className="w-20 h-8 text-xs font-mono text-center"
+                            placeholder="HH:MM"
+                            pattern="^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
                           />
                         ) : (
                           entry.endTime

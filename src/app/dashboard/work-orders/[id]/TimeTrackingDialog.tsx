@@ -295,47 +295,71 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                 {batchMode ? (
                   <div className="space-y-3">
                     <Label className="text-sm font-semibold text-blue-800">選擇人員（可多選）</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {personnel.map((person) => (
-                        <label key={person.id} className="flex items-center space-x-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={selectedPersonnel.includes(person.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedPersonnel([...selectedPersonnel, person.id])
-                              } else {
-                                setSelectedPersonnel(selectedPersonnel.filter(id => id !== person.id))
-                              }
-                            }}
-                            className="rounded"
-                          />
-                          <span className="text-sm">{person.name}</span>
-                        </label>
-                      ))}
-                    </div>
+                    {loading ? (
+                      <div className="flex items-center gap-2 p-3 bg-white border-2 border-blue-200 rounded-lg">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-sm text-gray-600">載入人員資料中...</span>
+                      </div>
+                    ) : personnel.length === 0 ? (
+                      <div className="flex items-center gap-2 p-3 bg-red-50 border-2 border-red-200 rounded-lg">
+                        <AlertTriangle className="h-4 w-4 text-red-600" />
+                        <span className="text-sm text-red-600">無法載入人員資料</span>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        {personnel.map((person) => (
+                          <label key={person.id} className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={selectedPersonnel.includes(person.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedPersonnel([...selectedPersonnel, person.id])
+                                } else {
+                                  setSelectedPersonnel(selectedPersonnel.filter(id => id !== person.id))
+                                }
+                              }}
+                              className="rounded"
+                            />
+                            <span className="text-sm">{person.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-3">
                     <Label className="text-sm font-semibold text-blue-800">選擇人員</Label>
-                    <Select 
-                      value={newEntry.personnelId} 
-                      onValueChange={(value) => setNewEntry({...newEntry, personnelId: value})}
-                    >
-                      <SelectTrigger className="bg-gradient-to-r from-white to-blue-50 border-2 border-blue-200">
-                        <SelectValue placeholder="選擇人員" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {personnel.map((person) => (
-                          <SelectItem key={person.id} value={person.id}>
-                            <div className="flex items-center gap-2">
-                              <User className="h-4 w-4" />
-                              {person.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {loading ? (
+                      <div className="flex items-center gap-2 p-3 bg-white border-2 border-blue-200 rounded-lg">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-sm text-gray-600">載入人員資料中...</span>
+                      </div>
+                    ) : personnel.length === 0 ? (
+                      <div className="flex items-center gap-2 p-3 bg-red-50 border-2 border-red-200 rounded-lg">
+                        <AlertTriangle className="h-4 w-4 text-red-600" />
+                        <span className="text-sm text-red-600">無法載入人員資料</span>
+                      </div>
+                    ) : (
+                      <Select 
+                        value={newEntry.personnelId} 
+                        onValueChange={(value) => setNewEntry({...newEntry, personnelId: value})}
+                      >
+                        <SelectTrigger className="bg-gradient-to-r from-white to-blue-50 border-2 border-blue-200">
+                          <SelectValue placeholder="選擇人員" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {personnel.map((person) => (
+                            <SelectItem key={person.id} value={person.id}>
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4" />
+                                {person.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                 )}
 
