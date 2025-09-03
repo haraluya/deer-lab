@@ -448,7 +448,7 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
   return (
     <TooltipProvider>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl sm:max-w-4xl max-w-[calc(100vw-1rem)] max-h-[90vh] sm:max-h-[80vh] overflow-y-auto" aria-describedby="time-tracking-dialog-description">
+        <DialogContent className="max-w-2xl sm:max-w-3xl max-w-[calc(100vw-2rem)] max-h-[85vh] overflow-y-auto" aria-describedby="time-tracking-dialog-description">
           <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
@@ -481,56 +481,6 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
           </Alert>
 
         <div className="space-y-6">
-          {/* 統計資訊 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-blue-200">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-bold text-blue-800">總記錄數</CardTitle>
-                  <div className="p-2 bg-blue-500 rounded-lg">
-                    <ClipboardList className="h-4 w-4 text-white" />
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-blue-900 mb-1">{timeEntries.length}</div>
-                <p className="text-xs text-blue-600 font-medium">筆工時記錄</p>
-              </CardContent>
-              <div className="absolute inset-0 bg-gradient-to-br from-transparent to-blue-600/10 pointer-events-none" />
-            </Card>
-
-            <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-50 to-green-100 border-2 border-emerald-200">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-bold text-emerald-800">總工時</CardTitle>
-                  <div className="p-2 bg-emerald-500 rounded-lg">
-                    <Clock className="h-4 w-4 text-white" />
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-emerald-900 mb-1">{formatDuration(getTotalHours())}</div>
-                <p className="text-xs text-emerald-600 font-medium">累計工作時間</p>
-              </CardContent>
-              <div className="absolute inset-0 bg-gradient-to-br from-transparent to-emerald-600/10 pointer-events-none" />
-            </Card>
-
-            <Card className="relative overflow-hidden bg-gradient-to-br from-purple-50 to-violet-100 border-2 border-purple-200">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-bold text-purple-800">人工總時</CardTitle>
-                  <div className="p-2 bg-purple-500 rounded-lg">
-                    <Users className="h-4 w-4 text-white" />
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-purple-900 mb-1">{formatDuration(getTotalManHours())}</div>
-                <p className="text-xs text-purple-600 font-medium">總人工工時</p>
-              </CardContent>
-              <div className="absolute inset-0 bg-gradient-to-br from-transparent to-purple-600/10 pointer-events-none" />
-            </Card>
-          </div>
 
           {/* 新增工時記錄 */}
           {!isLocked && (
@@ -651,8 +601,8 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                           type="time"
                           value={newEntry.startTime}
                           onChange={(e) => setNewEntry({...newEntry, startTime: e.target.value})}
-                          step="60"
-                          className="text-lg font-mono bg-white border-2 border-green-300 focus:border-green-500 focus:ring-green-200 pl-12 text-black [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-datetime-edit]:text-black [&::-webkit-datetime-edit-text]:text-black [&::-webkit-datetime-edit-hour-field]:text-black [&::-webkit-datetime-edit-minute-field]:text-black [&::-webkit-datetime-edit-ampm-field]:display-none"
+                          step="1"
+                          className="text-lg font-mono bg-white border-2 border-green-300 focus:border-green-500 focus:ring-green-200 pl-12 text-black [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-datetime-edit]:text-black [&::-webkit-datetime-edit-text]:text-black [&::-webkit-datetime-edit-hour-field]:text-black [&::-webkit-datetime-edit-minute-field]:text-black [&::-webkit-datetime-edit-ampm-field]:hidden"
                           style={{ 
                             colorScheme: 'light', 
                             color: '#000000 !important',
@@ -692,8 +642,8 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                             endTime: e.target.value,
                             endDate: newEntry.startDate // 自動同步結束日期
                           })}
-                          step="60"
-                          className="text-lg font-mono bg-white border-2 border-red-300 focus:border-red-500 focus:ring-red-200 pl-12 text-black [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-datetime-edit]:text-black [&::-webkit-datetime-edit-text]:text-black [&::-webkit-datetime-edit-hour-field]:text-black [&::-webkit-datetime-edit-minute-field]:text-black [&::-webkit-datetime-edit-ampm-field]:display-none"
+                          step="1"
+                          className="text-lg font-mono bg-white border-2 border-red-300 focus:border-red-500 focus:ring-red-200 pl-12 text-black [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-datetime-edit]:text-black [&::-webkit-datetime-edit-text]:text-black [&::-webkit-datetime-edit-hour-field]:text-black [&::-webkit-datetime-edit-minute-field]:text-black [&::-webkit-datetime-edit-ampm-field]:hidden"
                           style={{ 
                             colorScheme: 'light', 
                             color: '#000000 !important',
@@ -896,8 +846,8 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                                       type="time"
                                       value={editEntry?.startTime}
                                       onChange={(e) => setEditEntry({...editEntry!, startTime: e.target.value})}
-                                      step="60"
-                                      className="h-8 text-xs text-black [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-datetime-edit]:text-black [&::-webkit-datetime-edit-text]:text-black [&::-webkit-datetime-edit-hour-field]:text-black [&::-webkit-datetime-edit-minute-field]:text-black [&::-webkit-datetime-edit-ampm-field]:display-none"
+                                      step="1"
+                                      className="h-8 text-xs text-black [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-datetime-edit]:text-black [&::-webkit-datetime-edit-text]:text-black [&::-webkit-datetime-edit-hour-field]:text-black [&::-webkit-datetime-edit-minute-field]:text-black [&::-webkit-datetime-edit-ampm-field]:hidden"
                                       style={{ 
                                         colorScheme: 'light', 
                                         color: '#000000 !important',
@@ -919,8 +869,8 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                                       type="time"
                                       value={editEntry?.endTime}
                                       onChange={(e) => setEditEntry({...editEntry!, endTime: e.target.value})}
-                                      step="60"
-                                      className="h-8 text-xs text-black [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-datetime-edit]:text-black [&::-webkit-datetime-edit-text]:text-black [&::-webkit-datetime-edit-hour-field]:text-black [&::-webkit-datetime-edit-minute-field]:text-black [&::-webkit-datetime-edit-ampm-field]:display-none"
+                                      step="1"
+                                      className="h-8 text-xs text-black [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-datetime-edit]:text-black [&::-webkit-datetime-edit-text]:text-black [&::-webkit-datetime-edit-hour-field]:text-black [&::-webkit-datetime-edit-minute-field]:text-black [&::-webkit-datetime-edit-ampm-field]:hidden"
                                       style={{ 
                                         colorScheme: 'light', 
                                         color: '#000000 !important',
