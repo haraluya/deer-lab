@@ -16,7 +16,6 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { TimePicker } from "@/components/ui/time-picker"
 import { Loader2, AlertTriangle } from "lucide-react"
 
 interface TimeTrackingDialogProps {
@@ -417,7 +416,7 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                       startDate: e.target.value,
                       endDate: e.target.value // 自動同步結束日期
                     })}
-                    className="bg-gradient-to-r from-white to-blue-50 border-2 border-blue-200 focus:border-blue-500 focus:ring-blue-200"
+                    className="bg-gradient-to-r from-white to-blue-50 border-2 border-blue-200 focus:border-blue-500 focus:ring-blue-200 h-12 text-base"
                   />
                 </div>
 
@@ -435,10 +434,11 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                     
                     <div className="space-y-3">
                       <Label className="text-sm font-medium text-green-700">時間 (24小時制)</Label>
-                      <TimePicker
+                      <Input
+                        type="time"
                         value={newEntry.startTime}
-                        onChange={(value) => setNewEntry({...newEntry, startTime: value})}
-                        className="text-lg font-mono bg-white border-2 border-green-300 focus:border-green-500 focus:ring-green-200"
+                        onChange={(e) => setNewEntry({...newEntry, startTime: e.target.value})}
+                        className="text-lg font-mono bg-white border-2 border-green-300 focus:border-green-500 focus:ring-green-200 h-12"
                         placeholder="選擇開始時間"
                       />
                       <div className="text-xs text-green-600 bg-green-100 p-2 rounded">
@@ -459,14 +459,15 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                     
                     <div className="space-y-3">
                       <Label className="text-sm font-medium text-red-700">時間 (24小時制)</Label>
-                      <TimePicker
+                      <Input
+                        type="time"
                         value={newEntry.endTime}
-                        onChange={(value) => setNewEntry({
+                        onChange={(e) => setNewEntry({
                           ...newEntry, 
-                          endTime: value,
+                          endTime: e.target.value,
                           endDate: newEntry.startDate // 自動同步結束日期
                         })}
-                        className="text-lg font-mono bg-white border-2 border-red-300 focus:border-red-500 focus:ring-red-200"
+                        className="text-lg font-mono bg-white border-2 border-red-300 focus:border-red-500 focus:ring-red-200 h-12"
                         placeholder="選擇結束時間"
                       />
                       <div className="text-xs text-red-600 bg-red-100 p-2 rounded">

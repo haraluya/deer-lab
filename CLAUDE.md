@@ -915,3 +915,4 @@ src/
 **部署狀態**: ✅ 已推送到 GitHub 主分支
 **完成時間**: 2024年9月1日 21:30
 **Commit Hash**: c45e8a5
+- 推送到github之前要先npm run build過確認沒問題再推送
