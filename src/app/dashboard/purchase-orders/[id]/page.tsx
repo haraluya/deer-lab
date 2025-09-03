@@ -585,83 +585,161 @@ export default function PurchaseOrderDetailPage() {
         </CardHeader>
         <CardContent>
           {po.items.length > 0 ? (
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50">
-                    <TableHead className="font-semibold text-gray-700">品項代號</TableHead>
-                    <TableHead className="font-semibold text-gray-700">品項名稱</TableHead>
-                    <TableHead className="text-right font-semibold text-gray-700">採購數量</TableHead>
-                    <TableHead className="text-right font-semibold text-gray-700">單價</TableHead>
-                    <TableHead className="text-right font-semibold text-gray-700">小計</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {editedItems.map((item, index) => {
-                    const itemCost = item.costPerUnit || 0;
-                    const itemTotal = itemCost * item.quantity;
-                    return (
-                      <TableRow key={index} className="hover:bg-amber-50/30 transition-colors duration-200">
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
-                              <Package className="h-4 w-4 text-white" />
+            <>
+              {/* 桌面版表格 */}
+              <div className="hidden md:block bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="font-semibold text-gray-700">品項代號</TableHead>
+                      <TableHead className="font-semibold text-gray-700">品項名稱</TableHead>
+                      <TableHead className="text-right font-semibold text-gray-700">採購數量</TableHead>
+                      <TableHead className="text-right font-semibold text-gray-700">單價</TableHead>
+                      <TableHead className="text-right font-semibold text-gray-700">小計</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {editedItems.map((item, index) => {
+                      const itemCost = item.costPerUnit || 0;
+                      const itemTotal = itemCost * item.quantity;
+                      return (
+                        <TableRow key={index} className="hover:bg-amber-50/30 transition-colors duration-200">
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
+                                <Package className="h-4 w-4 text-white" />
+                              </div>
+                              <span className="font-mono font-medium text-gray-900">{item.code}</span>
                             </div>
-                            <span className="font-mono font-medium text-gray-900">{item.code}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-medium text-gray-900">{item.name}</TableCell>
-                        <TableCell className="text-right">
-                          {po.status === '已收貨' ? (
+                          </TableCell>
+                          <TableCell className="font-medium text-gray-900">{item.name}</TableCell>
+                          <TableCell className="text-right">
+                            {po.status === '已收貨' ? (
+                              <span className="font-semibold text-amber-600">
+                                {item.quantity} {item.unit}
+                              </span>
+                            ) : (
+                              <div className="flex items-center justify-end gap-2">
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  value={item.quantity}
+                                  onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 1)}
+                                  className="w-20 text-center border-amber-200 focus:border-amber-500"
+                                />
+                                <span className="text-sm text-gray-500 whitespace-nowrap">{item.unit}</span>
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {po.status === '已收貨' ? (
+                              <span className="text-gray-600">
+                                NT$ {itemCost.toLocaleString()}
+                              </span>
+                            ) : (
+                              <div className="flex items-center justify-end gap-1">
+                                <span className="text-sm text-gray-500">NT$</span>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={itemCost}
+                                  onChange={(e) => handleCostPerUnitChange(index, parseFloat(e.target.value) || 0)}
+                                  className="w-24 text-right border-amber-200 focus:border-amber-500"
+                                />
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
                             <span className="font-semibold text-amber-600">
-                              {item.quantity} {item.unit}
+                              NT$ {itemTotal.toLocaleString()}
                             </span>
-                          ) : (
-                            <div className="flex items-center justify-end gap-2">
-                              <Input
-                                type="number"
-                                min="1"
-                                value={item.quantity}
-                                onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 1)}
-                                className="w-20 text-center border-amber-200 focus:border-amber-500"
-                              />
-                              <span className="text-sm text-gray-500 whitespace-nowrap">{item.unit}</span>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* 手機版卡片式佈局 */}
+              <div className="md:hidden space-y-4">
+                {editedItems.map((item, index) => {
+                  const itemCost = item.costPerUnit || 0;
+                  const itemTotal = itemCost * item.quantity;
+                  return (
+                    <Card key={index} className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
+                            <Package className="h-5 w-5 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-semibold text-gray-900">{item.name}</div>
+                            <div className="text-xs text-gray-500 font-mono">{item.code}</div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-white/70 p-3 rounded-lg">
+                            <div className="text-xs text-gray-600 mb-2">採購數量</div>
+                            {po.status === '已收貨' ? (
+                              <div className="font-semibold text-amber-600">
+                                {item.quantity} {item.unit}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  value={item.quantity}
+                                  onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 1)}
+                                  className="flex-1 text-center border-amber-200 focus:border-amber-500 h-8"
+                                />
+                                <span className="text-sm text-gray-500">{item.unit}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="bg-white/70 p-3 rounded-lg">
+                            <div className="text-xs text-gray-600 mb-2">單價</div>
+                            {po.status === '已收貨' ? (
+                              <div className="font-medium text-gray-900">
+                                NT$ {itemCost.toLocaleString()}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1">
+                                <span className="text-sm text-gray-500">NT$</span>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={itemCost}
+                                  onChange={(e) => handleCostPerUnitChange(index, parseFloat(e.target.value) || 0)}
+                                  className="flex-1 text-right border-amber-200 focus:border-amber-500 h-8"
+                                />
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="col-span-2 bg-amber-100 p-3 rounded-lg text-center">
+                            <div className="text-xs text-amber-700 mb-1">小計</div>
+                            <div className="font-bold text-amber-800 text-lg">
+                              NT$ {itemTotal.toLocaleString()}
                             </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {po.status === '已收貨' ? (
-                            <span className="text-gray-600">
-                              NT$ {itemCost.toLocaleString()}
-                            </span>
-                          ) : (
-                            <div className="flex items-center justify-end gap-1">
-                              <span className="text-sm text-gray-500">NT$</span>
-                              <Input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={itemCost}
-                                onChange={(e) => handleCostPerUnitChange(index, parseFloat(e.target.value) || 0)}
-                                className="w-24 text-right border-amber-200 focus:border-amber-500"
-                              />
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <span className="font-semibold text-amber-600">
-                            NT$ {itemTotal.toLocaleString()}
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </>
               
               {/* 總金額顯示 */}
               <div className="mt-4 pt-4 border-t border-gray-200">
-                <div className="flex justify-end items-center gap-4">
+                {/* 桌面版 */}
+                <div className="hidden md:flex justify-end items-center gap-4">
                   <div className="text-right">
                     <div className="text-sm text-gray-600 mb-1">
                       項目總額：NT$ {editedItems.reduce((total, item) => total + ((item.costPerUnit || 0) * item.quantity), 0).toLocaleString()}
@@ -679,6 +757,52 @@ export default function PurchaseOrderDetailPage() {
                       onClick={handleSaveChanges}
                       disabled={isUpdating}
                       className="bg-amber-600 hover:bg-amber-700 text-white"
+                    >
+                      {isUpdating ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          儲存中...
+                        </>
+                      ) : (
+                        '儲存變更'
+                      )}
+                    </Button>
+                  )}
+                </div>
+
+                {/* 手機版 */}
+                <div className="md:hidden space-y-3">
+                  <div className="bg-amber-50 p-4 rounded-lg">
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">項目總額</span>
+                        <span className="font-medium text-gray-900">
+                          NT$ {editedItems.reduce((total, item) => total + ((item.costPerUnit || 0) * item.quantity), 0).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">其他費用</span>
+                        <span className="font-medium text-gray-900">
+                          NT$ {editedAdditionalFees.reduce((total, fee) => total + (fee.amount * fee.quantity), 0).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="border-t border-amber-200 pt-2">
+                        <div className="flex justify-between">
+                          <span className="font-semibold text-amber-800">總金額</span>
+                          <span className="font-bold text-amber-800 text-lg">
+                            NT$ {(editedItems.reduce((total, item) => total + ((item.costPerUnit || 0) * item.quantity), 0) + 
+                              editedAdditionalFees.reduce((total, fee) => total + (fee.amount * fee.quantity), 0)).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {po.status !== '已收貨' && (
+                    <Button
+                      onClick={handleSaveChanges}
+                      disabled={isUpdating}
+                      className="bg-amber-600 hover:bg-amber-700 text-white w-full"
                     >
                       {isUpdating ? (
                         <>
