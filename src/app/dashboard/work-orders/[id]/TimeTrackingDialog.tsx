@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { collection, addDoc, getDocs, query, where, orderBy, Timestamp } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
@@ -436,10 +436,14 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                       <Label className="text-sm font-medium text-green-700">時間 (24小時制)</Label>
                       <Input
                         type="time"
+                        step="60"
+                        lang="en-GB"
+                        pattern="[0-2][0-9]:[0-5][0-9]"
                         value={newEntry.startTime}
                         onChange={(e) => setNewEntry({...newEntry, startTime: e.target.value})}
-                        className="text-lg font-mono bg-white border-2 border-green-300 focus:border-green-500 focus:ring-green-200 h-12"
+                        className="text-lg font-mono bg-white border-2 border-green-300 focus:border-green-500 focus:ring-green-200 h-12 [&::-webkit-datetime-edit-hour-field]:color-black [&::-webkit-datetime-edit-minute-field]:color-black [&::-webkit-datetime-edit-text]:color-black"
                         placeholder="選擇開始時間"
+                        data-format="24"
                       />
                       <div className="text-xs text-green-600 bg-green-100 p-2 rounded">
                         點擊選擇時間，格式：HH:MM (例如：09:30, 14:00)
@@ -461,14 +465,18 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                       <Label className="text-sm font-medium text-red-700">時間 (24小時制)</Label>
                       <Input
                         type="time"
+                        step="60"
+                        lang="en-GB"
+                        pattern="[0-2][0-9]:[0-5][0-9]"
                         value={newEntry.endTime}
                         onChange={(e) => setNewEntry({
                           ...newEntry, 
                           endTime: e.target.value,
                           endDate: newEntry.startDate // 自動同步結束日期
                         })}
-                        className="text-lg font-mono bg-white border-2 border-red-300 focus:border-red-500 focus:ring-red-200 h-12"
+                        className="text-lg font-mono bg-white border-2 border-red-300 focus:border-red-500 focus:ring-red-200 h-12 [&::-webkit-datetime-edit-hour-field]:color-black [&::-webkit-datetime-edit-minute-field]:color-black [&::-webkit-datetime-edit-text]:color-black"
                         placeholder="選擇結束時間"
+                        data-format="24"
                       />
                       <div className="text-xs text-red-600 bg-red-100 p-2 rounded">
                         點擊選擇時間，格式：HH:MM (例如：17:30, 18:00)
