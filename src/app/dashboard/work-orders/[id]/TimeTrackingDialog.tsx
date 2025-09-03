@@ -28,7 +28,7 @@ interface TimeTrackingDialogProps {
 }
 
 export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrderNumber, isLocked = false }: TimeTrackingDialogProps) {
-  const { user } = useAuth()
+  const { user, appUser } = useAuth()
   const [personnel, setPersonnel] = useState<Personnel[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -71,10 +71,15 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
             name: userData.name || '',
             employeeId: userData.employeeId || '',
             phone: userData.phone || '',
-            status: userData.status || 'active'
+            email: userData.email || '',
+            position: userData.position || '員工',
+            department: userData.department || '生產部',
+            isActive: userData.status === 'active',
+            createdAt: userData.createdAt || Timestamp.now(),
+            updatedAt: userData.updatedAt || Timestamp.now()
           }
         })
-        .filter(user => user.status === 'active') // 只載入啟用的用戶
+        .filter(user => user.isActive) // 只載入啟用的用戶
       
       console.log("載入的人員清單:", personnelList)
       setPersonnel(personnelList)
@@ -149,7 +154,7 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
             createdAt: Timestamp.now(),
             updatedAt: Timestamp.now(),
             createdBy: user?.uid || '',
-            createdByName: user?.name || '系統用戶'
+            createdByName: appUser?.name || '系統用戶'
           }
 
           return addDoc(collection(db!, 'timeEntries'), timeEntryData)
@@ -210,7 +215,7 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
           createdAt: Timestamp.now(),
           updatedAt: Timestamp.now(),
           createdBy: user?.uid || '',
-          createdByName: user?.name || '系統用戶'
+          createdByName: appUser?.name || '系統用戶'
         }
 
         await addDoc(collection(db!, 'timeEntries'), timeEntryData)

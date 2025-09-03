@@ -2416,7 +2416,7 @@ export default function WorkOrderDetailPage() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => handleStartQuickEdit(entry)}
+                                  onClick={() => handleQuickEditTimeEntry(entry)}
                                   className="h-8 w-8 p-0 text-orange-600 border-orange-300 hover:bg-orange-50"
                                 >
                                   <Edit2 className="h-3 w-3" />
