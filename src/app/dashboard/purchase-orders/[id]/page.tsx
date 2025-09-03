@@ -694,7 +694,7 @@ export default function PurchaseOrderDetailPage() {
                                   min="1"
                                   value={item.quantity}
                                   onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 1)}
-                                  className="flex-1 text-center border-amber-200 focus:border-amber-500 h-8"
+                                  className="flex-1 text-center border-amber-200 focus:border-amber-500 h-10 text-lg"
                                 />
                                 <span className="text-sm text-gray-500">{item.unit}</span>
                               </div>
@@ -716,7 +716,7 @@ export default function PurchaseOrderDetailPage() {
                                   step="0.01"
                                   value={itemCost}
                                   onChange={(e) => handleCostPerUnitChange(index, parseFloat(e.target.value) || 0)}
-                                  className="flex-1 text-right border-amber-200 focus:border-amber-500 h-8"
+                                  className="flex-1 text-right border-amber-200 focus:border-amber-500 h-10 text-lg"
                                 />
                               </div>
                             )}

@@ -521,42 +521,46 @@ function PurchaseOrdersPageContent() {
           </div>
         </CardHeader>
         <CardContent>
-          {/* 狀態篩選 */}
-          <div className="flex items-center gap-2 mb-4">
-            <Filter className="h-4 w-4 text-gray-500" />
-            <span className="text-sm text-gray-600">狀態篩選：</span>
-            <Button
-              variant={statusFilter === 'all' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setStatusFilter('all')}
-              className="bg-amber-600 hover:bg-amber-700"
-            >
-              全部
-            </Button>
-            <Button
-              variant={statusFilter === '預報單' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setStatusFilter('預報單')}
-              className={statusFilter === '預報單' ? 'bg-purple-600 hover:bg-purple-700' : 'border-purple-200 text-purple-600 hover:bg-purple-50'}
-            >
-              預報單
-            </Button>
-            <Button
-              variant={statusFilter === '已訂購' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setStatusFilter('已訂購')}
-              className={statusFilter === '已訂購' ? 'bg-green-600 hover:bg-green-700' : 'border-green-200 text-green-600 hover:bg-green-50'}
-            >
-              已訂購
-            </Button>
-            <Button
-              variant={statusFilter === '已收貨' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setStatusFilter('已收貨')}
-              className={statusFilter === '已收貨' ? 'bg-gray-600 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}
-            >
-              已入庫
-            </Button>
+          {/* 狀態篩選 - 手機版優化 */}
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <span className="text-sm text-gray-600">狀態篩選：</span>
+            </div>
+            <div className="grid grid-cols-2 sm:flex gap-2">
+              <Button
+                variant={statusFilter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('all')}
+                className="bg-amber-600 hover:bg-amber-700 h-10"
+              >
+                全部
+              </Button>
+              <Button
+                variant={statusFilter === '預報單' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('預報單')}
+                className={`h-10 ${statusFilter === '預報單' ? 'bg-purple-600 hover:bg-purple-700' : 'border-purple-200 text-purple-600 hover:bg-purple-50'}`}
+              >
+                預報單
+              </Button>
+              <Button
+                variant={statusFilter === '已訂購' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('已訂購')}
+                className={`h-10 ${statusFilter === '已訂購' ? 'bg-green-600 hover:bg-green-700' : 'border-green-200 text-green-600 hover:bg-green-50'}`}
+              >
+                已訂購
+              </Button>
+              <Button
+                variant={statusFilter === '已收貨' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('已收貨')}
+                className={`h-10 ${statusFilter === '已收貨' ? 'bg-gray-600 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+              >
+                已入庫
+              </Button>
+            </div>
           </div>
 
           {/* 桌面版採購單表格 */}

@@ -13,6 +13,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from '@/components/ui/input';
 import { Form } from '@/components/ui/form';
+import { Card, CardContent } from '@/components/ui/card';
+import { Package } from 'lucide-react';
 
 // Zod schema for form validation
 const formSchema = z.object({
@@ -92,7 +94,7 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl" aria-describedby="receive-dialog-description">
+      <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto" aria-describedby="receive-dialog-description">
         <DialogHeader>
           <DialogTitle>收貨與入庫確認</DialogTitle>
           <DialogDescription id="receive-dialog-description">
@@ -101,33 +103,80 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="max-h-[60vh] overflow-y-auto pr-4">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>品項名稱</TableHead>
-                    <TableHead className="w-[120px]">採購數量</TableHead>
-                    <TableHead className="w-[150px]">實際收到數量</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {fields.map((field, index) => (
-                    <TableRow key={field.id}>
-                      <TableCell className="font-medium">{field.name} <span className="text-muted-foreground font-mono text-xs">{field.code}</span></TableCell>
-                      <TableCell>{field.quantity} {field.unit}</TableCell>
-                      <TableCell>
-                        <Controller
-                          control={form.control}
-                          name={`items.${index}.receivedQuantity`}
-                          render={({ field: controllerField }) => (
-                            <Input type="number" min="0" {...controllerField} />
-                          )}
-                        />
-                      </TableCell>
+            <div className="max-h-[60vh] overflow-y-auto">
+              {/* 桌面版表格 */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>品項名稱</TableHead>
+                      <TableHead className="w-[120px]">採購數量</TableHead>
+                      <TableHead className="w-[150px]">實際收到數量</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {fields.map((field, index) => (
+                      <TableRow key={field.id}>
+                        <TableCell className="font-medium">{field.name} <span className="text-muted-foreground font-mono text-xs">{field.code}</span></TableCell>
+                        <TableCell>{field.quantity} {field.unit}</TableCell>
+                        <TableCell>
+                          <Controller
+                            control={form.control}
+                            name={`items.${index}.receivedQuantity`}
+                            render={({ field: controllerField }) => (
+                              <Input type="number" min="0" {...controllerField} />
+                            )}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* 手機版卡片式佈局 */}
+              <div className="md:hidden space-y-4">
+                {fields.map((field, index) => (
+                  <Card key={field.id} className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
+                          <Package className="h-5 w-5 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-semibold text-gray-900">{field.name}</div>
+                          <div className="text-xs text-gray-500 font-mono">{field.code}</div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-white/70 p-3 rounded-lg">
+                          <div className="text-xs text-gray-600 mb-2">採購數量</div>
+                          <div className="font-semibold text-amber-600">
+                            {field.quantity} {field.unit}
+                          </div>
+                        </div>
+                        
+                        <div className="bg-white/70 p-3 rounded-lg">
+                          <div className="text-xs text-gray-600 mb-2">實際收到數量</div>
+                          <Controller
+                            control={form.control}
+                            name={`items.${index}.receivedQuantity`}
+                            render={({ field: controllerField }) => (
+                              <Input 
+                                type="number" 
+                                min="0" 
+                                {...controllerField} 
+                                className="h-10 text-lg font-semibold text-center border-amber-200 focus:border-amber-500"
+                              />
+                            )}
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
             <DialogFooter className="mt-6">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>取消</Button>

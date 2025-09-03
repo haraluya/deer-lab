@@ -1788,13 +1788,13 @@ export default function WorkOrderDetailPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       <div className="container mx-auto p-2 sm:p-4 py-4 sm:py-10">
         {/* 頁面標題 */}
-        <div className="flex items-center justify-between mb-4 sm:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-8">
           <div className="flex items-center gap-2 sm:gap-4">
             <Button 
               variant="outline" 
               size="icon" 
               onClick={() => router.back()}
-              className="hover:bg-white/80 backdrop-blur-sm"
+              className="hover:bg-white/80 backdrop-blur-sm flex-shrink-0"
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -1805,20 +1805,23 @@ export default function WorkOrderDetailPage() {
               <p className="text-gray-600 font-mono text-sm sm:text-base truncate">{workOrder.code}</p>
             </div>
           </div>
-          <div className="flex gap-2">
+          
+          {/* 按鈕組 - 手機版垂直排列 */}
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <Button 
               variant="outline"
               onClick={handlePrint}
-              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600 w-full sm:w-auto"
             >
               <Printer className="mr-2 h-4 w-4" />
-              列印工單
+              <span className="hidden sm:inline">列印工單</span>
+              <span className="sm:hidden">列印</span>
             </Button>
             {shouldShowTopButton() && (
               <Button 
                 variant="outline"
                 onClick={getTopButtonHandler()}
-                className="bg-green-600 hover:bg-green-700 text-white border-green-600"
+                className="bg-green-600 hover:bg-green-700 text-white border-green-600 w-full sm:w-auto"
               >
                 <Check className="mr-2 h-4 w-4" />
                 {getTopButtonText()}
@@ -1827,10 +1830,11 @@ export default function WorkOrderDetailPage() {
             <Button 
               variant="destructive" 
               onClick={() => setIsDeleteDialogOpen(true)}
-              className="bg-red-500 hover:bg-red-600 flex-shrink-0"
+              className="bg-red-500 hover:bg-red-600 w-full sm:w-auto"
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              刪除工單
+              <span className="hidden sm:inline">刪除工單</span>
+              <span className="sm:hidden">刪除</span>
             </Button>
           </div>
         </div>
@@ -2011,20 +2015,20 @@ export default function WorkOrderDetailPage() {
                 </Badge>
               )}
             </CardTitle>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleReloadBOM}
                 disabled={isReloading}
-                className="text-purple-700 border-purple-300 hover:bg-purple-50"
+                className="text-purple-700 border-purple-300 hover:bg-purple-50 w-full sm:w-auto"
               >
                 {isReloading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <RefreshCw className="h-4 w-4" />
                 )}
-                重新載入
+                <span className="ml-2">重新載入</span>
               </Button>
               {isEditingQuantity ? (
                 <>
@@ -2035,7 +2039,7 @@ export default function WorkOrderDetailPage() {
                       setEditingQuantities({});
                       setIsEditingQuantity(false);
                     }}
-                    className="text-red-700 border-red-300 hover:bg-red-50"
+                    className="text-red-700 border-red-300 hover:bg-red-50 w-full sm:w-auto"
                   >
                     <X className="h-4 w-4 mr-1" />
                     取消
@@ -2044,24 +2048,24 @@ export default function WorkOrderDetailPage() {
                     variant="outline"
                     size="sm"
                     onClick={handleSaveQuantities}
-                    className="text-purple-700 border-purple-300 hover:bg-purple-50"
+                    className="text-purple-700 border-purple-300 hover:bg-purple-50 w-full sm:w-auto"
                   >
                     <Save className="h-4 w-4 mr-1" />
                     保存數量
                   </Button>
                 </>
               ) : (
-                              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsEditingQuantity(true)}
-                disabled={!canEditQuantity()}
-                className="text-purple-700 border-purple-300 hover:bg-purple-50"
-                title={!canEditQuantity() ? "完工或入庫狀態無法編輯數量" : "點擊編輯物料使用數量"}
-              >
-                <Edit className="h-4 w-4 mr-1" />
-                編輯數量
-              </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditingQuantity(true)}
+                  disabled={!canEditQuantity()}
+                  className="text-purple-700 border-purple-300 hover:bg-purple-50 w-full sm:w-auto"
+                  title={!canEditQuantity() ? "完工或入庫狀態無法編輯數量" : "點擊編輯物料使用數量"}
+                >
+                  <Edit className="h-4 w-4 mr-1" />
+                  編輯數量
+                </Button>
               )}
             </div>
           </div>
@@ -2074,7 +2078,8 @@ export default function WorkOrderDetailPage() {
                 <Droplets className="h-4 w-4" />
                 核心配方物料
               </h3>
-              <div className="overflow-x-auto">
+              {/* 桌面版表格 */}
+              <div className="hidden md:block overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gradient-to-r from-gray-50 to-gray-100">
@@ -2127,6 +2132,84 @@ export default function WorkOrderDetailPage() {
                   </TableBody>
                 </Table>
               </div>
+
+              {/* 手機版卡片式佈局 */}
+              <div className="md:hidden space-y-3">
+                {workOrder.billOfMaterials
+                  .filter(item => ['fragrance', 'pg', 'vg', 'nicotine'].includes(item.category))
+                  .map((item, index) => (
+                    <Card key={index} className="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            {item.category === 'fragrance' && (
+                              <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
+                                <Droplets className="h-4 w-4 text-white" />
+                              </div>
+                            )}
+                            {item.category === 'pg' && (
+                              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                                <div className="w-3 h-3 bg-white rounded" />
+                              </div>
+                            )}
+                            {item.category === 'vg' && (
+                              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                                <div className="w-3 h-3 bg-white rounded" />
+                              </div>
+                            )}
+                            {item.category === 'nicotine' && (
+                              <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
+                                <div className="w-3 h-3 bg-white rounded" />
+                              </div>
+                            )}
+                            <div>
+                              <div className="font-semibold text-gray-900">{item.name}</div>
+                              <div className="text-xs text-gray-500 font-mono">{item.code}</div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-white p-3 rounded-lg border">
+                            <div className="text-xs text-gray-600 mb-1">比例</div>
+                            <div className="font-medium text-purple-800">
+                              {item.ratio ? `${item.ratio}%` : '-'}
+                            </div>
+                          </div>
+                          
+                          <div className="bg-white p-3 rounded-lg border">
+                            <div className="text-xs text-gray-600 mb-1">需求數量</div>
+                            <div className="font-medium text-gray-900">
+                              {formatNumber(item.quantity)} {item.unit}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-3 bg-white p-3 rounded-lg border">
+                          <div className="flex items-center justify-between">
+                            <div className="text-xs text-gray-600">使用數量</div>
+                            {isEditingQuantity ? (
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.001"
+                                value={editingQuantities[item.id] !== undefined ? editingQuantities[item.id] : (item.usedQuantity || 0)}
+                                onChange={(e) => {
+                                  handleQuantityChange(item.id, e.target.value);
+                                }}
+                                className="w-20 h-8 text-sm"
+                              />
+                            ) : (
+                              <div className="font-medium text-lg text-blue-800">
+                                {formatNumber(item.usedQuantity || 0)} {item.unit}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+              </div>
             </div>
 
             {/* 產品專屬物料 */}
@@ -2136,16 +2219,17 @@ export default function WorkOrderDetailPage() {
                   <Package className="h-4 w-4" />
                   產品專屬物料
                 </h3>
-                <div className="overflow-x-auto">
+                {/* 桌面版表格 */}
+                <div className="hidden md:block overflow-x-auto">
                   <Table>
-                                      <TableHeader>
-                    <TableRow className="bg-gradient-to-r from-gray-50 to-gray-100">
-                      <TableHead className="text-gray-700 font-bold">物料名稱</TableHead>
-                      <TableHead className="text-gray-700 font-bold">料件代號</TableHead>
-                      <TableHead className="text-gray-700 font-bold">使用數量</TableHead>
-                      <TableHead className="text-gray-700 font-bold">單位</TableHead>
-                    </TableRow>
-                  </TableHeader>
+                    <TableHeader>
+                      <TableRow className="bg-gradient-to-r from-gray-50 to-gray-100">
+                        <TableHead className="text-gray-700 font-bold">物料名稱</TableHead>
+                        <TableHead className="text-gray-700 font-bold">料件代號</TableHead>
+                        <TableHead className="text-gray-700 font-bold">使用數量</TableHead>
+                        <TableHead className="text-gray-700 font-bold">單位</TableHead>
+                      </TableRow>
+                    </TableHeader>
                     <TableBody>
                       {workOrder.billOfMaterials
                         .filter(item => item.category === 'specific')
@@ -2176,6 +2260,50 @@ export default function WorkOrderDetailPage() {
                     </TableBody>
                   </Table>
                 </div>
+
+                {/* 手機版卡片式佈局 */}
+                <div className="md:hidden space-y-3">
+                  {workOrder.billOfMaterials
+                    .filter(item => item.category === 'specific')
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map((item, index) => (
+                      <Card key={index} className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                              <Package className="h-4 w-4 text-white" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-semibold text-gray-900">{item.name}</div>
+                              <div className="text-xs text-gray-500 font-mono">{item.code}</div>
+                            </div>
+                          </div>
+                          
+                          <div className="bg-white p-3 rounded-lg border">
+                            <div className="flex items-center justify-between">
+                              <div className="text-xs text-gray-600">使用數量</div>
+                              {isEditingQuantity ? (
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="1"
+                                  value={editingQuantities[item.id] !== undefined ? editingQuantities[item.id] : (item.usedQuantity || 0)}
+                                  onChange={(e) => {
+                                    handleQuantityChange(item.id, e.target.value);
+                                  }}
+                                  className="w-20 h-8 text-sm"
+                                />
+                              ) : (
+                                <div className="font-medium text-lg text-blue-800">
+                                  {formatNumber(item.usedQuantity || 0)} {item.unit}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                </div>
               </div>
             )}
 
@@ -2186,7 +2314,8 @@ export default function WorkOrderDetailPage() {
                   <Package className="h-4 w-4" />
                   系列通用物料
                 </h3>
-                <div className="overflow-x-auto">
+                {/* 桌面版表格 */}
+                <div className="hidden md:block overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-gradient-to-r from-green-100 to-emerald-100">
@@ -2226,6 +2355,50 @@ export default function WorkOrderDetailPage() {
                     </TableBody>
                   </Table>
                 </div>
+
+                {/* 手機版卡片式佈局 */}
+                <div className="md:hidden space-y-3">
+                  {workOrder.billOfMaterials
+                    .filter(item => item.category === 'common')
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map((item, index) => (
+                      <Card key={index} className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                              <Package className="h-4 w-4 text-white" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-semibold text-gray-900">{item.name}</div>
+                              <div className="text-xs text-gray-500 font-mono">{item.code}</div>
+                            </div>
+                          </div>
+                          
+                          <div className="bg-white p-3 rounded-lg border">
+                            <div className="flex items-center justify-between">
+                              <div className="text-xs text-gray-600">使用數量</div>
+                              {isEditingQuantity ? (
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="1"
+                                  value={editingQuantities[item.id] !== undefined ? editingQuantities[item.id] : (item.usedQuantity || 0)}
+                                  onChange={(e) => {
+                                    handleQuantityChange(item.id, e.target.value);
+                                  }}
+                                  className="w-20 h-8 text-sm"
+                                />
+                              ) : (
+                                <div className="font-medium text-lg text-green-800">
+                                  {formatNumber(item.usedQuantity || 0)} {item.unit}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                </div>
               </div>
             )}
           </div>
@@ -2235,28 +2408,34 @@ export default function WorkOrderDetailPage() {
       {/* 工時申報 */}
       <Card className="mb-4 sm:mb-6 bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200">
         <CardHeader className="pb-3 sm:pb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <CardTitle className="text-orange-800 flex items-center gap-2 text-lg sm:text-xl">
-              <Clock className="h-5 w-5" />
-              工時申報
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <CardTitle className="text-orange-800 flex items-center gap-2 text-lg sm:text-xl">
+                <Clock className="h-5 w-5" />
+                工時申報
+              </CardTitle>
+              <Button
+                onClick={() => setIsTimeTrackingOpen(true)}
+                className="bg-orange-600 hover:bg-orange-700 w-full sm:w-auto"
+              >
+                <Clock className="mr-2 h-4 w-4" />
+                新增工時
+              </Button>
+            </div>
+            
+            {/* 狀態標籤 */}
+            <div className="flex flex-wrap gap-2">
               {workOrder?.status === "入庫" && (
-                <Badge variant="secondary" className="ml-2 bg-purple-100 text-purple-800 border-purple-200">
+                <Badge variant="secondary" className="bg-purple-100 text-purple-800 border-purple-200">
                   已入庫 - 無法新增
                 </Badge>
               )}
               {workOrder?.status === "完工" && (
-                <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800 border-green-200">
+                <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
                   已完工 - 仍可新增
                 </Badge>
               )}
-            </CardTitle>
-            <Button
-              onClick={() => setIsTimeTrackingOpen(true)}
-              className="bg-orange-600 hover:bg-orange-700 w-full sm:w-auto"
-            >
-              <Clock className="mr-2 h-4 w-4" />
-              新增工時
-            </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -2392,13 +2571,13 @@ export default function WorkOrderDetailPage() {
                           </div>
                         </div>
                         {workOrder?.status !== "入庫" && (
-                          <div className="flex gap-1">
+                          <div className="flex gap-2">
                             {editingTimeEntryId === entry.id ? (
                               <>
                                 <Button
                                   size="sm"
                                   onClick={handleSaveQuickEdit}
-                                  className="h-8 w-8 p-0 bg-green-600 hover:bg-green-700 text-white"
+                                  className="h-10 w-10 p-0 bg-green-600 hover:bg-green-700 text-white rounded-full"
                                 >
                                   <Check className="h-4 w-4" />
                                 </Button>
@@ -2406,7 +2585,7 @@ export default function WorkOrderDetailPage() {
                                   size="sm"
                                   variant="outline"
                                   onClick={handleCancelQuickEdit}
-                                  className="h-8 w-8 p-0"
+                                  className="h-10 w-10 p-0 rounded-full"
                                 >
                                   <X className="h-4 w-4" />
                                 </Button>
@@ -2417,17 +2596,17 @@ export default function WorkOrderDetailPage() {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => handleQuickEditTimeEntry(entry)}
-                                  className="h-8 w-8 p-0 text-orange-600 border-orange-300 hover:bg-orange-50"
+                                  className="h-10 w-10 p-0 text-orange-600 border-orange-300 hover:bg-orange-50 rounded-full"
                                 >
-                                  <Edit2 className="h-3 w-3" />
+                                  <Edit2 className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   onClick={() => handleDeleteTimeEntry(entry.id)}
-                                  className="h-8 w-8 p-0 text-red-600 border-red-300 hover:bg-red-50"
+                                  className="h-10 w-10 p-0 text-red-600 border-red-300 hover:bg-red-50 rounded-full"
                                 >
-                                  <Trash2 className="h-3 w-3" />
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
                               </>
                             )}
@@ -2443,7 +2622,7 @@ export default function WorkOrderDetailPage() {
                               type="date"
                               value={quickEditData.startDate}
                               onChange={(e) => setQuickEditData({...quickEditData, startDate: e.target.value})}
-                              className="w-32 h-8 text-xs"
+                              className="w-36 h-10 text-sm"
                             />
                           ) : (
                             <span className="font-medium text-gray-900">{entry.startDate}</span>
@@ -2458,7 +2637,7 @@ export default function WorkOrderDetailPage() {
                                 type="text"
                                 value={quickEditData.startTime}
                                 onChange={(e) => setQuickEditData({...quickEditData, startTime: e.target.value})}
-                                className="w-20 h-8 text-xs font-mono text-center"
+                                className="w-24 h-10 text-sm font-mono text-center"
                                 placeholder="HH:MM"
                                 pattern="^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
                               />
@@ -2474,7 +2653,7 @@ export default function WorkOrderDetailPage() {
                                 type="text"
                                 value={quickEditData.endTime}
                                 onChange={(e) => setQuickEditData({...quickEditData, endTime: e.target.value})}
-                                className="w-20 h-8 text-xs font-mono text-center"
+                                className="w-24 h-10 text-sm font-mono text-center"
                                 placeholder="HH:MM"
                                 pattern="^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
                               />

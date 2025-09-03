@@ -557,7 +557,7 @@ export function ProductionCapacityDialog({ isOpen, onClose }: ProductionCapacity
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-[95vw] sm:max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-green-600">
             <Calculator className="h-5 w-5" />

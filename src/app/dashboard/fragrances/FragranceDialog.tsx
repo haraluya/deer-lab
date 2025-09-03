@@ -266,7 +266,7 @@ export function FragranceDialog({
                       <FormControl>
                         <Input 
                           placeholder="例如：HYH-0123M1" 
-                          className="border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                          className="border-gray-300 focus:border-purple-500 focus:ring-purple-500 h-12 text-base"
                           {...field} 
                         />
                       </FormControl>
@@ -284,7 +284,7 @@ export function FragranceDialog({
                       <FormControl>
                         <Input 
                           placeholder="例如：茉莉綠茶" 
-                          className="border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                          className="border-gray-300 focus:border-purple-500 focus:ring-purple-500 h-12 text-base"
                           {...field} 
                         />
                       </FormControl>
@@ -301,7 +301,7 @@ export function FragranceDialog({
                       <FormLabel className="text-sm font-semibold text-gray-700">香精種類 *</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger className="border-gray-300 focus:border-purple-500 focus:ring-purple-500">
+                          <SelectTrigger className="border-gray-300 focus:border-purple-500 focus:ring-purple-500 h-12">
                             <SelectValue placeholder="選擇香精種類" />
                           </SelectTrigger>
                         </FormControl>
@@ -326,7 +326,7 @@ export function FragranceDialog({
                       <FormLabel className="text-sm font-semibold text-gray-700">啟用狀態 *</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger className="border-gray-300 focus:border-purple-500 focus:ring-purple-500">
+                          <SelectTrigger className="border-gray-300 focus:border-purple-500 focus:ring-purple-500 h-12">
                             <SelectValue placeholder="選擇啟用狀態" />
                           </SelectTrigger>
                         </FormControl>
@@ -351,7 +351,7 @@ export function FragranceDialog({
                       <FormLabel className="text-sm font-semibold text-gray-700">供應商</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger className="border-gray-300 focus:border-purple-500 focus:ring-purple-500">
+                          <SelectTrigger className="border-gray-300 focus:border-purple-500 focus:ring-purple-500 h-12">
                             <SelectValue placeholder="選擇供應商" />
                           </SelectTrigger>
                         </FormControl>
