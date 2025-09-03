@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { TimePicker } from "@/components/ui/time-picker"
 import { TimeTrackingDialog } from "./TimeTrackingDialog"
 
 interface Comment {
@@ -2287,12 +2288,10 @@ export default function WorkOrderDetailPage() {
                       </TableCell>
                       <TableCell>
                         {editingTimeEntryId === entry.id ? (
-                          <Input
-                            type="time"
+                          <TimePicker
                             value={quickEditData.startTime}
-                            onChange={(e) => setQuickEditData({...quickEditData, startTime: e.target.value})}
-                            className="w-24 h-8 text-xs [&::-webkit-datetime-edit-ampm-field]:hidden"
-                            step="1"
+                            onChange={(value) => setQuickEditData({...quickEditData, startTime: value})}
+                            className="w-32 h-8 text-xs"
                           />
                         ) : (
                           entry.startTime
@@ -2300,12 +2299,10 @@ export default function WorkOrderDetailPage() {
                       </TableCell>
                       <TableCell>
                         {editingTimeEntryId === entry.id ? (
-                          <Input
-                            type="time"
+                          <TimePicker
                             value={quickEditData.endTime}
-                            onChange={(e) => setQuickEditData({...quickEditData, endTime: e.target.value})}
-                            className="w-24 h-8 text-xs [&::-webkit-datetime-edit-ampm-field]:hidden"
-                            step="1"
+                            onChange={(value) => setQuickEditData({...quickEditData, endTime: value})}
+                            className="w-32 h-8 text-xs"
                           />
                         ) : (
                           entry.endTime

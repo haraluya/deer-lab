@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { TimePicker } from "@/components/ui/time-picker"
 import { Loader2, AlertTriangle } from "lucide-react"
 
 interface TimeTrackingDialogProps {
@@ -370,24 +371,14 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                     
                     <div className="space-y-3">
                       <Label className="text-sm font-medium text-green-700">時間 (24小時制)</Label>
-                      <div className="relative">
-                        <Input
-                          type="time"
-                          value={newEntry.startTime}
-                          onChange={(e) => setNewEntry({...newEntry, startTime: e.target.value})}
-                          step="60"
-                          className="text-lg font-mono bg-white border-2 border-green-300 focus:border-green-500 focus:ring-green-200 pl-12 text-black [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-datetime-edit]:text-black [&::-webkit-datetime-edit-text]:text-black [&::-webkit-datetime-edit-hour-field]:text-black [&::-webkit-datetime-edit-minute-field]:text-black [&::-webkit-datetime-edit-second-field]:hidden [&::-webkit-datetime-edit-ampm-field]:hidden"
-                          style={{ 
-                            colorScheme: 'light', 
-                            color: '#000000 !important',
-                            WebkitTextFillColor: '#000000 !important',
-                            opacity: 1
-                          }}
-                        />
-                        <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-green-500" />
-                      </div>
+                      <TimePicker
+                        value={newEntry.startTime}
+                        onChange={(value) => setNewEntry({...newEntry, startTime: value})}
+                        className="text-lg font-mono bg-white border-2 border-green-300 focus:border-green-500 focus:ring-green-200"
+                        placeholder="選擇開始時間"
+                      />
                       <div className="text-xs text-green-600 bg-green-100 p-2 rounded">
-                        格式：HH:MM (例如：09:30, 14:00)
+                        點擊選擇時間，格式：HH:MM (例如：09:30, 14:00)
                       </div>
                     </div>
                   </div>
@@ -404,28 +395,18 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                     
                     <div className="space-y-3">
                       <Label className="text-sm font-medium text-red-700">時間 (24小時制)</Label>
-                      <div className="relative">
-                        <Input
-                          type="time"
-                          value={newEntry.endTime}
-                          onChange={(e) => setNewEntry({
-                            ...newEntry, 
-                            endTime: e.target.value,
-                            endDate: newEntry.startDate // 自動同步結束日期
-                          })}
-                          step="60"
-                          className="text-lg font-mono bg-white border-2 border-red-300 focus:border-red-500 focus:ring-red-200 pl-12 text-black [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-datetime-edit]:text-black [&::-webkit-datetime-edit-text]:text-black [&::-webkit-datetime-edit-hour-field]:text-black [&::-webkit-datetime-edit-minute-field]:text-black [&::-webkit-datetime-edit-second-field]:hidden [&::-webkit-datetime-edit-ampm-field]:hidden"
-                          style={{ 
-                            colorScheme: 'light', 
-                            color: '#000000 !important',
-                            WebkitTextFillColor: '#000000 !important',
-                            opacity: 1
-                          }}
-                        />
-                        <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-red-500" />
-                      </div>
+                      <TimePicker
+                        value={newEntry.endTime}
+                        onChange={(value) => setNewEntry({
+                          ...newEntry, 
+                          endTime: value,
+                          endDate: newEntry.startDate // 自動同步結束日期
+                        })}
+                        className="text-lg font-mono bg-white border-2 border-red-300 focus:border-red-500 focus:ring-red-200"
+                        placeholder="選擇結束時間"
+                      />
                       <div className="text-xs text-red-600 bg-red-100 p-2 rounded">
-                        格式：HH:MM (例如：17:30, 18:00)
+                        點擊選擇時間，格式：HH:MM (例如：17:30, 18:00)
                       </div>
                     </div>
                   </div>
