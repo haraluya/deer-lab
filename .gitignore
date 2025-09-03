@@ -130,3 +130,17 @@ firebase-debug.*.log
 **/firebase-config.json
 
 deer-lab-firebase-adminsdk-fbsvc-d35cefcad6.json
+
+# Temporary and debug files
+auth_export.json
+user_check.json
+check-product-bom.js
+debug-inventory-records.*
+migrate-material-codes.js
+tatus*
+run_lint.sh
+
+# Large build/cache files that should not be committed
+*.tsbuildinfo
+.next/
+node_modules/
