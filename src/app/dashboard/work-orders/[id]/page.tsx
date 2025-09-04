@@ -1434,9 +1434,7 @@ export default function WorkOrderDetailPage() {
            }
            
            .main-content {
-             display: grid;
-             grid-template-columns: 2fr 1fr;
-             gap: 15px;
+             display: block;
              margin-bottom: 15px;
            }
            
@@ -1454,24 +1452,6 @@ export default function WorkOrderDetailPage() {
              border-radius: 3px;
            }
            
-           .comments-section {
-             border: 2px solid #000;
-             padding: 10px;
-             border-radius: 5px;
-             height: 100%;
-             display: flex;
-             flex-direction: column;
-           }
-           
-           .comments-section h3 {
-             font-size: 24px;
-             font-weight: bold;
-             margin: 0 0 12px 0;
-             text-align: center;
-             background-color: #f0f0f0;
-             padding: 10px;
-             border-radius: 3px;
-           }
           
                      .materials-section {
              margin-bottom: 15px;
@@ -1521,22 +1501,13 @@ export default function WorkOrderDetailPage() {
              border-radius: 3px;
            }
            
-           .time-writing-box {
+           .memo-writing-box {
              border: 4px solid #000;
              background-color: #f9f9f9;
-             min-height: 300px;
+             min-height: 280px;
              margin-top: 12px;
            }
           
-                     .total-time {
-             text-align: center;
-             font-size: 20px;
-             font-weight: bold;
-             margin: 12px 0;
-             padding: 15px;
-             background-color: #f0f0f0;
-             border-radius: 5px;
-           }
           
           
           .page-break {
@@ -1661,49 +1632,12 @@ export default function WorkOrderDetailPage() {
              ` : ''}
            </div>
            
-           <div class="comments-section">
-             <h3>留言板</h3>
-             <div style="flex: 1; border: 2px solid #000; background-color: #f9f9f9; padding: 15px; min-height: 200px;">
-               <!-- 留言內容會在這裡顯示 -->
-             </div>
-           </div>
          </div>
         
                  <div class="time-section">
-           <h3>工時申報表</h3>
-           ${timeEntries && timeEntries.length > 0 ? `
-             <table>
-               <thead>
-                 <tr>
-                   <th>人員</th>
-                   <th>工作日期</th>
-                   <th>開始時間</th>
-                   <th>結束時間</th>
-                   <th>工時小計</th>
-                 </tr>
-               </thead>
-               <tbody>
-                 ${timeEntries.map(entry => `
-                   <tr>
-                     <td style="font-size: 36px; font-weight: bold;">${entry.personnelName}</td>
-                     <td style="font-size: 36px;">${entry.startDate}</td>
-                     <td style="font-size: 36px;">${entry.startTime}</td>
-                     <td style="font-size: 36px;">${entry.endTime}</td>
-                     <td style="font-size: 36px; font-weight: bold;">${Math.floor(entry.duration)}小時${Math.round((entry.duration % 1) * 60)}分鐘</td>
-                   </tr>
-                 `).join('')}
-               </tbody>
-             </table>
-             <div class="total-time">
-               總人工小時：${Math.floor(totalWorkHours / 60)} 小時 ${Math.floor(totalWorkHours % 60)} 分鐘 (共 ${timeEntries.length} 筆紀錄)
-             </div>
-           ` : `
-             <div style="text-align: center; padding: 15px; color: #666; font-size: 16px;">
-               尚無工時紀錄
-             </div>
-           `}
-           <div class="time-writing-box">
-             <!-- 工時申報書寫區域 -->
+           <h3>備忘錄</h3>
+           <div class="memo-writing-box">
+             <!-- 備忘錄書寫區域 -->
            </div>
          </div>
         
