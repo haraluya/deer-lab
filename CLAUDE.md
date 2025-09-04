@@ -108,9 +108,24 @@ functions/                 # Firebase Functions
 如果遇到部署問題：
 1. 檢查 `.next` 資料夾是否存在：`ls -la`
 2. 重新建構：`npm run build`
-3. 手動複製：`cp -r .next functions/ && cp -r public functions/ && cp package.json functions/`
+3. 使用修復腳本：`node scripts/copy-build.js`
 4. 編譯 functions：`cd functions && npm run build && cd ..`
 5. 強制部署：`firebase deploy --force`
+
+### 📁 .next 資料夾管理策略
+**重要決策：`.next` 資料夾不納入版本控制**
+
+**原因說明**：
+- **檔案大小**：`.next` 資料夾通常 500MB+ 包含大量建構產物
+- **建構特性**：內容因環境、時間戳記而異，不適合版本控制
+- **安全考量**：可能包含環境變數等敏感資訊
+- **最佳實務**：業界標準做法是排除建構產物
+
+**部署流程**：
+1. 本地建構：`npm run build` 產生 `.next` 資料夾
+2. 複製到 functions：透過 `scripts/copy-build.js` 處理
+3. 部署後 functions 執行：Firebase Functions 載入 `.next` 運行 SSR
+4. 清理：可以安全刪除本地 `.next`，不影響線上版本
 
 ## 開發指令
 
