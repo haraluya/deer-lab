@@ -9,7 +9,12 @@
       "Bash(chcp:*)",
       "Bash(echo $env:LANG)",
       "Bash(cmd /c:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(dir:*)",
+      "Bash(firebase projects:list:*)",
+      "Bash(firebase hosting:list:*)",
+      "Bash(firebase deploy:*)",
+      "WebFetch(domain:deer-lab.web.app)"
     ],
     "deny": [],
     "ask": []
