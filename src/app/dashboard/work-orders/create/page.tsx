@@ -5,16 +5,17 @@ import { useRouter } from "next/navigation"
 import { collection, getDocs, addDoc, doc, getDoc, DocumentReference } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
-import { ArrowLeft, Plus, Package, Loader2, Calculator, Target, Zap, CheckCircle, AlertTriangle } from "lucide-react"
+import { ArrowLeft, Plus, Package, Loader2, Calculator, Target, Zap, CheckCircle, AlertTriangle, Search, ChevronsUpDown, Check } from "lucide-react"
 import { findMaterialByCategory } from "@/lib/systemConfig"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 interface Product {
   id: string
@@ -65,19 +66,15 @@ export default function CreateWorkOrderPage() {
   const [targetQuantity, setTargetQuantity] = useState(1) // 改為1 KG
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('') // 搜尋功能
+  const [open, setOpen] = useState(false) // 產品選擇下拉狀態
 
   // 格式化數值顯示，整數不顯示小數點
   const formatNumber = (value: number) => {
     return value % 1 === 0 ? value.toString() : value.toFixed(3);
   };
 
-  // 過濾產品列表並按系列排序
-  const filteredProducts = products.filter(product => 
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (product.seriesName && product.seriesName.toLowerCase().includes(searchTerm.toLowerCase()))
-  ).sort((a, b) => {
+  // 按系列排序產品列表
+  const sortedProducts = products.sort((a, b) => {
     // 先按系列名稱排序
     const seriesA = a.seriesName || '未指定'
     const seriesB = b.seriesName || '未指定'
@@ -233,6 +230,7 @@ export default function CreateWorkOrderPage() {
   const handleProductSelect = (productId: string) => {
     const product = products.find(p => p.id === productId)
     setSelectedProduct(product || null)
+    setOpen(false)
   }
 
   const calculateMaterialRequirements = () => {
@@ -647,21 +645,55 @@ export default function CreateWorkOrderPage() {
                   <Label htmlFor="product" className="text-sm font-semibold text-gray-700 mb-3 block">
                     產品
                   </Label>
-                  <Select onValueChange={handleProductSelect}>
-                    <SelectTrigger className="h-12 border-2 border-gray-200 hover:border-blue-300 focus:border-blue-500 transition-all duration-200 bg-white">
-                      <SelectValue placeholder="選擇要生產的產品" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredProducts.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          <div className="flex flex-col">
-                            <span className="font-medium">[{product.seriesName || '未指定'}] - {product.name}</span>
-                            <span className="text-xs text-slate-500">{product.code}</span>
+                  <Popover open={open} onOpenChange={setOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={open}
+                        className="h-12 w-full justify-between border-2 border-gray-200 hover:border-blue-300 focus:border-blue-500 transition-all duration-200 bg-white text-left font-normal"
+                      >
+                        {selectedProduct ? (
+                          <div className="flex flex-col items-start truncate">
+                            <span className="font-medium truncate">[{selectedProduct.seriesName || '未指定'}] - {selectedProduct.name}</span>
+                            <span className="text-xs text-slate-500">{selectedProduct.code}</span>
                           </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                        ) : (
+                          <span className="text-gray-500">選擇要生產的產品</span>
+                        )}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0" style={{ width: 'var(--radix-popover-trigger-width)' }}>
+                      <Command>
+                        <CommandInput 
+                          placeholder="搜尋產品名稱、系列或代號..." 
+                          className="h-9"
+                        />
+                        <CommandEmpty>找不到符合條件的產品。</CommandEmpty>
+                        <CommandGroup className="max-h-64 overflow-auto">
+                          {sortedProducts.map((product) => (
+                            <CommandItem
+                              key={product.id}
+                              value={`${product.name} ${product.code} ${product.seriesName || ''}`}
+                              onSelect={() => handleProductSelect(product.id)}
+                              className="cursor-pointer"
+                            >
+                              <Check
+                                className={`mr-2 h-4 w-4 ${
+                                  selectedProduct?.id === product.id ? "opacity-100" : "opacity-0"
+                                }`}
+                              />
+                              <div className="flex flex-col">
+                                <span className="font-medium">[{product.seriesName || '未指定'}] - {product.name}</span>
+                                <span className="text-xs text-slate-500">{product.code}</span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 {/* 產品資訊 */}
