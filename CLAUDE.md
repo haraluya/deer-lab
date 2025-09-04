@@ -410,6 +410,9 @@ const handleAddToCart = async (item: CartItem) => {
 6. **工時系統修復** (2025-09-04): 
    - 修復個人工時統計查詢問題：使用 `appUser.uid` 而非 `employeeId` 查詢
    - 工單詳情頁面已具備工時記錄即時更新機制（對話框關閉時自動重新載入）
+   - 增強工時系統除錯功能：新增詳細的 console 輸出以便診斷載入問題
+   - 確認 TimeTrackingDialog 中 personnelId 正確對應 Firebase Auth UID
+   - 改善工時記錄建立和查詢的錯誤處理機制
 
 ## 業務邏輯說明
 
