@@ -32,6 +32,11 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
   const [saving, setSaving] = useState(false)
   const [batchMode, setBatchMode] = useState(false)
   const [selectedPersonnel, setSelectedPersonnel] = useState<string[]>([])
+  const [conflictWarning, setConflictWarning] = useState<{
+    hasConflict: boolean
+    message: string
+    conflictDetails?: any[]
+  } | null>(null)
   
   const [newEntry, setNewEntry] = useState({
     personnelId: "",
@@ -46,6 +51,66 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
       loadPersonnel()
     }
   }, [isOpen, workOrderId])
+
+  // 即時檢查時間衝突
+  useEffect(() => {
+    const checkConflictRealTime = async () => {
+      // 清除之前的警告
+      setConflictWarning(null)
+      
+      // 只有在所有必要欄位都有值時才檢查
+      if (!newEntry.startDate || !newEntry.startTime || !newEntry.endDate || !newEntry.endTime) {
+        return
+      }
+
+      let personnelToCheck: string[] = []
+      
+      if (batchMode) {
+        personnelToCheck = selectedPersonnel
+      } else if (newEntry.personnelId) {
+        personnelToCheck = [newEntry.personnelId]
+      }
+
+      if (personnelToCheck.length === 0) {
+        return
+      }
+
+      try {
+        const conflictChecks = await Promise.all(
+          personnelToCheck.map(async (personId) => {
+            const conflict = await checkTimeConflict(
+              personId, 
+              newEntry.startDate, 
+              newEntry.startTime, 
+              newEntry.endDate, 
+              newEntry.endTime
+            )
+            return { 
+              personId, 
+              person: personnel.find(p => p.id === personId), 
+              ...conflict 
+            }
+          })
+        )
+
+        const conflictingPersons = conflictChecks.filter(check => check.hasConflict)
+        
+        if (conflictingPersons.length > 0) {
+          setConflictWarning({
+            hasConflict: true,
+            message: `發現 ${conflictingPersons.length} 位人員存在時間衝突`,
+            conflictDetails: conflictingPersons
+          })
+        }
+      } catch (error) {
+        console.error('即時衝突檢查失敗:', error)
+      }
+    }
+
+    // 加入延遲避免過度頻繁的查詢
+    const debounceTimer = setTimeout(checkConflictRealTime, 500)
+    return () => clearTimeout(debounceTimer)
+  }, [newEntry, selectedPersonnel, batchMode, personnel, checkTimeConflict])
 
   const loadPersonnel = async () => {
     if (!db) {
@@ -123,6 +188,76 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
     return `${wholeHours}小時${minutes > 0 ? `${minutes}分鐘` : ''}`
   }
 
+  // 檢查時間是否重疊的函式
+  const checkTimeOverlap = (
+    start1: Date, 
+    end1: Date, 
+    start2: Date, 
+    end2: Date
+  ): boolean => {
+    // 時間重疊的判定：start1 < end2 && start2 < end1
+    return start1.getTime() < end2.getTime() && start2.getTime() < end1.getTime()
+  }
+
+  // 檢查工時記錄是否與現有記錄衝突
+  const checkTimeConflict = async (
+    personnelId: string, 
+    startDate: string, 
+    startTime: string, 
+    endDate: string, 
+    endTime: string
+  ): Promise<{ hasConflict: boolean; conflictingEntry?: any }> => {
+    try {
+      const newStart = new Date(`${startDate}T${startTime}`)
+      let newEnd = new Date(`${endDate}T${endTime}`)
+      
+      // 處理跨日情況
+      if (newEnd.getTime() <= newStart.getTime()) {
+        newEnd = new Date(newEnd.getTime() + 24 * 60 * 60 * 1000)
+      }
+
+      // 查詢該人員的所有工時記錄
+      const q = query(
+        collection(db!, 'timeEntries'),
+        where('personnelId', '==', personnelId)
+      )
+      
+      const querySnapshot = await getDocs(q)
+      
+      for (const doc of querySnapshot.docs) {
+        const entry = doc.data()
+        
+        // 重建現有記錄的時間
+        const existingStart = new Date(`${entry.startDate}T${entry.startTime}`)
+        let existingEnd = new Date(`${entry.endDate}T${entry.endTime}`)
+        
+        // 處理現有記錄的跨日情況
+        if (existingEnd.getTime() <= existingStart.getTime()) {
+          existingEnd = new Date(existingEnd.getTime() + 24 * 60 * 60 * 1000)
+        }
+
+        // 檢查時間是否重疊
+        if (checkTimeOverlap(newStart, newEnd, existingStart, existingEnd)) {
+          return {
+            hasConflict: true,
+            conflictingEntry: {
+              ...entry,
+              id: doc.id,
+              formattedTime: `${entry.startDate} ${entry.startTime} - ${entry.endDate} ${entry.endTime}`,
+              workOrderNumber: entry.workOrderNumber || '未知工單'
+            }
+          }
+        }
+      }
+
+      return { hasConflict: false }
+    } catch (error) {
+      console.error('檢查時間衝突失敗:', error)
+      // 如果檢查失敗，為安全起見回傳無衝突（讓使用者可以繼續）
+      return { hasConflict: false }
+    }
+  }
+
   const handleAddTimeEntry = async () => {
     if (isLocked) {
       toast.error("工單已入庫，無法新增工時記錄")
@@ -138,6 +273,38 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
 
       try {
         setSaving(true)
+        
+        // 檢查所有選中人員的時間衝突
+        const conflictChecks = await Promise.all(
+          selectedPersonnel.map(async (personId) => {
+            const conflict = await checkTimeConflict(
+              personId, 
+              newEntry.startDate, 
+              newEntry.startTime, 
+              newEntry.endDate, 
+              newEntry.endTime
+            )
+            return { personId, ...conflict }
+          })
+        )
+
+        // 找出有衝突的人員
+        const conflictingPersons = conflictChecks.filter(check => check.hasConflict)
+        
+        if (conflictingPersons.length > 0) {
+          const conflictNames = conflictingPersons.map(conflict => {
+            const person = personnel.find(p => p.id === conflict.personId)
+            return `${person?.name || '未知人員'} (${conflict.conflictingEntry?.formattedTime})`
+          }).join('\n')
+          
+          toast.error(
+            `以下人員存在時間衝突，請調整時間：\n${conflictNames}`,
+            { duration: 8000 }
+          )
+          setSaving(false)
+          return
+        }
+
         const duration = calculateDuration(newEntry.startDate, newEntry.startTime, newEntry.endDate, newEntry.endTime)
         
         // 為每個選中的人員新增記錄
@@ -207,6 +374,25 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
 
       try {
         setSaving(true)
+        
+        // 檢查時間衝突
+        const conflict = await checkTimeConflict(
+          newEntry.personnelId, 
+          newEntry.startDate, 
+          newEntry.startTime, 
+          newEntry.endDate, 
+          newEntry.endTime
+        )
+
+        if (conflict.hasConflict) {
+          toast.error(
+            `時間衝突！此人員在 ${conflict.conflictingEntry?.formattedTime} 已有工時記錄（工單：${conflict.conflictingEntry?.workOrderNumber}）`,
+            { duration: 8000 }
+          )
+          setSaving(false)
+          return
+        }
+        
         const duration = calculateDuration(newEntry.startDate, newEntry.startTime, newEntry.endDate, newEntry.endTime)
         const selectedPerson = personnel.find(p => p.id === newEntry.personnelId)
 
@@ -549,6 +735,33 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                   </div>
                 </div>
 
+                {/* 時間衝突警告 */}
+                {conflictWarning && conflictWarning.hasConflict && (
+                  <Alert className="border-red-200 bg-gradient-to-r from-red-50 to-pink-50">
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                    <AlertTitle className="text-red-800 font-semibold">
+                      ⚠️ 時間衝突警告
+                    </AlertTitle>
+                    <AlertDescription className="text-red-700 text-sm space-y-2">
+                      <div className="font-medium">{conflictWarning.message}</div>
+                      <div className="space-y-1">
+                        {conflictWarning.conflictDetails?.map((conflict, index) => (
+                          <div key={index} className="bg-red-100 p-2 rounded text-xs">
+                            <strong>{conflict.person?.name || '未知人員'}</strong>
+                            <br />
+                            已有工時記錄：{conflict.conflictingEntry?.formattedTime}
+                            <br />
+                            工單：{conflict.conflictingEntry?.workOrderNumber}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="text-xs italic">
+                        請調整時間或更換人員以避免衝突
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 {/* 工時計算 */}
                 {newEntry.startDate && newEntry.startTime && newEntry.endDate && newEntry.endTime && (
                   <div className="p-3 bg-gradient-to-r from-orange-50 to-amber-50 rounded-lg border border-orange-200">
@@ -582,8 +795,17 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                 {/* 新增按鈕 */}
                 <Button 
                   onClick={handleAddTimeEntry}
-                  disabled={saving || (!batchMode && !newEntry.personnelId) || (batchMode && selectedPersonnel.length === 0)}
-                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3"
+                  disabled={
+                    saving || 
+                    (!batchMode && !newEntry.personnelId) || 
+                    (batchMode && selectedPersonnel.length === 0) || 
+                    (conflictWarning?.hasConflict === true)
+                  }
+                  className={`w-full font-semibold py-3 ${
+                    conflictWarning?.hasConflict 
+                      ? 'bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 cursor-not-allowed' 
+                      : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
+                  } text-white`}
                 >
                   {saving ? (
                     <>
