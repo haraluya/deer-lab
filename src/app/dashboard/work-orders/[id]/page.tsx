@@ -474,7 +474,8 @@ export default function WorkOrderDetailPage() {
           personnelId: data.personnelId,
           personnelName: data.personnelName,
           duration: data.duration,
-          startDate: data.startDate
+          startDate: data.startDate,
+          workDate: data.workDate
         });
         return {
           id: doc.id,
@@ -1333,9 +1334,10 @@ export default function WorkOrderDetailPage() {
 
   // 計算總人工小時 (從 timeEntries)
   const totalWorkHours = timeEntries.reduce((total, entry) => {
-    return total + (entry.duration || 0) // duration 已經是小時，直接累加
+    const duration = parseFloat(entry.duration) || 0;
+    return total + duration;
   }, 0)
-
+  
   const totalHours = Math.floor(totalWorkHours)
   const totalMinutes = Math.floor((totalWorkHours % 1) * 60)
 
@@ -2441,7 +2443,12 @@ export default function WorkOrderDetailPage() {
                         )}
                       </TableCell>
                       <TableCell className="font-medium">
-                        {Math.floor(entry.duration)} 小時 {Math.round((entry.duration % 1) * 60)} 分鐘
+                        {(() => {
+                          const duration = parseFloat(entry.duration) || 0;
+                          const hours = Math.floor(duration);
+                          const minutes = Math.round((duration % 1) * 60);
+                          return `${hours} 小時 ${minutes} 分鐘`;
+                        })()}
                       </TableCell>
                       <TableCell className="text-gray-600 text-sm">{entry.createdByName || '未知'}</TableCell>
                       {workOrder?.status !== "入庫" && (
@@ -2604,7 +2611,12 @@ export default function WorkOrderDetailPage() {
                           <span className="text-sm text-gray-600">工時小計</span>
                           <div className="text-right">
                             <div className="font-bold text-lg text-orange-900">
-                              {Math.floor(entry.duration)} 小時 {Math.round((entry.duration % 1) * 60)} 分鐘
+                              {(() => {
+                                const duration = parseFloat(entry.duration) || 0;
+                                const hours = Math.floor(duration);
+                                const minutes = Math.round((duration % 1) * 60);
+                                return `${hours} 小時 ${minutes} 分鐘`;
+                              })()}
                             </div>
                             {entry.overtimeHours > 0 && (
                               <div className="text-xs text-red-600">
@@ -3049,11 +3061,11 @@ export default function WorkOrderDetailPage() {
                       {timeEntries.map((entry, index) => (
                         <TableRow key={index}>
                           <TableCell className="font-medium">{entry.personnelName}</TableCell>
-                          <TableCell>{entry.workDate}</TableCell>
+                          <TableCell>{entry.startDate || entry.workDate}</TableCell>
                           <TableCell>{entry.startTime}</TableCell>
                           <TableCell>{entry.endTime}</TableCell>
                           <TableCell className="font-medium">
-                            {entry.duration} 小時
+                            {parseFloat(entry.duration) || 0} 小時
                           </TableCell>
                         </TableRow>
                       ))}
