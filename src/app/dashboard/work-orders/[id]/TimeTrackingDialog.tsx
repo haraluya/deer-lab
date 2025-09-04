@@ -61,12 +61,12 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
       const usersSnapshot = await getDocs(collection(db!, "users"))
       console.log("人員資料快照:", usersSnapshot.size, "筆資料")
       
-      // 將 users 資料轉換為 Personnel 格式
+      // 將 users 資料轉換為 Personnel 格式，id 使用 Firebase Auth UID
       const personnelList: Personnel[] = usersSnapshot.docs
         .map(doc => {
           const userData = doc.data()
           return {
-            id: doc.id,
+            id: userData.uid || doc.id, // 優先使用 Firebase Auth UID
             name: userData.name || '',
             employeeId: userData.employeeId || '',
             phone: userData.phone || '',
@@ -139,6 +139,7 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
 
           const timeEntryData = {
             workOrderId,
+            workOrderNumber: workOrderNumber || '', // 確保包含工單號碼
             personnelId: personId,
             personnelName: person.name,
             startDate: newEntry.startDate,
@@ -208,6 +209,7 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
 
         const timeEntryData = {
           workOrderId,
+          workOrderNumber: workOrderNumber || '', // 確保包含工單號碼
           personnelId: newEntry.personnelId,
           personnelName: selectedPerson.name,
           startDate: newEntry.startDate,

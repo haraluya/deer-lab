@@ -478,7 +478,8 @@ export default function WorkOrderDetailPage() {
         });
         return {
           id: doc.id,
-          ...data
+          ...data,
+          workOrderNumber: data.workOrderNumber || workOrder?.code || '', // 確保工時記錄有工單號碼
         };
       });
       
