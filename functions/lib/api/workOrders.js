@@ -1,10 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.completeWorkOrder = exports.addTimeRecord = exports.updateWorkOrder = exports.createWorkOrder = void 0;
+exports.completeWorkOrder = exports.deleteWorkOrder = exports.addTimeRecord = exports.updateWorkOrder = exports.createWorkOrder = void 0;
 // functions/src/api/workOrders.ts
 const firebase_functions_1 = require("firebase-functions");
 const https_1 = require("firebase-functions/v2/https");
 const firestore_1 = require("firebase-admin/firestore");
+const auth_1 = require("../utils/auth");
 const db = (0, firestore_1.getFirestore)();
 /**
  * Creates a new work order based on a product and target quantity with advanced BOM calculation.
@@ -246,6 +247,69 @@ exports.addTimeRecord = (0, https_1.onCall)(async (request) => {
             throw error;
         }
         throw new https_1.HttpsError("internal", "新增工時紀錄時發生未知錯誤。");
+    }
+});
+/**
+ * Deletes a work order and all related time entries.
+ */
+exports.deleteWorkOrder = (0, https_1.onCall)(async (request) => {
+    const { auth: contextAuth, data } = request;
+    await (0, auth_1.ensureIsAdminOrForeman)(contextAuth === null || contextAuth === void 0 ? void 0 : contextAuth.uid);
+    if (!contextAuth) {
+        throw new https_1.HttpsError("internal", "驗證檢查後 contextAuth 不應為空。");
+    }
+    const { workOrderId } = data;
+    if (!workOrderId) {
+        throw new https_1.HttpsError("invalid-argument", "缺少工單 ID。");
+    }
+    try {
+        await db.runTransaction(async (transaction) => {
+            // 1. 驗證工單存在
+            const workOrderRef = db.doc(`workOrders/${workOrderId}`);
+            const workOrderSnap = await transaction.get(workOrderRef);
+            if (!workOrderSnap.exists) {
+                throw new https_1.HttpsError("not-found", "找不到指定的工單。");
+            }
+            const workOrderData = workOrderSnap.data();
+            // 2. 檢查工單狀態 - 只允許刪除未開始或已取消的工單
+            if (workOrderData.status === '進行' || workOrderData.status === '完工') {
+                throw new https_1.HttpsError("failed-precondition", `無法刪除狀態為 "${workOrderData.status}" 的工單。`);
+            }
+            // 3. 查詢並刪除相關的工時記錄
+            const timeEntriesQuery = await db.collection('timeEntries')
+                .where('workOrderId', '==', workOrderId)
+                .get();
+            firebase_functions_1.logger.info(`找到 ${timeEntriesQuery.size} 筆與工單 ${workOrderId} 相關的工時記錄`);
+            // 刪除工時記錄
+            timeEntriesQuery.docs.forEach(doc => {
+                transaction.delete(doc.ref);
+            });
+            // 4. 查詢並刪除舊版的工時記錄（如果存在）
+            const oldTimeRecordsQuery = await db.collection('workOrderTimeRecords')
+                .where('workOrderId', '==', workOrderId)
+                .get();
+            firebase_functions_1.logger.info(`找到 ${oldTimeRecordsQuery.size} 筆舊版工時記錄`);
+            // 刪除舊版工時記錄
+            oldTimeRecordsQuery.docs.forEach(doc => {
+                transaction.delete(doc.ref);
+            });
+            // 5. 刪除工單
+            transaction.delete(workOrderRef);
+            firebase_functions_1.logger.info(`已刪除工單 ${workOrderId} 及其相關的 ${timeEntriesQuery.size + oldTimeRecordsQuery.size} 筆工時記錄`);
+        });
+        firebase_functions_1.logger.info(`使用者 ${contextAuth.uid} 成功刪除工單 ${workOrderId} 及其相關工時記錄`);
+        return {
+            success: true,
+            message: `成功刪除工單及其相關工時記錄`,
+            deletedTimeEntries: 0 // 實際數量會在 transaction 中計算
+        };
+    }
+    catch (error) {
+        firebase_functions_1.logger.error(`刪除工單時發生錯誤:`, error);
+        if (error instanceof https_1.HttpsError) {
+            throw error;
+        }
+        throw new https_1.HttpsError("internal", "刪除工單時發生未知錯誤。");
     }
 });
 /**

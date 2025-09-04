@@ -29,7 +29,7 @@ export const cleanupInvalidTimeRecords = onCall(async (request) => {
     const batch = db.batch();
     
     for (const timeEntryDoc of timeEntriesSnapshot.docs) {
-      const timeEntry = timeEntryDoc.data();
+      const timeEntry = timeEntryDoc.data() as any;
       
       if (!timeEntry.workOrderId) {
         // 沒有工單ID的記錄
@@ -102,7 +102,7 @@ export const getPersonalValidTimeRecords = onCall(async (request) => {
 
     // 2. 檢查每個工時記錄對應的工單狀態
     for (const timeEntryDoc of timeEntriesSnapshot.docs) {
-      const timeEntry = { id: timeEntryDoc.id, ...timeEntryDoc.data() };
+      const timeEntry = { id: timeEntryDoc.id, ...timeEntryDoc.data() } as any;
       
       if (!timeEntry.workOrderId) {
         invalidCount++;

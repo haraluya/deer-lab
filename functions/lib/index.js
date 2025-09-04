@@ -65,4 +65,5 @@ __exportStar(require("./api/personnel"), exports);
 __exportStar(require("./api/auth"), exports);
 __exportStar(require("./api/globalCart"), exports);
 __exportStar(require("./api/resetPermissions"), exports);
+__exportStar(require("./api/timeRecords"), exports);
 //# sourceMappingURL=index.js.map
