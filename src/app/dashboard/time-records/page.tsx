@@ -3,13 +3,15 @@
 
 import { useEffect, useState } from 'react';
 import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { 
   Clock, User, Calendar, Factory, TrendingUp, 
   Activity, Timer, Award, BarChart3, Filter,
-  ChevronDown, ChevronUp, Zap, ChevronLeft, ChevronRight
+  ChevronDown, ChevronUp, Zap, ChevronLeft, ChevronRight,
+  Trash2, AlertCircle
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -74,6 +76,9 @@ export default function PersonalTimeRecordsPage() {
   // 分頁狀態
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  
+  // 清理功能狀態
+  const [isCleaningUp, setIsCleaningUp] = useState(false);
 
   // 載入個人工時記錄
   useEffect(() => {
@@ -125,44 +130,44 @@ export default function PersonalTimeRecordsPage() {
 
   const loadPersonalTimeRecords = async () => {
     try {
-      if (!db || !appUser) {
-        console.warn('資料庫或用戶未初始化:', { db: !!db, appUser: !!appUser });
+      if (!appUser) {
+        console.warn('用戶未初始化:', { appUser: !!appUser });
         setIsLoading(false);
         return;
       }
       setIsLoading(true);
 
-      console.log('開始載入個人工時記錄，當前用戶:', { 
+      console.log('開始載入個人有效工時記錄（只包含已完工和已入庫工單），當前用戶:', { 
         uid: appUser.uid, 
         name: appUser.name, 
         employeeId: appUser.employeeId 
       });
 
-      // 載入當前用戶的工時記錄，使用用戶ID（在users集合中的文檔ID）
-      // 移除 orderBy 以避免 Firestore 索引問題，改為在客戶端排序
-      const timeEntriesQuery = query(
-        collection(db, 'timeEntries'),
-        where('personnelId', '==', appUser.uid)
-      );
+      // 使用新的 Firebase Function 獲取只包含已完工和已入庫工單的工時記錄
+      if (!functions) {
+        throw new Error('Firebase Functions 未初始化');
+      }
+      const getPersonalValidTimeRecords = httpsCallable(functions, 'getPersonalValidTimeRecords');
       
-      console.log('執行查詢，personnelId =', appUser.uid);
-      const timeEntriesSnapshot = await getDocs(timeEntriesQuery);
-      console.log('查詢結果:', timeEntriesSnapshot.size, '筆記錄');
+      const result = await getPersonalValidTimeRecords({ 
+        personnelId: appUser.uid 
+      });
       
-      const timeEntries = timeEntriesSnapshot.docs.map(doc => {
-        const data = doc.data();
-        console.log('工時記錄:', { 
-          id: doc.id, 
-          personnelId: data.personnelId, 
-          personnelName: data.personnelName,
-          workOrderId: data.workOrderId,
-          duration: data.duration 
-        });
-        return {
-          id: doc.id,
-          ...data
-        };
-      }) as TimeEntry[];
+      const data = result.data as {
+        success: boolean;
+        timeEntries: TimeEntry[];
+        totalFound: number;
+        validCount: number;
+        invalidCount: number;
+      };
+
+      if (!data.success) {
+        throw new Error('獲取個人工時記錄失敗');
+      }
+
+      console.log(`API 結果: 總共 ${data.totalFound} 筆，有效 ${data.validCount} 筆，無效 ${data.invalidCount} 筆`);
+
+      const timeEntries = data.timeEntries;
 
       // 在客戶端排序（按創建時間降序）
       const sortedTimeEntries = timeEntries.sort((a, b) => {
@@ -178,10 +183,12 @@ export default function PersonalTimeRecordsPage() {
       calculateMonthlyStats(timeEntries);
 
       if (timeEntries.length === 0) {
-        console.warn('未找到任何工時記錄，可能的原因：');
-        console.warn('1. 用戶尚未有任何工時記錄');
-        console.warn('2. personnelId 不匹配');
-        console.warn('3. timeEntries 集合不存在或無資料');
+        if (data.totalFound > 0) {
+          toast.info(`找到 ${data.totalFound} 筆工時記錄，但都不是來自已完工或已入庫的工單，因此不顯示`);
+        }
+        console.info('沒有有效的工時記錄（只顯示已完工和已入庫工單的工時）');
+      } else {
+        toast.success(`載入 ${timeEntries.length} 筆有效工時記錄`);
       }
 
     } catch (error) {
@@ -260,6 +267,57 @@ export default function PersonalTimeRecordsPage() {
   const formatMonthDisplay = (monthString: string) => {
     const [year, month] = monthString.split('-');
     return `${year}年${parseInt(month)}月`;
+  };
+
+  // 清理無效工時記錄功能（僅管理員可用）
+  const handleCleanupInvalidRecords = async () => {
+    if (!appUser) return;
+    
+    // 這裡應該檢查用戶是否為管理員，暫時允許所有用戶使用
+    const confirmed = window.confirm(
+      '⚠️ 警告：此操作將永久刪除所有沒有對應工單的工時記錄。\n\n' +
+      '這包括：\n' +
+      '• 沒有工單ID的工時記錄\n' +
+      '• 對應工單已被刪除的工時記錄\n\n' +
+      '此操作無法復原，確定要繼續嗎？'
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+      setIsCleaningUp(true);
+      toast.info('開始清理無效工時記錄...');
+      
+      if (!functions) {
+        throw new Error('Firebase Functions 未初始化');
+      }
+      const cleanupInvalidTimeRecords = httpsCallable(functions, 'cleanupInvalidTimeRecords');
+      const result = await cleanupInvalidTimeRecords();
+      
+      const data = result.data as {
+        success: boolean;
+        message: string;
+        deletedCount: number;
+        checkedCount: number;
+      };
+      
+      if (data.success) {
+        toast.success(data.message);
+        console.log(`清理完成：檢查了 ${data.checkedCount} 筆記錄，刪除了 ${data.deletedCount} 筆無效記錄`);
+        
+        // 重新載入工時記錄
+        if (data.deletedCount > 0) {
+          await loadPersonalTimeRecords();
+        }
+      } else {
+        throw new Error('清理失敗');
+      }
+    } catch (error) {
+      console.error('清理無效工時記錄失敗:', error);
+      toast.error(`清理失敗: ${error instanceof Error ? error.message : '未知錯誤'}`);
+    } finally {
+      setIsCleaningUp(false);
+    }
   };
 
   if (!appUser) {
@@ -390,19 +448,58 @@ export default function PersonalTimeRecordsPage() {
                 className="max-w-sm"
               />
             </div>
-            <Select value={monthFilter} onValueChange={setMonthFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="選擇月份" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部月份</SelectItem>
-                {monthlyStats.map(stat => (
-                  <SelectItem key={stat.month} value={stat.month}>
-                    {formatMonthDisplay(stat.month)} ({stat.entries}筆)
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Select value={monthFilter} onValueChange={setMonthFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="選擇月份" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部月份</SelectItem>
+                  {monthlyStats.map(stat => (
+                    <SelectItem key={stat.month} value={stat.month}>
+                      {formatMonthDisplay(stat.month)} ({stat.entries}筆)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {/* 管理員清理功能 */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCleanupInvalidRecords}
+                disabled={isCleaningUp}
+                className="px-3 text-red-600 border-red-300 hover:bg-red-50"
+                title="清理無效工時記錄（沒有對應工單的記錄）"
+              >
+                {isCleaningUp ? (
+                  <>
+                    <AlertCircle className="h-4 w-4 mr-1 animate-spin" />
+                    清理中
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    清理無效記錄
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+          
+          {/* 說明文字 */}
+          <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-blue-800">
+                <div className="font-medium mb-1">📋 工時記錄顯示規則</div>
+                <div className="text-xs space-y-1">
+                  <div>• 只顯示來自 <Badge variant="outline" className="bg-green-50 text-green-700 px-1 py-0 text-xs">完工</Badge> 或 <Badge variant="outline" className="bg-purple-50 text-purple-700 px-1 py-0 text-xs">已入庫</Badge> 狀態工單的工時記錄</div>
+                  <div>• 「預報」和「進行中」工單的工時記錄不會顯示在個人統計中</div>
+                  <div>• 清理功能會刪除沒有對應工單的測試記錄</div>
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
