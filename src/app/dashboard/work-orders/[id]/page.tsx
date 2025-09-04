@@ -451,19 +451,36 @@ export default function WorkOrderDetailPage() {
 
   // 載入工時記錄
   const loadTimeEntries = useCallback(async () => {
-    if (!workOrderId || !db) return;
+    if (!workOrderId || !db) {
+      console.warn('載入工時記錄條件不滿足:', { workOrderId: !!workOrderId, db: !!db });
+      return;
+    }
     
     try {
+      console.log('開始載入工時記錄，workOrderId:', workOrderId);
       const timeEntriesQuery = query(
         collection(db, 'timeEntries'),
         where('workOrderId', '==', workOrderId),
         orderBy('createdAt', 'desc')
       );
       const timeEntriesSnapshot = await getDocs(timeEntriesQuery);
-      const entries = timeEntriesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      console.log('工時記錄查詢結果:', timeEntriesSnapshot.size, '筆記錄');
+      
+      const entries = timeEntriesSnapshot.docs.map(doc => {
+        const data = doc.data();
+        console.log('工時記錄詳情:', { 
+          id: doc.id,
+          workOrderId: data.workOrderId,
+          personnelId: data.personnelId,
+          personnelName: data.personnelName,
+          duration: data.duration,
+          startDate: data.startDate
+        });
+        return {
+          id: doc.id,
+          ...data
+        };
+      });
       
       // 按工作日期和開始時間排序（最新的在上面）
       entries.sort((a: any, b: any) => {
@@ -472,8 +489,10 @@ export default function WorkOrderDetailPage() {
         return dateB.getTime() - dateA.getTime();
       });
       
+      console.log('設置工時記錄，共', entries.length, '筆');
       setTimeEntries(entries);
     } catch (err) {
+      console.error('載入工時記錄失敗:', err);
       error('載入工時記錄失敗', err as Error);
     }
   }, [workOrderId]);

@@ -156,6 +156,14 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
             createdByName: appUser?.name || '系統用戶'
           }
 
+          console.log('批量新增工時記錄資料:', {
+            workOrderId,
+            personnelId: personId,
+            personnelName: person.name,
+            duration,
+            createdBy: user?.uid
+          })
+
           return addDoc(collection(db!, 'timeEntries'), timeEntryData)
         })
 
@@ -216,6 +224,14 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
           createdBy: user?.uid || '',
           createdByName: appUser?.name || '系統用戶'
         }
+
+        console.log('單一新增工時記錄資料:', {
+          workOrderId,
+          personnelId: newEntry.personnelId,
+          personnelName: selectedPerson.name,
+          duration,
+          createdBy: user?.uid
+        })
 
         await addDoc(collection(db!, 'timeEntries'), timeEntryData)
         toast.success("工時記錄已新增")

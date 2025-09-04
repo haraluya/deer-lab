@@ -102,10 +102,17 @@ export default function PersonalTimeRecordsPage() {
   const loadPersonalTimeRecords = async () => {
     try {
       if (!db || !appUser) {
+        console.warn('資料庫或用戶未初始化:', { db: !!db, appUser: !!appUser });
         setIsLoading(false);
         return;
       }
       setIsLoading(true);
+
+      console.log('開始載入個人工時記錄，當前用戶:', { 
+        uid: appUser.uid, 
+        name: appUser.name, 
+        employeeId: appUser.employeeId 
+      });
 
       // 載入當前用戶的工時記錄，使用用戶ID（在users集合中的文檔ID）
       const timeEntriesQuery = query(
@@ -114,17 +121,37 @@ export default function PersonalTimeRecordsPage() {
         orderBy('createdAt', 'desc')
       );
       
+      console.log('執行查詢，personnelId =', appUser.uid);
       const timeEntriesSnapshot = await getDocs(timeEntriesQuery);
-      const timeEntries = timeEntriesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as TimeEntry[];
+      console.log('查詢結果:', timeEntriesSnapshot.size, '筆記錄');
+      
+      const timeEntries = timeEntriesSnapshot.docs.map(doc => {
+        const data = doc.data();
+        console.log('工時記錄:', { 
+          id: doc.id, 
+          personnelId: data.personnelId, 
+          personnelName: data.personnelName,
+          workOrderId: data.workOrderId,
+          duration: data.duration 
+        });
+        return {
+          id: doc.id,
+          ...data
+        };
+      }) as TimeEntry[];
 
       setPersonalTimeEntries(timeEntries);
 
       // 計算統計資料
       calculateStats(timeEntries);
       calculateMonthlyStats(timeEntries);
+
+      if (timeEntries.length === 0) {
+        console.warn('未找到任何工時記錄，可能的原因：');
+        console.warn('1. 用戶尚未有任何工時記錄');
+        console.warn('2. personnelId 不匹配');
+        console.warn('3. timeEntries 集合不存在或無資料');
+      }
 
     } catch (error) {
       console.error('載入個人工時記錄失敗:', error);
