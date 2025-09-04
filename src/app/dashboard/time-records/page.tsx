@@ -107,10 +107,10 @@ export default function PersonalTimeRecordsPage() {
       }
       setIsLoading(true);
 
-      // 載入當前用戶的工時記錄，使用 employeeId 而不是 uid
+      // 載入當前用戶的工時記錄，使用用戶ID（在users集合中的文檔ID）
       const timeEntriesQuery = query(
         collection(db, 'timeEntries'),
-        where('personnelId', '==', appUser.employeeId || appUser.uid),
+        where('personnelId', '==', appUser.uid),
         orderBy('createdAt', 'desc')
       );
       

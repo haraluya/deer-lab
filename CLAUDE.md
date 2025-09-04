@@ -4,9 +4,11 @@
 
 ## 專案概述
 
-這是「鹿鹿小作坊」(Deer Lab)，一個使用 Next.js 和 Firebase 建構的全方位生產管理系統。該系統管理小型製造工坊的完整生產流程，包括庫存、採購、工單和生產計劃。
+這是「鹿鹿小作坊」(Deer Lab)，一個使用 Next.js 和 Firebase 建構的全方位生產管理系統。該系統為小型製造工坊設計，管理完整的生產流程，包括庫存管理、採購、工單、人員和權限控制。
 
-## 架構設計
+**重要：這是一個動態網站**，使用 Next.js SSR (Server-Side Rendering) 配合 Firebase Functions，並非靜態部署。
+
+## 技術架構
 
 ### 技術堆疊
 - **前端**: Next.js 14 (App Router), React 18, TypeScript
@@ -15,904 +17,925 @@
 - **資料庫**: Firestore
 - **身份驗證**: Firebase Auth
 - **檔案儲存**: Firebase Storage
-- **部署**: Firebase Hosting
+- **部署**: Firebase Hosting + Firebase Functions (SSR)
 
-### 主要目錄結構
+### 部署架構說明
+系統採用 **Next.js SSR + Firebase Functions** 的動態網站架構：
+- Firebase Functions 運行 Next.js server (nextServer)
+- 所有路由通過 Firebase Functions 處理
+- 支援伺服器端渲染和 API 路由
+- 使用 `firebase.json` 的 rewrites 規則將所有請求導向 nextServer 函數
+
+### 目錄結構
 ```
 src/
 ├── app/                    # Next.js App Router 頁面
 │   ├── dashboard/          # 主要應用程式儀表板
-│   │   ├── inventory/      # 🆕 全新庫存管理系統 (components/)
-│   │   ├── inventory-old/  # 舊版庫存管理 (已備份)
-│   │   ├── materials/      # 物料管理
-│   │   ├── fragrances/     # 香精管理
-│   │   ├── products/       # 產品管理
-│   │   ├── purchase-orders/ # 採購管理
-│   │   ├── work-orders/    # 工單管理
-│   │   ├── inventory-records/ # 庫存追蹤
-│   │   └── suppliers/      # 供應商管理
+│   │   ├── page.tsx        # 工作台（主儀表板）
+│   │   ├── inventory/      # 庫存監控系統
+│   │   ├── materials/      # 原料庫管理
+│   │   ├── fragrances/     # 配方庫管理
+│   │   ├── products/       # 產品目錄
+│   │   ├── purchase-orders/ # 採購訂單
+│   │   ├── work-orders/    # 生產工單
+│   │   ├── inventory-records/ # 庫存歷史
+│   │   ├── suppliers/      # 供應商管理
+│   │   ├── personnel/      # 成員管理
+│   │   ├── time-records/   # 個人工時統計
+│   │   └── time-reports/   # 全公司工時報表
 ├── components/             # 可重用的 React 元件
-│   └── ui/                # Radix UI 元件
+│   └── ui/                # Radix UI 基礎元件
 ├── lib/                   # 工具函式庫
-├── context/               # React contexts
-└── hooks/                 # 自訂 React hooks
+├── context/               # React contexts (AuthContext 等)
+├── hooks/                 # 自訂 React hooks
+├── types/                 # TypeScript 類型定義
+└── utils/                 # 工具函數
 
 functions/                 # Firebase Functions
+├── src/
+│   ├── api/               # API 端點
+│   ├── utils/             # 共用工具
+│   └── index.ts           # Functions 入口
+├── package.json           # Functions 依賴
+└── .next/                 # 部署時的 Next.js 建構產物
 ```
 
-### 核心模組
+## 核心系統功能
 
-1. **庫存管理系統** ✨ **最新重新設計 (2024)**
-   - **現代化介面設計**: 4個統計卡片（總物料數、總香精數、總香精成本、總物料成本）
-   - **智能庫存表格**: 可切換物料/香精顯示，支援即時搜尋和快速調整
-   - **專業視覺設計**: 採用漸變色彩、動畫效果和響應式設計
-   - **模態化快速操作**:
-     - 低庫存項目警告系統 (`LowStockDialog`)
-     - 一鍵快速庫存調整 (`QuickUpdateDialog`) 
-     - 生產能力評估工具 (`ProductionCapacityDialog`)
-   - 完整的庫存紀錄與稽核軌跡
-   - 自動化低庫存通知與補貨建議
+### 1. 庫存管理系統
+- **統計卡片**: 總物料數、總香精數、總成本統計
+- **智能表格**: 可切換物料/香精顯示，即時搜尋
+- **快速操作**: 低庫存警告、快速調整、生產能力評估
+- **稽核軌跡**: 完整的庫存變更記錄
 
-2. **採購管理系統**
-   - 購物車功能與本地儲存
-   - 多供應商採購單管理
-   - 採購單狀態追蹤 (預報單/已訂購/已入庫)
-   - 與物料和香精的整合
+### 2. 全域購物車系統
+- **Firestore 整合**: 使用 `globalCart` 集合，支援跨裝置同步
+- **即時同步**: 使用 Firestore onSnapshot 實現即時更新
+- **統一介面**: 透過 `useGlobalCart` hook 統一管理
 
-3. **工單系統**
-   - 生產規劃與配方計算機
-   - BOM (物料清單) 自動計算
-   - 工時追蹤與勞動力報告
-   - 整個生產生命週期的狀態管理
+### 3. 工單與工時管理
+- **生產工單**: BOM 自動計算、配方管理
+- **工時記錄**: 使用 `timeEntries` 集合存儲（小時制）
+- **雙重統計**: 個人工時統計和全公司工時報表
+- **批量操作**: 支援批量新增和編輯工時
 
-4. **產品與配方管理**
-   - 產品系列組織
-   - 配方制定與自動縮放
-   - 與物料和香精的整合
-   - 生產數量計算
+### 4. 權限管理系統
+- **三級權限**: 系統管理員、生產領班、計時人員
+- **動態導航**: 根據權限動態顯示側邊欄功能
+- **前後端驗證**: 前端 UI 控制 + Firebase Functions 權限檢查
 
 ## 開發指令
 
-### 主要專案
+### 主專案指令
 ```bash
-# 開發
-npm run dev                    # 在埠口 8080 啟動開發伺服器
+# 開發環境
+npm run dev                 # 啟動開發伺服器 (port 3000)
 
 # 建構與部署
-npm run build                  # 建構生產版本
-npm run start                  # 啟動生產伺服器
-npm run lint                   # 執行 ESLint
-npm run deploy                 # 建構並部署到 Firebase Hosting
-npm run deploy-full           # 完整部署 (hosting + functions)
-npm run deploy-only           # 僅部署 hosting
+npm run build               # 建構 Next.js 專案
+npm run deploy              # 完整部署 (hosting + functions)
+npm run deploy-only         # 僅部署 hosting
+npm run deploy-full         # 完整部署 (等同 deploy)
 
-# Functions
-npm run lint:functions        # Lint Firebase Functions
-npm run install:functions     # 安裝 function 相依套件
+# 程式碼品質
+npm run lint                # Next.js ESLint 檢查
+npm run lint:functions      # Functions ESLint 檢查
+
+# Functions 管理
+npm run install:functions   # 安裝 Functions 依賴
 ```
 
-### Firebase Functions
+### Firebase Functions 指令
 ```bash
 cd functions
-npm run build                 # 編譯 TypeScript
-npm run lint                  # Lint functions 程式碼
-npm run serve                 # 執行本地模擬器
-npm run test                  # 執行 Jest 測試
-npm run deploy               # 僅部署 functions
+npm run build              # 編譯 TypeScript
+npm run lint               # 程式碼檢查
+npm run serve              # 本地模擬器
+npm run deploy             # 僅部署 functions
 ```
 
-### 🆕 新增的庫存管理 Firebase Functions (2024)
-```bash
-# 已部署的新 Functions:
-- getInventoryOverview       # 取得庫存統計概覽
-- quickUpdateInventory       # 快速更新庫存數量
-- getLowStockItems           # 取得低庫存項目清單
+## 資料模型
+
+### Firestore 集合設計
+```typescript
+// 核心業務實體
+materials              # 原物料庫存
+fragrances            # 香精庫存  
+products              # 產品目錄
+suppliers             # 供應商資訊
+
+// 業務流程
+purchase_orders       # 採購訂單
+work_orders          # 生產工單
+inventory_records    # 庫存變更稽核軌跡
+
+// 人員與權限
+users                # 使用者檔案
+roles                # 角色定義
+permissions          # 權限配置
+timeEntries          # 工時記錄 (新版，小時制)
+
+// 系統功能
+globalCart           # 全域購物車
 ```
 
-## 重要組態檔案
+### 詳細資料結構
 
-- `firebase.json` - Firebase hosting 和 functions 組態
-- `next.config.mts` - Next.js 組態與 Firebase 相容性
-- `tailwind.config.ts` - Tailwind CSS 組態
-- `functions/package.json` - Functions 相依套件與腳本
-- `src/components/ui/skeleton.tsx` - 🆕 Skeleton 載入組件 (2024新增)
+#### 核心實體欄位定義
+```typescript
+// 原料（Material）
+interface Material {
+  id: string;                    // 唯一識別碼
+  code: string;                  // 料號（自動生成 M001, M002...）
+  name: string;                  // 原料名稱
+  currentStock: number;          // 當前庫存
+  unit: string;                  // 單位（ml, g, 個等）
+  minStock: number;              // 最低庫存警戒線
+  maxStock: number;              // 最高庫存上限
+  costPerUnit: number;           // 單位成本
+  category?: string;             // 原料分類
+  supplierId?: string;           // 供應商ID
+  supplierName?: string;         // 供應商名稱
+  isActive: boolean;             // 是否啟用
+  createdAt: Timestamp;          // 建立時間
+  updatedAt: Timestamp;          // 更新時間
+}
 
-## 重要開發注意事項
+// 香精（Fragrance）
+interface Fragrance {
+  id: string;                    // 唯一識別碼
+  code: string;                  // 料號（自動生成 F001, F002...）
+  name: string;                  // 香精名稱
+  currentStock: number;          // 當前庫存
+  unit: string;                  // 單位
+  minStock: number;              // 最低庫存警戒線
+  maxStock: number;              // 最高庫存上限
+  costPerUnit: number;           // 單位成本
+  category?: string;             // 香精分類
+  series?: string;               // 香精系列
+  supplierId?: string;           // 供應商ID（限「生技」公司）
+  supplierName?: string;         // 供應商名稱
+  isActive: boolean;             // 是否啟用
+  createdAt: Timestamp;          // 建立時間
+  updatedAt: Timestamp;          // 更新時間
+}
+
+// 產品（Product）
+interface Product {
+  id: string;                    // 唯一識別碼
+  code: string;                  // 產品代碼
+  name: string;                  // 產品名稱
+  seriesId?: string;             // 產品系列ID
+  seriesName?: string;           // 產品系列名稱
+  // ... 其他產品屬性
+}
+```
+
+#### 關聯性說明
+```typescript
+// 產品系列關係
+Product.seriesId → ProductSeries.id
+Product.seriesName → ProductSeries.name
+
+// 供應商關係
+Material.supplierId → Supplier.id
+Fragrance.supplierId → Supplier.id (限制：名稱包含「生技」)
+
+// 工時記錄關係（新版）
+TimeEntry.workOrderId → WorkOrder.id
+TimeEntry.employeeId → Personnel.id
+// 注意：舊版 workOrder.timeRecords 已廢棄，統一使用 timeEntries 集合
+```
+
+#### 權限系統資料結構
+```typescript
+// 使用者檔案
+interface User {
+  uid: string;                   // Firebase Auth UID
+  email: string;                 // 電子信箱
+  employeeNumber: string;        // 員工編號
+  name: string;                  // 姓名
+  roleId?: string;               // 角色ID
+  department?: string;           // 部門
+  position?: string;             // 職位
+  isActive: boolean;             // 是否啟用
+}
+
+// 角色定義
+interface Role {
+  id: string;                    // 角色ID
+  name: string;                  // 角色名稱
+  description: string;           // 角色描述
+  permissions: string[];         // 權限陣列
+  isActive: boolean;             // 是否啟用
+}
+```
+
+## 開發規範
 
 ### 狀態管理
-- 使用 React Context 進行身份驗證 (`AuthContext`)
-- 本地儲存用於採購車持久化 (`usePurchaseCart` hook)
-- Firestore 即時訂閱用於即時資料更新
+- **驗證狀態**: React Context (`AuthContext`)
+- **全域購物車**: Firestore + `useGlobalCart` hook
+- **即時資料**: Firestore onSnapshot 訂閱
 
-### Firebase 整合
-- 所有資料操作使用 Firestore 集合
-- Firebase Storage 用於圖片上傳與自動壓縮
-- Firebase Functions 用於伺服器端邏輯
-- 自訂 Firebase 組態處理 Next.js 相容性問題
+### UI 設計原則
+- **設計系統**: Radix UI + Tailwind CSS
+- **色彩主題**: 橘色/藍色漸變系統
+- **響應式**: 行動優先設計
+- **暗色模式**: next-themes 支援
 
-### UI 元件
-- 使用 Radix UI 基礎元件建構
-- 全系統一致的橘色/藍色漸層主題
-- 響應式設計採用行動優先方法
-- 透過 `next-themes` 支援深色/淺色模式
+### 響應式設計規範
 
-### 資料模型
-主要 Firestore 集合：
-- `materials` - 原物料庫存
-- `fragrances` - 香精庫存
-- `products` - 成品
-- `purchase_orders` - 採購管理
-- `work_orders` - 生產訂單
-- `inventory_records` - 庫存變更稽核軌跡
-- `suppliers` - 供應商資訊
+#### Tailwind CSS 斷點定義
+```css
+/* Tailwind 預設斷點 */
+sm: 640px   /* 手機橫向 */
+md: 768px   /* 平板直向 */
+lg: 1024px  /* 平板橫向/小筆電 */
+xl: 1280px  /* 桌面電腦 */
+2xl: 1400px /* 大型桌面電腦 */
+```
 
-### 身份驗證與權限
-- Firebase Auth 整合
-- 基於角色的存取控制
-- 員工編號的使用者檔案管理
-- 儀表板佈局中的自動身份驗證檢查
+#### 設備適配策略
+```typescript
+// 桌面版 (lg: 1024px+)
+- 側邊欄固定展開
+- 表格完整顯示所有欄位
+- 統計卡片 4 欄排列
+- 模態對話框較大尺寸
 
-### 開發工作流程
-1. 系統使用全面的庫存追蹤系統記錄所有變更
-2. 採購管理包含跨會話持久化的購物車系統
-3. 工單與產品配方整合以自動計算 BOM
-4. 所有主要操作在庫存紀錄系統中建立稽核軌跡
+// 平板版 (md: 768px - lg: 1024px)
+- 側邊欄可摺疊
+- 表格隱藏次要欄位
+- 統計卡片 2 欄排列
+- 表單適中間距
 
-### 效能考量
-- 使用 `useMemo` 和 `useCallback` 進行最佳化
-- 大型資料集實作分頁 (每頁 10 項)
-- 上傳檔案的圖片壓縮
-- 具有適當索引的高效 Firestore 查詢
+// 手機版 (< md: 768px)
+- 抽屜式導航
+- 卡片式資料展示
+- 統計卡片單欄排列
+- 觸控最佳化按鈕
+```
 
-### 測試
-- Functions 包含 Jest 測試設定
-- 專案 README 檔案中記錄手動測試工作流程
-- 全面測試涵蓋響應式設計、資料持久化和整合流程
+#### 常用響應式模式
+```tsx
+// 條件式渲染
+{isDesktop ? <DataTable /> : <MobileCardList />}
+
+// Tailwind 響應式類別
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
+// 響應式隱藏/顯示
+<th className="hidden lg:table-cell">詳細資訊</th>
+<Button className="w-full md:w-auto">送出</Button>
+```
+
+### 程式碼品質
+- **型別安全**: 完整的 TypeScript 類型定義在 `src/types/`
+- **元件架構**: 可重用元件在 `src/components/ui/`
+- **效能優化**: useMemo、useCallback 適當使用
+- **錯誤處理**: 統一的錯誤處理機制
+
+### 程式碼使用規範
+
+#### 標準 Hook 使用模式
+```tsx
+// 權限檢查
+const { canAccess, isAdmin, hasPermission } = usePermission();
+
+// 使用範例
+if (!canAccess('/dashboard/materials')) {
+  return <div>無權限存取</div>;
+}
+
+// 身份驗證
+const { user, isAuthenticated, login, logout } = useAuth();
+
+// 全域購物車
+const { 
+  cartItems, 
+  cartItemCount, 
+  addToCart, 
+  removeFromCart, 
+  clearCart 
+} = useGlobalCart();
+```
+
+#### 錯誤處理標準模式
+```tsx
+// 統一錯誤處理
+import { toast } from 'sonner';
+
+try {
+  const result = await firebaseFunction();
+  toast.success('操作成功');
+} catch (error) {
+  console.error('操作失敗:', error);
+  toast.error(error.message || '操作失敗，請稍後再試');
+}
+
+// Loading 狀態處理
+const [isLoading, setIsLoading] = useState(false);
+
+const handleSubmit = async () => {
+  setIsLoading(true);
+  try {
+    // ... 執行操作
+  } finally {
+    setIsLoading(false);
+  }
+};
+```
+
+#### 表單驗證標準
+```tsx
+// 使用 react-hook-form + zod
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const schema = z.object({
+  name: z.string().min(1, '名稱為必填'),
+  email: z.string().email('請輸入有效的電子信箱'),
+});
+
+const { register, handleSubmit, formState: { errors } } = useForm({
+  resolver: zodResolver(schema),
+});
+```
+
+#### Firebase Functions 調用模式
+```tsx
+// 標準調用方式
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '@/lib/firebase';
+
+const addToGlobalCart = httpsCallable(functions, 'addToGlobalCart');
+
+const handleAddToCart = async (item: CartItem) => {
+  try {
+    await addToGlobalCart(item);
+    toast.success('已加入購物車');
+  } catch (error) {
+    toast.error('加入購物車失敗');
+  }
+};
+```
+
+#### 權限控制元件使用
+```tsx
+// 權限控制包裝器
+<PermissionGate permission="materials.manage">
+  <Button onClick={handleEdit}>編輯</Button>
+</PermissionGate>
+
+// 管理員專用元件
+<AdminOnly>
+  <Button onClick={handleDeleteAll}>全部刪除</Button>
+</AdminOnly>
+
+// 角色限制
+<RoleGate roles={['admin', 'supervisor']}>
+  <ManagementPanel />
+</RoleGate>
+```
+
+### 重要開發注意事項
+
+1. **購物車系統**: 統一使用 Firestore 全域購物車，避免 localStorage
+2. **工時記錄**: 使用新版 `timeEntries` 集合（小時制），避免舊版 `timeRecords`
+3. **權限檢查**: 前端 UI 控制搭配後端 Firebase Functions 驗證
+4. **庫存調整**: 統一使用「直接修改」(`direct_modification`) 動作類型
+5. **響應式設計**: 所有功能必須支援桌面、平板、手機三種裝置
+6. **工時系統修復** (2025-09-04): 
+   - 修復個人工時統計查詢問題：使用 `appUser.uid` 而非 `employeeId` 查詢
+   - 工單詳情頁面已具備工時記錄即時更新機制（對話框關閉時自動重新載入）
+
+## 業務邏輯說明
+
+### BOM（物料清單）計算邏輯
+```typescript
+// 配方計算順序
+1. 基礎液體計算
+   - 香精用量 = 總量 × 香精比例
+   - PG用量 = 總量 × PG比例  
+   - VG用量 = 總量 × VG比例
+   - 尼古丁用量 = 根據目標濃度計算
+
+2. 專屬材料計算
+   - 依據產品配方中定義的專屬材料
+   - 按比例或固定用量計算
+
+3. 通用材料計算
+   - 包裝材料（瓶子、標籤等）
+   - 按生產數量計算所需數量
+```
+
+### 工時計算規則
+```typescript
+// 工時統計規則
+interface TimeCalculation {
+  正常工時: number;      // <= 8 小時
+  加班工時: number;      // > 8 小時的部分
+  總工時: number;        // 正常工時 + 加班工時
+}
+
+// 計算邏輯
+const calculateWorkHours = (duration: number) => {
+  const normalHours = Math.min(duration, 8);
+  const overtimeHours = Math.max(duration - 8, 0);
+  return { normalHours, overtimeHours, totalHours: duration };
+};
+```
+
+### 庫存調整業務規則
+```typescript
+// 庫存動作類型
+enum InventoryAction {
+  DIRECT_MODIFICATION = 'direct_modification',    // 直接修改（統一使用）
+  PURCHASE_RECEIVED = 'purchase_received',        // 採購入庫
+  PRODUCTION_CONSUMED = 'production_consumed',    // 生產消耗
+  PRODUCTION_OUTPUT = 'production_output',        // 生產產出
+}
+
+// 低庫存判定邏輯
+const isLowStock = (item: Material | Fragrance) => {
+  return item.minStock > 0 && item.currentStock < item.minStock;
+};
+```
+
+### 採購車跨裝置同步機制
+```typescript
+// 同步流程
+1. 本地操作 → 立即更新 UI
+2. Firestore 寫入 → 後端驗證
+3. onSnapshot 監聽 → 跨裝置同步
+4. 錯誤處理 → 回滾本地狀態
+
+// 實作模式
+const syncCartItem = async (action: 'add' | 'update' | 'remove', item: CartItem) => {
+  // 樂觀更新
+  updateLocalState(action, item);
+  
+  try {
+    // 後端同步
+    await firebaseFunction(action, item);
+  } catch (error) {
+    // 錯誤回滾
+    revertLocalState(action, item);
+    toast.error('同步失敗，請重試');
+  }
+};
+```
+
+## UI/UX 設計系統
+
+### 漸變色彩系統
+```css
+/* 主要漸變色彩 */
+.gradient-orange-blue {
+  background: linear-gradient(135deg, #f59e0b 0%, #3b82f6 100%);
+}
+
+.gradient-card {
+  background: linear-gradient(135deg, #fbbf24 0%, #60a5fa 100%);
+}
+
+/* 狀態色彩 */
+.success-gradient { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+.warning-gradient { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+.error-gradient { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+```
+
+### 標準元件設計模式
+```tsx
+// 統計卡片標準格式
+<Card className="relative overflow-hidden">
+  <div className="absolute inset-0 gradient-orange-blue opacity-10" />
+  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+    <CardTitle className="text-sm font-medium">標題</CardTitle>
+    <Icon className="h-4 w-4 text-muted-foreground" />
+  </CardHeader>
+  <CardContent>
+    <div className="text-2xl font-bold">數值</div>
+    <p className="text-xs text-muted-foreground">描述文字</p>
+  </CardContent>
+</Card>
+
+// 資料表格 vs 卡片模式
+{isDesktop ? (
+  <Table>
+    <TableHeader>...</TableHeader>
+    <TableBody>...</TableBody>
+  </Table>
+) : (
+  <div className="space-y-4">
+    {items.map(item => (
+      <Card key={item.id}>...</Card>
+    ))}
+  </div>
+)}
+```
+
+### 載入狀態設計
+```tsx
+// Skeleton 載入模式
+import { Skeleton } from "@/components/ui/skeleton";
+
+const LoadingCards = () => (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    {[...Array(4)].map((_, i) => (
+      <Card key={i}>
+        <CardHeader>
+          <Skeleton className="h-4 w-[100px]" />
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-8 w-[60px] mb-2" />
+          <Skeleton className="h-3 w-[120px]" />
+        </CardContent>
+      </Card>
+    ))}
+  </div>
+);
+```
+
+### 行動裝置最佳化原則
+```scss
+// 觸控最佳化
+.touch-target {
+  min-height: 44px;    // iOS 建議最小觸控尺寸
+  min-width: 44px;
+  padding: 12px 16px;
+}
+
+// 手機版間距
+.mobile-spacing {
+  @media (max-width: 768px) {
+    padding: 16px;
+    margin: 8px 0;
+  }
+}
+
+// 安全區域支援
+.safe-area {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+```
+
+## 系統整合模式
+
+### Firestore 即時訂閱模式
+```tsx
+// 標準 onSnapshot 使用模式
+import { onSnapshot, collection, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+useEffect(() => {
+  const q = query(
+    collection(db, 'materials'),
+    where('isActive', '==', true)
+  );
+  
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const materials = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    setMaterials(materials);
+    setLoading(false);
+  });
+
+  return () => unsubscribe();
+}, []);
+```
+
+### Firebase Functions 標準調用
+```tsx
+// 統一的 Functions 調用模式
+import { httpsCallable, HttpsCallableResult } from 'firebase/functions';
+import { functions } from '@/lib/firebase';
+
+const callFunction = async <T = any>(
+  functionName: string,
+  data?: any
+): Promise<T> => {
+  try {
+    const func = httpsCallable(functions, functionName);
+    const result: HttpsCallableResult<T> = await func(data);
+    return result.data;
+  } catch (error) {
+    console.error(`Function ${functionName} 調用失敗:`, error);
+    throw error;
+  }
+};
+
+// 使用範例
+const updateInventory = async (itemId: string, quantity: number) => {
+  await callFunction('quickUpdateInventory', { itemId, quantity });
+};
+```
+
+### 檔案上傳處理流程
+```tsx
+// 統一檔案上傳模式
+import { uploadBytes, ref, getDownloadURL } from 'firebase/storage';
+import { storage } from '@/lib/firebase';
+
+const uploadFile = async (
+  file: File,
+  path: string
+): Promise<string> => {
+  try {
+    const storageRef = ref(storage, path);
+    const snapshot = await uploadBytes(storageRef, file);
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    return downloadURL;
+  } catch (error) {
+    console.error('檔案上傳失敗:', error);
+    throw error;
+  }
+};
+
+// 圖片壓縮和上傳
+const uploadAndCompressImage = async (file: File, maxWidth = 800) => {
+  // 圖片壓縮邏輯
+  const compressedFile = await compressImage(file, maxWidth);
+  
+  // 上傳到 Firebase Storage
+  const path = `images/${Date.now()}_${file.name}`;
+  return await uploadFile(compressedFile, path);
+};
+```
+
+### 錯誤處理和重試機制
+```tsx
+// 帶重試機制的 API 調用
+const apiCallWithRetry = async <T>(
+  apiCall: () => Promise<T>,
+  maxRetries = 3,
+  delay = 1000
+): Promise<T> => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await apiCall();
+    } catch (error) {
+      if (attempt === maxRetries) throw error;
+      
+      console.warn(`嘗試 ${attempt} 失敗，${delay}ms 後重試...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      delay *= 2; // 指數退避
+    }
+  }
+  throw new Error('最大重試次數已達到');
+};
+```
+
+### 資料驗證和轉換
+```tsx
+// 統一資料驗證模式
+import { z } from 'zod';
+
+// 定義驗證 schema
+const MaterialSchema = z.object({
+  name: z.string().min(1, '名稱為必填'),
+  currentStock: z.number().min(0, '庫存不能為負數'),
+  costPerUnit: z.number().min(0, '成本不能為負數'),
+});
+
+// 驗證函數
+const validateMaterial = (data: unknown) => {
+  try {
+    return MaterialSchema.parse(data);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new Error(error.errors.map(e => e.message).join(', '));
+    }
+    throw error;
+  }
+};
+```
+
+## 部署流程
+
+### 完整部署 (推薦)
+```bash
+npm run deploy-full
+```
+此指令會：
+1. 建構 Next.js 專案
+2. 複製建構產物到 functions 目錄
+3. 編譯 Functions TypeScript
+4. 部署 hosting 和 functions
+
+### 開發部署流程
+1. 本地測試: `npm run dev`
+2. 建構檢查: `npm run build`
+3. 程式碼檢查: `npm run lint`
+4. 執行部署: `npm run deploy`
+
+## 安全與權限實作
+
+### 三級權限系統詳細說明
+```typescript
+// 權限矩陣定義
+const ROLE_PERMISSIONS = {
+  admin: [        // 🔴 系統管理員
+    'personnel.manage',      // 成員管理
+    'roles.manage',          // 權限管理
+    'materials.manage',      // 原料庫管理
+    'fragrances.manage',     // 配方庫管理
+    'inventory.manage',      // 庫存管理
+    'purchase.manage',       // 採購管理
+    'workOrders.manage',     // 工單管理
+    'cost.view',            // 成本分析
+    'timeReports.view',     // 工時報表
+    // ... 所有權限
+  ],
+  
+  supervisor: [   // 🔵 生產領班
+    'materials.view',        // 查看原料庫
+    'fragrances.manage',     // 管理配方庫
+    'inventory.view',        // 查看庫存
+    'purchase.view',         // 查看採購
+    'workOrders.manage',     // 管理工單
+    'time.manage',          // 管理工時
+    'timeReports.view',     // 查看工時報表
+  ],
+  
+  employee: [     // 🟢 計時人員
+    'materials.view',        // 查看原料庫
+    'fragrances.view',       // 查看配方庫
+    'products.view',         // 查看產品
+    'workOrders.view',       // 查看工單
+    'time.view',            // 查看工時
+  ],
+};
+```
+
+### 權限檢查實作模式
+```tsx
+// 前端權限控制
+import { usePermission } from '@/hooks/usePermission';
+
+const Component = () => {
+  const { hasPermission, canAccess, isAdmin } = usePermission();
+
+  // 頁面級權限檢查
+  if (!canAccess('/dashboard/materials')) {
+    return <UnauthorizedPage />;
+  }
+
+  return (
+    <div>
+      {/* 功能級權限控制 */}
+      {hasPermission('materials.manage') && (
+        <Button onClick={handleEdit}>編輯</Button>
+      )}
+      
+      {/* 管理員專用功能 */}
+      {isAdmin() && (
+        <Button onClick={handleDelete}>刪除</Button>
+      )}
+    </div>
+  );
+};
+```
+
+### Firebase Functions 權限驗證
+```typescript
+// 後端權限檢查標準模式
+import { checkPermission } from '../utils/auth';
+
+export const updateMaterial = onCall(async (request) => {
+  // 驗證用戶身份
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', '需要登入');
+  }
+
+  // 檢查權限
+  const hasPermission = await checkPermission(
+    request.auth.uid, 
+    'materials.manage'
+  );
+  
+  if (!hasPermission) {
+    throw new HttpsError('permission-denied', '權限不足');
+  }
+
+  // 執行業務邏輯
+  // ...
+});
+```
+
+### 頁面路由權限對應
+```typescript
+// 完整的頁面權限對應表
+export const PAGE_PERMISSIONS = {
+  '/dashboard': null,                           // 所有人可存取
+  '/dashboard/personnel': 'personnel.view',     // 成員管理
+  '/dashboard/suppliers': 'suppliers.view',     // 供應商
+  '/dashboard/materials': 'materials.view',     // 原料庫
+  '/dashboard/fragrances': 'fragrances.view',   // 配方庫
+  '/dashboard/products': 'products.view',       // 產品目錄
+  '/dashboard/purchase-orders': 'purchase.view', // 採購訂單
+  '/dashboard/work-orders': 'workOrders.view',   // 生產工單
+  '/dashboard/inventory': 'inventory.view',      // 庫存監控
+  '/dashboard/inventory-records': 'inventoryRecords.view', // 庫存歷史
+  '/dashboard/cost-management': 'cost.view',     // 成本分析
+  '/dashboard/time-records': 'time.view',       // 工時統計
+  '/dashboard/time-reports': 'timeReports.view', // 工時報表
+  '/dashboard/personnel/permissions': 'roles.manage', // 權限管理（管理員專用）
+};
+```
+
+### 權限初始化流程
+```bash
+# 權限系統初始化步驟
+1. 登入系統管理員帳號
+2. 進入「成員管理」頁面
+3. 點擊「權限管理」按鈕
+4. 執行「初始化預設角色」
+5. 系統自動建立三種角色和完整權限配置
+6. 為現有用戶分配適當角色
+```
+
+### 安全最佳實務
+```typescript
+// 敏感資料處理
+const sanitizeUserData = (userData: any) => {
+  // 移除敏感欄位
+  const { password, privateKey, ...safeData } = userData;
+  return safeData;
+};
+
+// API 回應過濾
+const filterResponse = (data: any, userPermissions: string[]) => {
+  if (!userPermissions.includes('cost.view')) {
+    delete data.costPerUnit;
+    delete data.totalCost;
+  }
+  return data;
+};
+
+// 輸入驗證
+import { z } from 'zod';
+
+const UserInputSchema = z.object({
+  name: z.string().max(100).regex(/^[a-zA-Z0-9\u4e00-\u9fa5\s]+$/),
+  email: z.string().email(),
+  // 防止 XSS 攻擊
+}).transform(data => ({
+  ...data,
+  name: escapeHtml(data.name),
+}));
+```
 
 ## 故障排除
 
 ### 常見問題
-1. **Firebase 模組解析**: 在 `next.config.mts` 中使用 fallbacks 處理
-2. **建構錯誤**: 確保在根目錄和 functions 目錄中都已安裝所有相依套件
-3. **身份驗證問題**: 檢查 Firebase 組態和使用者權限
-4. **部署**: 根據變更類型使用適當的部署指令 (hosting vs functions)
+1. **Firebase 模組解析錯誤**: 檢查 `next.config.mts` 的 webpack fallbacks
+2. **建構失敗**: 確保根目錄和 functions 目錄都已安裝依賴
+3. **部署失敗**: 檢查 Firebase 專案權限和 functions 區域設定
+4. **權限問題**: 確認使用者角色已正確初始化
+
+### 除錯檢查清單
+- [ ] 所有依賴已安裝 (`npm install` 和 `npm run install:functions`)
+- [ ] Firebase 憑證已設定
+- [ ] 建構成功無錯誤 (`npm run build`)
+- [ ] ESLint 檢查通過
+- [ ] Firebase 專案權限正確
 
 ### 本地開發設定
-1. 安裝相依套件: `npm install`
-2. 安裝 function 相依套件: `npm run install:functions`
-3. 設定 Firebase 憑證
-4. 啟動開發伺服器: `npm run dev`
-5. 在 `http://localhost:8080` 存取應用程式
-
-## 🚀 **最新系統更新 (2024年8月)**
-
-### 全新庫存管理系統已部署完成
-
-**新增功能:**
-1. **統計卡片區** - 4個漸變色統計卡片顯示關鍵庫存指標
-2. **智能庫存表格** - 支援物料/香精切換、即時搜尋、一鍵快速調整
-3. **模態化操作** - 低庫存警告、快速更新、生產能力評估
-4. **現代化設計** - 專業視覺風格，大量使用顏色和動畫效果
-
-**新增元件架構:**
-```
-src/app/dashboard/inventory/
-├── page.tsx                    # 🆕 重新設計的主頁面
-└── components/
-    ├── InventoryOverviewCards.tsx    # 統計卡片區
-    ├── InventoryTable.tsx           # 智能庫存表格
-    ├── QuickUpdateDialog.tsx        # 快速更新對話框
-    ├── LowStockDialog.tsx          # 低庫存項目對話框
-    └── ProductionCapacityDialog.tsx # 生產能力評估工具
-```
-
-**後端支援:**
-- 3個新的 Firebase Functions 已部署
-- 增強的錯誤處理和日誌記錄
-- 完整的庫存記錄稽核軌跡
-
-**技術修復:**
-- 解決了5個報告的庫存系統錯誤
-- 新增 Skeleton 組件支援載入狀態
-- 完善的 TypeScript 類型定義
-
-**訪問新系統:** `http://localhost:8080/dashboard/inventory`
-
-## 🚀 **UI優化與工時功能完善 (2024年8月31日)**
-
-### 第一階段完成項目 ✅
-
-**1. 側邊欄全面重新設計**
-- ✅ **全新命名系統**: 更直觀專業的功能命名
-  - 「系統總覽」→「工作台」
-  - 「人員管理」→「成員管理」
-  - 「供應商管理」→「供應商」
-  - 「物料管理」→「原料庫」
-  - 「香精管理」→「配方庫」
-  - 「產品管理」→「產品目錄」
-  - 「工單管理」→「生產工單」
-  - 「庫存管理」→「庫存監控」
-  - 「庫存紀錄」→「庫存歷史」
-  - 「成本管理」→「成本分析」
-- ✅ **模組化分組**: 
-  - 團隊管理（成員管理、工時統計）
-  - 供應鏈（供應商、採購訂單）
-  - 生產中心（原料庫、配方庫、產品目錄、生產工單）
-  - 營運分析（庫存監控、庫存歷史、成本分析、工時報表）
-
-**2. 採購車全域共享功能實作** 🌐
-- ✅ **Firestore 整合**: 建立 `globalCart` 集合替代 localStorage
-- ✅ **新增 6 個 Firebase Functions**:
-  - `getGlobalCart` - 獲取全域購物車
-  - `addToGlobalCart` - 添加項目到購物車
-  - `updateGlobalCartItem` - 更新購物車項目
-  - `removeFromGlobalCart` - 移除購物車項目
-  - `clearGlobalCart` - 清空購物車
-  - `syncGlobalCart` - 批量同步購物車（用於遷移）
-- ✅ **實時同步機制**: 使用 Firestore onSnapshot 實現跨裝置同步
-- ✅ **向後相容**: 自動從 localStorage 遷移舊資料
-- ✅ **全新 Hook**: `useGlobalCart` 提供完整的購物車操作介面
-
-**3. 工單工時申報系統大幅優化** ⏰
-- ✅ **全新介面設計**: 漸變色彩、專業排版、響應式設計
-- ✅ **批量新增功能**: 支援一次為多個人員新增相同時間段工時
-- ✅ **智能工時計算**: 自動計算總工時、加班時數（超過8小時）
-- ✅ **實時編輯功能**: 入庫前可編輯、刪除工時記錄
-- ✅ **雙重模式支援**: 單一新增模式與批量新增模式切換
-- ✅ **手機版優化**: 卡片式展開設計，完美支援行動裝置
-- ✅ **視覺回饋**: 動態工時計算顯示、狀態徽章、操作確認
-
-**4. 工作台介面全面重新設計** 📊
-- ✅ **動態統計卡片**: 4個關鍵指標卡片（活躍工單、低庫存項目、待處理採購、今日工時）
-- ✅ **即時數據載入**: 從 Firestore 即時計算統計數據
-- ✅ **庫存健康度監控**: 視覺化庫存狀態、進度條顯示
-- ✅ **團隊概況面板**: 成員總數、今日工時記錄、活躍成員統計
-- ✅ **快速功能區**: 4個主要功能的快速入口卡片
-- ✅ **現代化設計**: 大量漸變色彩、動畫效果、hover 互動
-
-### 技術架構優化
-
-**前端架構增強**
-- ✅ **新增 UI 元件**: Progress、Separator、更多 Lucide 圖示
-- ✅ **Hook 系統擴展**: 新增全域購物車管理 Hook
-- ✅ **狀態管理優化**: Firestore 實時訂閱取代本地狀態
-- ✅ **響應式設計**: 所有新功能完美支援桌面和行動裝置
-
-**後端服務擴展**
-- ✅ **Firebase Functions**: 新增 6 個購物車相關雲端函數
-- ✅ **Firestore 架構**: 新增 `globalCart`、`timeSheets` 集合設計
-- ✅ **資料模型優化**: 工時記錄增加狀態管理、時間戳優化
-
-**開發工作流程改進**
-- ✅ **程式碼結構**: 模組化元件設計、可重用 Hook
-- ✅ **型別安全**: 完整的 TypeScript 介面定義
-- ✅ **錯誤處理**: 全面的錯誤捕獲和使用者提示
-- ✅ **效能優化**: 適當的 memo 化和批次處理
-
-### 使用者體驗提升
-
-**操作流程優化**
-- ✅ **直觀導航**: 重新組織的側邊欄分類更符合業務流程
-- ✅ **快速操作**: 工作台提供常用功能的一鍵訪問
-- ✅ **即時反饋**: 所有操作都有明確的視覺回饋和狀態提示
-
-**視覺設計升級**
-- ✅ **一致性**: 統一的漸變色彩系統和設計語言
-- ✅ **可讀性**: 清晰的層次結構和資訊密度控制
-- ✅ **互動性**: 豐富的 hover 效果和過渡動畫
-
-**行動裝置體驗**
-- ✅ **觸控優化**: 適合手指操作的按鈕大小和間距
-- ✅ **資訊展示**: 折疊式設計節省螢幕空間
-- ✅ **導航體驗**: 側邊欄滑動菜單在手機上的完美呈現
-
-## 🚀 **系統功能優化與改進 (2024年8月31日)**
-
-### 系統優化項目清單
-
-**1. 側邊欄導航優化**
-- ❌ **移除功能**: 刪除「報表分析」和「個人資料」頁面
-- 🔧 **影響範圍**: `src/app/dashboard/layout.tsx`
-- 📁 **清理檔案**: 移除對應的頁面目錄和檔案
-
-**2. 供應商管理介面重新設計**
-- 🆕 **新介面設計**: 從卡片式佈局改為專業表格式佈局
-- 🔍 **搜尋功能**: 支援按供應商名稱、產品、聯繫窗口、聯絡人搜尋
-- 📱 **響應式設計**: 桌面顯示表格，行動裝置顯示清單式佈局
-- 🔧 **影響檔案**: `src/app/dashboard/suppliers/page.tsx` 完全重寫
-
-**3. 採購單功能全面升級**
-- 💰 **價格編輯**: 支援即時修改採購項目單價
-- 🔢 **數量輸入**: 將增減按鈕改為直接數字輸入框
-- 🔒 **狀態鎖定**: 採購單入庫後自動鎖定編輯功能（僅保留留言功能）
-- 💾 **即時儲存**: 修改後即時同步到 Firestore 資料庫
-- 🔧 **影響檔案**: `src/app/dashboard/purchase-orders/[id]/page.tsx`
-
-**4. 香精供應商篩選優化**
-- 🏢 **智能篩選**: 編輯香精時，供應商選項僅顯示名稱包含「生技」的公司
-- 🔧 **影響檔案**: `src/app/dashboard/fragrances/FragranceDialog.tsx`
-
-**5. 匯入匯出功能智能化升級**
-- 🧠 **智能匹配**: 根據代號自動判斷新增或更新模式
-- ✅ **更新模式**: 代號存在時，覆蓋更新現有資料
-- 🆕 **新增模式**: 代號不存在時，依系統規則新增資料並自動生成代號
-- 📊 **處理結果**: 完整的新增/更新統計報告
-- 🔧 **影響檔案**: 
-  - `src/app/dashboard/fragrances/page.tsx` (已有智能匹配)
-  - `src/app/dashboard/materials/page.tsx` (新增智能匹配)
-
-### 技術改進重點
-
-**前端優化**
-- 🎨 **UI/UX 一致性**: 統一所有管理頁面的視覺設計語言
-- 📱 **行動裝置支援**: 所有功能完整支援手機和平板操作
-- 🚀 **效能優化**: 採用批次處理和分頁載入提升大量資料處理效能
-
-**後端整合**
-- 🔥 **Firebase Functions**: 新增智能匹配所需的後端函數
-- 📝 **資料驗證**: 強化匯入資料的格式驗證和錯誤處理
-- 🔄 **即時同步**: 確保前端修改即時反映到資料庫
-
-**使用者體驗提升**
-- 📋 **表單設計**: 所有編輯介面採用直觀的表單設計
-- 🔔 **即時反饋**: 操作完成後提供明確的成功/錯誤提示
-- 💡 **智能提示**: 匯入匯出功能提供清楚的操作說明和範例
-
-### 新增或修改的主要檔案
-
-```
-src/app/dashboard/
-├── layout.tsx                    # 🔧 側邊欄優化
-├── suppliers/page.tsx            # 🆕 完全重寫表格式介面  
-├── purchase-orders/[id]/page.tsx # 🔧 採購單功能升級
-├── fragrances/
-│   ├── FragranceDialog.tsx       # 🔧 供應商篩選
-│   └── page.tsx                  # ✅ 智能匯入匯出 (已存在)
-└── materials/page.tsx            # 🆕 新增智能匹配邏輯
-```
-
-**完成狀態**: ✅ 所有 5 項功能需求已完成實作並測試
-
-## 🚀 **工時管理系統全面升級 (2024年8月31日)**
-
-### 完成項目清單
-
-**1. 工時申報介面優化**
-- 🎨 **視覺重新設計**: 採用漸層色彩和現代化排版，解決了用戶反映的排版問題
-- ⚡ **快速設定功能**: 新增快速時間預設按鈕（日班、夜班、彈性時間）
-- 📱 **響應式優化**: 改善手機和平板的使用體驗
-- 🔧 **影響檔案**: `src/app/dashboard/work-orders/[id]/TimeTrackingDialog.tsx`
-
-**2. 人員管理介面全面改版**
-- 📊 **統計儀表板**: 新增 4 個統計卡片顯示人員概況
-- 🔍 **進階篩選**: 支援按姓名、員工編號、職位、部門搜尋
-- 📋 **表格與清單雙模式**: 桌面版表格、手機版清單式設計
-- 🔧 **影響檔案**: `src/app/dashboard/personnel/page.tsx` 完全重寫
-
-**3. 工時紀錄管理系統**
-- 🏢 **全公司概覽**: 顯示所有工單的工時統計和進度
-- 📈 **統計分析**: 5 個關鍵指標卡片（總工單、總工時、加班時數、活躍人員、平均工時）
-- 🔍 **智能搜尋**: 支援按工單、產品、人員搜尋
-- 📱 **雙重顯示**: 摘要卡片和詳細展開模式
-- 🔧 **新建檔案**: `src/app/dashboard/time-records/page.tsx`
-
-**4. 個人工時管理頁面**
-- 👤 **個人化儀表板**: 每位員工專屬的工時管理頁面
-- 📅 **月度統計**: 月度工時、加班、出勤天數、完成工單等統計
-- 📊 **雙重檢視**: 月度概覽和詳細記錄兩個分頁
-- 📱 **完整響應式**: 桌面表格和手機卡片雙重設計
-- 🔧 **新建檔案**: `src/app/dashboard/personnel/[id]/page.tsx`
-
-**5. 供應商管理介面優化**  
-- 📋 **專業表格設計**: 從卡片式改為表格式佈局
-- 🔍 **多欄位搜尋**: 支援供應商名稱、產品、聯繫窗口搜尋
-- 📱 **響應式適配**: 桌面表格、手機清單式設計
-- 🔧 **影響檔案**: `src/app/dashboard/suppliers/page.tsx` 完全重寫
-
-### 新增核心功能架構
-
-```
-src/app/dashboard/
-├── work-orders/[id]/
-│   └── TimeTrackingDialog.tsx        # 🔧 工時申報界面優化
-├── personnel/
-│   ├── page.tsx                      # 🔧 人員管理重新設計
-│   └── [id]/
-│       └── page.tsx                  # 🆕 個人工時管理頁面
-├── time-records/
-│   └── page.tsx                      # 🆕 全公司工時記錄管理
-└── suppliers/
-    └── page.tsx                      # 🔧 供應商管理表格化
-```
-
-### 技術改進重點
-
-**前端優化**
-- 🎨 **統一設計語言**: 採用一致的漸層色彩和卡片設計
-- ⚡ **效能提升**: 使用 useMemo 和 useCallback 優化大量資料處理
-- 📱 **響應式設計**: 所有頁面完整支援桌面、平板、手機三種螢幕
-
-**資料處理**
-- 🔥 **Firestore 整合**: 即時資料同步和批次查詢優化
-- 📊 **統計計算**: 複雜的工時統計和月度分析邏輯
-- 🔍 **搜尋篩選**: 高效能的前端搜尋和多條件篩選
-
-**使用者體驗**
-- 💫 **載入動畫**: 統一的 Skeleton 載入效果
-- 🎯 **互動回饋**: 即時的狀態更新和操作反饋
-- 📋 **資訊架構**: 清晰的資訊層級和導航結構
-
-**完成狀態**: ✅ 所有工時管理系統升級項目已完成實作並測試
-
-## 🔧 **庫存管理系統修復 (2024年8月31日)**
-
-### 修復項目清單
-
-**1. 低庫存項目判定邏輯修復**
-- **問題**: 所有未設定低庫存閾值的項目都被標示為低庫存
-- **解決方案**: 修改後端邏輯，只有設定了 `minStock > 0` 且當前庫存低於閾值的項目才會被判定為低庫存
-- **影響範圍**: `functions/src/api/inventory.ts` 中的三個函數
-  - `getInventoryOverview` - 統計總覽
-  - `getLowStockItems` - 低庫存項目清單
-
-**2. 生產力評估工具搜尋功能優化**
-- **問題**: 產品下拉選單無法搜尋，不易查找特定產品
-- **解決方案**: 將 Select 組件替換為 Combobox，支援按產品名稱、代碼和系列名稱搜尋
-- **新增組件**: `src/components/ui/popover.tsx`
-- **影響檔案**: `src/app/dashboard/inventory/components/ProductionCapacityDialog.tsx`
-
-**3. 生產力評估物料需求計算重構**
-- **問題**: 物料需求計算沒有反應，缺乏核心配方邏輯
-- **解決方案**: 完全重寫計算邏輯，參考工單管理系統的實作
-- **新增功能**: 
-  - 完整的香精配方比例計算
-  - 核心液體需求計算（香精、PG、VG、尼古丁）
-  - 專屬材料和通用材料需求計算
-  - 智能優先級排序顯示
-- **影響檔案**: `src/app/dashboard/inventory/components/ProductionCapacityDialog.tsx`
-
-**4. 庫存調整動作類型統一**
-- **問題**: 庫存調整產生多種不同的動作類型記錄
-- **解決方案**: 統一所有庫存調整動作為「直接修改」(`direct_modification`)
-- **影響範圍**: `functions/src/api/inventory.ts` 中的兩個函數
-  - `adjustInventory` - 手動調整庫存
-  - `quickUpdateInventory` - 快速更新庫存
-
-### 技術改進
-
-**後端 Firebase Functions 優化**
-- 改善低庫存檢測演算法，減少不必要的警告
-- 統一庫存記錄的動作類型，簡化稽核軌跡
-
-**前端 UI/UX 改進**
-- 新增 Popover 和 Command 組件支援
-- 改善生產力評估工具的使用體驗
-- 優化搜尋和過濾功能
-
-**系統穩定性提升**
-- 修復生產需求計算的關鍵錯誤
-- 完善錯誤處理和日誌記錄
-- 統一數據模型和接口定義
-- 所有改動都考慮手機板UI要跟著改動
-- 設計UI時要留意排版與顏色使用，要專業且高級
-
-## 🔧 **工時管理系統關鍵修復 (2024年9月1日)**
-
-### 修復項目清單 ✅
-
-**1. 側邊欄採購車氣泡顯示數量錯誤修復**
-- **問題**: 採購車氣泡可能顯示不正確的數量
-- **解決方案**: 確認 `usePurchaseCart` hook 正確返回 `cartItemCount` 數值
-- **影響檔案**: `src/app/dashboard/layout.tsx`, `src/hooks/useGlobalCart.ts`
-- **狀態**: ✅ 修復完成
-
-**2. 工時申報介面時間顯示問題修復**
-- **問題**: 工時申報介面中時間輸入欄位在某些瀏覽器中顯示為白色/透明，無法看到內容
-- **解決方案**: 加強 CSS 樣式控制，新增多個 Webkit 瀏覽器專用樣式修正
-  - 設定 `color: black` 確保文字顯示為黑色
-  - 針對 `webkit-datetime-edit` 系列組件設定文字顏色
-  - 調整 `calendar-picker-indicator` 透明度和指標樣式
-- **影響檔案**: `src/app/dashboard/work-orders/[id]/TimeTrackingDialog.tsx`
-- **技術細節**: 新增針對時間輸入的完整瀏覽器相容性樣式
-- **狀態**: ✅ 修復完成
-
-**3. 工單入庫前工時記錄編輯功能實作**
-- **問題**: 需要在工單入庫前提供工時記錄的編輯功能
-- **解決方案**: 整合新版 `TimeTrackingDialog` 到工單頁面
-  - 替換舊版工時申報對話框為新版 `TimeTrackingDialog`
-  - 支援完整的編輯、刪除、批量新增功能
-  - 入庫後自動鎖定編輯功能 (`isLocked` 屬性)
-- **影響檔案**: `src/app/dashboard/work-orders/[id]/page.tsx`
-- **功能特色**: 
-  - 單一和批量新增模式
-  - 實時工時計算和加班時數顯示
-  - 快速時間預設按鈕
-  - 響應式設計支援
-- **狀態**: ✅ 修復完成
-
-**4. 工時統計改為個人工時統計頁面**
-- **問題**: 原本的工時統計頁面顯示全公司資料，需改為個人專屬
-- **解決方案**: 完全重新設計 `/dashboard/time-records` 頁面
-  - 使用 `useAuth` hook 取得當前登入用戶資訊
-  - 僅載入和顯示當前用戶的工時記錄
-  - 新增個人化統計卡片和月度篩選功能
-- **影響檔案**: `src/app/dashboard/time-records/page.tsx` (完全重寫)
-- **新增功能**:
-  - 5個個人統計卡片 (總記錄、總工時、加班時數、參與工單、平均工時)
-  - 月度篩選和搜尋功能
-  - 桌面/手機雙重設計模式
-  - 個人化使用者資訊展示
-- **狀態**: ✅ 修復完成
-
-**5. 重新設計工時報表為所有工單工時記錄**
-- **問題**: 需要一個全公司的工時報表頁面，以工單為單位統計
-- **解決方案**: 創建全新的 `/dashboard/time-reports` 頁面
-  - 修改側邊欄路徑從 `/dashboard/time-records` 到 `/dashboard/time-reports`
-  - 以工單為基礎展示所有工時記錄
-  - 包含詳細的工時明細對話框
-- **新增檔案**: `src/app/dashboard/time-reports/page.tsx`
-- **影響檔案**: `src/app/dashboard/layout.tsx` (側邊欄路徑修正)
-- **功能特色**:
-  - 5個全公司統計卡片 (總工單、總工時、加班時數、活躍人員、平均工時)
-  - 工單狀態篩選和多欄位搜尋
-  - 工單詳細工時記錄檢視對話框
-  - 桌面表格和手機卡片雙重設計
-- **狀態**: ✅ 修復完成
-
-**6. 修復工單入庫後工時記錄產生問題**
-- **問題**: 工單頁面無法顯示通過新版 `TimeTrackingDialog` 產生的工時記錄
-- **根本原因**: 新版使用 `timeEntries` 集合，但工單頁面仍從舊的 `workOrder.timeRecords` 屬性讀取資料
-- **解決方案**: 完整修改工單頁面的工時記錄載入和顯示邏輯
-  - 新增 `loadTimeEntries` 函數從 `timeEntries` 集合載入資料
-  - 修改所有工時顯示邏輯使用新的 `timeEntries` 資料結構
-  - 更新總工時計算邏輯適配新的資料格式 (duration 為小時數)
-  - 修正列印功能中的工時記錄顯示
-  - 在 `TimeTrackingDialog` 關閉時自動重新載入工時記錄
-- **影響檔案**: `src/app/dashboard/work-orders/[id]/page.tsx`
-- **技術細節**:
-  - 從 `timeRecords` (分鐘制) 遷移到 `timeEntries` (小時制)
-  - 新增即時資料同步機制
-  - 統一工時記錄資料模型
-- **狀態**: ✅ 修復完成
-
-### 技術架構改進
-
-**資料模型統一**
-- ✅ 統一使用 `timeEntries` 集合存儲工時記錄
-- ✅ 新資料結構: `duration` (小時), `startDate/startTime/endDate/endTime`
-- ✅ 舊資料結構向新格式的完整遷移
-
-**前端架構優化**  
-- ✅ 新增個人化工時統計頁面和全公司工時報表頁面
-- ✅ 統一的時間輸入欄位瀏覽器相容性處理
-- ✅ 改進的響應式設計和使用者體驗
-
-**後端資料整合**
-- ✅ 確保工時記錄在不同頁面間的一致性顯示
-- ✅ 實時資料載入和同步機制
-- ✅ 完善的錯誤處理和狀態管理
-
-**UI/UX 改進**
-- ✅ 專業級漸變色彩和動畫效果
-- ✅ 完整的桌面和手機版適配
-- ✅ 直觀的操作流程和即時反饋
-
-### 新增/修改的核心檔案
-
-```
-src/app/dashboard/
-├── layout.tsx                           # 🔧 側邊欄路徑修正
-├── time-records/page.tsx               # 🔄 完全重寫為個人工時統計
-├── time-reports/page.tsx               # 🆕 新增全公司工時報表
-├── work-orders/[id]/
-│   ├── page.tsx                         # 🔧 整合新版工時管理和修復資料載入
-│   └── TimeTrackingDialog.tsx          # 🔧 時間顯示修復和樣式優化
-└── hooks/
-    └── useGlobalCart.ts                 # ✅ 確認購物車數量正確返回
-```
-
-### 系統完整性確保
-
-**資料一致性**
-- ✅ 所有工時記錄統一使用 `timeEntries` 集合
-- ✅ 個人工時統計和全公司報表資料來源一致
-- ✅ 工單頁面工時顯示與實際資料庫記錄同步
-
-**功能完整性**
-- ✅ 工時申報、編輯、刪除、檢視功能完整
-- ✅ 入庫前後狀態管理正確運作
-- ✅ 個人和全公司兩個層級的統計報表
-
-**使用者體驗**
-- ✅ 時間輸入在所有主流瀏覽器中正常顯示
-- ✅ 響應式設計在各種裝置上完美運作
-- ✅ 直觀的導航和操作流程
-
-**完成時間**: 2024年9月1日 02:14
-**修復項目**: 6個關鍵工時管理問題
-**影響檔案**: 5個核心檔案修改/新增
-**測試狀態**: ✅ 所有功能經過完整測試並確認正常運作
-
-## 🔐 **權限管理系統全面建置 (2024年9月1日)**
-
-### 完成項目清單 ✅
-
-**1. 三級權限系統設計**
-- 🔴 **系統管理員**：全部權限，包含權限管理介面
-- 🔵 **生產領班**：生產相關權限，無成員管理權限  
-- 🟢 **計時人員**：僅工時和基本查看權限，無法查看營運分析和供應鏈
-
-**2. 後端權限架構實作**
-- ✅ **權限定義系統**: 建立完整的權限常數和角色配置
-- ✅ **Firebase Functions**: 新增角色管理、權限檢查、初始化等 API
-- ✅ **真實權限檢查**: 取代舊的返回 `true` 邏輯，實作基於 Firestore 的權限驗證
-- 🔧 **影響檔案**: `functions/src/utils/permissions.ts`, `functions/src/utils/auth.ts`, `functions/src/api/roles.ts`
-
-**3. 前端權限控制系統**
-- ✅ **AuthContext 擴充**: 新增權限檢查函數和用戶權限載入
-- ✅ **權限檢查 Hook**: 建立 `usePermission` Hook 提供完整權限檢查功能
-- ✅ **權限控制元件**: 實作 `PermissionGate`、`AdminOnly`、`RoleGate` 等控制元件
-- 🔧 **影響檔案**: `src/context/AuthContext.tsx`, `src/hooks/usePermission.ts`, `src/components/PermissionGate.tsx`
-
-**4. 側邊欄動態權限控制**
-- ✅ **智能導航過濾**: 根據用戶權限動態顯示/隱藏導航選項
-- ✅ **分組管理**: 自動隱藏無權限存取的整個功能分組
-- ✅ **權限對應表**: 建立頁面路徑與權限的完整對應關係
-- 🔧 **影響檔案**: `src/app/dashboard/layout.tsx`, `src/utils/permissions.ts`
-
-**5. 權限管理介面建置**
-- ✅ **專屬管理頁面**: 建立 `/dashboard/personnel/permissions` 權限管理控制台
-- ✅ **角色統計儀表板**: 4個統計卡片顯示權限系統概況  
-- ✅ **預設角色初始化**: 一鍵建立三種預設角色和權限配置
-- ✅ **角色管理功能**: 角色檢視、權限矩陣、用戶分配（規劃中）
-- 🔧 **新增檔案**: `src/app/dashboard/personnel/permissions/page.tsx`
-
-**6. 成員管理頁面整合**  
-- ✅ **權限管理入口**: 系統管理員專屬的「權限管理」按鈕
-- ✅ **角色檢查**: 使用 `isAdmin()` 函數控制按鈕顯示
-- ✅ **無縫整合**: 與現有成員管理功能完美結合
-- 🔧 **影響檔案**: `src/app/dashboard/personnel/page.tsx`
-
-### 技術架構優化
-
-**權限檢查流程**
-```typescript
-用戶登入 → 載入角色資訊 → 取得權限陣列 → 前端權限檢查 
-       ↓
-Firebase Functions API 呼叫 → 後端權限驗證 → 執行/拒絕操作
-```
-
-**權限設計矩陣**
-| 功能模組 | 系統管理員 | 生產領班 | 計時人員 |
-|---------|-----------|----------|----------|
-| 成員管理 | ✅ 全權限 | ❌ 無權限 | ❌ 無權限 |
-| 工時統計 | ✅ | ✅ | ✅ |  
-| 供應鏈管理 | ✅ | ✅ 查看 | ❌ 無權限 |
-| 生產中心 | ✅ | ✅ 全權限 | ✅ 查看 |
-| 營運分析 | ✅ | ✅ 查看 | ❌ 無權限 |
-| 權限管理 | ✅ 專屬 | ❌ | ❌ |
-
-**新增核心檔案架構**
-```
-functions/src/utils/
-└── permissions.ts                # 🆕 權限定義和角色配置
-
-src/
-├── utils/permissions.ts          # 🆕 前端權限常數和輔助函數
-├── hooks/usePermission.ts        # 🆕 權限檢查 Hook
-├── components/PermissionGate.tsx # 🆕 權限控制元件
-└── app/dashboard/personnel/permissions/
-    └── page.tsx                  # 🆕 權限管理介面
-```
-
-### 使用說明
-
-**初始化權限系統**
-1. 以系統管理員身分登入系統
-2. 進入「成員管理」→ 點擊「權限管理」  
-3. 點擊「初始化預設角色」建立三種角色
-4. 系統將建立完整的角色和權限配置
-
-**權限測試流程**
-1. **側邊欄測試**: 不同角色登入查看導航選項差異
-2. **頁面訪問**: 嘗試直接存取無權限頁面會被阻擋
-3. **功能按鈕**: 編輯功能根據權限動態顯示/隱藏
-4. **API 安全**: 後端 Functions 執行完整權限驗證
-
-### 系統安全特性
-
-**多層次權限保護**
-- ✅ 前端 UI 元件根據權限顯示/隱藏
-- ✅ 路由級別的頁面訪問控制
-- ✅ Firebase Functions API 權限驗證
-- ✅ Firestore 安全規則整合（規劃中）
-
-**向後相容性**
-- ✅ 保留舊有權限檢查函數的向後相容
-- ✅ 現有功能無縫升級到新權限系統
-- ✅ 資料模型平滑遷移不影響現有用戶
-
-**部署狀態**: ✅ 前端已部署到 https://deer-lab.web.app  
-**完成時間**: 2024年9月1日 17:00
-**技術債務**: 完全消除，建立企業級權限管理架構
-**測試狀態**: ✅ 權限系統經過完整功能測試
-
-## 🚀 **TypeScript 類型系統全面升級 (2024年8月31日)**
-
-### 第二階段完成項目 ✅
-
-**1. 建立完整的 TypeScript 類型系統**
-- ✅ **統一類型管理**: 創建 `src/types/` 目錄，集中管理所有類型定義
-- ✅ **模組化設計**: 5個核心類型定義檔案
-  - `auth.ts` - 認證和用戶相關類型定義
-  - `business.ts` - 業務邏輯類型（800+ 行，涵蓋所有業務實體）
-  - `firebase.ts` - Firebase 特定類型和 Cloud Functions 介面
-  - `ui.ts` - UI 組件和介面相關類型
-  - `api.ts` - API 請求和響應類型定義
-  - `index.ts` - 統一匯出入口
-- ✅ **完整覆蓋**: 涵蓋系統中所有主要實體和操作類型
-
-**2. 大規模 any 類型替換與重構**
-- ✅ **核心頁面優化**: 
-  - `AuthContext.tsx` - 導入 `FirebaseError` 類型，提升錯誤處理安全性
-  - `work-orders/[id]/page.tsx` - 大量類型替換 (Material, Fragrance, Personnel, BillOfMaterialsItem)
-  - `time-reports/page.tsx` - 使用 `LocalTimeEntry` 擴展類型
-  - `purchase-orders/page.tsx` - 完整的 `CartItem` 類型整合
-  - `materials/page.tsx` - 修復購物車和匯入功能相關類型
-  - `inventory-records/page.tsx` - 篩選函數參數類型優化
-  - `TimeTrackingDialog.tsx` - 完整的類型系統重構
-
-- ✅ **類型衝突解決**: 
-  - 移除重複的本地介面定義
-  - 修復 `BillOfMaterialsItem` 缺少 `code` 屬性問題
-  - 新增向後相容的舊屬性支援
-  - 解決 `CartItem` 類型完整性問題
-  - 修復匯入資料類型比較邏輯
-
-**3. 編譯錯誤全面修復**
-- ✅ **零編譯錯誤**: 系統現在完全編譯通過，所有 TypeScript 錯誤已解決
-- ✅ **類型安全提升**: 大幅降低運行時錯誤風險
-- ✅ **開發體驗改善**: 提供完整的 IntelliSense 支援和型別檢查
-- ✅ **程式碼品質**: 只剩下少量 ESLint 警告（dependency array 相關）
-
-**4. 系統穩定性與效能提升**
-- ✅ **建構穩定**: 生產建構完全成功，所有路由正常生成
-- ✅ **類型推導**: 編輯器提供精確的類型推導和錯誤提示
-- ✅ **重構安全**: 大幅提升程式碼重構的安全性和可靠性
-
-### 技術成果統計
-
-**處理規模**
-- **處理檔案數量**: 8+ 個核心檔案完整優化
-- **替換 any 類型**: 20+ 處精確替換
-- **新增類型定義**: 50+ 個介面和類型定義
-- **修復編譯錯誤**: 10+ 個 TypeScript 編譯錯誤
-
-**架構優化**
-- ✅ **類型系統**: 建立企業級 TypeScript 類型架構
-- ✅ **模組化管理**: 類型定義按功能領域清晰分類
-- ✅ **向後相容**: 保持與現有程式碼的完全相容性
-- ✅ **擴展性**: 為未來功能擴展奠定堅實的類型基礎
-
-**開發體驗**
-- ✅ **智能提示**: 完整的 IDE 支援和自動完成
-- ✅ **錯誤預防**: 編譯時期發現潛在問題
-- ✅ **程式碼品質**: 強制執行一致的資料結構
-- ✅ **協作效率**: 清晰的類型約定提升團隊協作
-
-### 新增的類型系統架構
-
-```
-src/types/
-├── index.ts                    # 🆕 統一匯出入口
-├── auth.ts                     # 🆕 認證相關類型
-├── business.ts                 # 🆕 業務邏輯類型 (800+ 行)
-├── firebase.ts                 # 🆕 Firebase 操作類型  
-├── ui.ts                       # 🆕 UI 組件類型
-└── api.ts                      # 🆕 API 介面類型
-```
-
-**核心業務實體類型涵蓋**
-- Material, Fragrance, Product - 物料和產品類型
-- WorkOrder, TimeEntry, Personnel - 工單和人力資源
-- PurchaseOrder, CartItem, Supplier - 採購和供應商
-- InventoryRecord, BillOfMaterialsItem - 庫存和BOM
-- 完整的 Firebase 操作和 Cloud Functions 類型
-
-### 重構影響的核心檔案
-
-```
-src/
-├── context/AuthContext.tsx              # 🔧 錯誤處理類型化
-├── app/dashboard/
-│   ├── work-orders/[id]/
-│   │   ├── page.tsx                     # 🔧 大量類型替換和修復
-│   │   └── TimeTrackingDialog.tsx      # 🔧 完整類型重構
-│   ├── time-reports/page.tsx           # 🔧 TimeEntry 類型擴展
-│   ├── purchase-orders/page.tsx        # 🔧 CartItem 類型整合
-│   ├── materials/page.tsx              # 🔧 購物車和匯入類型修復
-│   └── inventory-records/page.tsx      # 🔧 篩選函數類型優化
-└── types/                              # 🆕 全新類型系統目錄
-```
-
-### 系統品質提升
-
-**編譯品質**
-- 🎯 **編譯成功率**: 100% (所有 TypeScript 錯誤已解決)
-- 🚀 **建構時間**: 穩定快速，無類型檢查阻塞
-- 📦 **包大小**: 類型定義不影響運行時包大小
-
-**程式碼品質**
-- 🔒 **類型安全**: 大幅減少運行時類型錯誤風險
-- 🎯 **精確性**: 精確的類型約束和資料驗證
-- 🔄 **一致性**: 統一的資料結構和介面定義
-
-**開發效率**
-- ⚡ **開發速度**: IntelliSense 支援大幅提升開發效率  
-- 🛡️ **錯誤預防**: 編譯時期捕獲潛在問題
-- 🔧 **重構安全**: 類型檢查確保重構過程的安全性
-
-**完成時間**: 2024年8月31日
-**技術債務清理**: TypeScript any 類型完全消除
-**影響檔案**: 8+ 個核心檔案全面優化
-**系統穩定性**: ✅ 編譯零錯誤，生產就緒狀態
-
-## 🔧 **購物車系統錯誤修復 (2024年9月1日)**
-
-### 修復項目清單 ✅
-
-**1. 原料庫購物車功能失效修復**
-- **問題**: 原料庫頁面使用舊的 localStorage 購物車實現，與新的全域購物車系統不相容
-- **解決方案**: 將 `handleAddToPurchaseCart` 函數從 localStorage 實現切換到全域購物車
-- **技術細節**: 
-  - 統一使用 `useGlobalCart` hook 和 `addToCart` 函數
-  - 支援 Firestore 即時同步和跨裝置共享
-  - 改善錯誤處理和使用者反饋
-- **影響檔案**: `src/app/dashboard/materials/page.tsx`
-- **狀態**: ✅ 修復完成
-
-**2. 配方庫購物車功能失效修復**  
-- **問題**: 購物車項目缺少必需的 `id` 和 `price` 字段，導致全域購物車函數失敗
-- **解決方案**: 完整購物車項目資料結構，確保相容性
-- **技術細節**:
-  - 添加缺失的 `id: fragrance.id` 字段
-  - 添加 `price: fragrance.costPerUnit || 0` 字段
-  - 統一單個和批量添加功能的資料格式
-- **影響檔案**: `src/app/dashboard/fragrances/page.tsx`
-- **狀態**: ✅ 修復完成
-
-**3. 庫存監控頁面無限循環錯誤修復**
-- **問題**: "Maximum update depth exceeded" 錯誤，由 useEffect 和 useCallback 依賴循環引起
-- **解決方案**: 優化依賴陣列和回調函數設計
-- **技術細節**:
-  - 移除 `overviewLoading` 狀態檢查，改為 try-finally 結構
-  - 修正 useEffect 依賴陣列，避免循環調用
-  - 改善頁面初始化和刷新邏輯
-- **影響檔案**: `src/app/dashboard/inventory/page.tsx`
-- **狀態**: ✅ 修復完成
-
-### 技術改進成果
-
-**購物車系統統一**
-- ✅ 全系統統一使用 Firestore 全域購物車
-- ✅ 消除 localStorage 和 Firestore 雙重實現的不一致
-- ✅ 支援跨裝置即時同步和協作購物
-
-**資料結構完整性**
-- ✅ 確保所有購物車項目包含必需字段 (id, price, type等)
-- ✅ 統一錯誤處理和使用者反饋機制
-- ✅ 改善型別安全和編譯時檢查
-
-**頁面穩定性提升**
-- ✅ 解決庫存監控頁面的無限重新渲染問題
-- ✅ 優化 React hooks 使用模式
-- ✅ 改善載入狀態和使用者體驗
-
-### 系統測試結果
-
-**建構狀態**: ✅ 完全編譯成功，零錯誤
-**功能測試**: ✅ 購物車添加、庫存頁面載入正常運作
-**部署狀態**: ✅ 已推送到 GitHub 主分支
-**完成時間**: 2024年9月1日 21:30
-**Commit Hash**: c45e8a5
-- 推送到github之前要先npm run build過確認沒問題再推送
+1. 複製專案: `git clone <repository-url>`
+2. 安裝依賴: `npm install`
+3. 安裝 Functions 依賴: `npm run install:functions`
+4. 設定 Firebase 憑證
+5. 啟動開發伺服器: `npm run dev`
+6. 開啟瀏覽器: `http://localhost:3000`
+
+## 系統維護重點
+
+### 權限系統維護
+- 預設角色：系統管理員、生產領班、計時人員
+- 權限初始化：透過成員管理頁面執行
+- 權限矩陣：參考 `src/utils/permissions.ts`
+
+### 資料庫維護
+- 定期檢查 Firestore 索引使用狀況
+- 監控 `timeEntries` 集合大小和查詢效能
+- 清理過期的 `globalCart` 項目
+
+### 效能監控
+- 監控 Firebase Functions 執行時間
+- 檢查 Next.js 建構產物大小
+- 評估 Firestore 讀寫次數
+
+此文檔專注於系統架構理解和維護指引。如需詳細的 API 文檔或元件說明，請參考程式碼內的 TypeScript 類型定義和註解。
+- 修改後都先本地部署，直到我有說再推送github
+- 重要：除非用戶明確說"推送到 GitHub"或"git push"，否則只能執行：
+  1. `git add .`
+  2. `git commit -m "..."`  
+  3. 本地測試 (`npm run build`, `npm run dev`)
+  4. 絕對不能執行 `git push` 命令
+- 每次有修改都要檢查claude.me，確保這份檔案能正確詮釋本專案
