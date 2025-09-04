@@ -6,7 +6,7 @@ import { db } from "@/lib/firebase"
 import { toast } from "sonner"
 import { Personnel } from "@/types"
 import { useAuth } from "@/context/AuthContext"
-import { Clock, User, Plus, Users, Timer, Zap, Calendar } from "lucide-react"
+import { Clock, User, Plus, Users, Timer, Zap, Calendar, Loader2, AlertTriangle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -16,7 +16,6 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Loader2, AlertTriangle } from "lucide-react"
 
 interface TimeTrackingDialogProps {
   isOpen: boolean
@@ -100,9 +99,18 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
     if (!startDate || !startTime || !endDate || !endTime) return 0
     
     const start = new Date(`${startDate}T${startTime}`)
-    const end = new Date(`${endDate}T${endTime}`)
+    let end = new Date(`${endDate}T${endTime}`)
     
-    return (end.getTime() - start.getTime()) / (1000 * 60 * 60) // 轉換為小時
+    // 處理跨日情況（如夜班）
+    if (end.getTime() <= start.getTime()) {
+      // 如果結束時間小於或等於開始時間，表示跨日，將結束日期加一天
+      end = new Date(end.getTime() + 24 * 60 * 60 * 1000)
+    }
+    
+    const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60) // 轉換為小時
+    
+    // 確保工時為正數且合理（最多24小時）
+    return Math.max(0, Math.min(24, durationHours))
   }
 
   const calculateOvertimeHours = (totalHours: number): number => {
@@ -523,10 +531,20 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => setQuickTime("20:00", "05:00")}
+                      onClick={() => {
+                        const today = new Date().toISOString().split('T')[0]
+                        const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                        setNewEntry({
+                          ...newEntry,
+                          startDate: today,
+                          startTime: "20:00",
+                          endDate: tomorrow, // 夜班跨日，結束日期設為隔日
+                          endTime: "05:00"
+                        })
+                      }}
                       className="flex-1 text-xs"
                     >
-                      夜班 (20:00-05:00)
+                      夜班 (20:00-翌日05:00)
                     </Button>
                   </div>
                 </div>
