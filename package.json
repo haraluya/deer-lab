@@ -27,7 +27,7 @@
     "lint:functions": "cd functions && npm run lint",
     "install:functions": "cd functions && npm install",
     "deploy": "npm run deploy-full",
-    "deploy-full": "npm run build && ncp .next functions/.next && ncp package.json functions/package.json && cd functions && npm run build && cd .. && firebase deploy",
+    "deploy-full": "npm run build && ncp .next functions/.next && ncp package.json functions/package.json && ncp -r public functions/public && cd functions && npm run build && cd .. && firebase deploy",
     "deploy-only": "firebase deploy --only hosting"
   },
   "dependencies": {
