@@ -453,6 +453,14 @@ const handleAddToCart = async (item: CartItem) => {
      - Toast 通知顯示過濾結果統計
      - 清晰的業務規則說明文字
      - 管理功能與一般查看功能分離
+11. **工時統計計算修復** (2025-09-04):
+   - **修復 NaN 顯示問題**: 修正工時統計中出現 "NaN 小時 NaN 分鐘" 的計算錯誤
+   - **計算邏輯修正**: 
+     - 修正 `duration` 重複轉換問題（之前誤將小時乘以 60 轉分鐘，然後又除以 60）
+     - `duration` 欄位已經是小時單位，直接累加即可
+     - 使用 `Math.floor(totalWorkHours)` 和 `Math.floor((totalWorkHours % 1) * 60)` 正確計算小時和分鐘
+   - **界面優化**: 移除完工總結下方的庫存統計摘要，簡化界面
+   - **統一顯示**: 使用 `totalHours` 和 `totalMinutes` 變數統一各處工時顯示格式
 
 ## 業務邏輯說明
 
