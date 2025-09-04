@@ -461,6 +461,20 @@ const handleAddToCart = async (item: CartItem) => {
      - 使用 `Math.floor(totalWorkHours)` 和 `Math.floor((totalWorkHours % 1) * 60)` 正確計算小時和分鐘
    - **界面優化**: 移除完工總結下方的庫存統計摘要，簡化界面
    - **統一顯示**: 使用 `totalHours` 和 `totalMinutes` 變數統一各處工時顯示格式
+12. **建立工單頁面產品選擇功能升級** (2025-09-04):
+   - **可搜尋產品選擇**: 從基本 Select 組件升級為 Command + Popover 的 Combobox 組件
+   - **多欄位智能搜尋**:
+     - 支援搜尋產品名稱
+     - 支援搜尋產品系列名稱  
+     - 支援搜尋產品代號
+     - 使用 `value={product.name} ${product.code} ${product.seriesName || ''}` 實現多欄位匹配
+   - **用戶體驗優化**:
+     - 保持原有視覺設計風格和樣式
+     - 搜尋提示文字：「搜尋產品名稱、系列或代號...」
+     - 選中狀態顯示勾選圖示，清楚標示當前選擇
+     - 產品顯示格式：[系列名稱] - 產品名稱，副標題顯示產品代號
+     - 支援鍵盤導航和無障礙功能
+   - **技術實現**: 使用 Shadcn UI 的 Command, Popover 組件，保持與現有設計系統一致
 
 ## 業務邏輯說明
 
