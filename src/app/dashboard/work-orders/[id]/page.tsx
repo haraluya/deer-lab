@@ -1373,16 +1373,16 @@ export default function WorkOrderDetailPage() {
           @media print {
             @page {
               size: A4;
-              margin: 1cm;
+              margin: 0.5cm;
             }
           }
           
                      body {
              font-family: 'Microsoft JhengHei', Arial, sans-serif;
              margin: 0;
-             padding: 15px;
-             font-size: 16px;
-             line-height: 1.3;
+             padding: 20px;
+             font-size: 20px;
+             line-height: 1.4;
              color: #000;
            }
           
@@ -1394,41 +1394,41 @@ export default function WorkOrderDetailPage() {
           }
           
                      .title {
-             font-size: 32px;
+             font-size: 36px;
              font-weight: bold;
-             margin-bottom: 8px;
+             margin-bottom: 10px;
            }
            
            .subtitle {
-             font-size: 24px;
+             font-size: 28px;
              font-weight: bold;
-             margin-bottom: 12px;
+             margin-bottom: 15px;
            }
           
                                 .top-info {
              display: grid;
              grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
-             gap: 8px;
-             margin-bottom: 15px;
+             gap: 10px;
+             margin-bottom: 18px;
            }
            
            .top-info-item {
              border: 3px solid #000;
-             padding: 8px;
+             padding: 12px;
              text-align: center;
              border-radius: 5px;
              background-color: #f8f8f8;
            }
            
            .top-info-label {
-             font-size: 16px;
+             font-size: 18px;
              font-weight: bold;
-             margin-bottom: 6px;
+             margin-bottom: 8px;
              color: #333;
            }
            
            .top-info-value {
-             font-size: 20px;
+             font-size: 22px;
              font-weight: bold;
              color: #000;
            }
@@ -1445,12 +1445,12 @@ export default function WorkOrderDetailPage() {
            }
            
            .materials-section h3 {
-             font-size: 18px;
+             font-size: 22px;
              font-weight: bold;
-             margin: 0 0 8px 0;
+             margin: 0 0 12px 0;
              text-align: center;
              background-color: #f0f0f0;
-             padding: 6px;
+             padding: 10px;
              border-radius: 3px;
            }
            
@@ -1464,12 +1464,12 @@ export default function WorkOrderDetailPage() {
            }
            
            .comments-section h3 {
-             font-size: 20px;
+             font-size: 24px;
              font-weight: bold;
-             margin: 0 0 8px 0;
+             margin: 0 0 12px 0;
              text-align: center;
              background-color: #f0f0f0;
-             padding: 6px;
+             padding: 10px;
              border-radius: 3px;
            }
           
@@ -1478,32 +1478,33 @@ export default function WorkOrderDetailPage() {
            }
            
            .materials-section h3 {
-             font-size: 18px;
+             font-size: 22px;
              font-weight: bold;
-             margin: 0 0 8px 0;
+             margin: 0 0 12px 0;
              text-align: center;
              background-color: #f0f0f0;
-             padding: 6px;
+             padding: 10px;
              border-radius: 3px;
            }
           
                      table {
              width: 100%;
              border-collapse: collapse;
-             margin-bottom: 12px;
-             font-size: 14px;
+             margin-bottom: 15px;
+             font-size: 18px;
            }
            
            th, td {
-             border: 1px solid #000;
-             padding: 8px 6px;
+             border: 2px solid #000;
+             padding: 15px 10px;
              text-align: center;
+             line-height: 1.6;
            }
            
            th {
              background-color: #f0f0f0;
              font-weight: bold;
-             font-size: 15px;
+             font-size: 20px;
            }
           
                      .time-section {
@@ -1511,28 +1512,28 @@ export default function WorkOrderDetailPage() {
            }
            
            .time-section h3 {
-             font-size: 20px;
+             font-size: 24px;
              font-weight: bold;
-             margin: 0 0 8px 0;
+             margin: 0 0 12px 0;
              text-align: center;
              background-color: #f0f0f0;
-             padding: 6px;
+             padding: 10px;
              border-radius: 3px;
            }
            
            .time-writing-box {
              border: 2px solid #000;
              background-color: #f9f9f9;
-             min-height: 200px;
-             margin-top: 8px;
+             min-height: 120px;
+             margin-top: 12px;
            }
           
                      .total-time {
              text-align: center;
-             font-size: 16px;
+             font-size: 20px;
              font-weight: bold;
-             margin: 8px 0;
-             padding: 12px;
+             margin: 12px 0;
+             padding: 15px;
              background-color: #f0f0f0;
              border-radius: 5px;
            }
@@ -1545,23 +1546,23 @@ export default function WorkOrderDetailPage() {
            }
            
            .signature-box {
-             border: 1px solid #000;
-             padding: 8px;
+             border: 2px solid #000;
+             padding: 12px;
              text-align: center;
-             height: 70px;
+             height: 80px;
            }
            
            .signature-label {
-             font-size: 13px;
+             font-size: 16px;
              font-weight: bold;
-             margin-bottom: 4px;
+             margin-bottom: 8px;
            }
           
                      .signature-line {
-             border-top: 1px solid #000;
-             margin-top: 40px;
-             padding-top: 4px;
-             font-size: 11px;
+             border-top: 2px solid #000;
+             margin-top: 35px;
+             padding-top: 6px;
+             font-size: 14px;
            }
           
           .page-break {
@@ -1626,12 +1627,12 @@ export default function WorkOrderDetailPage() {
                <tbody>
                  ${coreMaterials.map(item => `
                    <tr>
-                                        <td style="font-weight: bold; font-size: 15px;">${item.name}</td>
-                   <td style="font-weight: bold; font-size: 15px;">${item.code}</td>
-                   <td style="font-size: 15px;">${item.ratio ? item.ratio + '%' : '-'}</td>
-                   <td style="font-weight: bold; font-size: 15px;">${formatNumber(item.quantity)}</td>
-                   <td style="border: 2px solid #000; background-color: #f9f9f9; min-width: 60px; height: 30px;"></td>
-                   <td style="font-size: 15px;">${item.unit}</td>
+                                        <td style="font-weight: bold; font-size: 18px;">${item.name}</td>
+                   <td style="font-weight: bold; font-size: 18px;">${item.code}</td>
+                   <td style="font-size: 18px;">${item.ratio ? item.ratio + '%' : '-'}</td>
+                   <td style="font-weight: bold; font-size: 18px;">${formatNumber(item.quantity)}</td>
+                   <td style="border: 2px solid #000; background-color: #f9f9f9; min-width: 80px; height: 40px;"></td>
+                   <td style="font-size: 18px;">${item.unit}</td>
                    </tr>
                  `).join('')}
                </tbody>
@@ -1651,10 +1652,10 @@ export default function WorkOrderDetailPage() {
                <tbody>
                  ${specificMaterials.map(item => `
                    <tr>
-                     <td style="font-weight: bold; font-size: 15px;">${item.name}</td>
-                     <td style="font-weight: bold; font-size: 15px;">${item.code}</td>
-                     <td style="border: 2px solid #000; background-color: #f9f9f9; min-width: 60px; height: 30px;"></td>
-                     <td style="font-size: 15px;">${item.unit}</td>
+                     <td style="font-weight: bold; font-size: 18px;">${item.name}</td>
+                     <td style="font-weight: bold; font-size: 18px;">${item.code}</td>
+                     <td style="border: 2px solid #000; background-color: #f9f9f9; min-width: 80px; height: 40px;"></td>
+                     <td style="font-size: 18px;">${item.unit}</td>
                    </tr>
                  `).join('')}
                </tbody>
@@ -1675,10 +1676,10 @@ export default function WorkOrderDetailPage() {
                <tbody>
                  ${commonMaterials.map(item => `
                    <tr>
-                     <td style="font-weight: bold; font-size: 15px;">${item.name}</td>
-                     <td style="font-weight: bold; font-size: 15px;">${item.code}</td>
-                     <td style="border: 2px solid #000; background-color: #f9f9f9; min-width: 60px; height: 30px;"></td>
-                     <td style="font-size: 15px;">${item.unit}</td>
+                     <td style="font-weight: bold; font-size: 18px;">${item.name}</td>
+                     <td style="font-weight: bold; font-size: 18px;">${item.code}</td>
+                     <td style="border: 2px solid #000; background-color: #f9f9f9; min-width: 80px; height: 40px;"></td>
+                     <td style="font-size: 18px;">${item.unit}</td>
                    </tr>
                  `).join('')}
                </tbody>
@@ -1688,7 +1689,7 @@ export default function WorkOrderDetailPage() {
            
            <div class="comments-section">
              <h3>留言板</h3>
-             <div style="flex: 1; border: 1px solid #ccc; background-color: #f9f9f9; padding: 8px; min-height: 400px;">
+             <div style="flex: 1; border: 2px solid #000; background-color: #f9f9f9; padding: 15px; min-height: 200px;">
                <!-- 留言內容會在這裡顯示 -->
              </div>
            </div>
