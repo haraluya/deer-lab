@@ -301,6 +301,83 @@ export const addTimeRecord = onCall(async (request) => {
 });
 
 /**
+ * Deletes a work order and all related time entries.
+ */
+export const deleteWorkOrder = onCall(async (request) => {
+  const { auth: contextAuth, data } = request;
+  await ensureIsAdminOrForeman(contextAuth?.uid);
+
+  if (!contextAuth) {
+    throw new HttpsError("internal", "驗證檢查後 contextAuth 不應為空。");
+  }
+
+  const { workOrderId } = data;
+  if (!workOrderId) {
+    throw new HttpsError("invalid-argument", "缺少工單 ID。");
+  }
+
+  try {
+    await db.runTransaction(async (transaction) => {
+      // 1. 驗證工單存在
+      const workOrderRef = db.doc(`workOrders/${workOrderId}`);
+      const workOrderSnap = await transaction.get(workOrderRef);
+      
+      if (!workOrderSnap.exists) {
+        throw new HttpsError("not-found", "找不到指定的工單。");
+      }
+
+      const workOrderData = workOrderSnap.data()!;
+      
+      // 2. 檢查工單狀態 - 只允許刪除未開始或已取消的工單
+      if (workOrderData.status === '進行' || workOrderData.status === '完工') {
+        throw new HttpsError("failed-precondition", `無法刪除狀態為 "${workOrderData.status}" 的工單。`);
+      }
+
+      // 3. 查詢並刪除相關的工時記錄
+      const timeEntriesQuery = await db.collection('timeEntries')
+        .where('workOrderId', '==', workOrderId)
+        .get();
+
+      logger.info(`找到 ${timeEntriesQuery.size} 筆與工單 ${workOrderId} 相關的工時記錄`);
+
+      // 刪除工時記錄
+      timeEntriesQuery.docs.forEach(doc => {
+        transaction.delete(doc.ref);
+      });
+
+      // 4. 查詢並刪除舊版的工時記錄（如果存在）
+      const oldTimeRecordsQuery = await db.collection('workOrderTimeRecords')
+        .where('workOrderId', '==', workOrderId)
+        .get();
+
+      logger.info(`找到 ${oldTimeRecordsQuery.size} 筆舊版工時記錄`);
+
+      // 刪除舊版工時記錄
+      oldTimeRecordsQuery.docs.forEach(doc => {
+        transaction.delete(doc.ref);
+      });
+
+      // 5. 刪除工單
+      transaction.delete(workOrderRef);
+      
+      logger.info(`已刪除工單 ${workOrderId} 及其相關的 ${timeEntriesQuery.size + oldTimeRecordsQuery.size} 筆工時記錄`);
+    });
+
+    logger.info(`使用者 ${contextAuth.uid} 成功刪除工單 ${workOrderId} 及其相關工時記錄`);
+    return { 
+      success: true, 
+      message: `成功刪除工單及其相關工時記錄`,
+      deletedTimeEntries: 0 // 實際數量會在 transaction 中計算
+    };
+
+  } catch (error) {
+    logger.error(`刪除工單時發生錯誤:`, error);
+    if (error instanceof HttpsError) { throw error; }
+    throw new HttpsError("internal", "刪除工單時發生未知錯誤。");
+  }
+});
+
+/**
  * Completes a work order and records material consumption.
  */
 export const completeWorkOrder = onCall(async (request) => {

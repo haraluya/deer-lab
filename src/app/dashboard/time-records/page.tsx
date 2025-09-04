@@ -417,72 +417,241 @@ export default function PersonalTimeRecordsPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {/* 桌面版 */}
-              <div className="hidden md:block">
-                <div className="grid grid-cols-10 gap-4 py-3 px-4 bg-gray-50 rounded-lg font-medium text-sm text-gray-700">
-                  <div className="col-span-2">工單號碼</div>
-                  <div className="col-span-2">工作日期</div>
-                  <div className="col-span-2">工作時間</div>
-                  <div className="col-span-2">總工時</div>
-                  <div className="col-span-2">狀態</div>
+              {/* 桌面版表格 */}
+              <div className="hidden lg:block">
+                {/* 表格標題 */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-t-xl p-4 mb-2">
+                  <div className="grid grid-cols-12 gap-4 font-semibold text-sm text-gray-700">
+                    <div className="col-span-3 flex items-center gap-2">
+                      <Factory className="h-4 w-4 text-blue-600" />
+                      工單編號
+                    </div>
+                    <div className="col-span-2 flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-green-600" />
+                      工作日期
+                    </div>
+                    <div className="col-span-3 flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-orange-600" />
+                      工作時段
+                    </div>
+                    <div className="col-span-2 flex items-center gap-2">
+                      <Timer className="h-4 w-4 text-purple-600" />
+                      總工時
+                    </div>
+                    <div className="col-span-1 flex items-center gap-2">
+                      <Activity className="h-4 w-4 text-pink-600" />
+                      狀態
+                    </div>
+                    <div className="col-span-1 text-center">
+                      詳細
+                    </div>
+                  </div>
                 </div>
-                {filteredEntries.map((entry) => (
-                  <Card key={entry.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="grid grid-cols-10 gap-4 items-center">
-                        <div className="col-span-2">
-                          <Link 
-                            href={`/dashboard/work-orders/${entry.workOrderId}`}
-                            className="font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors"
-                          >
-                            {entry.workOrderNumber}
-                          </Link>
-                        </div>
-                        <div className="col-span-2">
-                          <div className="text-sm">
-                            {formatDate(entry.startDate)}
+                
+                {/* 表格內容 */}
+                <div className="space-y-2">
+                  {filteredEntries.map((entry, index) => (
+                    <Card 
+                      key={entry.id} 
+                      className={`hover:shadow-lg transition-all duration-200 border-l-4 ${
+                        entry.status === 'locked' 
+                          ? 'border-l-gray-500 bg-gray-50/50'
+                          : 'border-l-blue-500 bg-white hover:bg-blue-50/30'
+                      }`}
+                    >
+                      <CardContent className="p-4">
+                        <div className="grid grid-cols-12 gap-4 items-center">
+                          {/* 工單編號 */}
+                          <div className="col-span-3">
+                            <div className="space-y-1">
+                              <Link 
+                                href={`/dashboard/work-orders/${entry.workOrderId}`}
+                                className="font-bold text-blue-600 hover:text-blue-800 hover:underline transition-colors block text-base"
+                              >
+                                {entry.workOrderNumber || '未設定工單號'}
+                              </Link>
+                              <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full w-fit">
+                                #{entry.id.slice(-6)}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        <div className="col-span-2">
-                          <div className="text-sm">
-                            {entry.startTime} - {entry.endTime}
+                          
+                          {/* 工作日期 */}
+                          <div className="col-span-2">
+                            <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                              <div className="text-sm font-medium text-green-800">
+                                {new Date(entry.startDate).toLocaleDateString('zh-TW', {
+                                  month: 'short',
+                                  day: 'numeric'
+                                })}
+                              </div>
+                              <div className="text-xs text-green-600 mt-1">
+                                {new Date(entry.startDate).toLocaleDateString('zh-TW', {
+                                  weekday: 'short'
+                                })}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        <div className="col-span-2">
-                          <Badge variant="outline" className="bg-green-50 text-green-700">
-                            {formatDuration(entry.duration)}
-                          </Badge>
-                        </div>
-                        <div className="col-span-2">
-                          <div className="flex items-center justify-between">
-                            <Badge variant={entry.status === 'locked' ? 'secondary' : 'default'}>
-                              {entry.status === 'locked' ? '已鎖定' : '正常'}
-                            </Badge>
+                          
+                          {/* 工作時段 */}
+                          <div className="col-span-3">
+                            <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-orange-800">{entry.startTime}</span>
+                                <span className="text-orange-400">→</span>
+                                <span className="text-sm font-medium text-orange-800">{entry.endTime}</span>
+                              </div>
+                              <div className="text-xs text-orange-600 mt-1">
+                                {(() => {
+                                  const start = new Date(`1970-01-01T${entry.startTime}`);
+                                  const end = new Date(`1970-01-01T${entry.endTime}`);
+                                  const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+                                  return `共 ${diffHours.toFixed(1)} 小時`;
+                                })()} 
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* 總工時 */}
+                          <div className="col-span-2">
+                            <div className="text-center">
+                              <Badge 
+                                variant="outline" 
+                                className="bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-800 border-purple-300 font-bold px-3 py-2 text-sm"
+                              >
+                                {formatDuration(entry.duration)}
+                              </Badge>
+                              {entry.overtimeHours && entry.overtimeHours > 0 && (
+                                <div className="mt-1">
+                                  <Badge variant="secondary" className="text-xs bg-red-100 text-red-700">
+                                    加班 {entry.overtimeHours}h
+                                  </Badge>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* 狀態 */}
+                          <div className="col-span-1">
+                            <div className="flex justify-center">
+                              <Badge 
+                                variant={entry.status === 'locked' ? 'secondary' : 'default'}
+                                className={`${
+                                  entry.status === 'locked' 
+                                    ? 'bg-gray-100 text-gray-700 border-gray-300' 
+                                    : 'bg-green-100 text-green-700 border-green-300'
+                                } font-medium`}
+                              >
+                                {entry.status === 'locked' ? '🔒 已鎖定' : '✅ 正常'}
+                              </Badge>
+                            </div>
+                          </div>
+                          
+                          {/* 展開按鈕 */}
+                          <div className="col-span-1 flex justify-center">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => toggleExpanded(entry.id)}
+                              className="hover:bg-blue-100 transition-colors"
                             >
                               {expandedEntries.has(entry.id) ? (
-                                <ChevronUp className="h-4 w-4" />
+                                <ChevronUp className="h-4 w-4 text-blue-600" />
                               ) : (
-                                <ChevronDown className="h-4 w-4" />
+                                <ChevronDown className="h-4 w-4 text-blue-600" />
                               )}
                             </Button>
                           </div>
                         </div>
-                      </div>
-                      {expandedEntries.has(entry.id) && entry.notes && (
-                        <div className="mt-3 pt-3 border-t">
-                          <div className="text-sm">
-                            <span className="font-medium text-gray-700">備註：</span>
-                            <span className="ml-2">{entry.notes}</span>
+                        
+                        {/* 展開的詳細資訊 */}
+                        {expandedEntries.has(entry.id) && (
+                          <div className="mt-4 pt-4 border-t border-gray-200">
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                  <span className="font-medium text-gray-700">建立時間：</span>
+                                  <span className="ml-2 text-gray-600">
+                                    {entry.createdAt?.toDate?.()?.toLocaleString('zh-TW') || '未知'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="font-medium text-gray-700">員工：</span>
+                                  <span className="ml-2 text-gray-600">{entry.personnelName}</span>
+                                </div>
+                              </div>
+                              {entry.notes && (
+                                <div className="mt-3 pt-3 border-t border-gray-300">
+                                  <span className="font-medium text-gray-700">工作備註：</span>
+                                  <p className="mt-2 text-gray-800 bg-white p-3 rounded border-l-4 border-blue-300">
+                                    {entry.notes}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
                           </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
+              {/* 平板版簡化表格 */}
+              <div className="hidden md:block lg:hidden">
+                <div className="space-y-3">
+                  {filteredEntries.map((entry) => (
+                    <Card key={entry.id} className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex-1">
+                            <Link 
+                              href={`/dashboard/work-orders/${entry.workOrderId}`}
+                              className="font-bold text-blue-600 hover:text-blue-800 hover:underline transition-colors text-lg block mb-1"
+                            >
+                              {entry.workOrderNumber || '未設定工單號'}
+                            </Link>
+                            <div className="text-sm text-gray-600 mb-2">
+                              {formatDate(entry.startDate)} • {entry.startTime} - {entry.endTime}
+                            </div>
+                            <div className="flex gap-2 flex-wrap">
+                              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300">
+                                {formatDuration(entry.duration)}
+                              </Badge>
+                              <Badge 
+                                variant={entry.status === 'locked' ? 'secondary' : 'default'}
+                                className={entry.status === 'locked' ? 'bg-gray-100 text-gray-700' : 'bg-green-100 text-green-700'}
+                              >
+                                {entry.status === 'locked' ? '🔒 已鎖定' : '✅ 正常'}
+                              </Badge>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleExpanded(entry.id)}
+                            className="ml-2"
+                          >
+                            {expandedEntries.has(entry.id) ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </Button>
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                        
+                        {expandedEntries.has(entry.id) && entry.notes && (
+                          <div className="mt-3 pt-3 border-t">
+                            <div className="text-sm">
+                              <span className="font-medium text-gray-700">工作備註：</span>
+                              <p className="mt-1 text-gray-800 bg-gray-50 p-2 rounded">{entry.notes}</p>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
 
               {/* 手機版 */}
