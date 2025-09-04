@@ -57,7 +57,7 @@ export default function LoginPage() {
           <div className="flex flex-col items-center mb-4">
             <div className="w-24 h-24 rounded-2xl overflow-hidden mb-4 shadow-lg border-2 border-gray-200 bg-white p-1">
               <Image 
-                src="/Dexter's.png" 
+                src="/dexters-lab-logo.png" 
                 alt="Dexter's Laboratory" 
                 width={88} 
                 height={88} 

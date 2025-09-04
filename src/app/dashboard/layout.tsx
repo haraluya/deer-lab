@@ -282,7 +282,7 @@ export default function DashboardLayout({
         <div className="flex h-16 shrink-0 items-center border-b px-6 bg-gradient-to-r from-purple-600 to-blue-600">
             <div className="w-8 h-8 rounded-lg overflow-hidden bg-white/10 p-0.5">
               <Image 
-                src="/Dexter's.png" 
+                src="/dexters-lab-logo.png" 
                 alt="Dexter's Laboratory" 
                 width={32} 
                 height={32} 
@@ -355,7 +355,7 @@ export default function DashboardLayout({
            </button>
             <div className="w-6 h-6 rounded-md overflow-hidden bg-gray-100 p-0.5">
               <Image 
-                src="/Dexter's.png" 
+                src="/dexters-lab-logo.png" 
                 alt="Dexter's Laboratory" 
                 width={24} 
                 height={24} 
@@ -372,7 +372,7 @@ export default function DashboardLayout({
             <div className="flex items-center">
               <div className="w-6 h-6 rounded-md overflow-hidden bg-white/10 p-0.5">
                 <Image 
-                  src="/Dexter's.png" 
+                  src="/dexters-lab-logo.png" 
                   alt="Dexter's Laboratory" 
                   width={24} 
                   height={24} 
