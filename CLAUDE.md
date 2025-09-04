@@ -84,6 +84,34 @@ functions/                 # Firebase Functions
 - **動態導航**: 根據權限動態顯示側邊欄功能
 - **前後端驗證**: 前端 UI 控制 + Firebase Functions 權限檢查
 
+## 🚨 重要部署提醒
+
+**每次程式碼修改後必須完整部署才會生效！**
+
+### ⚠️ 部署注意事項
+1. **程式碼提交不等於部署**：Git commit 只是本地變更，線上版本不會自動更新
+2. **SSR 部署特殊性**：此專案使用 Next.js SSR + Firebase Functions，需要特殊部署流程
+3. **Windows 環境限制**：`ncp` 指令在 Windows 下可能失效，需要手動複製檔案
+4. **必要檔案檢查**：確認 `.next` 資料夾存在且已複製到 `functions/.next`
+5. **完整部署流程**：每次修改後務必執行完整的 `npm run deploy` 流程
+
+### 📋 部署檢查清單
+- [ ] 程式碼已提交：`git add . && git commit -m "描述"`
+- [ ] 本地建構成功：`npm run build`
+- [ ] 檢查 .next 資料夾存在：`ls -la .next`
+- [ ] 複製建構產物：`cp -r .next functions/`
+- [ ] 執行完整部署：`npm run deploy`
+- [ ] 確認部署成功：檢查 Firebase console 或測試線上功能
+- [ ] 清除瀏覽器快取測試：Ctrl+F5 或無痕模式
+
+### ⚡ 緊急修復部署問題
+如果遇到部署問題：
+1. 檢查 `.next` 資料夾是否存在：`ls -la`
+2. 重新建構：`npm run build`
+3. 手動複製：`cp -r .next functions/ && cp -r public functions/ && cp package.json functions/`
+4. 編譯 functions：`cd functions && npm run build && cd ..`
+5. 強制部署：`firebase deploy --force`
+
 ## 開發指令
 
 ### 主專案指令
