@@ -1388,9 +1388,9 @@ export default function WorkOrderDetailPage() {
           
           .header {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             border-bottom: 3px solid #000;
-            padding-bottom: 10px;
+            padding-bottom: 8px;
           }
           
                      .title {
@@ -1408,8 +1408,8 @@ export default function WorkOrderDetailPage() {
                                 .top-info {
              display: grid;
              grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
-             gap: 10px;
-             margin-bottom: 18px;
+             gap: 8px;
+             margin-bottom: 12px;
            }
            
            .top-info-item {
@@ -1445,7 +1445,7 @@ export default function WorkOrderDetailPage() {
            }
            
            .materials-section h3 {
-             font-size: 22px;
+             font-size: 44px;
              font-weight: bold;
              margin: 0 0 12px 0;
              text-align: center;
@@ -1478,7 +1478,7 @@ export default function WorkOrderDetailPage() {
            }
            
            .materials-section h3 {
-             font-size: 22px;
+             font-size: 44px;
              font-weight: bold;
              margin: 0 0 12px 0;
              text-align: center;
@@ -1495,7 +1495,7 @@ export default function WorkOrderDetailPage() {
            }
            
            th, td {
-             border: 2px solid #000;
+             border: 4px solid #000;
              padding: 15px 10px;
              text-align: center;
              line-height: 1.6;
@@ -1512,7 +1512,7 @@ export default function WorkOrderDetailPage() {
            }
            
            .time-section h3 {
-             font-size: 24px;
+             font-size: 48px;
              font-weight: bold;
              margin: 0 0 12px 0;
              text-align: center;
@@ -1522,9 +1522,9 @@ export default function WorkOrderDetailPage() {
            }
            
            .time-writing-box {
-             border: 2px solid #000;
+             border: 4px solid #000;
              background-color: #f9f9f9;
-             min-height: 120px;
+             min-height: 300px;
              margin-top: 12px;
            }
           
@@ -1538,32 +1538,6 @@ export default function WorkOrderDetailPage() {
              border-radius: 5px;
            }
           
-                     .footer {
-             margin-top: 20px;
-             display: grid;
-             grid-template-columns: 1fr 1fr;
-             gap: 15px;
-           }
-           
-           .signature-box {
-             border: 2px solid #000;
-             padding: 12px;
-             text-align: center;
-             height: 80px;
-           }
-           
-           .signature-label {
-             font-size: 16px;
-             font-weight: bold;
-             margin-bottom: 8px;
-           }
-          
-                     .signature-line {
-             border-top: 2px solid #000;
-             margin-top: 35px;
-             padding-top: 6px;
-             font-size: 14px;
-           }
           
           .page-break {
             page-break-before: always;
@@ -1733,17 +1707,6 @@ export default function WorkOrderDetailPage() {
            </div>
          </div>
         
-        <div class="footer">
-          <div class="signature-box">
-            <div class="signature-label">生產主管簽名</div>
-            <div class="signature-line"></div>
-          </div>
-          
-          <div class="signature-box">
-            <div class="signature-label">倉庫管理簽名</div>
-            <div class="signature-line"></div>
-          </div>
-        </div>
         
                  ${workOrder.notes ? `
          <div style="margin-top: 15px; border: 1px solid #000; padding: 8px;">
