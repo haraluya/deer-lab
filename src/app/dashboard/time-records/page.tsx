@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { 
   Clock, User, Calendar, Factory, TrendingUp, 
   Activity, Timer, Award, BarChart3, Filter,
-  ChevronDown, ChevronUp, Zap
+  ChevronDown, ChevronUp, Zap, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -70,6 +70,10 @@ export default function PersonalTimeRecordsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [monthFilter, setMonthFilter] = useState('all');
   const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
+  
+  // 分頁狀態
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // 載入個人工時記錄
   useEffect(() => {
@@ -105,7 +109,19 @@ export default function PersonalTimeRecordsPage() {
     }
     
     setFilteredEntries(filtered);
+    // 重置到第一頁
+    setCurrentPage(1);
   }, [personalTimeEntries, searchTerm, monthFilter]);
+  
+  // 分頁邏輯
+  const totalPages = Math.ceil(filteredEntries.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedEntries = filteredEntries.slice(startIndex, startIndex + itemsPerPage);
+  
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const loadPersonalTimeRecords = async () => {
     try {
@@ -398,9 +414,50 @@ export default function PersonalTimeRecordsPage() {
             <Timer className="h-5 w-5" />
             我的工時記錄
           </CardTitle>
-          <p className="text-sm text-gray-600">
-            共 {filteredEntries.length} 筆工時記錄
-          </p>
+          <div className="flex justify-between items-center">
+            <p className="text-sm text-gray-600">
+              共 {filteredEntries.length} 筆工時記錄 {totalPages > 0 && `• 第 ${currentPage} / ${totalPages} 頁`}
+            </p>
+            {filteredEntries.length > itemsPerPage && (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="h-8 px-2"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="flex gap-1 mx-2">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
+                    if (pageNum > totalPages) return null;
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={pageNum === currentPage ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handlePageChange(pageNum)}
+                        className="h-8 w-8 p-0 text-xs"
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="h-8 px-2"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -416,191 +473,182 @@ export default function PersonalTimeRecordsPage() {
               <p className="text-sm text-gray-400 mt-1">開始工作並申報工時後，記錄將會顯示在這裡</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {/* 桌面版表格 */}
+            <div className="space-y-4">
+              {/* 桌面版緊湊表格 */}
               <div className="hidden lg:block">
                 {/* 表格標題 */}
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-t-xl p-4 mb-2">
-                  <div className="grid grid-cols-12 gap-4 font-semibold text-sm text-gray-700">
-                    <div className="col-span-3 flex items-center gap-2">
-                      <Factory className="h-4 w-4 text-blue-600" />
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-t-lg px-4 py-2">
+                  <div className="grid grid-cols-12 gap-3 font-medium text-xs text-gray-700">
+                    <div className="col-span-3 flex items-center gap-1">
+                      <Factory className="h-3 w-3 text-blue-600" />
                       工單編號
                     </div>
-                    <div className="col-span-2 flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-green-600" />
-                      工作日期
+                    <div className="col-span-2 flex items-center gap-1">
+                      <Calendar className="h-3 w-3 text-green-600" />
+                      日期
                     </div>
-                    <div className="col-span-3 flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-orange-600" />
-                      工作時段
+                    <div className="col-span-2 flex items-center gap-1">
+                      <Clock className="h-3 w-3 text-orange-600" />
+                      時間
                     </div>
-                    <div className="col-span-2 flex items-center gap-2">
-                      <Timer className="h-4 w-4 text-purple-600" />
-                      總工時
+                    <div className="col-span-2 flex items-center gap-1">
+                      <Timer className="h-3 w-3 text-purple-600" />
+                      工時
                     </div>
-                    <div className="col-span-1 flex items-center gap-2">
-                      <Activity className="h-4 w-4 text-pink-600" />
+                    <div className="col-span-2 flex items-center gap-1">
+                      <Activity className="h-3 w-3 text-pink-600" />
                       狀態
                     </div>
-                    <div className="col-span-1 text-center">
+                    <div className="col-span-1 text-center text-xs">
                       詳細
                     </div>
                   </div>
                 </div>
                 
                 {/* 表格內容 */}
-                <div className="space-y-2">
-                  {filteredEntries.map((entry, index) => (
-                    <Card 
+                <div className="border border-t-0 border-blue-200 rounded-b-lg overflow-hidden">
+                  {paginatedEntries.map((entry, index) => (
+                    <div 
                       key={entry.id} 
-                      className={`hover:shadow-lg transition-all duration-200 border-l-4 ${
-                        entry.status === 'locked' 
-                          ? 'border-l-gray-500 bg-gray-50/50'
-                          : 'border-l-blue-500 bg-white hover:bg-blue-50/30'
+                      className={`grid grid-cols-12 gap-3 px-4 py-3 items-center hover:bg-blue-50/50 transition-colors border-b last:border-b-0 ${
+                        entry.status === 'locked' ? 'bg-gray-50/50' : 'bg-white'
                       }`}
                     >
-                      <CardContent className="p-4">
-                        <div className="grid grid-cols-12 gap-4 items-center">
-                          {/* 工單編號 */}
-                          <div className="col-span-3">
-                            <div className="space-y-1">
-                              <Link 
-                                href={`/dashboard/work-orders/${entry.workOrderId}`}
-                                className="font-bold text-blue-600 hover:text-blue-800 hover:underline transition-colors block text-base"
-                              >
-                                {entry.workOrderNumber || '未設定工單號'}
-                              </Link>
-                              <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full w-fit">
-                                #{entry.id.slice(-6)}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* 工作日期 */}
-                          <div className="col-span-2">
-                            <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                              <div className="text-sm font-medium text-green-800">
-                                {new Date(entry.startDate).toLocaleDateString('zh-TW', {
-                                  month: 'short',
-                                  day: 'numeric'
-                                })}
-                              </div>
-                              <div className="text-xs text-green-600 mt-1">
-                                {new Date(entry.startDate).toLocaleDateString('zh-TW', {
-                                  weekday: 'short'
-                                })}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* 工作時段 */}
-                          <div className="col-span-3">
-                            <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium text-orange-800">{entry.startTime}</span>
-                                <span className="text-orange-400">→</span>
-                                <span className="text-sm font-medium text-orange-800">{entry.endTime}</span>
-                              </div>
-                              <div className="text-xs text-orange-600 mt-1">
-                                {(() => {
-                                  const start = new Date(`1970-01-01T${entry.startTime}`);
-                                  const end = new Date(`1970-01-01T${entry.endTime}`);
-                                  const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-                                  return `共 ${diffHours.toFixed(1)} 小時`;
-                                })()} 
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* 總工時 */}
-                          <div className="col-span-2">
-                            <div className="text-center">
-                              <Badge 
-                                variant="outline" 
-                                className="bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-800 border-purple-300 font-bold px-3 py-2 text-sm"
-                              >
-                                {formatDuration(entry.duration)}
-                              </Badge>
-                              {entry.overtimeHours && entry.overtimeHours > 0 && (
-                                <div className="mt-1">
-                                  <Badge variant="secondary" className="text-xs bg-red-100 text-red-700">
-                                    加班 {entry.overtimeHours}h
-                                  </Badge>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          
-                          {/* 狀態 */}
-                          <div className="col-span-1">
-                            <div className="flex justify-center">
-                              <Badge 
-                                variant={entry.status === 'locked' ? 'secondary' : 'default'}
-                                className={`${
-                                  entry.status === 'locked' 
-                                    ? 'bg-gray-100 text-gray-700 border-gray-300' 
-                                    : 'bg-green-100 text-green-700 border-green-300'
-                                } font-medium`}
-                              >
-                                {entry.status === 'locked' ? '🔒 已鎖定' : '✅ 正常'}
-                              </Badge>
-                            </div>
-                          </div>
-                          
-                          {/* 展開按鈕 */}
-                          <div className="col-span-1 flex justify-center">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => toggleExpanded(entry.id)}
-                              className="hover:bg-blue-100 transition-colors"
-                            >
-                              {expandedEntries.has(entry.id) ? (
-                                <ChevronUp className="h-4 w-4 text-blue-600" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4 text-blue-600" />
-                              )}
-                            </Button>
-                          </div>
+                      {/* 工單編號 */}
+                      <div className="col-span-3">
+                        <Link 
+                          href={`/dashboard/work-orders/${entry.workOrderId}`}
+                          className="font-semibold text-blue-600 hover:text-blue-800 hover:underline transition-colors text-sm block"
+                        >
+                          {entry.workOrderNumber || '未設定工單號'}
+                        </Link>
+                        <div className="text-xs text-gray-400 mt-0.5">
+                          #{entry.id.slice(-6)}
                         </div>
-                        
-                        {/* 展開的詳細資訊 */}
-                        {expandedEntries.has(entry.id) && (
-                          <div className="mt-4 pt-4 border-t border-gray-200">
-                            <div className="bg-gray-50 p-4 rounded-lg">
-                              <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                  <span className="font-medium text-gray-700">建立時間：</span>
-                                  <span className="ml-2 text-gray-600">
-                                    {entry.createdAt?.toDate?.()?.toLocaleString('zh-TW') || '未知'}
-                                  </span>
-                                </div>
-                                <div>
-                                  <span className="font-medium text-gray-700">員工：</span>
-                                  <span className="ml-2 text-gray-600">{entry.personnelName}</span>
-                                </div>
-                              </div>
-                              {entry.notes && (
-                                <div className="mt-3 pt-3 border-t border-gray-300">
-                                  <span className="font-medium text-gray-700">工作備註：</span>
-                                  <p className="mt-2 text-gray-800 bg-white p-3 rounded border-l-4 border-blue-300">
-                                    {entry.notes}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
+                      </div>
+                      
+                      {/* 工作日期 */}
+                      <div className="col-span-2">
+                        <div className="text-sm font-medium text-gray-800">
+                          {new Date(entry.startDate).toLocaleDateString('zh-TW', {
+                            month: 'numeric',
+                            day: 'numeric'
+                          })}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {new Date(entry.startDate).toLocaleDateString('zh-TW', {
+                            weekday: 'short'
+                          })}
+                        </div>
+                      </div>
+                      
+                      {/* 工作時間 */}
+                      <div className="col-span-2">
+                        <div className="text-sm font-medium text-gray-800">
+                          {entry.startTime} - {entry.endTime}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {(() => {
+                            const start = new Date(`1970-01-01T${entry.startTime}`);
+                            const end = new Date(`1970-01-01T${entry.endTime}`);
+                            const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+                            return `共 ${diffHours.toFixed(1)}h`;
+                          })()} 
+                        </div>
+                      </div>
+                      
+                      {/* 總工時 */}
+                      <div className="col-span-2">
+                        <Badge 
+                          variant="outline" 
+                          className="bg-purple-50 text-purple-700 border-purple-300 text-xs px-2 py-1"
+                        >
+                          {formatDuration(entry.duration)}
+                        </Badge>
+                        {entry.overtimeHours && entry.overtimeHours > 0 && (
+                          <div className="mt-1">
+                            <Badge variant="secondary" className="text-xs bg-red-50 text-red-600 px-1 py-0.5">
+                              加班 {entry.overtimeHours}h
+                            </Badge>
                           </div>
                         )}
-                      </CardContent>
-                    </Card>
+                      </div>
+                      
+                      {/* 狀態 */}
+                      <div className="col-span-2">
+                        <Badge 
+                          variant={entry.status === 'locked' ? 'secondary' : 'default'}
+                          className={`text-xs px-2 py-1 ${
+                            entry.status === 'locked' 
+                              ? 'bg-gray-100 text-gray-600' 
+                              : 'bg-green-50 text-green-600'
+                          }`}
+                        >
+                          {entry.status === 'locked' ? '🔒 已鎖定' : '✅ 正常'}
+                        </Badge>
+                      </div>
+                      
+                      {/* 展開按鈕 */}
+                      <div className="col-span-1 flex justify-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleExpanded(entry.id)}
+                          className="h-6 w-6 p-0 hover:bg-blue-100"
+                        >
+                          {expandedEntries.has(entry.id) ? (
+                            <ChevronUp className="h-3 w-3 text-blue-600" />
+                          ) : (
+                            <ChevronDown className="h-3 w-3 text-blue-600" />
+                          )}
+                        </Button>
+                      </div>
+                      
+                      {/* 展開的詳細資訊 */}
+                      {expandedEntries.has(entry.id) && (
+                        <div className="col-span-12 mt-2 pt-3 border-t border-gray-200">
+                          <div className="bg-gray-50 p-3 rounded text-sm">
+                            <div className="grid grid-cols-3 gap-3 mb-2">
+                              <div>
+                                <span className="font-medium text-gray-600">建立時間：</span>
+                                <div className="text-gray-800 mt-1">
+                                  {entry.createdAt?.toDate?.()?.toLocaleString('zh-TW') || '未知'}
+                                </div>
+                              </div>
+                              <div>
+                                <span className="font-medium text-gray-600">員工：</span>
+                                <div className="text-gray-800 mt-1">{entry.personnelName}</div>
+                              </div>
+                              <div>
+                                <span className="font-medium text-gray-600">記錄ID：</span>
+                                <div className="text-gray-800 mt-1 font-mono text-xs">{entry.id}</div>
+                              </div>
+                            </div>
+                            {entry.notes && (
+                              <div className="pt-2 border-t border-gray-300">
+                                <span className="font-medium text-gray-600">備註：</span>
+                                <p className="mt-1 text-gray-800">{entry.notes}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   ))}
+                  
+                  {paginatedEntries.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <Clock className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                      <p>沒有找到符合條件的工時記錄</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* 平板版簡化表格 */}
               <div className="hidden md:block lg:hidden">
                 <div className="space-y-3">
-                  {filteredEntries.map((entry) => (
+                  {paginatedEntries.map((entry) => (
                     <Card key={entry.id} className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500">
                       <CardContent className="p-4">
                         <div className="flex justify-between items-start mb-3">
@@ -656,7 +704,7 @@ export default function PersonalTimeRecordsPage() {
 
               {/* 手機版 */}
               <div className="md:hidden space-y-3">
-                {filteredEntries.map((entry) => (
+                {paginatedEntries.map((entry) => (
                   <Card key={entry.id} className="p-4">
                     <div 
                       className="cursor-pointer"
@@ -707,6 +755,67 @@ export default function PersonalTimeRecordsPage() {
                   </Card>
                 ))}
               </div>
+
+              {/* 底部分頁 */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-2 pt-6 border-t">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(1)}
+                    disabled={currentPage === 1}
+                    className="px-3"
+                  >
+                    首頁
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-2"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  
+                  <div className="flex gap-1 mx-4">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
+                      if (pageNum > totalPages) return null;
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={pageNum === currentPage ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handlePageChange(pageNum)}
+                          className="w-10 h-8 p-0 text-sm"
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="px-2"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className="px-3"
+                  >
+                    末頁
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
