@@ -458,10 +458,10 @@ export default function WorkOrderDetailPage() {
     
     try {
       console.log('開始載入工時記錄，workOrderId:', workOrderId);
+      // 移除 orderBy 以避免 Firestore 索引問題，改為在客戶端排序
       const timeEntriesQuery = query(
         collection(db, 'timeEntries'),
-        where('workOrderId', '==', workOrderId),
-        orderBy('createdAt', 'desc')
+        where('workOrderId', '==', workOrderId)
       );
       const timeEntriesSnapshot = await getDocs(timeEntriesQuery);
       console.log('工時記錄查詢結果:', timeEntriesSnapshot.size, '筆記錄');
@@ -484,9 +484,16 @@ export default function WorkOrderDetailPage() {
       
       // 按工作日期和開始時間排序（最新的在上面）
       entries.sort((a: any, b: any) => {
-        const dateA = new Date(`${a.startDate}T${a.startTime}`);
-        const dateB = new Date(`${b.startDate}T${b.startTime}`);
-        return dateB.getTime() - dateA.getTime();
+        // 優先按創建時間排序，如果沒有創建時間則按工作日期和時間
+        if (a.createdAt && b.createdAt) {
+          const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt);
+          const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt);
+          return dateB.getTime() - dateA.getTime();
+        } else {
+          const dateA = new Date(`${a.startDate}T${a.startTime}`);
+          const dateB = new Date(`${b.startDate}T${b.startTime}`);
+          return dateB.getTime() - dateA.getTime();
+        }
       });
       
       console.log('設置工時記錄，共', entries.length, '筆');

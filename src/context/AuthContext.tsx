@@ -66,6 +66,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (userDoc.exists()) {
         debug('用戶文檔存在');
         const userData = userDoc.data() as AppUser;
+        
+        // 確保 uid 正確設置
+        userData.uid = firebaseUser.uid;
+        
         debug('用戶資料', userData);
         
         // 保留現有的權限設定，如果沒有則初始化為空陣列

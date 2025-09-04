@@ -73,8 +73,16 @@ export default function PersonalTimeRecordsPage() {
 
   // 載入個人工時記錄
   useEffect(() => {
-    if (appUser) {
+    console.log('useEffect 觸發，appUser 狀態:', { 
+      appUser: !!appUser, 
+      uid: appUser?.uid, 
+      name: appUser?.name 
+    });
+    
+    if (appUser && appUser.uid) {
       loadPersonalTimeRecords();
+    } else {
+      console.warn('appUser 或 appUser.uid 未準備就緒');
     }
   }, [appUser]);
 
@@ -115,10 +123,10 @@ export default function PersonalTimeRecordsPage() {
       });
 
       // 載入當前用戶的工時記錄，使用用戶ID（在users集合中的文檔ID）
+      // 移除 orderBy 以避免 Firestore 索引問題，改為在客戶端排序
       const timeEntriesQuery = query(
         collection(db, 'timeEntries'),
-        where('personnelId', '==', appUser.uid),
-        orderBy('createdAt', 'desc')
+        where('personnelId', '==', appUser.uid)
       );
       
       console.log('執行查詢，personnelId =', appUser.uid);
@@ -140,7 +148,14 @@ export default function PersonalTimeRecordsPage() {
         };
       }) as TimeEntry[];
 
-      setPersonalTimeEntries(timeEntries);
+      // 在客戶端排序（按創建時間降序）
+      const sortedTimeEntries = timeEntries.sort((a, b) => {
+        const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt);
+        const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt);
+        return dateB.getTime() - dateA.getTime();
+      });
+
+      setPersonalTimeEntries(sortedTimeEntries);
 
       // 計算統計資料
       calculateStats(timeEntries);
