@@ -1333,11 +1333,11 @@ export default function WorkOrderDetailPage() {
 
   // 計算總人工小時 (從 timeEntries)
   const totalWorkHours = timeEntries.reduce((total, entry) => {
-    return total + (entry.duration * 60) // duration 是小時，轉換為分鐘
+    return total + (entry.duration || 0) // duration 已經是小時，直接累加
   }, 0)
 
-  const totalHours = Math.floor(totalWorkHours / 60)
-  const totalMinutes = Math.floor(totalWorkHours % 60)
+  const totalHours = Math.floor(totalWorkHours)
+  const totalMinutes = Math.floor((totalWorkHours % 1) * 60)
 
   // 列印功能
   const handlePrint = () => {
@@ -3063,7 +3063,7 @@ export default function WorkOrderDetailPage() {
                     <div className="text-center">
                       <div className="text-sm text-gray-600">總人工小時</div>
                       <div className="text-lg font-bold text-blue-600">
-                        {Math.floor(totalWorkHours / 60)} 小時 {totalWorkHours % 60} 分鐘
+                        {totalHours} 小時 {totalMinutes} 分鐘
                       </div>
                       <div className="text-xs text-gray-500">共 {timeEntries.length} 筆紀錄</div>
                     </div>
@@ -3097,7 +3097,7 @@ export default function WorkOrderDetailPage() {
                 <div>
                   <div className="text-sm text-blue-600 mb-1">總人工小時</div>
                   <div className="text-lg font-bold text-blue-800">
-                    {Math.floor(totalWorkHours / 60)} 小時 {totalWorkHours % 60} 分鐘
+                    {totalHours} 小時 {totalMinutes} 分鐘
                   </div>
                 </div>
                 <div>
@@ -3146,50 +3146,6 @@ export default function WorkOrderDetailPage() {
                       const remaining = Math.max(0, currentStock - usedQuantity);
                       return total + remaining;
                     }, 0).toFixed(3)} KG
-                  </div>
-                </div>
-              </div>
-              
-              {/* 庫存統計摘要 */}
-              <div className="mt-4 p-3 bg-white rounded-lg border border-blue-200">
-                <h4 className="text-sm font-semibold text-blue-800 mb-2">庫存統計摘要</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                  <div className="text-center">
-                    <div className="text-gray-600">總庫存數量</div>
-                    <div className="font-bold text-blue-600">
-                      {workOrder?.billOfMaterials.reduce((total, item) => total + (item.currentStock || 0), 0).toFixed(3)} KG
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-gray-600">總使用數量</div>
-                    <div className="font-bold text-red-600">
-                      {workOrder?.billOfMaterials.reduce((total, item) => total + (item.usedQuantity || 0), 0).toFixed(3)} KG
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-gray-600">預計剩餘</div>
-                    <div className="font-bold text-green-600">
-                      {workOrder?.billOfMaterials.reduce((total, item) => {
-                        const currentStock = item.currentStock || 0;
-                        const usedQuantity = item.usedQuantity || 0;
-                        return total + (currentStock - usedQuantity);
-                      }, 0).toFixed(3)} KG
-                    </div>
-                  </div>
-                </div>
-                
-                {/* 庫存使用率 */}
-                <div className="mt-3 pt-3 border-t border-blue-200">
-                  <div className="text-center">
-                    <div className="text-gray-600 text-xs">庫存使用率</div>
-                    <div className="font-bold text-blue-600">
-                      {(() => {
-                        const totalStock = workOrder?.billOfMaterials.reduce((total, item) => total + (item.currentStock || 0), 0) || 0;
-                        const totalUsed = workOrder?.billOfMaterials.reduce((total, item) => total + (item.usedQuantity || 0), 0) || 0;
-                        if (totalStock === 0) return '0%';
-                        return `${((totalUsed / totalStock) * 100).toFixed(1)}%`;
-                      })()}
-                    </div>
                   </div>
                 </div>
               </div>
