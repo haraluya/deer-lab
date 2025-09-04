@@ -408,10 +408,11 @@ const handleAddToCart = async (item: CartItem) => {
 4. **庫存調整**: 統一使用「直接修改」(`direct_modification`) 動作類型
 5. **響應式設計**: 所有功能必須支援桌面、平板、手機三種裝置
 6. **工時系統修復** (2025-09-04): 
-   - 修復個人工時統計查詢問題：使用 `appUser.uid` 而非 `employeeId` 查詢
+   - **第一次修復**: 修復個人工時統計查詢問題：使用 `appUser.uid` 而非 `employeeId` 查詢
    - 工單詳情頁面已具備工時記錄即時更新機制（對話框關閉時自動重新載入）
    - 增強工時系統除錯功能：新增詳細的 console 輸出以便診斷載入問題
-   - 確認 TimeTrackingDialog 中 personnelId 正確對應 Firebase Auth UID
+   - **第二次修復**: 確保 personnelId 一致性，修正 TimeTrackingDialog 載入人員時使用 `userData.uid || doc.id`
+   - 新增 workOrderNumber 欄位到所有工時記錄，確保資料完整性
    - 改善工時記錄建立和查詢的錯誤處理機制
 
 ## 業務邏輯說明
