@@ -1491,7 +1491,7 @@ export default function WorkOrderDetailPage() {
              width: 100%;
              border-collapse: collapse;
              margin-bottom: 15px;
-             font-size: 18px;
+             font-size: 36px;
            }
            
            th, td {
@@ -1504,7 +1504,7 @@ export default function WorkOrderDetailPage() {
            th {
              background-color: #f0f0f0;
              font-weight: bold;
-             font-size: 20px;
+             font-size: 40px;
            }
           
                      .time-section {
@@ -1627,12 +1627,12 @@ export default function WorkOrderDetailPage() {
                <tbody>
                  ${coreMaterials.map(item => `
                    <tr>
-                                        <td style="font-weight: bold; font-size: 18px;">${item.name}</td>
-                   <td style="font-weight: bold; font-size: 18px;">${item.code}</td>
-                   <td style="font-size: 18px;">${item.ratio ? item.ratio + '%' : '-'}</td>
-                   <td style="font-weight: bold; font-size: 18px;">${formatNumber(item.quantity)}</td>
-                   <td style="border: 2px solid #000; background-color: #f9f9f9; min-width: 80px; height: 40px;"></td>
-                   <td style="font-size: 18px;">${item.unit}</td>
+                                        <td style="font-weight: bold; font-size: 36px;">${item.name}</td>
+                   <td style="font-weight: bold; font-size: 36px;">${item.code}</td>
+                   <td style="font-size: 36px;">${item.ratio ? item.ratio + '%' : '-'}</td>
+                   <td style="font-weight: bold; font-size: 36px;">${formatNumber(item.quantity)}</td>
+                   <td style="border: 2px solid #000; background-color: #f9f9f9; min-width: 120px; height: 60px;"></td>
+                   <td style="font-size: 36px;">${item.unit}</td>
                    </tr>
                  `).join('')}
                </tbody>
@@ -1652,10 +1652,10 @@ export default function WorkOrderDetailPage() {
                <tbody>
                  ${specificMaterials.map(item => `
                    <tr>
-                     <td style="font-weight: bold; font-size: 18px;">${item.name}</td>
-                     <td style="font-weight: bold; font-size: 18px;">${item.code}</td>
-                     <td style="border: 2px solid #000; background-color: #f9f9f9; min-width: 80px; height: 40px;"></td>
-                     <td style="font-size: 18px;">${item.unit}</td>
+                     <td style="font-weight: bold; font-size: 36px;">${item.name}</td>
+                     <td style="font-weight: bold; font-size: 36px;">${item.code}</td>
+                     <td style="border: 2px solid #000; background-color: #f9f9f9; min-width: 120px; height: 60px;"></td>
+                     <td style="font-size: 36px;">${item.unit}</td>
                    </tr>
                  `).join('')}
                </tbody>
@@ -1676,10 +1676,10 @@ export default function WorkOrderDetailPage() {
                <tbody>
                  ${commonMaterials.map(item => `
                    <tr>
-                     <td style="font-weight: bold; font-size: 18px;">${item.name}</td>
-                     <td style="font-weight: bold; font-size: 18px;">${item.code}</td>
-                     <td style="border: 2px solid #000; background-color: #f9f9f9; min-width: 80px; height: 40px;"></td>
-                     <td style="font-size: 18px;">${item.unit}</td>
+                     <td style="font-weight: bold; font-size: 36px;">${item.name}</td>
+                     <td style="font-weight: bold; font-size: 36px;">${item.code}</td>
+                     <td style="border: 2px solid #000; background-color: #f9f9f9; min-width: 120px; height: 60px;"></td>
+                     <td style="font-size: 36px;">${item.unit}</td>
                    </tr>
                  `).join('')}
                </tbody>
@@ -1711,11 +1711,11 @@ export default function WorkOrderDetailPage() {
                <tbody>
                  ${timeEntries.map(entry => `
                    <tr>
-                     <td>${entry.personnelName}</td>
-                     <td>${entry.startDate}</td>
-                     <td>${entry.startTime}</td>
-                     <td>${entry.endTime}</td>
-                     <td>${Math.floor(entry.duration)}小時${Math.round((entry.duration % 1) * 60)}分鐘</td>
+                     <td style="font-size: 36px; font-weight: bold;">${entry.personnelName}</td>
+                     <td style="font-size: 36px;">${entry.startDate}</td>
+                     <td style="font-size: 36px;">${entry.startTime}</td>
+                     <td style="font-size: 36px;">${entry.endTime}</td>
+                     <td style="font-size: 36px; font-weight: bold;">${Math.floor(entry.duration)}小時${Math.round((entry.duration % 1) * 60)}分鐘</td>
                    </tr>
                  `).join('')}
                </tbody>

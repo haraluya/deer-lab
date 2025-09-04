@@ -939,3 +939,4 @@ const UserInputSchema = z.object({
   3. 本地測試 (`npm run build`, `npm run dev`)
   4. 絕對不能執行 `git push` 命令
 - 每次有修改都要檢查claude.me，確保這份檔案能正確詮釋本專案
+- 每次都把運行本地的任務清除掉，避免佔用port
