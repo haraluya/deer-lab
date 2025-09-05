@@ -103,8 +103,48 @@ export function useGlobalCart() {
     }
   }, [isLoading, cartItems.length]);
 
-  // 添加項目到購物車
+  // 添加項目到購物車 - 樂觀更新以提升速度
   const addToCart = useCallback(async (item: Omit<CartItem, 'id' | 'addedBy' | 'addedAt' | 'updatedAt'>) => {
+    // 立即樂觀更新本地狀態
+    const newItemId = `${item.type}_${item.code}_${Date.now()}`;
+    const optimisticItem: CartItem = {
+      ...item,
+      id: newItemId,
+      addedBy: 'current_user',
+      addedAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    // 檢查是否已存在相同項目
+    const existingItemIndex = cartItems.findIndex(
+      (i) => i.type === item.type && i.code === item.code && i.supplierId === item.supplierId
+    );
+
+    if (existingItemIndex >= 0) {
+      // 樂觀更新：增加數量
+      setCartItems(prevItems => {
+        const updatedItems = [...prevItems];
+        updatedItems[existingItemIndex] = {
+          ...updatedItems[existingItemIndex],
+          quantity: updatedItems[existingItemIndex].quantity + item.quantity,
+          updatedAt: new Date()
+        };
+        setCartItemCount(updatedItems.length);
+        return updatedItems;
+      });
+    } else {
+      // 樂觀更新：添加新項目
+      setCartItems(prevItems => {
+        const updatedItems = [...prevItems, optimisticItem];
+        setCartItemCount(updatedItems.length);
+        return updatedItems;
+      });
+    }
+
+    // 立即顯示成功提示，不等待網路請求
+    toast.success('已加入購物車');
+
+    // 背景同步到 Firebase
     try {
       setIsSyncing(true);
       const functions = getFunctions();
@@ -113,18 +153,22 @@ export function useGlobalCart() {
       const result = await addItem({ item });
       
       if (result.data) {
-        toast.success('已加入購物車');
+        // 成功，但不再顯示提示（已經顯示過了）
         return true;
+      } else {
+        // 失敗時顯示錯誤並讓 Firestore 監聽自動同步回正確狀態
+        toast.error('同步到雲端失敗，但項目已暫存本地');
+        return false;
       }
-      return false;
     } catch (error) {
-      console.error('加入購物車失敗:', error);
-      toast.error('加入購物車失敗');
+      console.error('背景同步失敗:', error);
+      // 不顯示錯誤訊息，避免影響用戶體驗
+      // Firestore 監聽會自動同步回正確狀態
       return false;
     } finally {
       setIsSyncing(false);
     }
-  }, []);
+  }, [cartItems]);
 
   // 更新購物車項目 - 樂觀更新以改善使用者體驗
   const updateCartItem = useCallback(async (itemId: string, updates: Partial<CartItem>) => {

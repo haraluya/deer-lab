@@ -127,6 +127,24 @@ function PurchaseOrdersPageContent() {
           day: 'numeric',
         }) || 'N/A';
 
+        // 計算採購單總金額
+        const items = data.items || [];
+        const additionalFees = data.additionalFees || [];
+        
+        const itemsTotal = items.reduce((total: number, item: any) => {
+          const itemCost = item.costPerUnit || 0;
+          const itemQuantity = item.quantity || 0;
+          return total + (itemCost * itemQuantity);
+        }, 0);
+        
+        const feesTotal = additionalFees.reduce((total: number, fee: any) => {
+          const feeAmount = fee.amount || 0;
+          const feeQuantity = fee.quantity || 1;
+          return total + (feeAmount * feeQuantity);
+        }, 0);
+        
+        const totalAmount = itemsTotal + feesTotal;
+
         return {
           id: doc.id,
           code: data.code,
@@ -134,6 +152,7 @@ function PurchaseOrdersPageContent() {
           status: data.status,
           createdByName: usersMap.get(data.createdByRef?.id) || '未知人員',
           createdAt: createdAt,
+          totalAmount: totalAmount,
         } as PurchaseOrderView;
       });
 
@@ -579,7 +598,7 @@ function PurchaseOrdersPageContent() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                                          <TableCell colSpan={5} className="text-center py-8">
+                    <TableCell colSpan={6} className="text-center py-8">
                         <div className="flex items-center justify-center">
                           <div className="w-6 h-6 border-2 border-amber-200 border-t-amber-600 rounded-full animate-spin mr-2"></div>
                           載入中...
@@ -649,7 +668,7 @@ function PurchaseOrdersPageContent() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8">
+                    <TableCell colSpan={6} className="text-center py-8">
                       <div className="text-gray-500">
                         {statusFilter === 'all' ? '沒有採購單資料' : `沒有${statusFilter}狀態的採購單`}
                       </div>
