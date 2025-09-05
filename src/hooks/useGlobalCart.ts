@@ -21,6 +21,11 @@ interface CartItem {
   addedBy?: string;
   addedAt?: any;
   updatedAt?: any;
+  // 新增用途和分類欄位
+  category?: string;
+  subcategory?: string;
+  series?: string;
+  usedInProducts?: string[];
 }
 
 export function useGlobalCart() {

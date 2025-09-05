@@ -26,6 +26,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Label } from '@/components/ui/label';
 
 // 定義從 Firestore 讀取並處理後的採購單資料結構
 interface PurchaseOrderView {
@@ -57,6 +58,11 @@ interface SearchResult {
   unit: string;
   costPerUnit: number;
   currentStock: number;
+  // 新增欄位
+  category?: string;
+  subcategory?: string;
+  series?: string;
+  usedInProducts?: string[];
 }
 
 function PurchaseOrdersPageContent() {
@@ -97,6 +103,7 @@ function PurchaseOrdersPageContent() {
   const [selectedCartItems, setSelectedCartItems] = useState<Set<string>>(new Set());
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [itemDetailDialog, setItemDetailDialog] = useState<{open: boolean, item: CartItem | null}>({open: false, item: null});
 
   // 載入採購單資料
   const loadPurchaseOrders = useCallback(async () => {
@@ -183,6 +190,24 @@ function PurchaseOrdersPageContent() {
       
       const suppliersMap = new Map<string, string>();
       suppliersSnapshot.forEach(doc => suppliersMap.set(doc.id, doc.data().name));
+
+      // 載入產品資料，用於找出香精的使用產品
+      const productsSnapshot = await getDocs(collection(db, 'products'));
+      const productsMap = new Map<string, string[]>(); // fragranceId -> productNames[]
+      
+      await Promise.all(productsSnapshot.docs.map(async doc => {
+        const productData = doc.data();
+        const productName = productData.name;
+        
+        // 檢查產品的香精參考
+        if (productData.currentFragranceRef) {
+          const fragranceId = productData.currentFragranceRef.id;
+          if (!productsMap.has(fragranceId)) {
+            productsMap.set(fragranceId, []);
+          }
+          productsMap.get(fragranceId)?.push(productName);
+        }
+      }));
       
       // 載入物料
       const materialsSnapshot = await getDocs(collection(db, 'materials'));
@@ -198,6 +223,8 @@ function PurchaseOrdersPageContent() {
           unit: data.unit || '',
           costPerUnit: data.costPerUnit || 0,
           currentStock: data.currentStock || 0,
+          category: data.category || '',
+          subcategory: data.subcategory || '',
         };
       });
 
@@ -215,6 +242,9 @@ function PurchaseOrdersPageContent() {
           unit: data.unit || 'KG',
           costPerUnit: data.costPerUnit || 0,
           currentStock: data.currentStock || 0,
+          category: data.category || '',
+          series: data.series || '',
+          usedInProducts: productsMap.get(doc.id) || [],
         };
       });
 
@@ -265,9 +295,15 @@ function PurchaseOrdersPageContent() {
         item.supplierName.toLowerCase().includes(term.toLowerCase())
       );
       
-      // 依照名稱排序
+      // 依照名稱排序並包含完整欄位
       const sorted = filtered.sort((a, b) => a.name.localeCompare(b.name, 'zh-TW'));
-      setSearchResults(sorted.slice(0, 10)); // 限制搜尋結果數量
+      setSearchResults(sorted.slice(0, 10).map(item => ({
+        ...item,
+        category: item.category || '',
+        subcategory: item.subcategory || '',
+        series: item.series || '',
+        usedInProducts: item.usedInProducts || [],
+      }))); // 限制搜尋結果數量並確保包含所有欄位
     }
   }, [materials, fragrances, suppliers, searchType]);
 
@@ -306,7 +342,12 @@ function PurchaseOrdersPageContent() {
       unit: item.unit,
       currentStock: item.currentStock,
       price: item.costPerUnit,
-      costPerUnit: item.costPerUnit
+      costPerUnit: item.costPerUnit,
+      // 新增欄位
+      category: item.category,
+      subcategory: item.subcategory,
+      series: item.series,
+      usedInProducts: item.usedInProducts
     };
     
     await globalAddToCart(cartItemData);
@@ -371,6 +412,11 @@ function PurchaseOrdersPageContent() {
   // 顯示確認對話框
   const showConfirmDialog = useCallback(() => {
     setIsConfirmDialogOpen(true);
+  }, []);
+
+  // 處理點擊項目詳情
+  const handleItemDetailClick = useCallback((item: CartItem) => {
+    setItemDetailDialog({open: true, item});
   }, []);
 
   // 建立採購單
@@ -1020,9 +1066,40 @@ function PurchaseOrdersPageContent() {
                             {item.type === 'material' ? <Package className="h-4 w-4" /> : <Droplets className="h-4 w-4" />}
                           </div>
                           <div className="flex-1">
-                            <div className="font-medium text-gray-900">{item.name}</div>
-                            <div className="text-sm text-gray-500">
-                              {item.code} • NT$ {(item.price || item.costPerUnit || 0).toLocaleString()}/{item.unit}
+                            <div 
+                              className="font-medium text-gray-900 cursor-pointer hover:text-amber-600 transition-colors"
+                              onClick={() => handleItemDetailClick(item)}
+                            >
+                              {item.name}
+                            </div>
+                            <div className="text-sm text-gray-500 space-y-1">
+                              <div>
+                                {item.code} • NT$ {(item.price || item.costPerUnit || 0).toLocaleString()}/{item.unit}
+                              </div>
+                              {/* 原料用途或香精使用產品 */}
+                              {item.type === 'material' ? (
+                                <div className="text-xs text-blue-600">
+                                  {item.category && item.subcategory ? (
+                                    <span>📦 {item.category} → {item.subcategory}</span>
+                                  ) : item.category ? (
+                                    <span>📦 {item.category}</span>
+                                  ) : (
+                                    <span className="text-gray-400">📦 未分類</span>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="text-xs text-pink-600">
+                                  {item.usedInProducts && item.usedInProducts.length > 0 ? (
+                                    <span>🏷️ 用於: {item.usedInProducts.slice(0, 2).join(', ')}{item.usedInProducts.length > 2 ? ` 等${item.usedInProducts.length}項產品` : ''}</span>
+                                  ) : (
+                                    <span className="text-gray-400">🏷️ 未使用於任何產品</span>
+                                  )}
+                                </div>
+                              )}
+                              {/* 現有庫存 */}
+                              <div className="text-xs text-green-600">
+                                📊 庫存: <span className="font-semibold">{item.currentStock.toLocaleString()}</span> {item.unit}
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -1166,6 +1243,140 @@ function PurchaseOrdersPageContent() {
               ) : (
                 '確認建立採購單'
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 項目詳情對話框 */}
+      <Dialog open={itemDetailDialog.open} onOpenChange={(open) => setItemDetailDialog({open, item: null})}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                itemDetailDialog.item?.type === 'material' 
+                  ? 'bg-blue-100 text-blue-600' 
+                  : 'bg-pink-100 text-pink-600'
+              }`}>
+                {itemDetailDialog.item?.type === 'material' ? <Package className="h-4 w-4" /> : <Droplets className="h-4 w-4" />}
+              </div>
+              {itemDetailDialog.item?.name}
+            </DialogTitle>
+            <DialogDescription>
+              {itemDetailDialog.item?.type === 'material' ? '原料' : '香精'}詳細資訊
+            </DialogDescription>
+          </DialogHeader>
+          
+          {itemDetailDialog.item && (
+            <div className="space-y-6">
+              {/* 基本資訊 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">項目代號</Label>
+                  <div className="text-sm text-gray-900 font-mono bg-gray-50 px-3 py-2 rounded-md">
+                    {itemDetailDialog.item.code}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">項目名稱</Label>
+                  <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                    {itemDetailDialog.item.name}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">單位</Label>
+                  <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                    {itemDetailDialog.item.unit}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">單位成本</Label>
+                  <div className="text-sm text-amber-600 font-semibold bg-amber-50 px-3 py-2 rounded-md">
+                    NT$ {(itemDetailDialog.item.price || itemDetailDialog.item.costPerUnit || 0).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+
+              {/* 庫存資訊 */}
+              <div className="p-4 bg-green-50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Package className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-800">庫存資訊</span>
+                </div>
+                <div className="text-lg font-bold text-green-700">
+                  {itemDetailDialog.item.currentStock.toLocaleString()} {itemDetailDialog.item.unit}
+                </div>
+                <div className="text-xs text-green-600 mt-1">現有庫存</div>
+              </div>
+
+              {/* 用途或使用產品 */}
+              {itemDetailDialog.item.type === 'material' ? (
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Package className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-800">原料分類</span>
+                  </div>
+                  {itemDetailDialog.item.category && itemDetailDialog.item.subcategory ? (
+                    <div className="space-y-1">
+                      <div className="text-sm font-semibold text-blue-700">{itemDetailDialog.item.category}</div>
+                      <div className="text-sm text-blue-600">→ {itemDetailDialog.item.subcategory}</div>
+                    </div>
+                  ) : itemDetailDialog.item.category ? (
+                    <div className="text-sm font-semibold text-blue-700">{itemDetailDialog.item.category}</div>
+                  ) : (
+                    <div className="text-sm text-gray-500">未分類</div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-4 bg-pink-50 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Droplets className="h-4 w-4 text-pink-600" />
+                    <span className="text-sm font-medium text-pink-800">使用產品</span>
+                  </div>
+                  {itemDetailDialog.item.usedInProducts && itemDetailDialog.item.usedInProducts.length > 0 ? (
+                    <div className="space-y-2">
+                      <div className="text-sm text-pink-600 mb-2">
+                        此香精用於 {itemDetailDialog.item.usedInProducts.length} 項產品：
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {itemDetailDialog.item.usedInProducts.map((product, index) => (
+                          <span key={index} className="inline-block bg-pink-100 text-pink-800 text-xs px-2 py-1 rounded-full">
+                            {product}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500">未使用於任何產品</div>
+                  )}
+                  {itemDetailDialog.item.series && (
+                    <div className="mt-2 pt-2 border-t border-pink-200">
+                      <div className="text-xs text-pink-600 mb-1">香精系列</div>
+                      <div className="text-sm font-semibold text-pink-700">{itemDetailDialog.item.series}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 供應商資訊 */}
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Building className="h-4 w-4 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-800">供應商資訊</span>
+                </div>
+                <div className="text-sm font-semibold text-gray-900">
+                  {itemDetailDialog.item.supplierName || '未指定供應商'}
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setItemDetailDialog({open: false, item: null})}
+            >
+              關閉
             </Button>
           </DialogFooter>
         </DialogContent>

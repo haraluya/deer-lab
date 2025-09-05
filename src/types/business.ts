@@ -180,6 +180,11 @@ export interface CartItem {
   costPerUnit?: number; // 改為可選，以與 useGlobalCart 相容
   price?: number; // 新增以支援全域購物車
   currentStock: number;
+  // 新增用途和分類欄位
+  category?: string;
+  subcategory?: string;
+  series?: string;
+  usedInProducts?: string[];
 }
 
 // ==================== 工單管理 ====================
