@@ -39,6 +39,7 @@ exports.createPurchaseOrders = (0, https_1.onCall)(async (request) => {
                 code: item.code,
                 quantity: Number(item.quantity),
                 unit: item.unit || '',
+                costPerUnit: Number(item.price) || 0,
             }));
             writeBatch.set(poRef, {
                 code: poCode,

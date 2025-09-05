@@ -12,6 +12,7 @@ interface PurchaseItemPayload {
   code: string;
   quantity: number;
   unit?: string;
+  price?: number; // 單價
   itemRefPath?: string; // 用於收貨
   receivedQuantity?: number; // 用於收貨
 }
@@ -54,6 +55,7 @@ export const createPurchaseOrders = onCall(async (request) => {
         code: item.code,
         quantity: Number(item.quantity),
         unit: item.unit || '',
+        costPerUnit: Number(item.price) || 0,
       }));
       writeBatch.set(poRef, {
         code: poCode,

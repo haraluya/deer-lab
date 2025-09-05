@@ -557,6 +557,17 @@ const handleAddToCart = async (item: CartItem) => {
      - 完整的錯誤處理和容錯機制
      - 修復 ESLint useEffect 依賴警告
 
+14. **採購單價格自動代入功能** (2025-09-05):
+   - **成本價預設機制**: 建立採購單時，系統會自動將物料/香精的 `costPerUnit` 作為預設價格
+   - **Firebase Functions 更新**: 更新 `createPurchaseOrders` 函數，增加 `price` 參數到 `PurchaseItemPayload` 介面
+   - **價格儲存**: 採購單項目現在會儲存 `costPerUnit` 欄位，來源為購物車項目的 `price` 或 `costPerUnit`
+   - **可編輯價格**: 在採購單詳細頁面，用戶仍可修改每個項目的單價
+   - **完整價格流程**: 
+     - 搜尋結果 → 採購車 (預設成本價)
+     - 採購車 → 建立採購單 (傳遞價格資訊)
+     - Firebase Functions → 儲存價格到採購單項目
+     - 採購單詳情頁 → 顯示並允許修改價格
+
 ## 業務邏輯說明
 
 ### BOM（物料清單）計算邏輯
