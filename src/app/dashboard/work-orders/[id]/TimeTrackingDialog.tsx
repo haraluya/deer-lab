@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import { collection, addDoc, getDocs, query, where, orderBy, Timestamp } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
@@ -51,6 +51,76 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
       loadPersonnel()
     }
   }, [isOpen, workOrderId])
+
+  // 檢查時間是否重疊的函式
+  const checkTimeOverlap = useCallback((
+    start1: Date, 
+    end1: Date, 
+    start2: Date, 
+    end2: Date
+  ): boolean => {
+    // 時間重疊的判定：start1 < end2 && start2 < end1
+    return start1.getTime() < end2.getTime() && start2.getTime() < end1.getTime()
+  }, [])
+
+  // 檢查工時記錄是否與現有記錄衝突
+  const checkTimeConflict = useCallback(async (
+    personnelId: string, 
+    startDate: string, 
+    startTime: string, 
+    endDate: string, 
+    endTime: string
+  ): Promise<{ hasConflict: boolean; conflictingEntry?: any }> => {
+    try {
+      const newStart = new Date(`${startDate}T${startTime}`)
+      let newEnd = new Date(`${endDate}T${endTime}`)
+      
+      // 處理跨日情況
+      if (newEnd.getTime() <= newStart.getTime()) {
+        newEnd = new Date(newEnd.getTime() + 24 * 60 * 60 * 1000)
+      }
+
+      // 查詢該人員的所有工時記錄
+      const q = query(
+        collection(db!, 'timeEntries'),
+        where('personnelId', '==', personnelId)
+      )
+      
+      const querySnapshot = await getDocs(q)
+      
+      for (const doc of querySnapshot.docs) {
+        const entry = doc.data()
+        
+        // 重建現有記錄的時間
+        const existingStart = new Date(`${entry.startDate}T${entry.startTime}`)
+        let existingEnd = new Date(`${entry.endDate}T${entry.endTime}`)
+        
+        // 處理現有記錄的跨日情況
+        if (existingEnd.getTime() <= existingStart.getTime()) {
+          existingEnd = new Date(existingEnd.getTime() + 24 * 60 * 60 * 1000)
+        }
+
+        // 檢查時間是否重疊
+        if (checkTimeOverlap(newStart, newEnd, existingStart, existingEnd)) {
+          return {
+            hasConflict: true,
+            conflictingEntry: {
+              ...entry,
+              id: doc.id,
+              formattedTime: `${entry.startDate} ${entry.startTime} - ${entry.endDate} ${entry.endTime}`,
+              workOrderNumber: entry.workOrderNumber || '未知工單'
+            }
+          }
+        }
+      }
+
+      return { hasConflict: false }
+    } catch (error) {
+      console.error('檢查時間衝突失敗:', error)
+      // 如果檢查失敗，為安全起見回傳無衝突（讓使用者可以繼續）
+      return { hasConflict: false }
+    }
+  }, [checkTimeOverlap])
 
   // 即時檢查時間衝突
   useEffect(() => {
@@ -186,76 +256,6 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
     const wholeHours = Math.floor(hours)
     const minutes = Math.round((hours - wholeHours) * 60)
     return `${wholeHours}小時${minutes > 0 ? `${minutes}分鐘` : ''}`
-  }
-
-  // 檢查時間是否重疊的函式
-  const checkTimeOverlap = (
-    start1: Date, 
-    end1: Date, 
-    start2: Date, 
-    end2: Date
-  ): boolean => {
-    // 時間重疊的判定：start1 < end2 && start2 < end1
-    return start1.getTime() < end2.getTime() && start2.getTime() < end1.getTime()
-  }
-
-  // 檢查工時記錄是否與現有記錄衝突
-  const checkTimeConflict = async (
-    personnelId: string, 
-    startDate: string, 
-    startTime: string, 
-    endDate: string, 
-    endTime: string
-  ): Promise<{ hasConflict: boolean; conflictingEntry?: any }> => {
-    try {
-      const newStart = new Date(`${startDate}T${startTime}`)
-      let newEnd = new Date(`${endDate}T${endTime}`)
-      
-      // 處理跨日情況
-      if (newEnd.getTime() <= newStart.getTime()) {
-        newEnd = new Date(newEnd.getTime() + 24 * 60 * 60 * 1000)
-      }
-
-      // 查詢該人員的所有工時記錄
-      const q = query(
-        collection(db!, 'timeEntries'),
-        where('personnelId', '==', personnelId)
-      )
-      
-      const querySnapshot = await getDocs(q)
-      
-      for (const doc of querySnapshot.docs) {
-        const entry = doc.data()
-        
-        // 重建現有記錄的時間
-        const existingStart = new Date(`${entry.startDate}T${entry.startTime}`)
-        let existingEnd = new Date(`${entry.endDate}T${entry.endTime}`)
-        
-        // 處理現有記錄的跨日情況
-        if (existingEnd.getTime() <= existingStart.getTime()) {
-          existingEnd = new Date(existingEnd.getTime() + 24 * 60 * 60 * 1000)
-        }
-
-        // 檢查時間是否重疊
-        if (checkTimeOverlap(newStart, newEnd, existingStart, existingEnd)) {
-          return {
-            hasConflict: true,
-            conflictingEntry: {
-              ...entry,
-              id: doc.id,
-              formattedTime: `${entry.startDate} ${entry.startTime} - ${entry.endDate} ${entry.endTime}`,
-              workOrderNumber: entry.workOrderNumber || '未知工單'
-            }
-          }
-        }
-      }
-
-      return { hasConflict: false }
-    } catch (error) {
-      console.error('檢查時間衝突失敗:', error)
-      // 如果檢查失敗，為安全起見回傳無衝突（讓使用者可以繼續）
-      return { hasConflict: false }
-    }
   }
 
   const handleAddTimeEntry = async () => {

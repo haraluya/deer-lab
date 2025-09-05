@@ -576,6 +576,13 @@ const handleAddToCart = async (item: CartItem) => {
    - **表格顯示修復**: 修正桌面版採購單表格的 colSpan 問題（6欄位）
    - **用戶體驗提升**: 加入購物車操作從等待網路回應改為立即反饋
 
+16. **建構錯誤修復** (2025-09-05):
+   - **修復變數提升問題**: 修復 TimeTrackingDialog.tsx 中 `checkTimeConflict` 函數的變數提升錯誤
+   - **useCallback 優化**: 將時間衝突檢測函數用 `useCallback` 包裹，避免不必要的重新渲染
+   - **程式碼重構**: 移動函數定義到正確位置，確保在使用前已定義
+   - **移除重複程式碼**: 清理重複的函數定義，提升程式碼品質
+   - **建構成功**: 解決 TypeScript 編譯錯誤，確保 Next.js build 正常運作
+
 ## 業務邏輯說明
 
 ### BOM（物料清單）計算邏輯
