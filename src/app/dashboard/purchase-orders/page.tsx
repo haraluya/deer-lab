@@ -195,19 +195,19 @@ function PurchaseOrdersPageContent() {
       const productsSnapshot = await getDocs(collection(db, 'products'));
       const productsMap = new Map<string, string[]>(); // fragranceId -> productNames[]
       
-      await Promise.all(productsSnapshot.docs.map(async doc => {
+      productsSnapshot.docs.forEach(doc => {
         const productData = doc.data();
         const productName = productData.name;
         
         // 檢查產品的香精參考
-        if (productData.currentFragranceRef) {
+        if (productData.currentFragranceRef?.id) {
           const fragranceId = productData.currentFragranceRef.id;
           if (!productsMap.has(fragranceId)) {
             productsMap.set(fragranceId, []);
           }
           productsMap.get(fragranceId)?.push(productName);
         }
-      }));
+      });
       
       // 載入物料
       const materialsSnapshot = await getDocs(collection(db, 'materials'));
@@ -224,7 +224,7 @@ function PurchaseOrdersPageContent() {
           costPerUnit: data.costPerUnit || 0,
           currentStock: data.currentStock || 0,
           category: data.category || '',
-          subcategory: data.subcategory || '',
+          subcategory: data.subCategory || '', // 修正欄位名稱
         };
       });
 
@@ -250,6 +250,11 @@ function PurchaseOrdersPageContent() {
 
       setMaterials(materialsList);
       setFragrances(fragrancesList);
+      
+      // 調試資訊
+      console.log('產品對香精的對應關係:', productsMap);
+      console.log('載入的物料列表:', materialsList.slice(0, 2));
+      console.log('載入的香精列表:', fragrancesList.slice(0, 2));
 
     } catch (error) {
       console.error("載入物料和香精資料失敗:", error);
@@ -1049,7 +1054,133 @@ function PurchaseOrdersPageContent() {
                       </span>
                     </div>
                   </div>
-                  <div className="divide-y divide-amber-100">
+                  
+                  {/* 桌面版表格顯示 */}
+                  <div className="hidden lg:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12"></TableHead>
+                          <TableHead>項目資訊</TableHead>
+                          <TableHead>用途/使用產品</TableHead>
+                          <TableHead>現有庫存</TableHead>
+                          <TableHead>單價</TableHead>
+                          <TableHead>數量</TableHead>
+                          <TableHead className="w-12">操作</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {supplierGroup.items.map((item) => (
+                          <TableRow key={`${item.id}-${item.type}`} className="hover:bg-amber-50/50">
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedCartItems.has(`${item.id}-${item.type}`)}
+                                onCheckedChange={() => toggleCartItemSelection(item.id, item.type)}
+                                className="border-amber-300 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                  item.type === 'material' 
+                                    ? 'bg-blue-100 text-blue-600' 
+                                    : 'bg-pink-100 text-pink-600'
+                                }`}>
+                                  {item.type === 'material' ? <Package className="h-4 w-4" /> : <Droplets className="h-4 w-4" />}
+                                </div>
+                                <div>
+                                  <div 
+                                    className="font-medium text-gray-900 cursor-pointer hover:text-amber-600 transition-colors"
+                                    onClick={() => handleItemDetailClick(item)}
+                                  >
+                                    {item.name}
+                                  </div>
+                                  <div className="text-sm text-gray-500">{item.code}</div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {item.type === 'material' ? (
+                                <div className="text-sm">
+                                  {item.category && item.subcategory ? (
+                                    <div className="text-blue-600">
+                                      <div className="font-semibold">{item.category}</div>
+                                      <div className="text-xs">→ {item.subcategory}</div>
+                                    </div>
+                                  ) : item.category ? (
+                                    <span className="text-blue-600 font-semibold">{item.category}</span>
+                                  ) : (
+                                    <span className="text-gray-400">未分類</span>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="text-sm">
+                                  {item.usedInProducts && item.usedInProducts.length > 0 ? (
+                                    <div className="text-pink-600">
+                                      <div className="text-xs mb-1">用於 {item.usedInProducts.length} 項產品</div>
+                                      <div className="space-y-1">
+                                        {item.usedInProducts.slice(0, 2).map((product, index) => (
+                                          <div key={index} className="text-xs bg-pink-50 px-2 py-1 rounded inline-block mr-1">
+                                            {product}
+                                          </div>
+                                        ))}
+                                        {item.usedInProducts.length > 2 && (
+                                          <div className="text-xs text-pink-500">等{item.usedInProducts.length}項</div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-400">未使用</span>
+                                  )}
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                <div className="font-semibold text-green-700">
+                                  {item.currentStock.toLocaleString()}
+                                </div>
+                                <div className="text-xs text-green-600">{item.unit}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm font-medium text-amber-600">
+                                NT$ {(item.price || item.costPerUnit || 0).toLocaleString()}
+                              </div>
+                              <div className="text-xs text-gray-500">/ {item.unit}</div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  value={item.quantity}
+                                  onChange={(e) => {
+                                    const newQuantity = parseInt(e.target.value) || 1;
+                                    updateCartItemQuantity(item.id, item.type, newQuantity);
+                                  }}
+                                  className="w-20 h-8 text-center text-sm border-amber-200 focus:border-amber-500 focus:ring-amber-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeFromCart(item.id, item.type)}
+                                className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* 平板和手機版卡片顯示 */}
+                  <div className="lg:hidden divide-y divide-amber-100">
                     {supplierGroup.items.map((item) => (
                       <div key={`${item.id}-${item.type}`} className="p-4">
                         <div className="flex items-center gap-3">
