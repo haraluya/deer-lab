@@ -583,6 +583,13 @@ const handleAddToCart = async (item: CartItem) => {
    - **移除重複程式碼**: 清理重複的函數定義，提升程式碼品質
    - **建構成功**: 解決 TypeScript 編譯錯誤，確保 Next.js build 正常運作
 
+17. **線上版本部署修復** (2025-09-05):
+   - **問題解決**: 修復線上版本採購單金額顯示為 0 的問題
+   - **部署流程**: 執行完整的 Next.js SSR 部署流程，更新 nextServer 函數
+   - **建構與複製**: 重新建構 Next.js 並複製建構產物到 functions 目錄
+   - **Firebase 部署**: 成功部署所有 Firebase Functions 和 Hosting
+   - **版本同步**: 確保線上版本與本地版本功能一致
+
 ## 業務邏輯說明
 
 ### BOM（物料清單）計算邏輯
