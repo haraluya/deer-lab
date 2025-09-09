@@ -58,30 +58,13 @@ export default function FragranceDetailPage() {
   const [isSupplierDetailOpen, setIsSupplierDetailOpen] = useState(false);
   const [supplierData, setSupplierData] = useState<any>(null);
 
-  // 使用正確的配方比例計算邏輯（與 FragranceDialog 一致）
-  const getCorrectRatios = (fragrancePercentage: number) => {
-    if (fragrancePercentage <= 0) {
-      return { fragrance: 0, pg: 0, vg: 0, total: 0 };
-    }
-    
-    let pgRatio = 0;
-    let vgRatio = 0;
-    
-    if (fragrancePercentage <= 60) {
-      // 香精+PG補滿60%，VG為40%
-      pgRatio = Math.round((60 - fragrancePercentage) * 100) / 100;
-      vgRatio = 40;
-    } else {
-      // 香精超過60%，PG為0，VG補滿
-      pgRatio = 0;
-      vgRatio = Math.round((100 - fragrancePercentage) * 100) / 100;
-    }
-    
+  // 直接使用資料庫中儲存的比例，不重新計算
+  const getRatiosFromDatabase = (fragrance: any) => {
     return {
-      fragrance: fragrancePercentage,
-      pg: pgRatio,
-      vg: vgRatio,
-      total: fragrancePercentage + pgRatio + vgRatio
+      fragrance: fragrance.percentage || 0,
+      pg: fragrance.pgRatio || 0,
+      vg: fragrance.vgRatio || 0,
+      total: (fragrance.percentage || 0) + (fragrance.pgRatio || 0) + (fragrance.vgRatio || 0)
     };
   };
 
@@ -558,36 +541,36 @@ export default function FragranceDetailPage() {
                  {/* 配方欄位 */}
          <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-50 to-indigo-50">
            <CardHeader>
-             <CardTitle className="text-lg text-primary">配方欄位 (計算後)</CardTitle>
+             <CardTitle className="text-lg text-primary">配方欄位 (資料庫儲存)</CardTitle>
            </CardHeader>
            <CardContent className="space-y-4">
              <div className="space-y-3">
                {(() => {
-                 const correctRatios = getCorrectRatios(fragrance.percentage || 0);
+                 const ratios = getRatiosFromDatabase(fragrance);
                  return (
                    <>
                      <div className="flex justify-between items-center py-2 border-b border-blue-200">
                        <span className="text-muted-foreground">香精比例</span>
                        <span className="font-medium text-blue-600">
-                         {correctRatios.fragrance}%
+                         {ratios.fragrance}%
                        </span>
                      </div>
                      <div className="flex justify-between items-center py-2 border-b border-blue-200">
                        <span className="text-muted-foreground">PG比例</span>
                        <span className="font-medium text-green-600">
-                         {correctRatios.pg}%
+                         {ratios.pg}%
                        </span>
                      </div>
                      <div className="flex justify-between items-center py-2 border-b border-blue-200">
                        <span className="text-muted-foreground">VG比例</span>
                        <span className="font-medium text-purple-600">
-                         {correctRatios.vg}%
+                         {ratios.vg}%
                        </span>
                      </div>
                      <div className="flex justify-between items-center py-2 border-b border-blue-200">
                        <span className="text-muted-foreground">總比例</span>
                        <span className="font-medium text-orange-600">
-                         {correctRatios.total}%
+                         {ratios.total}%
                        </span>
                      </div>
                    </>
