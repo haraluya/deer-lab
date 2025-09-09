@@ -269,3 +269,121 @@ export const deleteFragrance = onCall(async (request) => {
     return { status: "success", message: "香精已成功刪除。", };
   } catch (error) { logger.error(`刪除香精 ${fragranceId} 時發生錯誤:`, error); throw new HttpsError("internal", "刪除香精時發生未知錯誤。"); }
 });
+
+// 診斷和修復香精狀態
+export const diagnoseFragranceStatus = onCall(async (request) => {
+  const { auth: contextAuth } = request;
+  // await ensureIsAdmin(contextAuth?.uid);
+  
+  try {
+    logger.info('開始診斷香精狀態...');
+    
+    // 獲取所有香精
+    const fragrancesQuery = await db.collection('fragrances').get();
+    const allFragrances = fragrancesQuery.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    
+    logger.info(`總共找到 ${allFragrances.length} 個香精`);
+    
+    // 統計狀態分布
+    const statusStats = {
+      active: 0,
+      standby: 0,
+      deprecated: 0,
+      undefined: 0,
+      other: 0
+    };
+    
+    const problematicFragrances = [];
+    
+    allFragrances.forEach((fragrance: any) => {
+      const status = fragrance.status;
+      if (status === 'active') {
+        statusStats.active++;
+      } else if (status === 'standby') {
+        statusStats.standby++;
+      } else if (status === 'deprecated') {
+        statusStats.deprecated++;
+      } else if (!status) {
+        statusStats.undefined++;
+        problematicFragrances.push({
+          id: fragrance.id,
+          name: fragrance.name || '未知',
+          code: fragrance.code || '未知',
+          issue: 'missing_status'
+        });
+      } else {
+        statusStats.other++;
+        problematicFragrances.push({
+          id: fragrance.id,
+          name: fragrance.name || '未知',
+          code: fragrance.code || '未知',
+          status: status,
+          issue: 'invalid_status'
+        });
+      }
+    });
+    
+    logger.info('香精狀態統計:', statusStats);
+    logger.info('有問題的香精:', problematicFragrances);
+    
+    return {
+      success: true,
+      totalFragrances: allFragrances.length,
+      statusStats,
+      problematicFragrances,
+      message: `診斷完成：總共 ${allFragrances.length} 個香精，發現 ${problematicFragrances.length} 個狀態異常`
+    };
+  } catch (error) {
+    logger.error('診斷香精狀態失敗:', error);
+    throw new HttpsError('internal', '診斷香精狀態時發生錯誤');
+  }
+});
+
+// 修復香精狀態
+export const fixFragranceStatus = onCall(async (request) => {
+  const { auth: contextAuth } = request;
+  // await ensureIsAdmin(contextAuth?.uid);
+  
+  try {
+    logger.info('開始修復香精狀態...');
+    
+    // 獲取所有香精
+    const fragrancesQuery = await db.collection('fragrances').get();
+    let fixedCount = 0;
+    const batch = db.batch();
+    
+    fragrancesQuery.docs.forEach(doc => {
+      const data = doc.data();
+      const currentStatus = data.status;
+      
+      // 修復邏輯：如果狀態不正確，設為 standby
+      if (!currentStatus || !['active', 'standby', 'deprecated'].includes(currentStatus)) {
+        batch.update(doc.ref, {
+          status: 'standby',
+          updatedAt: FieldValue.serverTimestamp()
+        });
+        fixedCount++;
+        logger.info(`修復香精 ${data.name} (${data.code}) 狀態從 "${currentStatus}" 改為 "standby"`);
+      }
+    });
+    
+    if (fixedCount > 0) {
+      await batch.commit();
+      logger.info(`批量修復完成，共修復 ${fixedCount} 個香精`);
+    } else {
+      logger.info('所有香精狀態正常，無需修復');
+    }
+    
+    return {
+      success: true,
+      fixedCount,
+      message: `修復完成，共修復 ${fixedCount} 個香精的狀態`
+    };
+  } catch (error) {
+    logger.error('修復香精狀態失敗:', error);
+    throw new HttpsError('internal', '修復香精狀態時發生錯誤');
+  }
+});

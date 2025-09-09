@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteFragrance = exports.updateFragranceByCode = exports.updateFragrance = exports.createFragrance = void 0;
+exports.fixFragranceStatus = exports.diagnoseFragranceStatus = exports.deleteFragrance = exports.updateFragranceByCode = exports.updateFragrance = exports.createFragrance = void 0;
 // functions/src/api/fragrances.ts
 const firebase_functions_1 = require("firebase-functions");
 const https_1 = require("firebase-functions/v2/https");
@@ -17,8 +17,8 @@ exports.createFragrance = (0, https_1.onCall)(async (request) => {
         }
         // 處理向後相容性
         const finalFragranceType = fragranceType || status || '棉芯';
-        const finalStatus = status || fragranceType || 'active';
-        const finalFragranceStatus = fragranceStatus || '啟用';
+        const finalStatus = status || fragranceType || 'standby'; // 修復：預設改為 standby 以符合前端期望
+        const finalFragranceStatus = fragranceStatus || '備用';
         const fragranceData = {
             code,
             name,
@@ -59,8 +59,8 @@ exports.updateFragrance = (0, https_1.onCall)(async (request) => {
     }
     // 處理 fragranceType 和 status 的相容性
     const finalFragranceType = fragranceType !== undefined && fragranceType !== null && fragranceType !== '' ? fragranceType : (status || '棉芯');
-    const finalStatus = status !== undefined && status !== null && status !== '' ? status : (fragranceType || 'active');
-    const finalFragranceStatus = fragranceStatus !== undefined && fragranceStatus !== null && fragranceStatus !== '' ? fragranceStatus : (status || '啟用');
+    const finalStatus = status !== undefined && status !== null && status !== '' ? status : (fragranceType || 'standby'); // 修復：預設改為 standby
+    const finalFragranceStatus = fragranceStatus !== undefined && fragranceStatus !== null && fragranceStatus !== '' ? fragranceStatus : (status || '備用');
     try {
         const fragranceRef = db.collection("fragrances").doc(fragranceId);
         // 先獲取當前香精資料以檢查庫存變更
@@ -158,8 +158,8 @@ exports.updateFragranceByCode = (0, https_1.onCall)(async (request) => {
     });
     // 處理 fragranceType 和 status 的相容性
     const finalFragranceType = fragranceType !== undefined && fragranceType !== null && fragranceType !== '' ? fragranceType : (status || '棉芯');
-    const finalStatus = status !== undefined && status !== null && status !== '' ? status : (fragranceType || 'active');
-    const finalFragranceStatus = fragranceStatus !== undefined && fragranceStatus !== null && fragranceStatus !== '' ? fragranceStatus : (status || '啟用');
+    const finalStatus = status !== undefined && status !== null && status !== '' ? status : (fragranceType || 'standby'); // 修復：預設改為 standby
+    const finalFragranceStatus = fragranceStatus !== undefined && fragranceStatus !== null && fragranceStatus !== '' ? fragranceStatus : (status || '備用');
     try {
         // 根據香精編號查找現有的香精
         const fragranceQuery = await db.collection("fragrances").where("code", "==", code).limit(1).get();
@@ -236,6 +236,112 @@ exports.deleteFragrance = (0, https_1.onCall)(async (request) => {
     catch (error) {
         firebase_functions_1.logger.error(`刪除香精 ${fragranceId} 時發生錯誤:`, error);
         throw new https_1.HttpsError("internal", "刪除香精時發生未知錯誤。");
+    }
+});
+// 診斷和修復香精狀態
+exports.diagnoseFragranceStatus = (0, https_1.onCall)(async (request) => {
+    const { auth: contextAuth } = request;
+    // await ensureIsAdmin(contextAuth?.uid);
+    try {
+        firebase_functions_1.logger.info('開始診斷香精狀態...');
+        // 獲取所有香精
+        const fragrancesQuery = await db.collection('fragrances').get();
+        const allFragrances = fragrancesQuery.docs.map(doc => (Object.assign({ id: doc.id }, doc.data())));
+        firebase_functions_1.logger.info(`總共找到 ${allFragrances.length} 個香精`);
+        // 統計狀態分布
+        const statusStats = {
+            active: 0,
+            standby: 0,
+            deprecated: 0,
+            undefined: 0,
+            other: 0
+        };
+        const problematicFragrances = [];
+        allFragrances.forEach((fragrance) => {
+            const status = fragrance.status;
+            if (status === 'active') {
+                statusStats.active++;
+            }
+            else if (status === 'standby') {
+                statusStats.standby++;
+            }
+            else if (status === 'deprecated') {
+                statusStats.deprecated++;
+            }
+            else if (!status) {
+                statusStats.undefined++;
+                problematicFragrances.push({
+                    id: fragrance.id,
+                    name: fragrance.name || '未知',
+                    code: fragrance.code || '未知',
+                    issue: 'missing_status'
+                });
+            }
+            else {
+                statusStats.other++;
+                problematicFragrances.push({
+                    id: fragrance.id,
+                    name: fragrance.name || '未知',
+                    code: fragrance.code || '未知',
+                    status: status,
+                    issue: 'invalid_status'
+                });
+            }
+        });
+        firebase_functions_1.logger.info('香精狀態統計:', statusStats);
+        firebase_functions_1.logger.info('有問題的香精:', problematicFragrances);
+        return {
+            success: true,
+            totalFragrances: allFragrances.length,
+            statusStats,
+            problematicFragrances,
+            message: `診斷完成：總共 ${allFragrances.length} 個香精，發現 ${problematicFragrances.length} 個狀態異常`
+        };
+    }
+    catch (error) {
+        firebase_functions_1.logger.error('診斷香精狀態失敗:', error);
+        throw new https_1.HttpsError('internal', '診斷香精狀態時發生錯誤');
+    }
+});
+// 修復香精狀態
+exports.fixFragranceStatus = (0, https_1.onCall)(async (request) => {
+    const { auth: contextAuth } = request;
+    // await ensureIsAdmin(contextAuth?.uid);
+    try {
+        firebase_functions_1.logger.info('開始修復香精狀態...');
+        // 獲取所有香精
+        const fragrancesQuery = await db.collection('fragrances').get();
+        let fixedCount = 0;
+        const batch = db.batch();
+        fragrancesQuery.docs.forEach(doc => {
+            const data = doc.data();
+            const currentStatus = data.status;
+            // 修復邏輯：如果狀態不正確，設為 standby
+            if (!currentStatus || !['active', 'standby', 'deprecated'].includes(currentStatus)) {
+                batch.update(doc.ref, {
+                    status: 'standby',
+                    updatedAt: firestore_1.FieldValue.serverTimestamp()
+                });
+                fixedCount++;
+                firebase_functions_1.logger.info(`修復香精 ${data.name} (${data.code}) 狀態從 "${currentStatus}" 改為 "standby"`);
+            }
+        });
+        if (fixedCount > 0) {
+            await batch.commit();
+            firebase_functions_1.logger.info(`批量修復完成，共修復 ${fixedCount} 個香精`);
+        }
+        else {
+            firebase_functions_1.logger.info('所有香精狀態正常，無需修復');
+        }
+        return {
+            success: true,
+            fixedCount,
+            message: `修復完成，共修復 ${fixedCount} 個香精的狀態`
+        };
+    }
+    catch (error) {
+        firebase_functions_1.logger.error('修復香精狀態失敗:', error);
+        throw new https_1.HttpsError('internal', '修復香精狀態時發生錯誤');
     }
 });
 //# sourceMappingURL=fragrances.js.map

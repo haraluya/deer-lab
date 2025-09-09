@@ -16,6 +16,8 @@ const FULL_PERMISSIONS = [
 export default function EmergencyFixPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [targetEmployeeId, setTargetEmployeeId] = useState('052');
+  const [fragranceStatus, setFragranceStatus] = useState<any>(null);
+  const [isFragranceProcessing, setIsFragranceProcessing] = useState(false);
 
   const setAdminPermissions = async () => {
     setIsProcessing(true);
@@ -83,6 +85,97 @@ export default function EmergencyFixPage() {
     }
   };
 
+  const diagnoseFragrances = async () => {
+    setIsFragranceProcessing(true);
+    try {
+      // 動態導入Firebase Functions
+      const { getFunctions, httpsCallable } = await import('firebase/functions');
+      const { getApp } = await import('firebase/app');
+      
+      // 確保Firebase已初始化
+      let app;
+      try {
+        app = getApp();
+      } catch (error) {
+        // Firebase未初始化，需要初始化
+        const { initializeApp } = await import('firebase/app');
+        const firebaseConfig = {
+          apiKey: "AIzaSyCgZpAhUG0GZC0uWOUTQ0FIhKZBwc6pC2I",
+          authDomain: "deer-lab.firebaseapp.com",
+          projectId: "deer-lab",
+          storageBucket: "deer-lab.appspot.com",
+          messagingSenderId: "1005802674127",
+          appId: "1:1005802674127:web:8a3e3f3e6b6c7d8e9f0a1b"
+        };
+        app = initializeApp(firebaseConfig);
+      }
+      
+      const functions = getFunctions(app);
+      const diagnose = httpsCallable(functions, 'diagnoseFragranceStatus');
+      
+      const result = await diagnose();
+      setFragranceStatus(result.data);
+      
+      console.log('香精診斷結果:', result.data);
+      alert('診斷完成！請查看控制台或下方結果');
+      
+    } catch (error) {
+      console.error('香精診斷失敗:', error);
+      alert('診斷失敗: ' + (error as Error).message);
+    } finally {
+      setIsFragranceProcessing(false);
+    }
+  };
+
+  const fixFragrances = async () => {
+    if (!fragranceStatus || fragranceStatus.problematicFragrances.length === 0) {
+      alert('沒有需要修復的香精');
+      return;
+    }
+    
+    setIsFragranceProcessing(true);
+    try {
+      // 動態導入Firebase Functions
+      const { getFunctions, httpsCallable } = await import('firebase/functions');
+      const { getApp } = await import('firebase/app');
+      
+      // 確保Firebase已初始化
+      let app;
+      try {
+        app = getApp();
+      } catch (error) {
+        // Firebase未初始化，需要初始化
+        const { initializeApp } = await import('firebase/app');
+        const firebaseConfig = {
+          apiKey: "AIzaSyCgZpAhUG0GZC0uWOUTQ0FIhKZBwc6pC2I",
+          authDomain: "deer-lab.firebaseapp.com",
+          projectId: "deer-lab",
+          storageBucket: "deer-lab.appspot.com",
+          messagingSenderId: "1005802674127",
+          appId: "1:1005802674127:web:8a3e3f3e6b6c7d8e9f0a1b"
+        };
+        app = initializeApp(firebaseConfig);
+      }
+      
+      const functions = getFunctions(app);
+      const fix = httpsCallable(functions, 'fixFragranceStatus');
+      
+      const result = await fix();
+      
+      console.log('香精修復結果:', result.data);
+      alert(`✅ 修復完成！共修復 ${(result.data as any).fixedCount} 個香精狀態`);
+      
+      // 修復後重新診斷
+      await diagnoseFragrances();
+      
+    } catch (error) {
+      console.error('香精修復失敗:', error);
+      alert('修復失敗: ' + (error as Error).message);
+    } finally {
+      setIsFragranceProcessing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
@@ -127,6 +220,43 @@ export default function EmergencyFixPage() {
               `修復工號 ${targetEmployeeId} 的權限`
             )}
           </button>
+          
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">香精狀態診斷</h2>
+            
+            <div className="space-y-3">
+              <button 
+                onClick={diagnoseFragrances}
+                disabled={isFragranceProcessing}
+                className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-medium py-3 px-4 rounded-md transition-colors"
+              >
+                {isFragranceProcessing ? '診斷中...' : '診斷香精狀態'}
+              </button>
+              
+              {fragranceStatus && (
+                <button 
+                  onClick={fixFragrances}
+                  disabled={isFragranceProcessing || fragranceStatus.problematicFragrances.length === 0}
+                  className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-medium py-3 px-4 rounded-md transition-colors"
+                >
+                  {isFragranceProcessing ? '修復中...' : `修復 ${fragranceStatus.problematicFragrances.length} 個異常香精`}
+                </button>
+              )}
+            </div>
+            
+            {fragranceStatus && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-md">
+                <h3 className="font-semibold text-gray-800 mb-2">診斷結果：</h3>
+                <div className="text-sm text-gray-600 space-y-1">
+                  <div>總香精數：{fragranceStatus.totalFragrances}</div>
+                  <div>啟用狀態：{fragranceStatus.statusStats.active}</div>
+                  <div>備用狀態：{fragranceStatus.statusStats.standby}</div>
+                  <div>棄用狀態：{fragranceStatus.statusStats.deprecated}</div>
+                  <div>異常狀態：{fragranceStatus.problematicFragrances.length}</div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="mt-6 p-4 bg-yellow-50 rounded-md">
