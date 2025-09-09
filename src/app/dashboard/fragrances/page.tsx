@@ -525,14 +525,20 @@ function FragrancesPageContent() {
     return Math.round(value * 100) / 100;
   };
 
-  // 計算 PG 和 VG 比例的函數
+  // 計算 PG 和 VG 比例的函數（使用正確的配方邏輯）
   const calculatePGRatios = (fragrancePercentage: number): { pgRatio: number; vgRatio: number } => {
-    const remainingPercentage = 100 - fragrancePercentage;
+    let pgRatio = 0;
+    let vgRatio = 0;
     
-    // 根據香精種類決定 PG/VG 比例
-    // 這裡使用標準的 PG/VG 比例：PG 70%, VG 30%
-    const pgRatio = roundToTwoDecimals(remainingPercentage * 0.7); // 四捨五入到小數點後2位
-    const vgRatio = roundToTwoDecimals(remainingPercentage * 0.3); // 四捨五入到小數點後2位
+    if (fragrancePercentage <= 60) {
+      // 香精+PG補滿60%，VG為40%
+      pgRatio = roundToTwoDecimals(60 - fragrancePercentage);
+      vgRatio = 40;
+    } else {
+      // 香精超過60%，PG為0，VG補滿
+      pgRatio = 0;
+      vgRatio = roundToTwoDecimals(100 - fragrancePercentage);
+    }
     
     return { pgRatio, vgRatio };
   };
