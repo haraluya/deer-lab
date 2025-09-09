@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { MaterialDialog, MaterialData } from '../MaterialDialog';
+import { MaterialDialog } from '../MaterialDialog';
+import { MaterialData } from '@/types/entities';
 import { toast } from 'sonner';
 import { InventoryHistorySection } from '@/components/InventoryHistorySection';
 
@@ -484,7 +485,7 @@ export default function MaterialDetailPage() {
         <MaterialDialog
           isOpen={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
-          materialData={material as MaterialData}
+          materialData={material as unknown as MaterialData}
           onMaterialUpdate={handleMaterialUpdate}
         />
       )}

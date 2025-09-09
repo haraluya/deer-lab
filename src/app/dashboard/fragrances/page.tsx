@@ -155,7 +155,7 @@ function FragrancesPageContent() {
       });
       setFragrances(fragrancesList);
     } catch (error) {
-      logger.error("讀取香精資料失敗", error);
+      logger.error("讀取香精資料失敗", error as Error);
       toast.error("讀取香精資料失敗。");
     } finally {
       setIsLoading(false);
@@ -298,7 +298,7 @@ function FragrancesPageContent() {
       await addToCart(cartItem);
       toast.success(`已將 ${fragrance.name} 加入採購車`);
     } catch (error) {
-      logger.error("添加到採購車失敗", error);
+      logger.error("添加到採購車失敗", error as Error);
       toast.error("添加到採購車失敗");
     }
   };
@@ -341,7 +341,7 @@ function FragrancesPageContent() {
         toast.error("加入採購車失敗");
       }
     } catch (error) {
-      logger.error("加入採購車失敗", error);
+      logger.error("加入採購車失敗", error as Error);
       toast.error("加入採購車失敗");
     }
   };
@@ -372,7 +372,7 @@ function FragrancesPageContent() {
       setPurchaseCart(new Set()); // 清空選中的項目
       loadData();
     } catch (error) {
-      logger.error("批量刪除香精失敗", error);
+      logger.error("批量刪除香精失敗", error as Error);
       let errorMessage = "批量刪除香精時發生錯誤。";
       if (error instanceof Error) {
         errorMessage = error.message;
@@ -419,7 +419,7 @@ function FragrancesPageContent() {
       toast.success(`香精 ${selectedFragrance.name} 已成功刪除。`, { id: toastId });
       loadData();
     } catch (error) {
-      logger.error("刪除香精失敗", error);
+      logger.error("刪除香精失敗", error as Error);
       let errorMessage = "刪除香精時發生錯誤。";
       if (error instanceof Error) {
         errorMessage = error.message;
@@ -737,7 +737,7 @@ function FragrancesPageContent() {
       console.log('香精匯入結果:', `總共 ${data.length} 筆資料，成功處理 ${processedCount} 筆 (新增: ${createdCount}, 更新: ${updatedCount}, 跳過: ${skippedCount})`);
       loadData();
     } catch (error) {
-      logger.error('匯入香精失敗', error);
+      logger.error('匯入香精失敗', error as Error);
       throw error;
     }
   };

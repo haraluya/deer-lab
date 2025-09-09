@@ -9,7 +9,8 @@ import { CartItem } from '@/types';
 import { useGlobalCart } from '@/hooks/useGlobalCart';
 import { useDataSearch, createMaterialSearchConfig } from '@/hooks/useDataSearch';
 
-import { MaterialDialog, MaterialData } from './MaterialDialog';
+import { MaterialDialog } from './MaterialDialog';
+import { MaterialData } from '@/types/entities';
 import { MaterialCategoryDialog } from './MaterialCategoryDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { MaterialIcon } from '@/components/ui/material-icon';

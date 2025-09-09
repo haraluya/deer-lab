@@ -11,6 +11,7 @@ import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
 
 import { MaterialIcon } from '@/components/ui/material-icon';
+import { Material, MaterialData, Supplier } from '@/types/entities'; // 使用統一的類型定義
 
 import { Button } from '@/components/ui/button';
 import {
@@ -55,25 +56,6 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 // Data structure for a single supplier (for the dropdown)
-interface Supplier {
-  id: string;
-  name: string;
-}
-
-// Data structure for a material
-export interface MaterialData extends DocumentData {
-  id: string;
-  code: string;
-  name: string;
-  category?: string;
-  subCategory?: string;
-  supplierRef?: DocumentReference;
-  safetyStockLevel?: number;
-  costPerUnit?: number;
-  unit?: string;
-  currentStock: number;
-  notes?: string;
-}
 
 interface MaterialDialogProps {
   isOpen: boolean;

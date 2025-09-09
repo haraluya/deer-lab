@@ -4,29 +4,7 @@ import { onSnapshot, doc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
-
-interface CartItem {
-  id: string;
-  type: 'material' | 'fragrance';
-  code: string;
-  name: string;
-  supplierId: string;
-  supplierName: string;
-  quantity: number;
-  unit: string;
-  currentStock: number;
-  price?: number;
-  costPerUnit?: number;  // 新增以確保相容性
-  notes?: string;
-  addedBy?: string;
-  addedAt?: any;
-  updatedAt?: any;
-  // 新增用途和分類欄位
-  category?: string;
-  subcategory?: string;
-  series?: string;
-  usedInProducts?: string[];
-}
+import { CartItem } from '@/types/entities'; // 使用統一的類型定義
 
 export function useGlobalCart() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
