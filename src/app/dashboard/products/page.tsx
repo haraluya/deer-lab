@@ -452,7 +452,7 @@ function ProductsPageContent() {
             </Button>
           </div>
         )}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {canManageProducts && (
             <Button 
               variant="outline" 
@@ -461,6 +461,16 @@ function ProductsPageContent() {
             >
               <Library className="mr-2 h-4 w-4" />
               系列管理
+            </Button>
+          )}
+          {canManageProducts && (
+            <Button 
+              variant="outline" 
+              onClick={() => router.push('/dashboard/products/fragrance-history')}
+              className="border-indigo-200 text-indigo-600 hover:bg-indigo-100 hover:border-indigo-300 hover:shadow-sm transition-all duration-200"
+            >
+              <Calendar className="mr-2 h-4 w-4" />
+              香精歷程
             </Button>
           )}
           {canManageProducts && (
@@ -502,6 +512,16 @@ function ProductsPageContent() {
             >
               <Library className="mr-2 h-4 w-4" />
               系列管理
+            </Button>
+          )}
+          {canManageProducts && (
+            <Button 
+              variant="outline" 
+              onClick={() => router.push('/dashboard/products/fragrance-history')}
+              className="border-indigo-200 text-indigo-600 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all duration-200"
+            >
+              <Calendar className="mr-2 h-4 w-4" />
+              香精更換歷程
             </Button>
           )}
           {canManageProducts && (

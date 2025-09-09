@@ -38,6 +38,11 @@ export interface Fragrance {
   supplierId?: string;
   supplierName?: string;
   isActive: boolean;
+  // 新增香精狀態管理欄位
+  status: 'active' | 'standby' | 'deprecated';  // 啟用/備用/棄用
+  usedInProducts?: string[];                    // 使用此香精的產品ID列表
+  usageCount?: number;                          // 使用產品數量統計
+  lastUsedAt?: Timestamp;                       // 最後使用時間
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -345,4 +350,52 @@ export interface InventoryItem {
   category?: string;
   series?: string;
   type: 'material' | 'fragrance';
+}
+
+// ==================== 香精更換歷史管理 ====================
+
+export interface FragranceChangeHistory {
+  id: string;
+  productId: string;                    // 產品ID
+  productName: string;                  // 產品名稱 (快照)
+  productCode: string;                  // 產品代號 (快照)
+  oldFragranceId: string;               // 原香精ID
+  oldFragranceName: string;             // 原香精名稱 (快照)
+  oldFragranceCode: string;             // 原香精代號 (快照)
+  newFragranceId: string;               // 新香精ID
+  newFragranceName: string;             // 新香精名稱 (快照)
+  newFragranceCode: string;             // 新香精代號 (快照)
+  changeReason: string;                 // 更換原因
+  changeDate: Timestamp;                // 更換日期
+  changedBy: string;                    // 更換人員ID
+  changedByName: string;                // 更換人員姓名
+  createdAt: Timestamp;
+}
+
+// 香精更換歷史查詢參數
+export interface FragranceChangeHistoryQuery {
+  page?: number;
+  pageSize?: number;
+  searchTerm?: string;                  // 搜尋關鍵字 (產品名稱、香精代號、更換原因)
+  productId?: string;                   // 特定產品的更換歷史
+  fragranceId?: string;                 // 特定香精的更換歷史
+  dateFrom?: string;                    // 開始日期 (YYYY-MM-DD)
+  dateTo?: string;                      // 結束日期 (YYYY-MM-DD)
+}
+
+// 香精更換歷史查詢結果
+export interface FragranceChangeHistoryResult {
+  data: FragranceChangeHistory[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+// 香精狀態更新參數
+export interface FragranceStatusUpdateParams {
+  newFragranceId: string;               // 新啟用的香精ID
+  oldFragranceId?: string;              // 被換下的香精ID
+  action: 'add' | 'remove' | 'change'; // 操作類型
+  productId?: string;                   // 相關產品ID
 }

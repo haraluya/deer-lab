@@ -53,7 +53,9 @@ export const createProduct = onCall(async (request) => {
   const productCode = `${productTypeCode}-${seriesCode}-${productNumber}`;
   const fragranceRef = db.doc(`fragrances/${fragranceId}`);
   const materialRefs = (specificMaterialIds || []).map((id: string) => db.doc(`materials/${id}`));
-  await db.collection("products").add({ 
+  
+  // 建立產品
+  const productDocRef = await db.collection("products").add({ 
     name, 
     code: productCode, 
     productNumber,
@@ -65,7 +67,24 @@ export const createProduct = onCall(async (request) => {
     status: status || '啟用',
     createdAt: FieldValue.serverTimestamp(), 
   });
-  return { success: true, code: productCode };
+
+  // 觸發香精狀態實時更新 - 新產品使用香精，設為啟用
+  try {
+    await updateFragranceStatusesRealtime.run({
+      auth: contextAuth,
+      data: {
+        newFragranceId: fragranceId,
+        action: 'add',
+        productId: productDocRef.id
+      }
+    });
+    logger.info(`建立產品 ${productCode} 後，已觸發香精 ${fragranceId} 狀態更新`);
+  } catch (statusUpdateError) {
+    logger.warn("香精狀態更新警告 (產品建立已完成):", statusUpdateError);
+    // 不拋出錯誤，因為主要操作已經成功
+  }
+
+  return { success: true, code: productCode, productId: productDocRef.id };
 });
 
 export const updateProduct = onCall(async (request) => {
@@ -115,32 +134,462 @@ export const deleteProduct = onCall(async (request) => {
   // await ensureCanManageProducts(contextAuth?.uid);
   const { productId } = data;
   if (!productId) { throw new HttpsError("invalid-argument", "缺少 productId"); }
-  await db.doc(`products/${productId}`).delete();
-  return { success: true };
+  
+  let fragranceId: string | null = null;
+  let productData: any = null;
+
+  try {
+    // 先獲取產品資料以便後續香精狀態更新
+    const productRef = db.doc(`products/${productId}`);
+    const productDoc = await productRef.get();
+    
+    if (productDoc.exists) {
+      productData = productDoc.data();
+      const fragranceRef = productData?.currentFragranceRef;
+      if (fragranceRef) {
+        fragranceId = fragranceRef.id;
+      }
+    }
+
+    // 刪除產品
+    await productRef.delete();
+
+    // 觸發香精狀態實時更新 - 檢查是否需要將香精設為備用
+    if (fragranceId) {
+      try {
+        await updateFragranceStatusesRealtime.run({
+          auth: contextAuth,
+          data: {
+            oldFragranceId: fragranceId,
+            action: 'remove',
+            productId: productId
+          }
+        });
+        logger.info(`刪除產品 ${productId} 後，已觸發香精 ${fragranceId} 狀態檢查`);
+      } catch (statusUpdateError) {
+        logger.warn("香精狀態更新警告 (產品刪除已完成):", statusUpdateError);
+        // 不拋出錯誤，因為主要操作已經成功
+      }
+    }
+
+    return { 
+      success: true, 
+      deletedProduct: {
+        id: productId,
+        name: productData?.name,
+        fragranceId
+      }
+    };
+  } catch (error) {
+    logger.error(`刪除產品 ${productId} 時發生錯誤:`, error);
+    if (error instanceof HttpsError) { throw error; }
+    throw new HttpsError("internal", "刪除產品時發生未知錯誤");
+  }
+});
+
+/**
+ * 實時更新香精狀態 - 核心功能
+ * 根據產品使用情況自動更新香精的啟用/備用/棄用狀態
+ */
+export const updateFragranceStatusesRealtime = onCall(async (request) => {
+  const { auth: contextAuth, data } = request;
+  const { newFragranceId, oldFragranceId, action, productId } = data;
+
+  if (!newFragranceId && !oldFragranceId) {
+    throw new HttpsError("invalid-argument", "必須提供 newFragranceId 或 oldFragranceId");
+  }
+
+  try {
+    await db.runTransaction(async (transaction) => {
+      const updates: { [key: string]: any } = {};
+
+      // 處理新香精 - 自動設為啟用
+      if (newFragranceId) {
+        const newFragranceRef = db.doc(`fragrances/${newFragranceId}`);
+        const newFragranceDoc = await transaction.get(newFragranceRef);
+        
+        if (newFragranceDoc.exists) {
+          const newFragranceData = newFragranceDoc.data();
+          
+          // 查詢使用此香精的所有產品
+          const newFragranceProducts = await db.collection('products')
+            .where('currentFragranceRef', '==', newFragranceRef)
+            .get();
+
+          // 更新為啟用狀態，除非手動設為棄用
+          if (newFragranceData?.status !== 'deprecated') {
+            transaction.update(newFragranceRef, {
+              status: 'active',
+              usageCount: newFragranceProducts.size,
+              lastUsedAt: FieldValue.serverTimestamp(),
+              updatedAt: FieldValue.serverTimestamp()
+            });
+            logger.info(`香精 ${newFragranceId} 自動設為啟用狀態，使用產品數: ${newFragranceProducts.size}`);
+          }
+        }
+      }
+
+      // 處理舊香精 - 檢查是否需要降級為備用
+      if (oldFragranceId) {
+        const oldFragranceRef = db.doc(`fragrances/${oldFragranceId}`);
+        const oldFragranceDoc = await transaction.get(oldFragranceRef);
+        
+        if (oldFragranceDoc.exists) {
+          const oldFragranceData = oldFragranceDoc.data();
+          
+          // 查詢仍在使用此香精的產品（排除當前正在更換的產品）
+          const oldFragranceProductsQuery = db.collection('products')
+            .where('currentFragranceRef', '==', oldFragranceRef);
+          const oldFragranceProducts = await oldFragranceProductsQuery.get();
+          
+          // 過濾掉正在更換的產品
+          const remainingProducts = oldFragranceProducts.docs.filter(doc => doc.id !== productId);
+          
+          // 如果沒有其他產品使用，且不是手動設為棄用，則設為備用
+          if (remainingProducts.length === 0 && oldFragranceData?.status !== 'deprecated') {
+            transaction.update(oldFragranceRef, {
+              status: 'standby',
+              usageCount: 0,
+              updatedAt: FieldValue.serverTimestamp()
+            });
+            logger.info(`香精 ${oldFragranceId} 自動設為備用狀態，無產品使用`);
+          } else {
+            // 更新使用統計
+            transaction.update(oldFragranceRef, {
+              usageCount: remainingProducts.length,
+              updatedAt: FieldValue.serverTimestamp()
+            });
+            logger.info(`香精 ${oldFragranceId} 仍有 ${remainingProducts.length} 個產品使用，保持當前狀態`);
+          }
+        }
+      }
+    });
+
+    return { 
+      success: true, 
+      message: "香精狀態已實時更新",
+      updatedFragrances: {
+        newFragrance: newFragranceId || null,
+        oldFragrance: oldFragranceId || null
+      }
+    };
+  } catch (error) {
+    logger.error("更新香精狀態時發生錯誤:", error);
+    throw new HttpsError("internal", "更新香精狀態失敗");
+  }
+});
+
+/**
+ * 批次檢查並更新所有香精狀態 - 系統維護用
+ */
+export const batchUpdateFragranceStatuses = onCall(async (request) => {
+  const { auth: contextAuth } = request;
+  // await ensureCanManageProducts(contextAuth?.uid); // 需要管理權限
+
+  try {
+    const fragrancesSnapshot = await db.collection('fragrances').get();
+    const updatePromises: Promise<any>[] = [];
+
+    for (const fragranceDoc of fragrancesSnapshot.docs) {
+      const fragranceData = fragranceDoc.data();
+      
+      // 跳過已棄用的香精
+      if (fragranceData.status === 'deprecated') continue;
+
+      // 查詢使用此香精的產品
+      const fragranceRef = db.doc(`fragrances/${fragranceDoc.id}`);
+      const productsQuery = db.collection('products')
+        .where('currentFragranceRef', '==', fragranceRef);
+      
+      const updatePromise = productsQuery.get().then(async (productsSnapshot) => {
+        const usageCount = productsSnapshot.size;
+        const newStatus = usageCount > 0 ? 'active' : 'standby';
+        
+        if (fragranceData.status !== newStatus) {
+          await fragranceRef.update({
+            status: newStatus,
+            usageCount,
+            updatedAt: FieldValue.serverTimestamp()
+          });
+          logger.info(`批次更新香精 ${fragranceDoc.id} 狀態: ${fragranceData.status} → ${newStatus}`);
+        } else {
+          // 只更新統計數據
+          await fragranceRef.update({
+            usageCount,
+            updatedAt: FieldValue.serverTimestamp()
+          });
+        }
+      });
+
+      updatePromises.push(updatePromise);
+    }
+
+    await Promise.all(updatePromises);
+    
+    return { 
+      success: true, 
+      message: `已檢查並更新 ${fragrancesSnapshot.size} 個香精的狀態`,
+      processedCount: fragrancesSnapshot.size
+    };
+  } catch (error) {
+    logger.error("批次更新香精狀態時發生錯誤:", error);
+    throw new HttpsError("internal", "批次更新香精狀態失敗");
+  }
 });
 
 export const changeProductFragrance = onCall(async (request) => {
     const { auth: contextAuth, data } = request;
     // await ensureCanManageProducts(contextAuth?.uid);
     const { productId, newFragranceId, reason } = data;
-    if (!productId || !newFragranceId || !reason) { throw new HttpsError("invalid-argument", "請求缺少 productId, newFragranceId, 或 reason。"); }
+    
+    if (!productId || !newFragranceId || !reason) { 
+        throw new HttpsError("invalid-argument", "請求缺少 productId, newFragranceId, 或 reason。"); 
+    }
+    
+    if (reason.length < 5) {
+        throw new HttpsError("invalid-argument", "更換原因至少需要 5 個字元");
+    }
+
     const productRef = db.doc(`products/${productId}`);
     const newFragranceRef = db.doc(`fragrances/${newFragranceId}`);
-    const changedByRef = db.doc(`users/${contextAuth?.uid}`);
+    const userRef = db.doc(`users/${contextAuth?.uid}`);
+    
     try {
+        let oldFragranceId: string | null = null;
+        let productData: any = null;
+        let oldFragranceData: any = null;
+        let newFragranceData: any = null;
+        let userData: any = null;
+
+        // 執行主要的更換操作
         await db.runTransaction(async (transaction) => {
-            const productDoc = await transaction.get(productRef);
-            if (!productDoc.exists) { throw new HttpsError("not-found", "找不到指定的產品。"); }
-            const oldFragranceRef = productDoc.data()?.currentFragranceRef;
-            transaction.update(productRef, { currentFragranceRef: newFragranceRef, updatedAt: FieldValue.serverTimestamp(), });
-            const historyRef = productRef.collection("fragranceHistory").doc();
-            transaction.set(historyRef, { oldFragranceRef: oldFragranceRef || null, newFragranceRef: newFragranceRef, reason: reason, changedAt: FieldValue.serverTimestamp(), changedByRef: changedByRef, });
+            // 獲取所有相關資料
+            const [productDoc, newFragranceDoc, userDoc] = await Promise.all([
+                transaction.get(productRef),
+                transaction.get(newFragranceRef),
+                transaction.get(userRef)
+            ]);
+
+            if (!productDoc.exists) { 
+                throw new HttpsError("not-found", "找不到指定的產品。"); 
+            }
+            if (!newFragranceDoc.exists) { 
+                throw new HttpsError("not-found", "找不到指定的新香精。"); 
+            }
+
+            productData = productDoc.data();
+            newFragranceData = newFragranceDoc.data();
+            userData = userDoc.data();
+            const oldFragranceRef = productData?.currentFragranceRef;
+            
+            // 獲取舊香精資料
+            if (oldFragranceRef) {
+                const oldFragranceDoc = await transaction.get(oldFragranceRef);
+                if (oldFragranceDoc.exists) {
+                    oldFragranceData = oldFragranceDoc.data();
+                    oldFragranceId = oldFragranceRef.id;
+                }
+            }
+
+            // 更新產品的香精引用
+            transaction.update(productRef, { 
+                currentFragranceRef: newFragranceRef, 
+                updatedAt: FieldValue.serverTimestamp()
+            });
+
+            // 建立詳細的香精更換歷史記錄到獨立集合
+            const historyRef = db.collection("fragranceChangeHistory").doc();
+            transaction.set(historyRef, {
+                productId: productId,
+                productName: productData.name || '未知產品',
+                productCode: productData.code || '未知代號',
+                oldFragranceId: oldFragranceId || '',
+                oldFragranceName: oldFragranceData?.name || '未知香精',
+                oldFragranceCode: oldFragranceData?.code || '未知代號',
+                newFragranceId: newFragranceId,
+                newFragranceName: newFragranceData.name || '未知香精',
+                newFragranceCode: newFragranceData.code || '未知代號',
+                changeReason: reason,
+                changeDate: FieldValue.serverTimestamp(),
+                changedBy: contextAuth?.uid || '',
+                changedByName: userData?.name || '未知用戶',
+                createdAt: FieldValue.serverTimestamp()
+            });
+
+            // 保留舊版相容性 - 也寫入產品子集合
+            const legacyHistoryRef = productRef.collection("fragranceHistory").doc();
+            transaction.set(legacyHistoryRef, { 
+                oldFragranceRef: oldFragranceRef || null, 
+                newFragranceRef: newFragranceRef, 
+                reason: reason, 
+                changedAt: FieldValue.serverTimestamp(), 
+                changedByRef: userRef
+            });
         });
-        logger.info(`管理員 ${contextAuth?.uid} 成功更換產品 ${productId} 的香精。`);
-        return { success: true, message: "香精更換成功並已記錄。" };
+
+        // 觸發實時香精狀態更新
+        try {
+            await updateFragranceStatusesRealtime.run({
+                auth: contextAuth,
+                data: {
+                    newFragranceId: newFragranceId,
+                    oldFragranceId: oldFragranceId,
+                    action: 'change',
+                    productId: productId
+                }
+            });
+            logger.info(`已觸發香精狀態實時更新: 新香精 ${newFragranceId}, 舊香精 ${oldFragranceId}`);
+        } catch (statusUpdateError) {
+            logger.warn("香精狀態更新警告 (主要操作已完成):", statusUpdateError);
+            // 不拋出錯誤，因為主要操作已經成功
+        }
+
+        logger.info(`用戶 ${contextAuth?.uid} 成功更換產品 ${productId} 的香精: ${oldFragranceData?.code || '未知'} → ${newFragranceData?.code || '未知'}`);
+        
+        return { 
+            success: true, 
+            message: "香精更換成功並已記錄", 
+            data: {
+                productId,
+                productName: productData?.name,
+                oldFragrance: oldFragranceData ? {
+                    id: oldFragranceId,
+                    name: oldFragranceData.name,
+                    code: oldFragranceData.code
+                } : null,
+                newFragrance: {
+                    id: newFragranceId,
+                    name: newFragranceData.name,
+                    code: newFragranceData.code
+                },
+                reason
+            }
+        };
     } catch (error) {
         logger.error(`更換產品 ${productId} 香精時發生錯誤:`, error);
         if (error instanceof HttpsError) { throw error; }
         throw new HttpsError("internal", "更換香精時發生未知錯誤。");
     }
+});
+
+/**
+ * 查詢香精更換歷史記錄 - 支援分頁和搜尋
+ */
+export const getFragranceChangeHistory = onCall(async (request) => {
+  const { auth: contextAuth, data } = request;
+  // 權限檢查可以在這裡加入
+  
+  const { 
+    page = 1, 
+    pageSize = 10, 
+    searchTerm = '', 
+    productId = '', 
+    fragranceId = '', 
+    dateFrom = '', 
+    dateTo = '' 
+  } = data || {};
+
+  try {
+    let query = db.collection('fragranceChangeHistory');
+    
+    // 應用篩選條件
+    if (productId) {
+      query = query.where('productId', '==', productId);
+    }
+    
+    if (fragranceId) {
+      query = query.where('oldFragranceId', '==', fragranceId)
+        .where('newFragranceId', '==', fragranceId);
+    }
+
+    // 日期範圍篩選（這需要複合索引）
+    if (dateFrom && dateTo) {
+      const fromDate = new Date(dateFrom);
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999); // 包含整天
+      
+      query = query.where('changeDate', '>=', fromDate)
+                   .where('changeDate', '<=', toDate);
+    }
+
+    // 按時間降序排列
+    query = query.orderBy('changeDate', 'desc');
+
+    // 計算總數（用於分頁）
+    const countSnapshot = await query.get();
+    const total = countSnapshot.size;
+    const totalPages = Math.ceil(total / pageSize);
+
+    // 分頁查詢
+    const offset = (page - 1) * pageSize;
+    const pagedQuery = query.limit(pageSize).offset(offset);
+    const snapshot = await pagedQuery.get();
+
+    let records = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    // 客戶端搜尋過濾（因為 Firestore 全文搜尋限制）
+    if (searchTerm && searchTerm.trim() !== '') {
+      const searchLower = searchTerm.toLowerCase();
+      records = records.filter((record: any) => 
+        record.productName?.toLowerCase().includes(searchLower) ||
+        record.productCode?.toLowerCase().includes(searchLower) ||
+        record.oldFragranceName?.toLowerCase().includes(searchLower) ||
+        record.oldFragranceCode?.toLowerCase().includes(searchLower) ||
+        record.newFragranceName?.toLowerCase().includes(searchLower) ||
+        record.newFragranceCode?.toLowerCase().includes(searchLower) ||
+        record.changeReason?.toLowerCase().includes(searchLower) ||
+        record.changedByName?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return {
+      success: true,
+      data: records,
+      pagination: {
+        page,
+        pageSize,
+        total: searchTerm ? records.length : total,
+        totalPages: searchTerm ? Math.ceil(records.length / pageSize) : totalPages
+      }
+    };
+  } catch (error) {
+    logger.error("查詢香精更換歷史時發生錯誤:", error);
+    throw new HttpsError("internal", "查詢香精更換歷史失敗");
+  }
+});
+
+/**
+ * 獲取特定產品的香精更換歷史 - 用於產品詳情頁面
+ */
+export const getProductFragranceHistory = onCall(async (request) => {
+  const { auth: contextAuth, data } = request;
+  const { productId } = data;
+
+  if (!productId) {
+    throw new HttpsError("invalid-argument", "缺少 productId");
+  }
+
+  try {
+    const query = db.collection('fragranceChangeHistory')
+      .where('productId', '==', productId)
+      .orderBy('changeDate', 'desc');
+
+    const snapshot = await query.get();
+    const records = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    return {
+      success: true,
+      data: records,
+      count: records.length
+    };
+  } catch (error) {
+    logger.error(`獲取產品 ${productId} 香精歷史時發生錯誤:`, error);
+    throw new HttpsError("internal", "獲取產品香精歷史失敗");
+  }
 });

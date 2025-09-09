@@ -48,6 +48,7 @@ function FragrancesPageContent() {
   const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
   const [selectedSuppliers, setSelectedSuppliers] = useState<Set<string>>(new Set());
   const [selectedFragranceTypes, setSelectedFragranceTypes] = useState<Set<string>>(new Set());
+  const [selectedFragranceStatuses, setSelectedFragranceStatuses] = useState<Set<string>>(new Set());
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [isBatchDeleteOpen, setIsBatchDeleteOpen] = useState(false);
 
@@ -145,7 +146,7 @@ function FragrancesPageContent() {
 
   // 搜尋過濾功能
   useEffect(() => {
-    if (!searchTerm.trim() && selectedSuppliers.size === 0 && selectedFragranceTypes.size === 0 && !showLowStockOnly) {
+    if (!searchTerm.trim() && selectedSuppliers.size === 0 && selectedFragranceTypes.size === 0 && selectedFragranceStatuses.size === 0 && !showLowStockOnly) {
       setFilteredFragrances(fragrances);
       return;
     }
@@ -159,6 +160,7 @@ function FragrancesPageContent() {
           fragrance.name?.toLowerCase().includes(searchLower) ||
           fragrance.supplierName?.toLowerCase().includes(searchLower) ||
           fragrance.fragranceType?.toLowerCase().includes(searchLower) ||
+          fragrance.fragranceStatus?.toLowerCase().includes(searchLower) ||
           fragrance.currentStock?.toString().includes(searchLower) ||
           fragrance.costPerUnit?.toString().includes(searchLower) ||
           fragrance.percentage?.toString().includes(searchLower)
@@ -173,6 +175,11 @@ function FragrancesPageContent() {
 
       // 香精種類過濾
       if (selectedFragranceTypes.size > 0 && !selectedFragranceTypes.has(fragrance.fragranceType || '')) {
+        return false;
+      }
+
+      // 香精狀態過濾
+      if (selectedFragranceStatuses.size > 0 && !selectedFragranceStatuses.has(fragrance.fragranceStatus || '')) {
         return false;
       }
 
@@ -210,10 +217,10 @@ function FragrancesPageContent() {
     });
 
     setFilteredFragrances(sortedFragrances);
-  }, [fragrances, searchTerm, selectedSuppliers, selectedFragranceTypes, showLowStockOnly]);
+  }, [fragrances, searchTerm, selectedSuppliers, selectedFragranceTypes, selectedFragranceStatuses, showLowStockOnly]);
 
   // 智能篩選標籤邏輯
-  const { availableSuppliers, availableFragranceTypes } = useMemo(() => {
+  const { availableSuppliers, availableFragranceTypes, availableFragranceStatuses } = useMemo(() => {
     // 先根據搜尋詞過濾
     let searchFilteredFragrances = fragrances;
     if (searchTerm.trim()) {
@@ -224,6 +231,7 @@ function FragrancesPageContent() {
           fragrance.name?.toLowerCase().includes(searchLower) ||
           fragrance.supplierName?.toLowerCase().includes(searchLower) ||
           fragrance.fragranceType?.toLowerCase().includes(searchLower) ||
+          fragrance.fragranceStatus?.toLowerCase().includes(searchLower) ||
           fragrance.currentStock?.toString().includes(searchLower) ||
           fragrance.costPerUnit?.toString().includes(searchLower) ||
           fragrance.percentage?.toString().includes(searchLower)
@@ -231,18 +239,21 @@ function FragrancesPageContent() {
       });
     }
 
-    // 從搜尋結果中提取可用的供應商和香精種類
+    // 從搜尋結果中提取可用的供應商、香精種類和狀態
     const availableSuppliers = new Set<string>();
     const availableFragranceTypes = new Set<string>();
+    const availableFragranceStatuses = new Set<string>();
     
     searchFilteredFragrances.forEach(fragrance => {
       if (fragrance.supplierName) availableSuppliers.add(fragrance.supplierName);
       if (fragrance.fragranceType) availableFragranceTypes.add(fragrance.fragranceType);
+      if (fragrance.fragranceStatus) availableFragranceStatuses.add(fragrance.fragranceStatus);
     });
 
     // 根據當前選擇進行智能篩選
     let finalSuppliers = new Set<string>();
     let finalFragranceTypes = new Set<string>();
+    let finalFragranceStatuses = new Set<string>();
 
     if (selectedSuppliers.size > 0 && selectedFragranceTypes.size > 0) {
       // 兩個都選了：只顯示選中的標籤
@@ -272,13 +283,15 @@ function FragrancesPageContent() {
       // 都沒選：顯示所有可用的標籤
       finalSuppliers = availableSuppliers;
       finalFragranceTypes = availableFragranceTypes;
+      finalFragranceStatuses = availableFragranceStatuses;
     }
 
     return {
       availableSuppliers: Array.from(finalSuppliers).sort(),
-      availableFragranceTypes: Array.from(finalFragranceTypes).sort()
+      availableFragranceTypes: Array.from(finalFragranceTypes).sort(),
+      availableFragranceStatuses: Array.from(finalFragranceStatuses).sort()
     };
-  }, [fragrances, searchTerm, selectedSuppliers, selectedFragranceTypes]);
+  }, [fragrances, searchTerm, selectedSuppliers, selectedFragranceTypes, selectedFragranceStatuses]);
 
   // 移除舊的邏輯，使用新的智能篩選邏輯
 
@@ -1060,6 +1073,52 @@ function FragrancesPageContent() {
                   }}
                 >
                   {type}
+                </Badge>
+              );
+            })}
+
+            {/* 香精狀態標籤 - 彩色 */}
+            {availableFragranceStatuses.map(status => {
+              const isSelected = selectedFragranceStatuses.has(status);
+              const getStatusColor = (status: string) => {
+                switch (status) {
+                  case '啟用':
+                    return isSelected 
+                      ? "bg-green-600 hover:bg-green-700 text-white" 
+                      : "bg-green-100 hover:bg-green-200 text-green-800 border-green-300";
+                  case '備用':
+                    return isSelected 
+                      ? "bg-yellow-600 hover:bg-yellow-700 text-white" 
+                      : "bg-yellow-100 hover:bg-yellow-200 text-yellow-800 border-yellow-300";
+                  case '棄用':
+                    return isSelected 
+                      ? "bg-red-600 hover:bg-red-700 text-white" 
+                      : "bg-red-100 hover:bg-red-200 text-red-800 border-red-300";
+                  default:
+                    return isSelected 
+                      ? "bg-gray-600 hover:bg-gray-700 text-white" 
+                      : "bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300";
+                }
+              };
+              
+              return (
+                <Badge
+                  key={status}
+                  variant={isSelected ? "default" : "secondary"}
+                  className={`cursor-pointer transition-colors ${getStatusColor(status)}`}
+                  onClick={() => {
+                    setSelectedFragranceStatuses(prev => {
+                      const newSet = new Set(prev);
+                      if (newSet.has(status)) {
+                        newSet.delete(status);
+                      } else {
+                        newSet.add(status);
+                      }
+                      return newSet;
+                    });
+                  }}
+                >
+                  {status === '啟用' ? '🟢' : status === '備用' ? '🟡' : '🔴'} {status}
                 </Badge>
               );
             })}

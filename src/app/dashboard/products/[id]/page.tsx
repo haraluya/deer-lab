@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, updateDoc, DocumentReference, collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { ArrowLeft, Loader2, Package, Building, User, Calendar, Tag, DollarSign, ShoppingCart, Edit, Droplets, Calculator } from 'lucide-react';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { ArrowLeft, Loader2, Package, Building, User, Calendar, Tag, DollarSign, ShoppingCart, Edit, Droplets, Calculator, History, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ProductDialog, ProductData } from '../ProductDialog';
 import { RemarksDialog } from './RemarksDialog';
+import { FragranceChangeHistory } from '@/types';
 
 
 interface Product {
@@ -60,10 +62,52 @@ export default function ProductDetailPage() {
   const [targetProductionInput, setTargetProductionInput] = useState<string>('1');
   const [isRemarksDialogOpen, setIsRemarksDialogOpen] = useState(false);
   const [remarks, setRemarks] = useState<string>('');
+  const [fragranceHistory, setFragranceHistory] = useState<FragranceChangeHistory[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
 
   // 格式化數值顯示，整數不顯示小數點
   const formatNumber = (value: number) => {
     return value % 1 === 0 ? value.toString() : value.toFixed(3);
+  };
+
+  // 格式化日期
+  const formatDate = (timestamp: any) => {
+    if (!timestamp) return '未知';
+    
+    let date: Date;
+    if (timestamp.toDate) {
+      date = timestamp.toDate();
+    } else if (timestamp instanceof Date) {
+      date = timestamp;
+    } else {
+      date = new Date(timestamp);
+    }
+    
+    return date.toLocaleString('zh-TW', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  // 載入香精更換歷程
+  const loadFragranceHistory = async (productId: string) => {
+    setIsLoadingHistory(true);
+    
+    try {
+      const functions = getFunctions();
+      const getProductFragranceHistory = httpsCallable(functions, 'getProductFragranceHistory');
+      
+      const result = await getProductFragranceHistory({ productId });
+      setFragranceHistory((result.data as any) || []);
+    } catch (error) {
+      console.error("載入香精歷程失敗:", error);
+      toast.error("載入香精歷程失敗");
+    } finally {
+      setIsLoadingHistory(false);
+    }
   };
 
 
@@ -229,6 +273,9 @@ export default function ProductDetailPage() {
         setTargetProduction(data.targetProduction || 1);
         setTargetProductionInput((data.targetProduction || 1).toString());
         setRemarks(data.notes || '');
+        
+        // 載入香精歷程
+        await loadFragranceHistory(productDoc.id);
       } catch (error) {
         console.error('Failed to fetch product:', error);
         setError('讀取產品資料失敗');
@@ -670,6 +717,95 @@ export default function ProductDetailPage() {
               <div className="text-muted-foreground">
                 尚未選擇香精
               </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 香精更換歷程區塊 */}
+      <Card className="mt-6 border-0 shadow-lg bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200">
+        <CardHeader>
+          <CardTitle className="text-lg text-indigo-700 flex items-center gap-2">
+            <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+              <History className="h-4 w-4 text-white" />
+            </div>
+            香精更換歷程
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoadingHistory ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 border-2 border-indigo-200 rounded-full animate-spin border-t-indigo-600"></div>
+                <span className="text-indigo-600 font-medium">載入歷程中...</span>
+              </div>
+            </div>
+          ) : fragranceHistory.length > 0 ? (
+            <div className="space-y-4">
+              {fragranceHistory.map((record, index) => (
+                <div key={record.id} className="bg-white rounded-lg p-4 border border-indigo-200 relative">
+                  {/* 時間軸連接線 */}
+                  {index < fragranceHistory.length - 1 && (
+                    <div className="absolute left-6 top-12 w-px h-8 bg-indigo-300"></div>
+                  )}
+                  
+                  <div className="flex items-start gap-4">
+                    {/* 時間軸圓點 */}
+                    <div className="w-3 h-3 bg-indigo-500 rounded-full mt-2 flex-shrink-0"></div>
+                    
+                    <div className="flex-1 min-w-0">
+                      {/* 頭部：日期和操作人員 */}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-indigo-500" />
+                          <span className="text-sm font-medium text-indigo-700">
+                            {formatDate(record.changeDate)}
+                          </span>
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          操作人員：{record.changedByName}
+                        </span>
+                      </div>
+                      
+                      {/* 香精更換資訊 */}
+                      <div className="mb-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Droplets className="h-4 w-4 text-purple-500" />
+                          <span className="text-sm font-medium text-gray-700">香精更換</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap ml-6">
+                          <Badge variant="secondary" className="bg-red-100 text-red-800 text-xs">
+                            {record.oldFragranceCode}
+                          </Badge>
+                          <span className="text-gray-400 text-xs">→</span>
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                            {record.newFragranceCode}
+                          </Badge>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1 ml-6">
+                          {record.oldFragranceName} → {record.newFragranceName}
+                        </div>
+                      </div>
+                      
+                      {/* 更換原因 */}
+                      <div className="bg-gray-50 rounded-md p-2 ml-6">
+                        <div className="text-xs text-gray-500 mb-1">更換原因</div>
+                        <div className="text-sm text-gray-700">{record.changeReason}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mb-4 mx-auto">
+                <History className="h-8 w-8 text-indigo-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-700 mb-2">無更換歷程</h3>
+              <p className="text-gray-500 text-center">
+                此產品尚未有香精更換記錄
+              </p>
             </div>
           )}
         </CardContent>
