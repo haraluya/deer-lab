@@ -171,12 +171,9 @@ export function FragranceCalculatorDialog({
       console.log('處理完成，總計項目數:', items.length);
       console.log('試算項目:', items);
 
-      // 只保留本地選中的產品項目
-      const filteredItems = items.filter(item => 
-        localSelectedProducts.has(item.productId)
-      );
-      console.log('過濾後項目數:', filteredItems.length);
-      setCalculationItems(filteredItems);
+      // 直接設置所有計算項目，不進行過濾
+      // 過濾邏輯已由 useEffect 處理
+      setCalculationItems(items);
     } catch (error) {
       console.error('載入香精試算資料失敗:', error);
       toast.error('載入香精試算資料失敗');
