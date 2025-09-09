@@ -450,7 +450,7 @@ function PurchaseOrdersPageContent() {
         return;
       }
 
-      // 按供應商分組
+      // 按供應商分組 - 使用最新價格資料
       const supplierGroups = itemsToProcess.reduce((groups, item) => {
         if (!groups[item.supplierId]) {
           groups[item.supplierId] = {
@@ -458,13 +458,29 @@ function PurchaseOrdersPageContent() {
             items: []
           };
         }
+        
+        // 🔄 獲取最新的價格資料
+        let latestPrice = item.price || item.costPerUnit || 0;
+        
+        if (item.type === 'material') {
+          const latestMaterial = materials.find(m => m.id === item.id);
+          if (latestMaterial && latestMaterial.costPerUnit) {
+            latestPrice = latestMaterial.costPerUnit;
+          }
+        } else if (item.type === 'fragrance') {
+          const latestFragrance = fragrances.find(f => f.id === item.id);
+          if (latestFragrance && latestFragrance.costPerUnit) {
+            latestPrice = latestFragrance.costPerUnit;
+          }
+        }
+        
         groups[item.supplierId].items.push({
           id: item.id,
           name: item.name,
           code: item.code,
           quantity: item.quantity,
           unit: item.unit,
-          price: item.price || item.costPerUnit || 0,
+          price: latestPrice, // 使用最新價格
           itemRefPath: `${item.type === 'material' ? 'materials' : 'fragrances'}/${item.id}`
         });
         return groups;
@@ -494,7 +510,7 @@ function PurchaseOrdersPageContent() {
     } finally {
       setIsCreatingOrder(false);
     }
-  }, [selectedCartItems, cartItems, loadPurchaseOrders, globalRemoveFromCart]);
+  }, [selectedCartItems, cartItems, materials, fragrances, loadPurchaseOrders, globalRemoveFromCart]);
 
 
 
@@ -517,7 +533,7 @@ function PurchaseOrdersPageContent() {
     return Math.ceil(filtered.length / itemsPerPage);
   }, [purchaseOrders, statusFilter, itemsPerPage]);
 
-  // 按供應商分組採購車
+  // 按供應商分組採購車 - 動態更新最新資料
   const cartBySupplier = useMemo(() => {
     const groups: Record<string, SupplierCartGroup> = {};
     
@@ -529,19 +545,69 @@ function PurchaseOrdersPageContent() {
           items: []
         };
       }
-      groups[item.supplierId].items.push(item);
+      
+      // 🔄 動態合併最新的物料/香精資料
+      let updatedItem = { ...item };
+      
+      if (item.type === 'material') {
+        const latestMaterial = materials.find(m => m.id === item.id);
+        if (latestMaterial) {
+          updatedItem = {
+            ...item,
+            name: latestMaterial.name,
+            code: latestMaterial.code,
+            costPerUnit: latestMaterial.costPerUnit,
+            price: latestMaterial.costPerUnit, // 同步更新價格
+            currentStock: latestMaterial.currentStock,
+            unit: latestMaterial.unit,
+            category: latestMaterial.category,
+            subcategory: latestMaterial.subcategory,
+          };
+        }
+      } else if (item.type === 'fragrance') {
+        const latestFragrance = fragrances.find(f => f.id === item.id);
+        if (latestFragrance) {
+          updatedItem = {
+            ...item,
+            name: latestFragrance.name,
+            code: latestFragrance.code,
+            costPerUnit: latestFragrance.costPerUnit,
+            price: latestFragrance.costPerUnit, // 同步更新價格
+            currentStock: latestFragrance.currentStock,
+            unit: latestFragrance.unit,
+            series: latestFragrance.series,
+            usedInProducts: latestFragrance.usedInProducts,
+          };
+        }
+      }
+      
+      groups[item.supplierId].items.push(updatedItem);
     });
 
     return Object.values(groups);
-  }, [cartItems]);
+  }, [cartItems, materials, fragrances]);
 
-  // 計算總金額
+  // 計算總金額 - 使用最新的成本資料
   const totalAmount = useMemo(() => {
     return cartItems.reduce((total, item) => {
-      const price = item.price || item.costPerUnit || 0;
+      let price = item.price || item.costPerUnit || 0;
+      
+      // 🔄 動態獲取最新成本價格
+      if (item.type === 'material') {
+        const latestMaterial = materials.find(m => m.id === item.id);
+        if (latestMaterial && latestMaterial.costPerUnit) {
+          price = latestMaterial.costPerUnit;
+        }
+      } else if (item.type === 'fragrance') {
+        const latestFragrance = fragrances.find(f => f.id === item.id);
+        if (latestFragrance && latestFragrance.costPerUnit) {
+          price = latestFragrance.costPerUnit;
+        }
+      }
+      
       return total + (price * item.quantity);
     }, 0);
-  }, [cartItems]);
+  }, [cartItems, materials, fragrances]);
 
   useEffect(() => {
     loadPurchaseOrders();
