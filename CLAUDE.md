@@ -116,8 +116,10 @@ functions/                 # Firebase Functions
 - [ ] 程式碼已提交：`git add . && git commit -m "描述"`
 - [ ] 本地建構成功：`npm run build`
 - [ ] 檢查 .next 資料夾存在：`ls -la .next`
+- [ ] **檢查時間戳記同步**：比較 `.next` 和 `functions/.next` 的修改時間
 - [ ] 複製建構產物：`cp -r .next functions/`
 - [ ] 執行完整部署：`npm run deploy`
+- [ ] 處理 Firebase 409 錯誤：殺掉衝突的部署程序後重試
 - [ ] 確認部署成功：檢查 Firebase console 或測試線上功能
 - [ ] 清除瀏覽器快取測試：Ctrl+F5 或無痕模式
 
@@ -589,6 +591,19 @@ const handleAddToCart = async (item: CartItem) => {
    - **建構與複製**: 重新建構 Next.js 並複製建構產物到 functions 目錄
    - **Firebase 部署**: 成功部署所有 Firebase Functions 和 Hosting
    - **版本同步**: 確保線上版本與本地版本功能一致
+
+18. **部署同步問題診斷與修復** (2025-09-09):
+   - **問題發現**: 線上版本與本地版本不一致，香精試算功能無法載入勾選產品
+   - **根本原因**: 
+     1. 本地 `.next` 建構產物較新但未部署到 Firebase Functions
+     2. FragranceCalculatorDialog 中重複過濾邏輯導致計算項目清空
+   - **部署檢查流程**:
+     1. 檢查 git 狀態和提交記錄
+     2. 比較本地和 functions 目錄的 `.next` 時間戳記
+     3. 重新建構並複製建構產物
+     4. 遇到 Firebase 409 錯誤需殺掉衝突部署程序
+   - **程式碼修復**: 移除 FragranceCalculatorDialog 載入資料後的重複過濾邏輯
+   - **教訓總結**: 必須檢查時間戳記確保建構產物同步，避免功能不一致
 
 ## 業務邏輯說明
 
