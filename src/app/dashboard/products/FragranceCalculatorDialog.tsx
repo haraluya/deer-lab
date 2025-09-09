@@ -3,8 +3,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { toast } from 'sonner';
-import { useGlobalCart } from '@/hooks/useGlobalCart';
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -49,7 +49,6 @@ export function FragranceCalculatorDialog({
 }: FragranceCalculatorDialogProps) {
   const [calculationItems, setCalculationItems] = useState<FragranceCalculationItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { addToCart } = useGlobalCart();
 
   // 當對話框開啟時載入資料
   useEffect(() => {
@@ -198,30 +197,19 @@ export function FragranceCalculatorDialog({
     }
 
     try {
-      // 只加入需要採購的香精（庫存不足的）
-      const itemsToAdd = totalRequirements.filter(item => item.shortage > 0);
+      // 使用新的 Firebase Function 依代碼加入採購車
+      const functions = getFunctions();
+      const addToCartByCode = httpsCallable(functions, 'addToGlobalCartByCode');
       
-      if (itemsToAdd.length === 0) {
-        toast.info('所有香精庫存充足，無需採購');
-        return;
-      }
-
-      for (const item of itemsToAdd) {
-        await addToCart({
-          name: item.name,
+      for (const item of totalRequirements) {
+        await addToCartByCode({
           code: item.code,
           type: 'fragrance',
-          quantity: Math.ceil(item.shortage), // 向上取整
-          unit: item.unit,
-          supplierId: item.supplierId,
-          supplierName: item.supplierName,
-          currentStock: item.currentStock,
-          price: item.costPerUnit,
-          costPerUnit: item.costPerUnit
+          quantity: item.totalRequired // 保留小數點精確度
         });
       }
 
-      toast.success(`已將 ${itemsToAdd.length} 項香精加入採購車`);
+      toast.success(`已將 ${totalRequirements.length} 項香精加入採購車`);
       onOpenChange(false);
     } catch (error) {
       console.error('加入採購車失敗:', error);
@@ -432,7 +420,7 @@ export function FragranceCalculatorDialog({
           </Button>
           <Button 
             onClick={handleAddToCart}
-            disabled={totalRequirements.length === 0 || totalRequirements.every(item => item.shortage === 0)}
+            disabled={totalRequirements.length === 0}
             className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
           >
             <ShoppingCart className="mr-2 h-4 w-4" />

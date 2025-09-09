@@ -193,11 +193,16 @@ function PurchaseOrdersPageContent() {
 
       // 載入產品資料，用於找出香精的使用產品
       const productsSnapshot = await getDocs(collection(db, 'products'));
-      const productsMap = new Map<string, string[]>(); // fragranceId -> productNames[]
+      const productsMap = new Map<string, string[]>(); // fragranceId -> productDisplayNames[]
       
       productsSnapshot.docs.forEach(doc => {
         const productData = doc.data();
         const productName = productData.name;
+        const seriesName = productData.seriesName; // 產品系列名稱
+        
+        // 組合顯示名稱：如果有系列名稱，則顯示為「系列名稱 - 產品名稱」
+        // 專門針對香精採購車顯示，確保包含產品系列資訊
+        const displayName = seriesName ? `${seriesName} - ${productName}` : productName;
         
         // 檢查產品的香精參考
         if (productData.currentFragranceRef?.id) {
@@ -205,7 +210,7 @@ function PurchaseOrdersPageContent() {
           if (!productsMap.has(fragranceId)) {
             productsMap.set(fragranceId, []);
           }
-          productsMap.get(fragranceId)?.push(productName);
+          productsMap.get(fragranceId)?.push(displayName);
         }
       });
       
@@ -559,7 +564,7 @@ function PurchaseOrdersPageContent() {
       let updatedItem = { ...item };
       
       if (item.type === 'material') {
-        const latestMaterial = materials.find(m => m.id === item.id);
+        const latestMaterial = materials.find(m => m.code === item.code);
         if (latestMaterial) {
           const oldPrice = item.costPerUnit || item.price || 0;
           const newPrice = latestMaterial.costPerUnit || 0;
@@ -584,10 +589,10 @@ function PurchaseOrdersPageContent() {
             });
           }
         } else {
-          console.warn(`⚠️ 找不到物料 ${item.name} (${item.id}) 的最新數據`);
+          console.warn(`⚠️ 找不到物料 ${item.name} (${item.code}) 的最新數據`);
         }
       } else if (item.type === 'fragrance') {
-        const latestFragrance = fragrances.find(f => f.id === item.id);
+        const latestFragrance = fragrances.find(f => f.code === item.code);
         
         console.log(`🔍 查找香精資料匹配:`, {
           購物車項目: {
@@ -633,11 +638,11 @@ function PurchaseOrdersPageContent() {
         } else {
           // 🔧 修復：找不到最新香精資料時，確保使用購物車項目本身的價格
           console.warn(`⚠️ 找不到香精資料匹配，使用購物車原有價格:`, {
-            購物車項目ID: item.id,
+            購物車項目代碼: item.code,
             購物車項目名稱: item.name,
             原始價格: item.price,
             原始costPerUnit: item.costPerUnit,
-            可用香精IDs: fragrances.map(f => ({ id: f.id, name: f.name }))
+            可用香精代碼: fragrances.map(f => ({ code: f.code, name: f.name }))
           });
           
           // 確保價格字段存在且合理
@@ -662,12 +667,12 @@ function PurchaseOrdersPageContent() {
       
       // 🔄 動態獲取最新成本價格
       if (item.type === 'material') {
-        const latestMaterial = materials.find(m => m.id === item.id);
+        const latestMaterial = materials.find(m => m.code === item.code);
         if (latestMaterial && latestMaterial.costPerUnit) {
           price = latestMaterial.costPerUnit;
         }
       } else if (item.type === 'fragrance') {
-        const latestFragrance = fragrances.find(f => f.id === item.id);
+        const latestFragrance = fragrances.find(f => f.code === item.code);
         if (latestFragrance && latestFragrance.costPerUnit) {
           price = latestFragrance.costPerUnit;
         }
@@ -867,7 +872,7 @@ function PurchaseOrdersPageContent() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-semibold text-amber-600">
-                            NT$ {order.totalAmount ? order.totalAmount.toLocaleString() : '0'}
+                            NT$ {order.totalAmount ? Math.round(order.totalAmount).toLocaleString() : '0'}
                           </span>
                         </div>
                       </TableCell>
@@ -963,7 +968,7 @@ function PurchaseOrdersPageContent() {
                         <div className="p-3 bg-amber-50 rounded-lg">
                           <div className="text-xs text-amber-600 font-medium mb-1">採購金額</div>
                           <div className="text-sm font-bold text-amber-800">
-                            NT$ {order.totalAmount ? order.totalAmount.toLocaleString() : '0'}
+                            NT$ {order.totalAmount ? Math.round(order.totalAmount).toLocaleString() : '0'}
                           </div>
                         </div>
                       </div>
@@ -1174,7 +1179,7 @@ function PurchaseOrdersPageContent() {
                 <RefreshCw className="h-3 w-3" />
               </Button>
               <span className="text-sm text-gray-500">
-                ({cartItems.length} 個項目，總計 NT$ {totalAmount.toLocaleString()})
+                ({cartItems.length} 個項目，總計 NT$ {Math.round(totalAmount).toLocaleString()})
               </span>
             </div>
             {cartItems.length > 0 && canManagePurchase && (
@@ -1317,14 +1322,14 @@ function PurchaseOrdersPageContent() {
                             <TableCell>
                               <div className="text-sm">
                                 <div className="font-semibold text-green-700">
-                                  {item.currentStock.toLocaleString()}
+                                  {(item.currentStock || 0).toLocaleString()}
                                 </div>
                                 <div className="text-xs text-green-600">{item.unit}</div>
                               </div>
                             </TableCell>
                             <TableCell>
                               <div className="text-sm font-medium text-amber-600">
-                                NT$ {(item.price || item.costPerUnit || 0).toLocaleString()}
+                                NT$ {Math.round(item.price || item.costPerUnit || 0).toLocaleString()}
                               </div>
                               <div className="text-xs text-gray-500">/ {item.unit}</div>
                             </TableCell>
@@ -1332,14 +1337,16 @@ function PurchaseOrdersPageContent() {
                               <div className="flex items-center gap-2">
                                 <Input
                                   type="number"
-                                  min="1"
+                                  min="0"
+                                  step="0.1"
                                   value={item.quantity}
                                   onChange={(e) => {
-                                    const newQuantity = parseInt(e.target.value) || 1;
+                                    const newQuantity = parseFloat(e.target.value) || 0;
                                     updateCartItemQuantity(item.id, item.type, newQuantity);
                                   }}
                                   className="w-20 h-8 text-center text-sm border-amber-200 focus:border-amber-500 focus:ring-amber-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 />
+                                <span className="text-xs text-gray-500 min-w-0 truncate">{item.unit}</span>
                               </div>
                             </TableCell>
                             <TableCell>
@@ -1384,7 +1391,7 @@ function PurchaseOrdersPageContent() {
                             </div>
                             <div className="text-sm text-gray-500 space-y-1">
                               <div>
-                                {item.code} • NT$ {(item.price || item.costPerUnit || 0).toLocaleString()}/{item.unit}
+                                {item.code} • NT$ {Math.round(item.price || item.costPerUnit || 0).toLocaleString()}/{item.unit}
                               </div>
                               {/* 原料用途或香精使用產品 */}
                               {item.type === 'material' ? (
@@ -1408,7 +1415,7 @@ function PurchaseOrdersPageContent() {
                               )}
                               {/* 現有庫存 */}
                               <div className="text-xs text-green-600">
-                                📊 庫存: <span className="font-semibold">{item.currentStock.toLocaleString()}</span> {item.unit}
+                                📊 庫存: <span className="font-semibold">{(item.currentStock || 0).toLocaleString()}</span> {item.unit}
                               </div>
                             </div>
                           </div>
@@ -1416,10 +1423,11 @@ function PurchaseOrdersPageContent() {
                             <div className="flex items-center gap-2">
                               <Input
                                 type="number"
-                                min="1"
+                                min="0"
+                                step="0.1"
                                 value={item.quantity}
                                 onChange={(e) => {
-                                  const newQuantity = parseInt(e.target.value) || 1;
+                                  const newQuantity = parseFloat(e.target.value) || 0;
                                   updateCartItemQuantity(item.id, item.type, newQuantity);
                                 }}
                                 className="w-20 h-8 text-center text-sm border-amber-200 focus:border-amber-500 focus:ring-amber-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -1509,7 +1517,7 @@ function PurchaseOrdersPageContent() {
                                 <div>
                                   <div className="font-medium text-gray-900">{item.name}</div>
                                   <div className="text-sm text-gray-500">
-                                    {item.code} • NT$ {(item.price || item.costPerUnit || 0).toLocaleString()}/{item.unit}
+                                    {item.code} • NT$ {Math.round(item.price || item.costPerUnit || 0).toLocaleString()}/{item.unit}
                                   </div>
                                 </div>
                               </div>
@@ -1518,7 +1526,7 @@ function PurchaseOrdersPageContent() {
                                   {item.quantity} {item.unit}
                                 </div>
                                 <div className="text-sm text-gray-500">
-                                  NT$ {((item.price || item.costPerUnit || 0) * item.quantity).toLocaleString()}
+                                  NT$ {Math.round((item.price || item.costPerUnit || 0) * item.quantity).toLocaleString()}
                                 </div>
                               </div>
                             </div>
@@ -1602,7 +1610,7 @@ function PurchaseOrdersPageContent() {
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-gray-700">單位成本</Label>
                   <div className="text-sm text-amber-600 font-semibold bg-amber-50 px-3 py-2 rounded-md">
-                    NT$ {(itemDetailDialog.item.price || itemDetailDialog.item.costPerUnit || 0).toLocaleString()}
+                    NT$ {Math.round(itemDetailDialog.item.price || itemDetailDialog.item.costPerUnit || 0).toLocaleString()}
                   </div>
                 </div>
               </div>
@@ -1614,7 +1622,7 @@ function PurchaseOrdersPageContent() {
                   <span className="text-sm font-medium text-green-800">庫存資訊</span>
                 </div>
                 <div className="text-lg font-bold text-green-700">
-                  {itemDetailDialog.item.currentStock.toLocaleString()} {itemDetailDialog.item.unit}
+                  {(itemDetailDialog.item.currentStock || 0).toLocaleString()} {itemDetailDialog.item.unit}
                 </div>
                 <div className="text-xs text-green-600 mt-1">現有庫存</div>
               </div>

@@ -622,9 +622,10 @@ export default function PurchaseOrderDetailPage() {
                               <div className="flex items-center justify-end gap-2">
                                 <Input
                                   type="number"
-                                  min="1"
+                                  min="0"
+                                  step="0.1"
                                   value={item.quantity}
-                                  onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 1)}
+                                  onChange={(e) => handleQuantityChange(index, parseFloat(e.target.value) || 0)}
                                   className="w-20 text-center border-amber-200 focus:border-amber-500"
                                 />
                                 <span className="text-sm text-gray-500 whitespace-nowrap">{item.unit}</span>
@@ -634,7 +635,7 @@ export default function PurchaseOrderDetailPage() {
                           <TableCell className="text-right">
                             {po.status === '已收貨' ? (
                               <span className="text-gray-600">
-                                NT$ {itemCost.toLocaleString()}
+                                NT$ {Math.round(itemCost).toLocaleString()}
                               </span>
                             ) : (
                               <div className="flex items-center justify-end gap-1">
@@ -652,7 +653,7 @@ export default function PurchaseOrderDetailPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             <span className="font-semibold text-amber-600">
-                              NT$ {itemTotal.toLocaleString()}
+                              NT$ {Math.round(itemTotal).toLocaleString()}
                             </span>
                           </TableCell>
                         </TableRow>
@@ -691,9 +692,10 @@ export default function PurchaseOrderDetailPage() {
                               <div className="flex items-center gap-2">
                                 <Input
                                   type="number"
-                                  min="1"
+                                  min="0"
+                                  step="0.1"
                                   value={item.quantity}
-                                  onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 1)}
+                                  onChange={(e) => handleQuantityChange(index, parseFloat(e.target.value) || 0)}
                                   className="flex-1 text-center border-amber-200 focus:border-amber-500 h-10 text-lg"
                                 />
                                 <span className="text-sm text-gray-500">{item.unit}</span>
@@ -705,7 +707,7 @@ export default function PurchaseOrderDetailPage() {
                             <div className="text-xs text-gray-600 mb-2">單價</div>
                             {po.status === '已收貨' ? (
                               <div className="font-medium text-gray-900">
-                                NT$ {itemCost.toLocaleString()}
+                                NT$ {Math.round(itemCost).toLocaleString()}
                               </div>
                             ) : (
                               <div className="flex items-center gap-1">
@@ -725,7 +727,7 @@ export default function PurchaseOrderDetailPage() {
                           <div className="col-span-2 bg-amber-100 p-3 rounded-lg text-center">
                             <div className="text-xs text-amber-700 mb-1">小計</div>
                             <div className="font-bold text-amber-800 text-lg">
-                              NT$ {itemTotal.toLocaleString()}
+                              NT$ {Math.round(itemTotal).toLocaleString()}
                             </div>
                           </div>
                         </div>
@@ -741,13 +743,13 @@ export default function PurchaseOrderDetailPage() {
                 <div className="hidden md:flex justify-end items-center gap-4">
                   <div className="text-right">
                     <div className="text-sm text-gray-600 mb-1">
-                      項目總額：NT$ {editedItems.reduce((total, item) => total + ((item.costPerUnit || 0) * item.quantity), 0).toLocaleString()}
+                      項目總額：NT$ {Math.round(editedItems.reduce((total, item) => total + ((item.costPerUnit || 0) * item.quantity), 0)).toLocaleString()}
                     </div>
                     <div className="text-sm text-gray-600 mb-1">
-                      其他費用：NT$ {editedAdditionalFees.reduce((total, fee) => total + (fee.amount * fee.quantity), 0).toLocaleString()}
+                      其他費用：NT$ {Math.round(editedAdditionalFees.reduce((total, fee) => total + (fee.amount * fee.quantity), 0)).toLocaleString()}
                     </div>
                     <div className="text-lg font-bold text-amber-600 border-t border-gray-200 pt-1">
-                      總金額：NT$ {(editedItems.reduce((total, item) => total + ((item.costPerUnit || 0) * item.quantity), 0) + 
+                      總金額：NT$ {Math.round(editedItems.reduce((total, item) => total + ((item.costPerUnit || 0) * item.quantity), 0) + 
                         editedAdditionalFees.reduce((total, fee) => total + (fee.amount * fee.quantity), 0)).toLocaleString()}
                     </div>
                   </div>
@@ -776,20 +778,20 @@ export default function PurchaseOrderDetailPage() {
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">項目總額</span>
                         <span className="font-medium text-gray-900">
-                          NT$ {editedItems.reduce((total, item) => total + ((item.costPerUnit || 0) * item.quantity), 0).toLocaleString()}
+                          NT$ {Math.round(editedItems.reduce((total, item) => total + ((item.costPerUnit || 0) * item.quantity), 0)).toLocaleString()}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">其他費用</span>
                         <span className="font-medium text-gray-900">
-                          NT$ {editedAdditionalFees.reduce((total, fee) => total + (fee.amount * fee.quantity), 0).toLocaleString()}
+                          NT$ {Math.round(editedAdditionalFees.reduce((total, fee) => total + (fee.amount * fee.quantity), 0)).toLocaleString()}
                         </span>
                       </div>
                       <div className="border-t border-amber-200 pt-2">
                         <div className="flex justify-between">
                           <span className="font-semibold text-amber-800">總金額</span>
                           <span className="font-bold text-amber-800 text-lg">
-                            NT$ {(editedItems.reduce((total, item) => total + ((item.costPerUnit || 0) * item.quantity), 0) + 
+                            NT$ {Math.round(editedItems.reduce((total, item) => total + ((item.costPerUnit || 0) * item.quantity), 0) + 
                               editedAdditionalFees.reduce((total, fee) => total + (fee.amount * fee.quantity), 0)).toLocaleString()}
                           </span>
                         </div>
@@ -866,7 +868,7 @@ export default function PurchaseOrderDetailPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="font-semibold text-amber-600">
-                      NT$ {(fee.amount * fee.quantity).toLocaleString()}
+                      NT$ {Math.round(fee.amount * fee.quantity).toLocaleString()}
                     </span>
                     {po.status !== '已收貨' && (
                       <Button

@@ -203,6 +203,110 @@ export const clearGlobalCart = onCall(async (request) => {
   }
 });
 
+// 僅以代碼新增項目到購物車（會自動查詢完整資料）
+export const addToGlobalCartByCode = onCall(async (request) => {
+  const { code, type, quantity } = request.data;
+  
+  if (!code || !type || !quantity) {
+    throw new HttpsError("invalid-argument", "缺少必要參數：code, type, quantity");
+  }
+  
+  if (!['material', 'fragrance'].includes(type)) {
+    throw new HttpsError("invalid-argument", "type 必須是 'material' 或 'fragrance'");
+  }
+  
+  try {
+    // 根據類型和代碼查詢完整資料
+    let itemDoc;
+    let collection: string;
+    
+    if (type === 'material') {
+      collection = 'materials';
+      const materialsQuery = await db.collection('materials').where('code', '==', code).limit(1).get();
+      if (materialsQuery.empty) {
+        throw new HttpsError("not-found", `找不到代碼為 ${code} 的原料`);
+      }
+      itemDoc = materialsQuery.docs[0];
+    } else {
+      collection = 'fragrances';
+      const fragrancesQuery = await db.collection('fragrances').where('code', '==', code).limit(1).get();
+      if (fragrancesQuery.empty) {
+        throw new HttpsError("not-found", `找不到代碼為 ${code} 的香精`);
+      }
+      itemDoc = fragrancesQuery.docs[0];
+    }
+    
+    const itemData = itemDoc.data();
+    
+    // 取得供應商資訊
+    let supplierName = '未指定供應商';
+    if (itemData.supplierRef?.id) {
+      const supplierDoc = await db.collection('suppliers').doc(itemData.supplierRef.id).get();
+      if (supplierDoc.exists) {
+        supplierName = supplierDoc.data()?.name || '未指定供應商';
+      }
+    }
+    
+    // 建構完整的購物車項目
+    const fullItem: CartItem = {
+      id: `${type}_${code}_${Date.now()}`,
+      type: type as 'material' | 'fragrance',
+      code: itemData.code,
+      name: itemData.name,
+      supplierId: itemData.supplierRef?.id || '',
+      supplierName: supplierName,
+      quantity: quantity,
+      unit: itemData.unit || 'KG',
+      currentStock: itemData.currentStock || 0,
+      price: itemData.costPerUnit || 0,
+      addedBy: request.auth?.uid || 'anonymous',
+      addedAt: Timestamp.now(),
+      updatedAt: Timestamp.now()
+    };
+    
+    // 使用現有的 addToGlobalCart 邏輯
+    const cartRef = db.collection("globalCart").doc("main");
+    const cartDoc = await cartRef.get();
+    
+    if (!cartDoc.exists) {
+      // 建立新購物車
+      await cartRef.set({
+        items: [fullItem],
+        lastUpdated: FieldValue.serverTimestamp(),
+        updatedBy: request.auth?.uid || 'system'
+      });
+    } else {
+      // 更新現有購物車
+      const currentItems = cartDoc.data()?.items || [];
+      
+      // 檢查是否已存在相同項目
+      const existingIndex = currentItems.findIndex(
+        (i: CartItem) => i.type === fullItem.type && i.code === fullItem.code && i.supplierId === fullItem.supplierId
+      );
+      
+      if (existingIndex >= 0) {
+        // 更新數量
+        currentItems[existingIndex].quantity += fullItem.quantity;
+        currentItems[existingIndex].updatedAt = Timestamp.now();
+      } else {
+        // 添加新項目
+        currentItems.push(fullItem);
+      }
+      
+      await cartRef.update({
+        items: currentItems,
+        lastUpdated: FieldValue.serverTimestamp(),
+        updatedBy: request.auth?.uid || 'system'
+      });
+    }
+    
+    return { success: true, message: "已加入購物車", item: fullItem };
+  } catch (error) {
+    console.error("依代碼添加到購物車失敗:", error);
+    throw new HttpsError("internal", `添加到購物車失敗: ${error.message}`);
+  }
+});
+
 // 批量更新購物車（用於從 localStorage 遷移）
 export const syncGlobalCart = onCall(async (request) => {
   const { items } = request.data;
