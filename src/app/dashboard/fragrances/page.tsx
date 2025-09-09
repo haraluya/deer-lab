@@ -12,6 +12,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { MoreHorizontal, ShoppingCart, Search, Package, Calculator, FileSpreadsheet, Warehouse, Plus, Eye, Edit, Droplets, Building, Calendar, AlertTriangle, X, Shield, HelpCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import FragranceCalculations from '@/utils/fragranceCalculations';
+import { logger } from '@/utils/logger';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
@@ -128,23 +129,9 @@ function FragrancesPageContent() {
         const supplierRef = data.supplierRef as DocumentReference | undefined;
         const supplierName = supplierRef ? suppliersMap.get(supplierRef.id) || 'N/A' : '未指定';
         
-        // 詳細調試：檢查資料庫中的原始值
-        console.log(`=== 香精 ${data.name} (${data.code}) 的詳細資料 ===`);
-        console.log('原始資料庫資料:', data);
-        console.log('fragranceType 原始值:', data.fragranceType, '類型:', typeof data.fragranceType);
-        console.log('fragranceStatus 原始值:', data.fragranceStatus, '類型:', typeof data.fragranceStatus);
-        console.log('status 原始值:', data.status, '類型:', typeof data.status);
-        console.log('costPerUnit 原始值:', data.costPerUnit, '類型:', typeof data.costPerUnit);
-        console.log('unit 原始值:', data.unit, '類型:', typeof data.unit);
-        console.log('所有欄位名稱:', Object.keys(data));
-        
         // 確保正確讀取 fragranceType 和 fragranceStatus
         const fragranceType = data.fragranceType || '未指定';
         const fragranceStatus = data.fragranceStatus || '未指定';
-        
-        console.log('處理後的 fragranceType:', fragranceType);
-        console.log('處理後的 fragranceStatus:', fragranceStatus);
-        console.log('=====================================');
         
         return {
           id: doc.id,
@@ -168,7 +155,7 @@ function FragrancesPageContent() {
       });
       setFragrances(fragrancesList);
     } catch (error) {
-      console.error("讀取香精資料失敗:", error);
+      logger.error("讀取香精資料失敗", error);
       toast.error("讀取香精資料失敗。");
     } finally {
       setIsLoading(false);
@@ -285,17 +272,11 @@ function FragrancesPageContent() {
   // 添加到採購車 - 使用全域購物車
   const addToPurchaseCart = async (fragrance: FragranceWithSupplier) => {
     try {
-      console.log('🛒 準備加入採購車的香精資料:', {
+      logger.debug('準備加入採購車的香精資料', {
         id: fragrance.id,
         name: fragrance.name,
         code: fragrance.code,
-        costPerUnit: fragrance.costPerUnit,
-        unit: fragrance.unit,
-        原始costPerUnit類型: typeof fragrance.costPerUnit,
-        原始costPerUnit值: fragrance.costPerUnit,
-        是否為零: fragrance.costPerUnit === 0,
-        是否為null: fragrance.costPerUnit === null,
-        是否為undefined: fragrance.costPerUnit === undefined
+        costPerUnit: fragrance.costPerUnit
       });
 
       const cartItem = {
@@ -312,12 +293,12 @@ function FragrancesPageContent() {
         price: fragrance.costPerUnit || 0
       };
 
-      console.log('🛒 最終送出到購物車的資料:', cartItem);
+      logger.debug('送出到購物車的資料', cartItem);
 
       await addToCart(cartItem);
       toast.success(`已將 ${fragrance.name} 加入採購車`);
     } catch (error) {
-      console.error("添加到採購車失敗:", error);
+      logger.error("添加到採購車失敗", error);
       toast.error("添加到採購車失敗");
     }
   };
@@ -360,7 +341,7 @@ function FragrancesPageContent() {
         toast.error("加入採購車失敗");
       }
     } catch (error) {
-      console.error("加入採購車失敗:", error);
+      logger.error("加入採購車失敗", error);
       toast.error("加入採購車失敗");
     }
   };
@@ -391,7 +372,7 @@ function FragrancesPageContent() {
       setPurchaseCart(new Set()); // 清空選中的項目
       loadData();
     } catch (error) {
-      console.error("批量刪除香精失敗:", error);
+      logger.error("批量刪除香精失敗", error);
       let errorMessage = "批量刪除香精時發生錯誤。";
       if (error instanceof Error) {
         errorMessage = error.message;
@@ -438,7 +419,7 @@ function FragrancesPageContent() {
       toast.success(`香精 ${selectedFragrance.name} 已成功刪除。`, { id: toastId });
       loadData();
     } catch (error) {
-      console.error("刪除香精失敗:", error);
+      logger.error("刪除香精失敗", error);
       let errorMessage = "刪除香精時發生錯誤。";
       if (error instanceof Error) {
         errorMessage = error.message;
@@ -756,7 +737,7 @@ function FragrancesPageContent() {
       console.log('香精匯入結果:', `總共 ${data.length} 筆資料，成功處理 ${processedCount} 筆 (新增: ${createdCount}, 更新: ${updatedCount}, 跳過: ${skippedCount})`);
       loadData();
     } catch (error) {
-      console.error('匯入香精失敗:', error);
+      logger.error('匯入香精失敗', error);
       throw error;
     }
   };
