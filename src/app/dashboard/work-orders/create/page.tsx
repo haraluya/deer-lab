@@ -296,15 +296,36 @@ export default function CreateWorkOrderPage() {
     // 2. 核心液體 (香精、PG、VG、尼古丁) - 總是添加所有核心液體
     // 香精 - 從香精集合中獨立查找
     if (selectedProduct.fragranceName && selectedProduct.fragranceName !== '未指定') {
-      const fragranceQuantity = targetQuantity * (fragranceRatios.fragrance / 100) // 35.7% = 0.357
+      const fragranceQuantity = targetQuantity * (fragranceRatios.fragrance / 100) 
       
-      // 查找香精的實際庫存 - 從香精集合中查找
-      const fragranceMaterial = fragrances.find(f => 
-        f.code === selectedProduct.fragranceCode || 
-        f.name === selectedProduct.fragranceName ||
-        f.name.includes(selectedProduct.fragranceName) ||
-        (selectedProduct.fragranceCode && f.code.includes(selectedProduct.fragranceCode))
-      )
+      // 查找香精的實際庫存 - 從香精集合中查找，使用更精確的匹配邏輯
+      let fragranceMaterial = null
+      
+      // 第一優先：精確匹配香精代號
+      if (selectedProduct.fragranceCode && selectedProduct.fragranceCode !== '未指定') {
+        fragranceMaterial = fragrances.find(f => f.code === selectedProduct.fragranceCode)
+      }
+      
+      // 第二優先：精確匹配香精名稱
+      if (!fragranceMaterial && selectedProduct.fragranceName) {
+        fragranceMaterial = fragrances.find(f => f.name === selectedProduct.fragranceName)
+      }
+      
+      // 第三優先：模糊匹配名稱
+      if (!fragranceMaterial && selectedProduct.fragranceName) {
+        fragranceMaterial = fragrances.find(f => 
+          f.name.includes(selectedProduct.fragranceName) ||
+          selectedProduct.fragranceName.includes(f.name)
+        )
+      }
+      
+      // 第四優先：模糊匹配代號
+      if (!fragranceMaterial && selectedProduct.fragranceCode && selectedProduct.fragranceCode !== '未指定') {
+        fragranceMaterial = fragrances.find(f => 
+          f.code.includes(selectedProduct.fragranceCode!) ||
+          selectedProduct.fragranceCode!.includes(f.code)
+        )
+      }
       
       console.log('香精匹配結果:', {
         fragranceCode: selectedProduct.fragranceCode,
@@ -315,7 +336,9 @@ export default function CreateWorkOrderPage() {
           name: fragranceMaterial.name,
           currentStock: fragranceMaterial.currentStock
         } : null,
-        allFragrances: fragrances.map(f => ({ code: f.code, name: f.name, currentStock: f.currentStock }))
+        totalFragrancesCount: fragrances.length,
+        allFragranceCodes: fragrances.map(f => f.code).slice(0, 5), // 只顯示前5個代號供參考
+        allFragranceNames: fragrances.map(f => f.name).slice(0, 5), // 只顯示前5個名稱供參考
       })
       
       const currentStock = fragranceMaterial ? (fragranceMaterial.currentStock || 0) : 0
