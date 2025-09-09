@@ -7,6 +7,8 @@
  * @created 2025-09-09
  */
 
+import { BUSINESS_CONFIG } from '@/config/business';
+
 /**
  * 香精比例介面定義
  */
@@ -30,7 +32,7 @@ export class FragranceCalculations {
    * @param decimals 小數位數（預設2位）
    * @returns 四捨五入後的數值
    */
-  static roundToDecimals(value: number, decimals: number = 2): number {
+  static roundToDecimals(value: number, decimals: number = BUSINESS_CONFIG.fragrance.ratios.decimalPlaces): number {
     const multiplier = Math.pow(10, decimals);
     return Math.round(value * multiplier) / multiplier;
   }
@@ -47,21 +49,22 @@ export class FragranceCalculations {
    */
   static calculatePGVGRatios(fragrancePercentage: number): { pgRatio: number; vgRatio: number } {
     // 輸入驗證
-    if (fragrancePercentage < 0 || fragrancePercentage > 100) {
-      throw new Error('香精比例必須在 0-100% 之間');
+    if (fragrancePercentage < BUSINESS_CONFIG.fragrance.ratios.minFragrancePercentage || 
+        fragrancePercentage > BUSINESS_CONFIG.fragrance.ratios.maxFragrancePercentage) {
+      throw new Error(`香精比例必須在 ${BUSINESS_CONFIG.fragrance.ratios.minFragrancePercentage}-${BUSINESS_CONFIG.fragrance.ratios.maxFragrancePercentage}% 之間`);
     }
 
     let pgRatio = 0;
     let vgRatio = 0;
     
-    if (fragrancePercentage <= 60) {
-      // 香精+PG補滿60%，VG為40%
-      pgRatio = this.roundToDecimals(60 - fragrancePercentage);
-      vgRatio = 40;
+    if (fragrancePercentage <= BUSINESS_CONFIG.fragrance.ratios.pgThreshold) {
+      // 香精+PG補滿門檻值，VG為剩餘比例
+      pgRatio = this.roundToDecimals(BUSINESS_CONFIG.fragrance.ratios.pgThreshold - fragrancePercentage);
+      vgRatio = BUSINESS_CONFIG.fragrance.ratios.defaultVGRatio;
     } else {
-      // 香精超過60%，PG為0，VG補滿
+      // 香精超過門檻值，PG為0，VG補滿
       pgRatio = 0;
-      vgRatio = this.roundToDecimals(100 - fragrancePercentage);
+      vgRatio = this.roundToDecimals(BUSINESS_CONFIG.fragrance.ratios.maxFragrancePercentage - fragrancePercentage);
     }
     
     return { pgRatio, vgRatio };

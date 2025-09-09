@@ -27,6 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
+import { BUSINESS_CONFIG } from '@/config/business';
 
 // 定義從 Firestore 讀取並處理後的採購單資料結構
 interface PurchaseOrderView {
@@ -74,7 +75,7 @@ function PurchaseOrdersPageContent() {
   // 採購清單相關狀態
   const [statusFilter, setStatusFilter] = useState<'all' | '預報單' | '已訂購' | '已收貨'>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  const [itemsPerPage] = useState(BUSINESS_CONFIG.ui.pagination.itemsPerPage);
   
   // 搜尋相關狀態
   const [searchTerm, setSearchTerm] = useState('');

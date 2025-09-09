@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import { DollarSign, TrendingUp, TrendingDown, Package, Droplets, Factory, Calculator, Calendar, ChevronLeft, ChevronRight } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { BUSINESS_CONFIG } from '@/config/business'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -57,7 +58,7 @@ function CostManagementPageContent() {
   
   // 分頁狀態
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage] = useState(10)
+  const [itemsPerPage] = useState(BUSINESS_CONFIG.ui.pagination.itemsPerPage)
 
   const loadCostData = async () => {
     setIsLoading(true)

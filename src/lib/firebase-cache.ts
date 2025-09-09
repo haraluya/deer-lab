@@ -14,6 +14,7 @@ import {
 import { db } from '@/lib/firebase'
 import { cacheManager } from './cache'
 import { logger } from '@/utils/logger'
+import { BUSINESS_CONFIG } from '@/config/business'
 
 // Firebase 請求去重機制
 class RequestDeduplicator {
@@ -73,7 +74,7 @@ export async function getCachedDoc<T>(
   docId: string,
   options: FirebaseCacheOptions = {}
 ): Promise<T | null> {
-  const { ttl = 5 * 60 * 1000, skipCache = false, forceRefresh = false } = options
+  const { ttl = BUSINESS_CONFIG.cache.ttl.short, skipCache = false, forceRefresh = false } = options
   const cacheKey = `firestore:${collectionName}:${docId}`
 
   // 強制刷新時先刪除快取
@@ -128,7 +129,7 @@ export async function getCachedCollection<T>(
   constraints: any[] = [],
   options: FirebaseCacheOptions = {}
 ): Promise<T[]> {
-  const { ttl = 5 * 60 * 1000, skipCache = false, forceRefresh = false } = options
+  const { ttl = BUSINESS_CONFIG.cache.ttl.short, skipCache = false, forceRefresh = false } = options
   
   // 生成快取鍵（基於集合名和查詢約束）
   const constraintKey = JSON.stringify(constraints)
@@ -181,13 +182,13 @@ export async function getCachedCollection<T>(
 // 預設的集合快取配置
 export const cacheConfigs = {
   // 短時間快取（5分鐘）
-  short: { ttl: 5 * 60 * 1000 },
+  short: { ttl: BUSINESS_CONFIG.cache.ttl.short },
   // 中等時間快取（15分鐘）
-  medium: { ttl: 15 * 60 * 1000 },
+  medium: { ttl: BUSINESS_CONFIG.cache.ttl.medium },
   // 長時間快取（30分鐘）
-  long: { ttl: 30 * 60 * 1000 },
+  long: { ttl: BUSINESS_CONFIG.cache.ttl.long },
   // 超長時間快取（1小時）
-  extraLong: { ttl: 60 * 60 * 1000 }
+  extraLong: { ttl: BUSINESS_CONFIG.cache.ttl.extraLong }
 }
 
 // 清除特定集合的所有快取
@@ -300,7 +301,7 @@ export function useFirebaseCache<T>(
   dependencies: string[],
   options: FirebaseCacheOptions = {}
 ) {
-  const { ttl = 5 * 60 * 1000 } = options
+  const { ttl = BUSINESS_CONFIG.cache.ttl.short } = options
   const cacheKey = `firebase-hook:${dependencies.join(':')}`
   
   return {

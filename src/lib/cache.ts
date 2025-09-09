@@ -1,4 +1,6 @@
 // 快取管理系統
+import { BUSINESS_CONFIG } from '@/config/business';
+
 interface CacheItem<T> {
   data: T
   timestamp: number
@@ -7,7 +9,7 @@ interface CacheItem<T> {
 
 class CacheManager {
   private cache = new Map<string, CacheItem<any>>()
-  private readonly defaultTTL = 5 * 60 * 1000 // 5 minutes
+  private readonly defaultTTL = BUSINESS_CONFIG.cache.ttl.short // 5 minutes
 
   // 設定快取
   set<T>(key: string, data: T, ttl: number = this.defaultTTL): void {
@@ -80,7 +82,7 @@ export const cacheManager = new CacheManager()
 // 定期清理過期快取
 setInterval(() => {
   cacheManager.cleanup()
-}, 60000) // 每分鐘清理一次
+}, BUSINESS_CONFIG.cache.strategy.autoCleanupIntervalMs) // 每分鐘清理一次
 
 // 快取鍵生成器
 export const cacheKeys = {

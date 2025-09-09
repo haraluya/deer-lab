@@ -27,6 +27,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { getChangeReasonLabel, getItemTypeLabel } from "@/lib/inventoryRecords"
+import { BUSINESS_CONFIG } from '@/config/business'
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -63,7 +64,7 @@ export function DataTable<TData, TValue>({
     },
     initialState: {
       pagination: {
-        pageSize: 10,
+        pageSize: BUSINESS_CONFIG.inventory.pagination.defaultPageSize,
       },
     },
   })

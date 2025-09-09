@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
+import { BUSINESS_CONFIG } from '@/config/business';
 
 // 介面定義
 interface TimeEntry {
@@ -75,7 +76,7 @@ export default function PersonalTimeRecordsPage() {
   
   // 分頁狀態
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = BUSINESS_CONFIG.ui.pagination.itemsPerPage;
   
   // 清理功能狀態
   const [isCleaningUp, setIsCleaningUp] = useState(false);

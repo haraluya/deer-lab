@@ -33,6 +33,7 @@ import {
   getChangeReasonLabel,
   getItemTypeLabel
 } from "@/lib/inventoryRecords"
+import { BUSINESS_CONFIG } from '@/config/business'
 import { InventoryRecordDialog } from "@/components/InventoryRecordDialog"
 
 function InventoryRecordsPageContent() {
@@ -43,7 +44,7 @@ function InventoryRecordsPageContent() {
   
   // 篩選狀態
   const [filters, setFilters] = useState<InventoryRecordQueryParams>({
-    pageSize: 10
+    pageSize: BUSINESS_CONFIG.inventory.pagination.defaultPageSize
   })
   
   // 對話框狀態
@@ -125,7 +126,7 @@ function InventoryRecordsPageContent() {
   }
 
   const clearFilters = () => {
-    setFilters({ pageSize: 10 })
+    setFilters({ pageSize: BUSINESS_CONFIG.inventory.pagination.defaultPageSize })
   }
 
   const handleRecordClick = (record: InventoryRecord) => {

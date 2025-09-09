@@ -14,6 +14,7 @@ import {
   QueryDocumentSnapshot,
   DocumentData
 } from 'firebase/firestore';
+import { BUSINESS_CONFIG } from '@/config/business';
 
 // 明細紀錄介面
 export interface InventoryRecordDetail {
@@ -93,7 +94,7 @@ export async function getInventoryRecords(params: InventoryRecordQueryParams = {
       remarks,
       startDate,
       endDate,
-      pageSize = 10,
+      pageSize = BUSINESS_CONFIG.inventory.pagination.defaultPageSize,
       lastDoc
     } = params;
 
@@ -162,7 +163,7 @@ export async function getInventoryRecords(params: InventoryRecordQueryParams = {
 export async function getItemInventoryHistory(
   itemId: string, 
   itemType: 'material' | 'fragrance',
-  limitCount: number = 20
+  limitCount: number = BUSINESS_CONFIG.ui.pagination.itemsPerPage * 2
 ): Promise<InventoryRecord[]> {
   try {
     if (!db) {

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { logger } from '@/utils/logger'
+import { BUSINESS_CONFIG } from '@/config/business'
 
 // 錯誤類型定義
 export interface AppError {
@@ -154,7 +155,7 @@ export function useErrorHandler() {
       switch (appError.severity) {
         case 'high':
           toast.error(message, {
-            duration: 6000,
+            duration: BUSINESS_CONFIG.ui.toast.errorDuration,
             action: {
               label: '確定',
               onClick: clearError
@@ -163,12 +164,12 @@ export function useErrorHandler() {
           break
         case 'medium':
           toast.error(message, {
-            duration: 4000
+            duration: BUSINESS_CONFIG.ui.toast.warningDuration
           })
           break
         case 'low':
           toast.warning(message, {
-            duration: 3000
+            duration: BUSINESS_CONFIG.ui.toast.duration
           })
           break
       }
@@ -250,7 +251,7 @@ export function setupGlobalErrorHandler() {
     logger.error(`[全域錯誤] ${error.message}`, event.error)
     
     toast.error('系統發生未預期的錯誤', {
-      duration: 5000
+      duration: BUSINESS_CONFIG.ui.toast.errorDuration
     })
   })
 
@@ -260,7 +261,7 @@ export function setupGlobalErrorHandler() {
     logger.error(`[未處理的Promise拒絕] ${error.message}`, event.reason)
     
     toast.error('系統處理請求時發生錯誤', {
-      duration: 5000
+      duration: BUSINESS_CONFIG.ui.toast.errorDuration
     })
     
     // 阻止錯誤在控制台中顯示
@@ -276,15 +277,15 @@ export const businessErrorHandlers = {
     
     if (appError.message.includes('庫存不足')) {
       toast.warning('庫存數量不足，請檢查庫存狀態', {
-        duration: 4000
+        duration: BUSINESS_CONFIG.ui.toast.warningDuration
       })
     } else if (appError.message.includes('產品不存在')) {
       toast.error('找不到指定的產品，請重新選擇', {
-        duration: 4000
+        duration: BUSINESS_CONFIG.ui.toast.warningDuration
       })
     } else {
       toast.error('庫存操作失敗：' + appError.message, {
-        duration: 5000
+        duration: BUSINESS_CONFIG.ui.toast.errorDuration
       })
     }
     
@@ -297,7 +298,7 @@ export const businessErrorHandlers = {
     
     if (appError.message.includes('材料不足')) {
       toast.warning('生產材料不足，請先補充庫存', {
-        duration: 5000,
+        duration: BUSINESS_CONFIG.ui.toast.errorDuration,
         action: {
           label: '查看庫存',
           onClick: () => {
@@ -307,11 +308,11 @@ export const businessErrorHandlers = {
       })
     } else if (appError.message.includes('人員未指派')) {
       toast.error('請先指派工作人員', {
-        duration: 4000
+        duration: BUSINESS_CONFIG.ui.toast.warningDuration
       })
     } else {
       toast.error('工單操作失敗：' + appError.message, {
-        duration: 5000
+        duration: BUSINESS_CONFIG.ui.toast.errorDuration
       })
     }
     
@@ -324,15 +325,15 @@ export const businessErrorHandlers = {
     
     if (appError.message.includes('供應商')) {
       toast.error('供應商資訊有誤，請檢查供應商設定', {
-        duration: 4000
+        duration: BUSINESS_CONFIG.ui.toast.warningDuration
       })
     } else if (appError.message.includes('價格')) {
       toast.warning('價格資訊不完整，請確認所有項目的價格', {
-        duration: 4000
+        duration: BUSINESS_CONFIG.ui.toast.warningDuration
       })
     } else {
       toast.error('採購操作失敗：' + appError.message, {
-        duration: 5000
+        duration: BUSINESS_CONFIG.ui.toast.errorDuration
       })
     }
     
