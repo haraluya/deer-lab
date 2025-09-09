@@ -168,49 +168,57 @@ exports.updateFragranceByCode = (0, https_1.onCall)(async (request) => {
         }
         const fragranceDoc = fragranceQuery.docs[0];
         const fragranceId = fragranceDoc.id;
+        // 只更新有提供的欄位 - 智能更新模式
         const updateData = {
             code,
             name,
             status: finalStatus,
-            currentStock: Number(currentStock) || 0,
-            safetyStockLevel: Number(safetyStockLevel) || 0,
-            costPerUnit: Number(costPerUnit) || 0,
-            percentage: Number(percentage) || 0,
-            pgRatio: Number(pgRatio) || 0,
-            vgRatio: Number(vgRatio) || 0,
-            unit: unit || 'KG',
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
         };
-        // 處理香精種類 - 如果為空則使用預設值
+        // 處理香精種類 - 只有提供時才更新
         if (fragranceType !== undefined && fragranceType !== null && fragranceType !== '') {
             updateData.fragranceType = fragranceType;
             firebase_functions_1.logger.info(`更新香精 ${code} 的 fragranceType: ${fragranceType}`);
         }
-        else {
-            // 如果沒有提供香精種類，使用預設值
-            updateData.fragranceType = '棉芯';
-            firebase_functions_1.logger.info(`香精 ${code} 的 fragranceType 設置為預設值: ${updateData.fragranceType}`);
-        }
-        // 處理啟用狀態 - 如果為空則使用預設值
+        // 處理啟用狀態 - 只有提供時才更新
         if (fragranceStatus !== undefined && fragranceStatus !== null && fragranceStatus !== '') {
             updateData.fragranceStatus = fragranceStatus;
             firebase_functions_1.logger.info(`更新香精 ${code} 的 fragranceStatus: ${fragranceStatus}`);
         }
-        else {
-            // 如果沒有提供啟用狀態，使用預設值
-            updateData.fragranceStatus = '啟用';
-            firebase_functions_1.logger.info(`香精 ${code} 的 fragranceStatus 設置為預設值: ${updateData.fragranceStatus}`);
-        }
-        // 如果提供了 currentStock，則更新庫存
+        // 處理數值欄位 - 只有提供時才更新
         if (currentStock !== undefined && currentStock !== null && currentStock !== '') {
             updateData.currentStock = Number(currentStock) || 0;
             updateData.lastStockUpdate = firestore_1.FieldValue.serverTimestamp();
+            firebase_functions_1.logger.info(`更新香精 ${code} 的 currentStock: ${updateData.currentStock}`);
         }
-        if (supplierId) {
+        if (safetyStockLevel !== undefined && safetyStockLevel !== null && safetyStockLevel !== '') {
+            updateData.safetyStockLevel = Number(safetyStockLevel) || 0;
+            firebase_functions_1.logger.info(`更新香精 ${code} 的 safetyStockLevel: ${updateData.safetyStockLevel}`);
+        }
+        if (costPerUnit !== undefined && costPerUnit !== null && costPerUnit !== '') {
+            updateData.costPerUnit = Number(costPerUnit) || 0;
+            firebase_functions_1.logger.info(`更新香精 ${code} 的 costPerUnit: ${updateData.costPerUnit}`);
+        }
+        if (percentage !== undefined && percentage !== null && percentage !== '') {
+            updateData.percentage = Number(percentage) || 0;
+            firebase_functions_1.logger.info(`更新香精 ${code} 的 percentage: ${updateData.percentage}`);
+        }
+        if (pgRatio !== undefined && pgRatio !== null && pgRatio !== '') {
+            updateData.pgRatio = Number(pgRatio) || 0;
+            firebase_functions_1.logger.info(`更新香精 ${code} 的 pgRatio: ${updateData.pgRatio}`);
+        }
+        if (vgRatio !== undefined && vgRatio !== null && vgRatio !== '') {
+            updateData.vgRatio = Number(vgRatio) || 0;
+            firebase_functions_1.logger.info(`更新香精 ${code} 的 vgRatio: ${updateData.vgRatio}`);
+        }
+        if (unit !== undefined && unit !== null && unit !== '') {
+            updateData.unit = unit;
+            firebase_functions_1.logger.info(`更新香精 ${code} 的 unit: ${updateData.unit}`);
+        }
+        // 處理供應商 - 只有明確提供時才更新
+        if (supplierId !== undefined && supplierId !== null && supplierId !== '') {
             updateData.supplierRef = db.collection("suppliers").doc(supplierId);
-        }
-        else {
-            updateData.supplierRef = firestore_1.FieldValue.delete();
+            firebase_functions_1.logger.info(`更新香精 ${code} 的 supplierRef: ${supplierId}`);
         }
         await fragranceDoc.ref.update(updateData);
         firebase_functions_1.logger.info(`管理員 ${contextAuth === null || contextAuth === void 0 ? void 0 : contextAuth.uid} 成功根據編號更新香精資料: ${code} (ID: ${fragranceId})`);

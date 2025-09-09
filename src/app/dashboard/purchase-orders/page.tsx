@@ -581,7 +581,8 @@ function PurchaseOrdersPageContent() {
             id: item.id,
             name: item.name,
             code: item.code,
-            costPerUnit: item.costPerUnit
+            costPerUnit: item.costPerUnit,
+            price: item.price
           },
           香精資料總數: fragrances.length,
           找到匹配: !!latestFragrance,
@@ -606,11 +607,21 @@ function PurchaseOrdersPageContent() {
             usedInProducts: latestFragrance.usedInProducts,
           };
         } else {
-          console.warn(`⚠️ 找不到香精資料匹配:`, {
+          // 🔧 修復：找不到最新香精資料時，確保使用購物車項目本身的價格
+          console.warn(`⚠️ 找不到香精資料匹配，使用購物車原有價格:`, {
             購物車項目ID: item.id,
             購物車項目名稱: item.name,
+            原始價格: item.price,
+            原始costPerUnit: item.costPerUnit,
             可用香精IDs: fragrances.map(f => ({ id: f.id, name: f.name }))
           });
+          
+          // 確保價格字段存在且合理
+          updatedItem = {
+            ...item,
+            price: item.price || item.costPerUnit || 0,
+            costPerUnit: item.costPerUnit || item.price || 0
+          };
         }
       }
       

@@ -320,7 +320,10 @@ function FragrancesPageContent() {
         costPerUnit: fragrance.costPerUnit,
         unit: fragrance.unit,
         原始costPerUnit類型: typeof fragrance.costPerUnit,
-        原始costPerUnit值: fragrance.costPerUnit
+        原始costPerUnit值: fragrance.costPerUnit,
+        是否為零: fragrance.costPerUnit === 0,
+        是否為null: fragrance.costPerUnit === null,
+        是否為undefined: fragrance.costPerUnit === undefined
       });
 
       const cartItem = {
