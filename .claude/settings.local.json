@@ -21,7 +21,8 @@
       "Read(/D:\\APP\\deer-lab\\src\\types/**)",
       "Read(/D:\\APP\\deer-lab\\src\\app\\dashboard/**)",
       "Read(/D:\\APP\\deer-lab\\src\\utils/**)",
-      "Read(/D:\\APP\\deer-lab/**)"
+      "Read(/D:\\APP\\deer-lab/**)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []
