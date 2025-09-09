@@ -7,7 +7,7 @@ import { collection, getDocs, DocumentReference, query, where } from 'firebase/f
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 
-import { MoreHorizontal, Droplets, FileSpreadsheet, Eye, Edit, Package, Factory, Calendar, Plus, Tag, Library, Search, Shield } from 'lucide-react';
+import { MoreHorizontal, Droplets, FileSpreadsheet, Eye, Edit, Package, Factory, Calendar, Plus, Tag, Library, Search, Shield, FlaskConical } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -25,6 +25,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { FragranceChangeDialog } from './FragranceChangeDialog';
 import { DetailViewDialog } from '@/components/DetailViewDialog';
 import { ImportExportDialog } from '@/components/ImportExportDialog';
+import { FragranceCalculatorDialog } from './FragranceCalculatorDialog';
 
 // 擴充介面，用於在前端顯示關聯資料的名稱
 interface ProductWithDetails extends ProductData {
@@ -53,6 +54,7 @@ function ProductsPageContent() {
   const [filteredProducts, setFilteredProducts] = useState<ProductWithDetails[]>([]);
   const [selectedProductTypes, setSelectedProductTypes] = useState<Set<string>>(new Set());
   const [selectedSeries, setSelectedSeries] = useState<Set<string>>(new Set());
+  const [isFragranceCalculatorOpen, setIsFragranceCalculatorOpen] = useState(false);
 
   // 權限檢查
   const { hasPermission, isAdmin } = usePermission();
@@ -221,6 +223,20 @@ function ProductsPageContent() {
       newSelected.delete(productId);
     }
     setSelectedProducts(newSelected);
+  };
+
+  const handleFragranceCalculator = () => {
+    if (selectedProducts.size === 0) {
+      toast.error('請先選擇要試算的產品');
+      return;
+    }
+    
+    if (selectedProducts.size > 10) {
+      toast.error('最多只能選擇 10 個產品進行香精試算');
+      return;
+    }
+    
+    setIsFragranceCalculatorOpen(true);
   };
 
   const handleConfirmDelete = async () => {
@@ -440,16 +456,26 @@ function ProductsPageContent() {
 
       {/* 手機版功能按鈕區域 */}
       <div className="lg:hidden mb-6">
-        {selectedProducts.size > 0 && canManageProducts && (
-          <div className="mb-3">
+        {selectedProducts.size > 0 && (
+          <div className="mb-3 space-y-2">
             <Button 
-              variant="destructive" 
-              onClick={() => setIsBatchDeleteOpen(true)}
-              className="w-full bg-red-600 hover:bg-red-700 text-white"
+              variant="outline" 
+              onClick={handleFragranceCalculator}
+              className="w-full border-purple-200 text-purple-600 hover:bg-purple-100 hover:border-purple-300 hover:shadow-sm transition-all duration-200"
             >
-              <Package className="mr-2 h-4 w-4" />
-              批次刪除 ({selectedProducts.size} 個產品)
+              <FlaskConical className="mr-2 h-4 w-4" />
+              香精試算 ({selectedProducts.size} 個產品)
             </Button>
+            {canManageProducts && (
+              <Button 
+                variant="destructive" 
+                onClick={() => setIsBatchDeleteOpen(true)}
+                className="w-full bg-red-600 hover:bg-red-700 text-white"
+              >
+                <Package className="mr-2 h-4 w-4" />
+                批次刪除 ({selectedProducts.size} 個產品)
+              </Button>
+            )}
           </div>
         )}
         <div className="grid grid-cols-2 gap-3">
@@ -494,6 +520,16 @@ function ProductsPageContent() {
       {/* 桌面版功能按鈕區域 */}
       <div className="hidden lg:block mb-6">
         <div className="flex flex-wrap items-center gap-2 justify-end">
+          {selectedProducts.size > 0 && (
+            <Button 
+              variant="outline" 
+              onClick={handleFragranceCalculator}
+              className="border-purple-200 text-purple-600 hover:bg-purple-600 hover:text-white hover:border-purple-600 transition-all duration-200"
+            >
+              <FlaskConical className="mr-2 h-4 w-4" />
+              香精試算 ({selectedProducts.size})
+            </Button>
+          )}
           {selectedProducts.size > 0 && canManageProducts && (
             <Button 
               variant="destructive" 
@@ -955,6 +991,13 @@ function ProductsPageContent() {
           { key: "nicotineMg", label: "尼古丁濃度", required: false, type: "number" },
           { key: "status", label: "狀態", required: false, type: "string" }
         ]}
+      />
+
+      <FragranceCalculatorDialog
+        isOpen={isFragranceCalculatorOpen}
+        onOpenChange={setIsFragranceCalculatorOpen}
+        selectedProductIds={selectedProducts}
+        products={filteredProducts}
       />
     </div>
   );
