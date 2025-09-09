@@ -23,7 +23,7 @@ const formSchema = z.object({
   code: z.string().min(1, { message: '香精代號為必填欄位' }),
   name: z.string().min(2, { message: '香精名稱至少需要 2 個字元' }),
   fragranceType: z.string({ required_error: '必須選擇香精種類' }),
-  fragranceStatus: z.string({ required_error: '必須選擇香精狀態' }),
+  fragranceStatus: z.string().default('standby'), // 預設為備用，不再是必填
   supplierId: z.string().optional(),
   currentStock: z.coerce.number().min(0, { message: '現有庫存不能為負數' }).optional(),
   safetyStockLevel: z.coerce.number().min(0).optional(),
@@ -85,7 +85,7 @@ export function FragranceDialog({
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      code: '', name: '', fragranceType: '', fragranceStatus: '', supplierId: '',
+      code: '', name: '', fragranceType: '', fragranceStatus: 'standby', supplierId: '',
       currentStock: 0, safetyStockLevel: 0, costPerUnit: 0, percentage: 0, pgRatio: 0, vgRatio: 0, remarks: '',
     },
   });
@@ -318,30 +318,36 @@ export function FragranceDialog({
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="fragranceStatus"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-semibold text-gray-700">啟用狀態 *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="border-gray-300 focus:border-purple-500 focus:ring-purple-500 h-12">
-                            <SelectValue placeholder="選擇啟用狀態" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {fragranceStatuses.map((status) => (
-                            <SelectItem key={status} value={status}>
-                              {status}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {/* 只在編輯模式顯示狀態選擇框 */}
+                {isEditMode && (
+                  <FormField
+                    control={form.control}
+                    name="fragranceStatus"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-semibold text-gray-700">啟用狀態</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="border-gray-300 focus:border-purple-500 focus:ring-purple-500 h-12">
+                              <SelectValue placeholder="選擇啟用狀態" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {fragranceStatuses.map((status) => (
+                              <SelectItem key={status} value={status}>
+                                {status}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        <p className="text-xs text-gray-500 mt-1">
+                          新增香精時預設為備用狀態，有產品使用後會自動啟用
+                        </p>
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <FormField
                   control={form.control}

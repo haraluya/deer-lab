@@ -42,8 +42,8 @@ export const createFragrance = onCall<FragranceData>(async (request) => {
 
     // 處理向後相容性
     const finalFragranceType = fragranceType || status || '棉芯';
-    const finalStatus = status || fragranceType || 'active';
-    const finalFragranceStatus = fragranceStatus || '啟用';
+    const finalStatus = status || fragranceType || 'standby'; // 修復：預設改為 standby 以符合前端期望
+    const finalFragranceStatus = fragranceStatus || '備用';
 
     const fragranceData = {
       code,
@@ -87,8 +87,8 @@ export const updateFragrance = onCall(async (request) => {
   
   // 處理 fragranceType 和 status 的相容性
   const finalFragranceType = fragranceType !== undefined && fragranceType !== null && fragranceType !== '' ? fragranceType : (status || '棉芯');
-  const finalStatus = status !== undefined && status !== null && status !== '' ? status : (fragranceType || 'active');
-  const finalFragranceStatus = fragranceStatus !== undefined && fragranceStatus !== null && fragranceStatus !== '' ? fragranceStatus : (status || '啟用');
+  const finalStatus = status !== undefined && status !== null && status !== '' ? status : (fragranceType || 'standby'); // 修復：預設改為 standby
+  const finalFragranceStatus = fragranceStatus !== undefined && fragranceStatus !== null && fragranceStatus !== '' ? fragranceStatus : (status || '備用');
   
   try {
     const fragranceRef = db.collection("fragrances").doc(fragranceId);
@@ -189,8 +189,8 @@ export const updateFragranceByCode = onCall(async (request) => {
   
   // 處理 fragranceType 和 status 的相容性
   const finalFragranceType = fragranceType !== undefined && fragranceType !== null && fragranceType !== '' ? fragranceType : (status || '棉芯');
-  const finalStatus = status !== undefined && status !== null && status !== '' ? status : (fragranceType || 'active');
-  const finalFragranceStatus = fragranceStatus !== undefined && fragranceStatus !== null && fragranceStatus !== '' ? fragranceStatus : (status || '啟用');
+  const finalStatus = status !== undefined && status !== null && status !== '' ? status : (fragranceType || 'standby'); // 修復：預設改為 standby
+  const finalFragranceStatus = fragranceStatus !== undefined && fragranceStatus !== null && fragranceStatus !== '' ? fragranceStatus : (status || '備用');
   
   try {
     // 根據香精編號查找現有的香精

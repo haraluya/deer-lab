@@ -101,7 +101,8 @@ export default function ProductDetailPage() {
       const getProductFragranceHistory = httpsCallable(functions, 'getProductFragranceHistory');
       
       const result = await getProductFragranceHistory({ productId });
-      setFragranceHistory((result.data as any) || []);
+      console.log('香精歷程載入結果:', result.data);
+      setFragranceHistory((result.data as any)?.data || []);
     } catch (error) {
       console.error("載入香精歷程失敗:", error);
       toast.error("載入香精歷程失敗");
