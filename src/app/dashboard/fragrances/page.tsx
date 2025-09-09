@@ -571,6 +571,7 @@ function FragrancesPageContent() {
       let processedCount = 0;
       let createdCount = 0;
       let updatedCount = 0;
+      let skippedCount = 0;
       
       for (let i = 0; i < totalBatches; i++) {
         const startIndex = i * batchSize;
@@ -580,6 +581,12 @@ function FragrancesPageContent() {
         // 處理每一批資料
         for (const item of batch) {
           try {
+            // 🚨 第一步：檢查香精代號是否存在，沒有代號直接跳過
+            if (!item.code || item.code.toString().trim() === '') {
+              console.warn(`跳過沒有香精代號的資料:`, { name: item.name });
+              skippedCount++;
+              continue; // 跳過這筆資料，不計入處理數量
+            }
             // 處理供應商ID
             let supplierId = undefined;
             if (item.supplierName && item.supplierName.trim() !== '') {
@@ -772,7 +779,7 @@ function FragrancesPageContent() {
         }
       }
       
-      console.log('香精匯入結果:', `成功處理 ${processedCount} 筆資料 (新增: ${createdCount}, 更新: ${updatedCount})`);
+      console.log('香精匯入結果:', `總共 ${data.length} 筆資料，成功處理 ${processedCount} 筆 (新增: ${createdCount}, 更新: ${updatedCount}, 跳過: ${skippedCount})`);
       loadData();
     } catch (error) {
       console.error('匯入香精失敗:', error);
@@ -1656,7 +1663,7 @@ function FragrancesPageContent() {
         onImport={handleImport}
         onExport={handleExport}
         title="香精資料"
-        description="匯入或匯出香精資料，支援 Excel 和 CSV 格式。香精代號為必填欄位。匯入時會智能匹配香精代號：如果代號不存在則新增，如果代號已存在則更新覆蓋有填入的欄位。"
+        description="匯入或匯出香精資料，支援 Excel 和 CSV 格式。匯入規則：1) 沒有香精代號的資料將被跳過不處理 2) 有代號但資料庫無相同代號則新增 3) 有相同代號則更新現有香精內容。"
         color="purple"
         showUpdateOption={false}
         maxBatchSize={500}
