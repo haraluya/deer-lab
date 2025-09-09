@@ -94,6 +94,10 @@ export function FragranceCalculatorDialog({
 
       const items: FragranceCalculationItem[] = [];
       
+      console.log('開始載入香精試算資料...');
+      console.log('選擇的產品ID:', Array.from(selectedProductIds));
+      console.log('產品清單:', products);
+      
       // 獲取香精庫存資料
       const fragrancesSnapshot = await getDocs(collection(db, 'fragrances'));
       const fragrancesMap = new Map();
@@ -111,27 +115,43 @@ export function FragranceCalculatorDialog({
         });
       });
 
+      console.log('香精資料:', fragrancesMap);
+
       // 處理每個選中的產品
       for (const productId of Array.from(selectedProductIds)) {
         const product = products.find(p => p.id === productId);
-        if (!product) continue;
+        if (!product) {
+          console.log(`找不到產品: ${productId}`);
+          continue;
+        }
+
+        console.log(`處理產品: ${product.name}`, product);
 
         // 獲取產品的香精參考
         let fragranceInfo = null;
+        let fragranceId = null;
 
+        // 檢查產品是否有香精參考
         if (product.currentFragranceRef?.id) {
-          fragranceInfo = fragrancesMap.get(product.currentFragranceRef.id);
+          fragranceId = product.currentFragranceRef.id;
+          fragranceInfo = fragrancesMap.get(fragranceId);
+          console.log(`產品 ${product.name} 使用香精ID: ${fragranceId}`);
+        } else {
+          console.log(`產品 ${product.name} 沒有配置香精參考`);
+          // 如果沒有香精參考，跳過這個產品
+          continue;
         }
 
         if (fragranceInfo) {
           const fragranceRatio = fragranceInfo.percentage; // 直接從香精資料中獲取比例
+          console.log(`香精 ${fragranceInfo.name} 比例: ${fragranceRatio}%`);
           
           items.push({
             productId: product.id,
             productName: product.name,
             productCode: product.code,
             seriesName: product.seriesName || '未知系列',
-            fragranceId: product.currentFragranceRef.id,
+            fragranceId: fragranceId,
             fragranceName: fragranceInfo.name,
             fragranceCode: fragranceInfo.code,
             fragranceRatio: fragranceRatio,
@@ -143,13 +163,19 @@ export function FragranceCalculatorDialog({
             supplierId: fragranceInfo.supplierId,
             supplierName: fragranceInfo.supplierName
           });
+        } else {
+          console.log(`找不到香精資訊: ${fragranceId}`);
         }
       }
+
+      console.log('處理完成，總計項目數:', items.length);
+      console.log('試算項目:', items);
 
       // 只保留本地選中的產品項目
       const filteredItems = items.filter(item => 
         localSelectedProducts.has(item.productId)
       );
+      console.log('過濾後項目數:', filteredItems.length);
       setCalculationItems(filteredItems);
     } catch (error) {
       console.error('載入香精試算資料失敗:', error);
@@ -333,7 +359,7 @@ export function FragranceCalculatorDialog({
                               onCheckedChange={(checked) => 
                                 handleProductSelectionChange(item.productId, checked as boolean)
                               }
-                              className="mt-1"
+                              className="mt-1 border-2 border-gray-800 data-[state=checked]:bg-gray-800 data-[state=checked]:border-gray-800"
                             />
                           </div>
                         </div>

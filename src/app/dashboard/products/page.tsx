@@ -673,6 +673,7 @@ function ProductsPageContent() {
                           <Checkbox
                             checked={selectedProducts.has(product.id)}
                             onCheckedChange={(checked) => handleSelectProduct(product.id, checked as boolean)}
+                            className="border-2 border-gray-800 data-[state=checked]:bg-gray-800 data-[state=checked]:border-gray-800"
                           />
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -794,6 +795,7 @@ function ProductsPageContent() {
                     <Checkbox
                       checked={selectedProducts.size === filteredProducts.length && filteredProducts.length > 0}
                       onCheckedChange={handleSelectAll}
+                      className="border-2 border-gray-800 data-[state=checked]:bg-gray-800 data-[state=checked]:border-gray-800"
                     />
                     <span className="text-xs text-muted-foreground">全選</span>
                   </div>
@@ -830,6 +832,7 @@ function ProductsPageContent() {
                       <Checkbox
                         checked={selectedProducts.has(product.id)}
                         onCheckedChange={(checked) => handleSelectProduct(product.id, checked as boolean)}
+                        className="border-2 border-gray-800 data-[state=checked]:bg-gray-800 data-[state=checked]:border-gray-800"
                       />
                     </TableCell>
                     <TableCell>
