@@ -64,18 +64,7 @@ export function FragranceCalculatorDialog({
     }
   }, [isOpen, selectedProductIds]);
 
-  // 當本地選擇狀態改變時，過濾計算項目
-  useEffect(() => {
-    if (calculationItems.length > 0) {
-      const filteredItems = calculationItems.filter(item => 
-        localSelectedProducts.has(item.productId)
-      );
-      // 如果過濾後的項目數量與原始項目不同，更新計算項目
-      if (filteredItems.length !== calculationItems.length) {
-        setCalculationItems(filteredItems);
-      }
-    }
-  }, [localSelectedProducts, calculationItems]);
+  // 移除過濾邏輯，讓所有載入的計算項目保持顯示
 
   const loadCalculationData = async () => {
     setIsLoading(true);
