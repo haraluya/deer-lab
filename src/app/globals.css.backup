@@ -1,0 +1,243 @@
+/* globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 84% 4.9%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 94.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* 工單管理頁面自定義樣式 */
+@layer components {
+  .table-modern {
+    @apply w-full border-collapse;
+  }
+  
+  .table-modern th {
+    @apply text-left font-semibold text-slate-700 py-4 px-6 border-b border-slate-200;
+  }
+  
+  .table-modern td {
+    @apply py-4 px-6 border-b border-slate-100;
+  }
+  
+  .table-modern tr:hover {
+    @apply bg-slate-50/50 transition-all duration-200;
+  }
+  
+  /* 狀態標籤動畫效果 */
+  .status-badge {
+    @apply transition-all duration-200 hover:scale-105;
+  }
+  
+  /* 卡片懸停效果 */
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
+  }
+  
+  /* 按鈕懸停效果 */
+  .btn-modern {
+    @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5;
+  }
+  
+  /* 搜尋框效果 */
+  .search-modern {
+    @apply transition-all duration-200 focus:ring-2 focus:ring-blue-500/20;
+  }
+  
+  /* 載入動畫 */
+  .loading-spinner {
+    @apply animate-spin rounded-full border-4 border-slate-200 border-t-blue-600;
+  }
+  
+  /* 漸變背景 */
+  .gradient-bg {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%);
+  }
+  
+  /* 毛玻璃效果 */
+  .glass-effect {
+    @apply backdrop-blur-sm bg-white/80;
+  }
+  
+  /* 表格行懸停效果 */
+  .table-row-hover {
+    @apply hover:bg-blue-50/50 transition-all duration-200 cursor-pointer;
+  }
+  
+  /* 狀態指示器 */
+  .status-indicator {
+    @apply w-2 h-2 rounded-full;
+  }
+  
+  .status-indicator.forecast {
+    @apply bg-orange-500;
+  }
+  
+  .status-indicator.in-progress {
+    @apply bg-blue-500;
+  }
+  
+  .status-indicator.completed {
+    @apply bg-green-500;
+  }
+  
+  .status-indicator.warehoused {
+    @apply bg-purple-500;
+  }
+  
+  /* 響應式設計 */
+  @media (max-width: 768px) {
+    .mobile-optimized {
+      @apply text-sm;
+    }
+    
+    .mobile-card {
+      @apply p-4;
+    }
+    
+    /* 強制手機版佈局 */
+    .force-mobile-layout {
+      display: flex !important;
+      flex-direction: column !important;
+      width: 100% !important;
+    }
+    
+    /* 手機版表格強制隱藏 */
+    .mobile-hide-table {
+      display: none !important;
+    }
+    
+    /* 手機版卡片強制顯示 */
+    .mobile-show-cards {
+      display: block !important;
+    }
+    
+    /* 手機版按鈕調整 */
+    .mobile-button-full {
+      width: 100% !important;
+      margin-bottom: 8px !important;
+    }
+    
+    /* 手機版文字縮放 */
+    .mobile-text-scale {
+      font-size: 14px !important;
+      line-height: 1.4 !important;
+    }
+    
+    /* 手機版間距調整 */
+    .mobile-spacing {
+      padding: 12px !important;
+      margin: 8px 0 !important;
+    }
+  }
+  
+  /* 平板電腦響應式 */
+  @media (max-width: 1024px) and (min-width: 769px) {
+    .tablet-optimized {
+      @apply text-sm;
+    }
+  }
+  
+  /* 動畫效果 */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .animate-fade-in-up {
+    animation: fadeInUp 0.5s ease-out;
+  }
+  
+  /* 自定義滾動條 */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+}
