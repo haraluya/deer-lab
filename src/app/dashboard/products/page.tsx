@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { collection, getDocs, DocumentReference, query, where } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
+import { useDataSearch, createProductSearchConfig } from '@/hooks/useDataSearch';
 
 import { MoreHorizontal, Droplets, FileSpreadsheet, Eye, Edit, Package, Factory, Calendar, Plus, Tag, Library, Search, Shield, FlaskConical } from 'lucide-react';
 import { toast } from 'sonner';
@@ -50,11 +51,40 @@ function ProductsPageContent() {
   const [selectedProduct, setSelectedProduct] = useState<ProductWithDetails | null>(null);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [isBatchDeleteOpen, setIsBatchDeleteOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filteredProducts, setFilteredProducts] = useState<ProductWithDetails[]>([]);
-  const [selectedProductTypes, setSelectedProductTypes] = useState<Set<string>>(new Set());
-  const [selectedSeries, setSelectedSeries] = useState<Set<string>>(new Set());
   const [isFragranceCalculatorOpen, setIsFragranceCalculatorOpen] = useState(false);
+
+  // 使用統一的搜尋過濾 Hook
+  const {
+    searchTerm,
+    setSearchTerm,
+    activeFilters,
+    setFilter,
+    clearFilter,
+    filteredData: filteredProducts,
+    totalCount,
+    filteredCount
+  } = useDataSearch(products, createProductSearchConfig<ProductWithDetails>());
+
+  // 便利方法：獲取當前過濾器值
+  const selectedSeries = (activeFilters.seriesName as Set<string>) || new Set<string>();
+  const selectedStatus = (activeFilters.status as Set<string>) || new Set<string>();
+
+  // 便利方法：設定過濾器
+  const setSelectedSeries = (series: Set<string>) => {
+    if (series.size > 0) {
+      setFilter('seriesName', series);
+    } else {
+      clearFilter('seriesName');
+    }
+  };
+
+  const setSelectedStatus = (statuses: Set<string>) => {
+    if (statuses.size > 0) {
+      setFilter('status', statuses);
+    } else {
+      clearFilter('status');
+    }
+  };
 
   // 權限檢查
   const { hasPermission, isAdmin } = usePermission();
@@ -109,7 +139,6 @@ function ProductsPageContent() {
       });
 
       setProducts(sortedProductsList);
-      setFilteredProducts(sortedProductsList);
     } catch (error) {
       console.error("讀取產品資料失敗:", error);
       toast.error("讀取產品資料失敗。");
@@ -120,54 +149,6 @@ function ProductsPageContent() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // 搜尋過濾功能
-  useEffect(() => {
-    if (!searchTerm.trim() && selectedProductTypes.size === 0 && selectedSeries.size === 0) {
-      setFilteredProducts(products);
-      return;
-    }
-
-    const filtered = products.filter(product => {
-      // 搜尋詞過濾
-      if (searchTerm.trim()) {
-        const searchLower = searchTerm.toLowerCase();
-        const matchesSearch = (
-          product.code?.toLowerCase().includes(searchLower) ||
-          product.name?.toLowerCase().includes(searchLower) ||
-          product.seriesName?.toLowerCase().includes(searchLower) ||
-          product.fragranceName?.toLowerCase().includes(searchLower) ||
-          product.fragranceCode?.toLowerCase().includes(searchLower)
-        );
-        if (!matchesSearch) return false;
-      }
-
-      // 產品類型過濾
-      if (selectedProductTypes.size > 0) {
-        // 這裡需要從產品系列中獲取產品類型，暫時跳過
-        // TODO: 實現產品類型過濾
-      }
-
-      // 產品系列過濾
-      if (selectedSeries.size > 0 && !selectedSeries.has(product.seriesName || '')) {
-        return false;
-      }
-
-      return true;
-    });
-
-    // 排序：先按系列名稱升序，再按產品名稱升序
-    const sorted = filtered.sort((a, b) => {
-      // 首先按系列名稱排序
-      const seriesComparison = (a.seriesName || '').localeCompare(b.seriesName || '');
-      if (seriesComparison !== 0) {
-        return seriesComparison;
-      }
-      // 如果系列相同，再按產品名稱排序
-      return (a.name || '').localeCompare(b.name || '');
-    });
-
-    setFilteredProducts(sorted);
-  }, [products, searchTerm, selectedProductTypes, selectedSeries]);
 
   // 處理 URL 查詢參數
   useEffect(() => {
@@ -607,15 +588,13 @@ function ProductsPageContent() {
                   : "bg-purple-100 hover:bg-purple-200 text-purple-800 border-purple-300"
               }`}
               onClick={() => {
-                setSelectedSeries(prev => {
-                  const newSet = new Set(prev);
-                  if (newSet.has(series || '')) {
-                    newSet.delete(series || '');
-                  } else {
-                    newSet.add(series || '');
-                  }
-                  return newSet;
-                });
+                const newSet = new Set(selectedSeries);
+                if (newSet.has(series || '')) {
+                  newSet.delete(series || '');
+                } else {
+                  newSet.add(series || '');
+                }
+                setSelectedSeries(newSet);
               }}
             >
               {series}

@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback, Suspense, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { collection, getDocs, DocumentReference, QueryDocumentSnapshot, DocumentData, doc, updateDoc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useDataSearch, createFragranceSearchConfig } from '@/hooks/useDataSearch';
 import { db } from '@/lib/firebase';
 import { FragranceDialog, FragranceData } from './FragranceDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -34,23 +35,68 @@ function FragrancesPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [fragrances, setFragrances] = useState<FragranceWithSupplier[]>([]);
-  const [filteredFragrances, setFilteredFragrances] = useState<FragranceWithSupplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [selectedFragrance, setSelectedFragrance] = useState<FragranceData | null>(null);
   const [purchaseCart, setPurchaseCart] = useState<Set<string>>(new Set());
-  const [searchTerm, setSearchTerm] = useState("");
   const [isStocktakeMode, setIsStocktakeMode] = useState(false);
   const [updatedStocks, setUpdatedStocks] = useState<Record<string, number>>({});
   const [isImportExportOpen, setIsImportExportOpen] = useState(false);
   const [selectedDetailFragrance, setSelectedDetailFragrance] = useState<FragranceWithSupplier | null>(null);
   const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
-  const [selectedSuppliers, setSelectedSuppliers] = useState<Set<string>>(new Set());
-  const [selectedFragranceTypes, setSelectedFragranceTypes] = useState<Set<string>>(new Set());
-  const [selectedFragranceStatuses, setSelectedFragranceStatuses] = useState<Set<string>>(new Set());
-  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [isBatchDeleteOpen, setIsBatchDeleteOpen] = useState(false);
+
+  // 使用統一的搜尋過濾 Hook
+  const {
+    searchTerm,
+    setSearchTerm,
+    activeFilters,
+    setFilter,
+    clearFilter,
+    filteredData: filteredFragrances,
+    totalCount,
+    filteredCount
+  } = useDataSearch(fragrances, createFragranceSearchConfig<FragranceWithSupplier>());
+
+  // 便利方法：獲取當前過濾器值
+  const selectedSuppliers = (activeFilters.supplierName as Set<string>) || new Set<string>();
+  const selectedFragranceTypes = (activeFilters.fragranceType as Set<string>) || new Set<string>();
+  const selectedFragranceStatuses = (activeFilters.fragranceStatus as Set<string>) || new Set<string>();
+  const showLowStockOnly = Boolean(activeFilters.currentStock);
+
+  // 便利方法：設定過濾器
+  const setSelectedSuppliers = (suppliers: Set<string>) => {
+    if (suppliers.size > 0) {
+      setFilter('supplierName', suppliers);
+    } else {
+      clearFilter('supplierName');
+    }
+  };
+
+  const setSelectedFragranceTypes = (types: Set<string>) => {
+    if (types.size > 0) {
+      setFilter('fragranceType', types);
+    } else {
+      clearFilter('fragranceType');
+    }
+  };
+
+  const setSelectedFragranceStatuses = (statuses: Set<string>) => {
+    if (statuses.size > 0) {
+      setFilter('fragranceStatus', statuses);
+    } else {
+      clearFilter('fragranceStatus');
+    }
+  };
+
+  const setShowLowStockOnly = (show: boolean) => {
+    if (show) {
+      setFilter('currentStock', true);
+    } else {
+      clearFilter('currentStock');
+    }
+  };
 
   // 權限檢查
   const { hasPermission, isAdmin } = usePermission();
@@ -120,7 +166,6 @@ function FragrancesPageContent() {
         } as FragranceWithSupplier;
       });
       setFragrances(fragrancesList);
-      setFilteredFragrances(fragrancesList);
     } catch (error) {
       console.error("讀取香精資料失敗:", error);
       toast.error("讀取香精資料失敗。");
@@ -147,80 +192,6 @@ function FragrancesPageContent() {
     }
   }, [searchParams, fragrances, router]);
 
-  // 搜尋過濾功能
-  useEffect(() => {
-    if (!searchTerm.trim() && selectedSuppliers.size === 0 && selectedFragranceTypes.size === 0 && selectedFragranceStatuses.size === 0 && !showLowStockOnly) {
-      setFilteredFragrances(fragrances);
-      return;
-    }
-
-    const filtered = fragrances.filter(fragrance => {
-      // 搜尋詞過濾
-      if (searchTerm.trim()) {
-        const searchLower = searchTerm.toLowerCase();
-        const matchesSearch = (
-          fragrance.code?.toLowerCase().includes(searchLower) ||
-          fragrance.name?.toLowerCase().includes(searchLower) ||
-          fragrance.supplierName?.toLowerCase().includes(searchLower) ||
-          fragrance.fragranceType?.toLowerCase().includes(searchLower) ||
-          fragrance.fragranceStatus?.toLowerCase().includes(searchLower) ||
-          fragrance.currentStock?.toString().includes(searchLower) ||
-          fragrance.costPerUnit?.toString().includes(searchLower) ||
-          fragrance.percentage?.toString().includes(searchLower)
-        );
-        if (!matchesSearch) return false;
-      }
-
-      // 供應商過濾
-      if (selectedSuppliers.size > 0 && !selectedSuppliers.has(fragrance.supplierName)) {
-        return false;
-      }
-
-      // 香精種類過濾
-      if (selectedFragranceTypes.size > 0 && !selectedFragranceTypes.has(fragrance.fragranceType || '')) {
-        return false;
-      }
-
-      // 香精狀態過濾
-      if (selectedFragranceStatuses.size > 0 && !selectedFragranceStatuses.has(fragrance.fragranceStatus || '')) {
-        return false;
-      }
-
-      // 低庫存過濾
-      if (showLowStockOnly) {
-        const isLowStock = typeof fragrance.safetyStockLevel === 'number' && fragrance.currentStock < fragrance.safetyStockLevel;
-        if (!isLowStock) return false;
-      }
-
-      return true;
-    });
-
-    // 排序：啟用狀態 -> 香精種類 -> 香精名稱
-    const sortedFragrances = filtered.sort((a, b) => {
-      // 1. 按啟用狀態排序：啟用 -> 備用 -> 棄用
-      const statusOrder = { '啟用': 1, '備用': 2, '棄用': 3 };
-      const aStatus = statusOrder[a.fragranceStatus as keyof typeof statusOrder] || 4;
-      const bStatus = statusOrder[b.fragranceStatus as keyof typeof statusOrder] || 4;
-      
-      if (aStatus !== bStatus) {
-        return aStatus - bStatus;
-      }
-
-      // 2. 按香精種類排序
-      const typeOrder = { '棉芯': 1, '陶瓷芯': 2, '棉陶芯通用': 3 };
-      const aType = typeOrder[a.fragranceType as keyof typeof typeOrder] || 4;
-      const bType = typeOrder[b.fragranceType as keyof typeof typeOrder] || 4;
-      
-      if (aType !== bType) {
-        return aType - bType;
-      }
-
-      // 3. 按香精名稱排序
-      return (a.name || '').localeCompare(b.name || '', 'zh-TW');
-    });
-
-    setFilteredFragrances(sortedFragrances);
-  }, [fragrances, searchTerm, selectedSuppliers, selectedFragranceTypes, selectedFragranceStatuses, showLowStockOnly]);
 
   // 智能篩選標籤邏輯
   const { availableSuppliers, availableFragranceTypes, availableFragranceStatuses } = useMemo(() => {
@@ -1075,15 +1046,13 @@ function FragrancesPageContent() {
                     : "bg-orange-100 hover:bg-orange-200 text-orange-800 border-orange-300"
                 }`}
                 onClick={() => {
-                  setSelectedSuppliers(prev => {
-                    const newSet = new Set(prev);
-                    if (newSet.has(supplier)) {
-                      newSet.delete(supplier);
-                    } else {
-                      newSet.add(supplier);
-                    }
-                    return newSet;
-                  });
+                  const newSet = new Set(selectedSuppliers);
+                  if (newSet.has(supplier)) {
+                    newSet.delete(supplier);
+                  } else {
+                    newSet.add(supplier);
+                  }
+                  setSelectedSuppliers(newSet);
                 }}
               >
                 {supplier}
@@ -1120,15 +1089,13 @@ function FragrancesPageContent() {
                   variant={isSelected ? "default" : "secondary"}
                   className={`cursor-pointer transition-colors ${getTypeColor(type)}`}
                   onClick={() => {
-                    setSelectedFragranceTypes(prev => {
-                      const newSet = new Set(prev);
-                      if (newSet.has(type)) {
-                        newSet.delete(type);
-                      } else {
-                        newSet.add(type);
-                      }
-                      return newSet;
-                    });
+                    const newSet = new Set(selectedFragranceTypes);
+                    if (newSet.has(type)) {
+                      newSet.delete(type);
+                    } else {
+                      newSet.add(type);
+                    }
+                    setSelectedFragranceTypes(newSet);
                   }}
                 >
                   {type}
@@ -1166,15 +1133,13 @@ function FragrancesPageContent() {
                   variant={isSelected ? "default" : "secondary"}
                   className={`cursor-pointer transition-colors ${getStatusColor(status)}`}
                   onClick={() => {
-                    setSelectedFragranceStatuses(prev => {
-                      const newSet = new Set(prev);
-                      if (newSet.has(status)) {
-                        newSet.delete(status);
-                      } else {
-                        newSet.add(status);
-                      }
-                      return newSet;
-                    });
+                    const newSet = new Set(selectedFragranceStatuses);
+                    if (newSet.has(status)) {
+                      newSet.delete(status);
+                    } else {
+                      newSet.add(status);
+                    }
+                    setSelectedFragranceStatuses(newSet);
                   }}
                 >
                   {status === '啟用' ? '🟢' : status === '備用' ? '🟡' : '🔴'} {status}

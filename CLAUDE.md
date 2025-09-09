@@ -381,6 +381,18 @@ const {
   removeFromCart, 
   clearCart 
 } = useGlobalCart();
+
+// 統一搜尋過濾 Hook
+const {
+  searchTerm,
+  setSearchTerm,
+  activeFilters,
+  setFilter,
+  clearFilter,
+  filteredData,
+  totalCount,
+  filteredCount
+} = useDataSearch(data, searchConfig);
 ```
 
 #### 錯誤處理標準模式

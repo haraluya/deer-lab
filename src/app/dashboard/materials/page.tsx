@@ -7,6 +7,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 import { CartItem } from '@/types';
 import { useGlobalCart } from '@/hooks/useGlobalCart';
+import { useDataSearch, createMaterialSearchConfig } from '@/hooks/useDataSearch';
 
 import { MaterialDialog, MaterialData } from './MaterialDialog';
 import { MaterialCategoryDialog } from './MaterialCategoryDialog';
@@ -48,17 +49,54 @@ function MaterialsPageContent() {
   const { addToCart, isLoading: cartLoading } = useGlobalCart();
 
   const [materials, setMaterials] = useState<MaterialWithSupplier[]>([]);
-  const [filteredMaterials, setFilteredMaterials] = useState<MaterialWithSupplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isBatchDeleteOpen, setIsBatchDeleteOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<MaterialData | null>(null);
   const [purchaseCart, setPurchaseCart] = useState<Set<string>>(new Set());
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [selectedSubCategory, setSelectedSubCategory] = useState<string>("");
-  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
+
+  // 使用統一的搜尋過濾 Hook
+  const {
+    searchTerm,
+    setSearchTerm,
+    activeFilters,
+    setFilter,
+    clearFilter,
+    filteredData: filteredMaterials,
+    totalCount,
+    filteredCount
+  } = useDataSearch(materials, createMaterialSearchConfig<MaterialWithSupplier>());
+
+  // 便利方法：獲取當前過濾器值
+  const selectedCategory = (activeFilters.category as Set<string>)?.values().next().value || "";
+  const selectedSubCategory = (activeFilters.subCategory as Set<string>)?.values().next().value || "";
+  const showLowStockOnly = Boolean(activeFilters.currentStock);
+
+  // 便利方法：設定過濾器
+  const setSelectedCategory = (category: string) => {
+    if (category) {
+      setFilter('category', new Set([category]));
+    } else {
+      clearFilter('category');
+    }
+  };
+
+  const setSelectedSubCategory = (subCategory: string) => {
+    if (subCategory) {
+      setFilter('subCategory', new Set([subCategory]));
+    } else {
+      clearFilter('subCategory');
+    }
+  };
+
+  const setShowLowStockOnly = (show: boolean) => {
+    if (show) {
+      setFilter('currentStock', true);
+    } else {
+      clearFilter('currentStock');
+    }
+  };
 
   // --- 盤點功能相關狀態 ---
   const [isStocktakeMode, setIsStocktakeMode] = useState(false);
@@ -178,7 +216,7 @@ function MaterialsPageContent() {
     };
   };
 
-  // 高效篩選算法：使用 Map 和 Set 進行快速查找
+  // 獲取所有可用的分類選項
   const getAvailableFilterOptions = useCallback(() => {
     // 使用 Map 建立分類關係索引，提升查找效率
     const categoryToSubCategories = new Map<string, Set<string>>();
@@ -365,107 +403,17 @@ function MaterialsPageContent() {
     }
   };
 
-  // 處理搜尋和篩選
-  const handleSearchAndFilter = useCallback(() => {
-    let filtered = materials;
-
-    // 搜尋篩選
-    if (searchTerm.trim()) {
-      const searchLower = searchTerm.toLowerCase().trim();
-      console.log('搜尋條件:', searchLower);
-      
-      filtered = filtered.filter(material => {
-        const nameMatch = material.name.toLowerCase().includes(searchLower);
-        const codeMatch = material.code.toLowerCase().includes(searchLower);
-        const categoryMatch = material.category?.toLowerCase().includes(searchLower);
-        const subCategoryMatch = material.subCategory?.toLowerCase().includes(searchLower);
-        const supplierMatch = material.supplierName.toLowerCase().includes(searchLower);
-        
-        const isMatch = nameMatch || codeMatch || categoryMatch || subCategoryMatch || supplierMatch;
-        
-        if (isMatch) {
-          console.log('找到匹配:', material.name, {
-            nameMatch,
-            codeMatch,
-            categoryMatch,
-            subCategoryMatch,
-            supplierMatch
-          });
-        }
-        
-        return isMatch;
-      });
-    }
-
-    // 主分類篩選
-    if (selectedCategory) {
-      filtered = filtered.filter(material => material.category === selectedCategory);
-    }
-
-    // 子分類篩選
-    if (selectedSubCategory) {
-      filtered = filtered.filter(material => material.subCategory === selectedSubCategory);
-    }
-
-    // 低於安全庫存篩選
-    if (showLowStockOnly) {
-      filtered = filtered.filter(material => isLowStock(material));
-    }
-
-    // 排序：先按主分類，再按細分分類，最後按物料名稱（升序）
-    filtered.sort((a, b) => {
-      // 第一級排序：主分類
-      const categoryA = a.category || '';
-      const categoryB = b.category || '';
-      if (categoryA !== categoryB) {
-        return categoryA.localeCompare(categoryB, 'zh-TW');
-      }
-      
-      // 第二級排序：細分分類
-      const subCategoryA = a.subCategory || '';
-      const subCategoryB = b.subCategory || '';
-      if (subCategoryA !== subCategoryB) {
-        return subCategoryA.localeCompare(subCategoryB, 'zh-TW');
-      }
-      
-      // 第三級排序：物料名稱
-      return a.name.localeCompare(b.name, 'zh-TW');
-    });
-
-    console.log('篩選結果:', {
-      searchTerm: searchTerm.trim(),
-      totalMaterials: materials.length,
-      filteredCount: filtered.length,
-      selectedCategory,
-      selectedSubCategory
-    });
-
-    setFilteredMaterials(filtered);
-  }, [materials, searchTerm, selectedCategory, selectedSubCategory, showLowStockOnly]);
-
-  // 處理搜尋 - 移除延遲
-  const handleSearch = (term: string) => {
-    setSearchTerm(term);
-    // 立即執行篩選，不使用延遲
-    handleSearchAndFilter();
-  };
 
   // 處理分類篩選
   const handleCategoryFilter = (category: string) => {
     const newCategory = selectedCategory === category ? "" : category;
     setSelectedCategory(newCategory);
-    
-    // 如果取消選取主分類，保留子分類，讓篩選邏輯自動處理
-    // 不再自動清除子分類
   };
 
   // 處理子分類篩選
   const handleSubCategoryFilter = (subCategory: string) => {
     const newSubCategory = selectedSubCategory === subCategory ? "" : subCategory;
     setSelectedSubCategory(newSubCategory);
-    
-    // 如果取消選取子分類，保留主分類，讓篩選邏輯自動處理
-    // 不再自動清除主分類
   };
 
   // 處理低於安全庫存篩選
@@ -639,14 +587,8 @@ function MaterialsPageContent() {
     }
   }, [searchParams, materials, router]);
 
-  // 當篩選條件或資料變化時，重新應用篩選和排序
-  useEffect(() => {
-    if (materials.length > 0) {
-      handleSearchAndFilter();
-    }
-  }, [materials, handleSearchAndFilter]);
 
-  const { categories, subCategories } = useMemo(() => getAvailableFilterOptions(), [getAvailableFilterOptions]);
+  const { categories, subCategories } = useMemo(() => getAllCategories(), [materials]);
 
   // 權限保護：如果沒有查看權限，顯示無權限頁面
   if (!canViewMaterials && !isAdmin()) {
@@ -815,7 +757,7 @@ function MaterialsPageContent() {
             <Input
               placeholder="搜尋物料名稱、代號、分類或供應商..."
               value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 border-input focus:border-orange-500 focus:ring-orange-500"
             />
           </div>
