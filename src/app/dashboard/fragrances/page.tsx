@@ -713,14 +713,42 @@ function FragrancesPageContent() {
               fragranceStatusLength: item.fragranceStatus?.length || 0
             });
             
-            // 智能匹配邏輯：檢查香精代號是否存在
-            const existingFragranceId = existingFragrancesMap.get(item.code);
+            // 智能匹配邏輯：檢查香精代號是否存在，支援自動補0
+            const normalizeFragranceCode = (code: string): string[] => {
+              if (!code) return [];
+              
+              const candidates = [code];
+              
+              // 如果是純數字，嘗試補0到10位
+              if (/^\d+$/.test(code)) {
+                const paddedCode = code.padStart(10, '0');
+                candidates.push(paddedCode);
+                console.log(`香精代號補0: ${code} -> ${paddedCode}`);
+              }
+              
+              return candidates;
+            };
+            
+            const codeVariants = normalizeFragranceCode(item.code);
+            let existingFragranceId = null;
+            let matchedCode = item.code;
+            
+            // 嘗試各種代號變體
+            for (const codeVariant of codeVariants) {
+              existingFragranceId = existingFragrancesMap.get(codeVariant);
+              if (existingFragranceId) {
+                matchedCode = codeVariant;
+                break;
+              }
+            }
             
             if (existingFragranceId) {
               // 香精代號已存在，執行更新
-              console.log(`香精代號 ${item.code} 已存在，執行更新操作`);
+              console.log(`香精代號 ${matchedCode} 已存在，執行更新操作 (原始輸入: ${item.code})`);
               const updateFragrance = httpsCallable(functions, 'updateFragranceByCode');
-              await updateFragrance(processedItem);
+              // 使用匹配到的代號進行更新
+              const updateItem = { ...processedItem, code: matchedCode };
+              await updateFragrance(updateItem);
               updatedCount++;
             } else {
               // 香精代號不存在，執行新增
