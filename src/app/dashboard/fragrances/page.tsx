@@ -87,6 +87,8 @@ function FragrancesPageContent() {
         console.log('fragranceType 原始值:', data.fragranceType, '類型:', typeof data.fragranceType);
         console.log('fragranceStatus 原始值:', data.fragranceStatus, '類型:', typeof data.fragranceStatus);
         console.log('status 原始值:', data.status, '類型:', typeof data.status);
+        console.log('costPerUnit 原始值:', data.costPerUnit, '類型:', typeof data.costPerUnit);
+        console.log('unit 原始值:', data.unit, '類型:', typeof data.unit);
         console.log('所有欄位名稱:', Object.keys(data));
         
         // 確保正確讀取 fragranceType 和 fragranceStatus
@@ -107,6 +109,7 @@ function FragrancesPageContent() {
           supplierRef: data.supplierRef,
           safetyStockLevel: data.safetyStockLevel,
           costPerUnit: data.costPerUnit,
+          unit: data.unit || 'KG', // 確保有 unit 欄位，預設為 KG
           percentage: data.percentage,
           pgRatio: data.pgRatio,
           vgRatio: data.vgRatio,
@@ -310,6 +313,16 @@ function FragrancesPageContent() {
   // 添加到採購車 - 使用全域購物車
   const addToPurchaseCart = async (fragrance: FragranceWithSupplier) => {
     try {
+      console.log('🛒 準備加入採購車的香精資料:', {
+        id: fragrance.id,
+        name: fragrance.name,
+        code: fragrance.code,
+        costPerUnit: fragrance.costPerUnit,
+        unit: fragrance.unit,
+        原始costPerUnit類型: typeof fragrance.costPerUnit,
+        原始costPerUnit值: fragrance.costPerUnit
+      });
+
       const cartItem = {
         id: fragrance.id,
         type: 'fragrance' as const,
@@ -323,6 +336,8 @@ function FragrancesPageContent() {
         costPerUnit: fragrance.costPerUnit || 0,
         price: fragrance.costPerUnit || 0
       };
+
+      console.log('🛒 最終送出到購物車的資料:', cartItem);
 
       await addToCart(cartItem);
       toast.success(`已將 ${fragrance.name} 加入採購車`);

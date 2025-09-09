@@ -56,6 +56,7 @@ export interface FragranceData extends DocumentData {
   supplierRef?: DocumentReference;
   safetyStockLevel?: number;
   costPerUnit?: number;
+  unit?: string; // 新增 unit 欄位
   percentage?: number;
   pgRatio?: number;
   vgRatio?: number;
