@@ -9,6 +9,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { collection, getDocs, DocumentReference, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
+import FragranceCalculations from '@/utils/fragranceCalculations';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -178,20 +179,7 @@ export function FragranceDialog({
 
   // 自動計算PG和VG比例
   const calculateRatios = (fragrancePercentage: number) => {
-    let pgRatio = 0;
-    let vgRatio = 0;
-    
-    if (fragrancePercentage <= 60) {
-      // 香精+PG補滿60%，VG為40%
-      pgRatio = Math.round((60 - fragrancePercentage) * 100) / 100;
-      vgRatio = 40;
-    } else {
-      // 香精超過60%，PG為0，VG補滿
-      pgRatio = 0;
-      vgRatio = Math.round((100 - fragrancePercentage) * 100) / 100;
-    }
-    
-    return { pgRatio, vgRatio };
+    return FragranceCalculations.calculatePGVGRatios(fragrancePercentage);
   };
 
   async function onSubmit(values: FormData) {

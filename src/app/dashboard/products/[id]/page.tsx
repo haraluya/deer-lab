@@ -102,10 +102,32 @@ export default function ProductDetailPage() {
       
       const result = await getProductFragranceHistory({ productId });
       console.log('香精歷程載入結果:', result.data);
-      setFragranceHistory((result.data as any)?.data || []);
+      
+      // 檢查 Firebase Function 是否成功返回
+      if (result.data && (result.data as any).success) {
+        setFragranceHistory((result.data as any).data || []);
+      } else {
+        // Function 成功執行但沒有資料，設置空陣列（這是正常情況，不顯示任何通知）
+        setFragranceHistory([]);
+        console.log('該產品尚無香精更換歷程');
+      }
     } catch (error) {
-      console.error("載入香精歷程失敗:", error);
-      toast.error("載入香精歷程失敗");
+      console.error("載入香精歷程時發生錯誤:", error);
+      // 設置空陣列
+      setFragranceHistory([]);
+      
+      // 只在真正的網路錯誤或函數錯誤時才顯示錯誤訊息
+      // 排除常見的正常情況（如函數不存在、無權限等）
+      if (error && typeof error === 'object' && 'code' in error) {
+        const firebaseError = error as any;
+        const errorCode = firebaseError.code;
+        
+        // 只在真正的系統錯誤時顯示錯誤訊息，其他情況靜默處理
+        if (errorCode === 'unavailable' || errorCode === 'deadline-exceeded' || errorCode === 'internal') {
+          toast.error("香精歷程載入失敗，請稍後再試");
+        }
+        // 其他錯誤（如 functions/not-found, permission-denied 等）靜默處理
+      }
     } finally {
       setIsLoadingHistory(false);
     }

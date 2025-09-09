@@ -3,6 +3,7 @@ import { logger } from "firebase-functions";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue, DocumentReference } from "firebase-admin/firestore";
 import { ensureIsAdmin } from "../utils/auth";
+import FragranceCalculations, { calculateCorrectRatios } from '../utils/fragranceCalculations';
 
 const db = getFirestore();
 
@@ -406,22 +407,7 @@ export const fixFragranceStatus = onCall(async (request) => {
 });
 
 // 計算正確的香精比例（與前端邏輯一致）
-const calculateCorrectRatios = (fragrancePercentage: number) => {
-  let pgRatio = 0;
-  let vgRatio = 0;
-  
-  if (fragrancePercentage <= 60) {
-    // 香精+PG補滿60%，VG為40%
-    pgRatio = Math.round((60 - fragrancePercentage) * 100) / 100;
-    vgRatio = 40;
-  } else {
-    // 香精超過60%，PG為0，VG補滿
-    pgRatio = 0;
-    vgRatio = Math.round((100 - fragrancePercentage) * 100) / 100;
-  }
-  
-  return { pgRatio, vgRatio };
-};
+// 注意：此函數已移至 utils/fragranceCalculations.ts 統一管理
 
 // 批量修正所有香精的比例
 export const fixAllFragranceRatios = onCall(async (request) => {

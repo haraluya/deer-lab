@@ -17,7 +17,6 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MultiSelect, OptionType } from '@/components/ui/multi-select';
 import { Package, Tag, FlaskConical, Search, ChevronDown, Check } from 'lucide-react';
-import { FragranceChangeDialog } from './FragranceChangeDialog';
 
 // 表單的 Zod 驗證 Schema
 const formSchema = z.object({
@@ -27,6 +26,7 @@ const formSchema = z.object({
   nicotineMg: z.coerce.number().min(0, { message: '尼古丁濃度不能為負數' }).default(0),
   specificMaterialIds: z.array(z.string()).optional().default([]),
   status: z.enum(['啟用', '備用', '棄用']).default('啟用'),
+  fragranceChangeReason: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -78,10 +78,9 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
   const [seriesInfo, setSeriesInfo] = useState<SeriesInfo[]>([]);
   const isEditMode = !!productData;
   
-  // 香精更換相關狀態
+  // 香精更換檢測
   const [originalFragranceId, setOriginalFragranceId] = useState<string | null>(null);
-  const [isFragranceChangeDialogOpen, setIsFragranceChangeDialogOpen] = useState(false);
-  const [currentFragranceName, setCurrentFragranceName] = useState<string>('');
+  const [isFragranceChanged, setIsFragranceChanged] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -92,6 +91,7 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
       nicotineMg: 0,
       specificMaterialIds: [],
       status: '啟用',
+      fragranceChangeReason: '',
     },
   });
 
@@ -107,8 +107,8 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
           console.log('🔍 開始查詢資料...');
           const seriesQuery = getDocs(collection(db, 'productSeries'));
           console.log('🔍 系列查詢已建立');
-          const fragrancesQuery = getDocs(query(collection(db, 'fragrances'), where('status', 'in', ['active', 'standby'])));
-          console.log('🔍 香精查詢已建立，查詢條件: status in [active, standby]');
+          const fragrancesQuery = getDocs(query(collection(db, 'fragrances'), where('fragranceStatus', 'in', ['啟用', '備用'])));
+          console.log('🔍 香精查詢已建立，查詢條件: fragranceStatus in [啟用, 備用]');
           const materialsQuery = getDocs(collection(db, 'materials'));
           console.log('🔍 物料查詢已建立');
 
@@ -247,17 +247,16 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
         nicotineMg: productData.nicotineMg || 0,
         specificMaterialIds: productData.specificMaterials?.map(ref => ref.id) || [],
         status: productData.status || '啟用',
+        fragranceChangeReason: '',
       });
       
       // 記錄原始香精ID（用於判斷是否有更換）
       setOriginalFragranceId(productData.currentFragranceRef?.id || null);
+      setIsFragranceChanged(false);
       
-      // 如果編輯模式，載入香精配方資訊和名稱
+      // 如果編輯模式，載入香精配方資訊
       if (productData.currentFragranceRef?.id) {
         handleFragranceChange(productData.currentFragranceRef.id);
-        // 設置當前香精名稱
-        const currentFragrance = options.fragrances.find(f => f.value === productData.currentFragranceRef?.id);
-        setCurrentFragranceName(currentFragrance?.label || '');
       }
     } else if (isOpen && !productData) {
       form.reset({
@@ -267,6 +266,7 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
         nicotineMg: 0,
         specificMaterialIds: [],
         status: '啟用',
+        fragranceChangeReason: '',
       });
       // 重置產品編號和代碼預覽
       setGeneratedProductNumber('');
@@ -335,13 +335,41 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
     }
   }, [form.watch('seriesId'), seriesInfo, isEditMode]);
 
+  // 監聽香精選擇變更，檢測是否有更換
+  useEffect(() => {
+    const currentFragranceId = form.watch('fragranceId');
+    if (isEditMode && originalFragranceId && currentFragranceId) {
+      setIsFragranceChanged(currentFragranceId !== originalFragranceId);
+    } else {
+      setIsFragranceChanged(false);
+    }
+  }, [form.watch('fragranceId'), originalFragranceId, isEditMode]);
+
   // 表單提交處理
   async function onSubmit(values: FormData) {
+    // 檢查如果香精有更換但沒有填寫更換原因
+    if (isFragranceChanged && !values.fragranceChangeReason?.trim()) {
+      toast.error('請填寫香精更換原因');
+      return;
+    }
+
     setIsSubmitting(true);
     const toastId = toast.loading(isEditMode ? '正在更新產品...' : '正在新增產品...');
     try {
       const functions = getFunctions();
-      const payload = { ...values };
+      
+      // 組裝要傳送的資料
+      const payload = { 
+        ...values,
+        // 如果有香精更換且在編輯模式，添加更換原因資訊
+        ...(isFragranceChanged && isEditMode && {
+          fragranceChangeInfo: {
+            oldFragranceId: originalFragranceId,
+            newFragranceId: values.fragranceId,
+            changeReason: values.fragranceChangeReason
+          }
+        })
+      };
 
       if (isEditMode && productData) {
         const updateProduct = httpsCallable(functions, 'updateProduct');
@@ -594,22 +622,10 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
                                         field.value === option.value ? 'bg-green-100' : ''
                                       }`}
                                       onClick={() => {
-                                        // 在編輯模式下，如果香精有改變，先彈出香精更換對話框
-                                        if (isEditMode && originalFragranceId && option.value !== originalFragranceId) {
-                                          // 先設置新的香精ID到表單
-                                          field.onChange(option.value);
-                                          // 關閉下拉選單
-                                          setIsFragranceDropdownOpen(false);
-                                          setFragranceSearchTerm('');
-                                          // 彈出香精更換對話框
-                                          setIsFragranceChangeDialogOpen(true);
-                                        } else {
-                                          // 新增模式或無更換香精，正常處理
-                                          field.onChange(option.value);
-                                          handleFragranceChange(option.value);
-                                          setIsFragranceDropdownOpen(false);
-                                          setFragranceSearchTerm('');
-                                        }
+                                        field.onChange(option.value);
+                                        handleFragranceChange(option.value);
+                                        setIsFragranceDropdownOpen(false);
+                                        setFragranceSearchTerm('');
                                       }}
                                     >
                                       <span className="text-sm">{option.label}</span>
@@ -634,6 +650,35 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
                     )}
                   />
                 </div>
+
+                {/* 香精更換原因欄位（當檢測到香精有更換時顯示） */}
+                {isFragranceChanged && (
+                  <div className="mt-4">
+                    <FormField
+                      control={form.control}
+                      name="fragranceChangeReason"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm font-semibold text-orange-700 flex items-center gap-2">
+                            <div className="w-4 h-4 bg-orange-500 rounded-full"></div>
+                            更換原因 *
+                          </FormLabel>
+                          <FormControl>
+                            <textarea
+                              {...field}
+                              className="w-full px-3 py-2 border border-orange-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 min-h-[80px] resize-none"
+                              placeholder="請詳細說明更換原因，例如：配方升級、舊版停產等..."
+                            />
+                          </FormControl>
+                          <FormMessage />
+                          <p className="text-xs text-orange-600 mt-1">
+                            ⚠️ 檢測到香精有變更，此操作將會被記錄
+                          </p>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
 
                                {/* 香精資訊顯示 */}
                 {selectedFragrance && (
@@ -723,19 +768,6 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
           </form>
         </Form>
       </DialogContent>
-      
-      {/* 香精更換對話框 */}
-      <FragranceChangeDialog
-        isOpen={isFragranceChangeDialogOpen}
-        onOpenChange={setIsFragranceChangeDialogOpen}
-        onUpdate={() => {
-          // 香精更換完成後關閉產品編輯對話框並觸發更新
-          onOpenChange(false);
-          onProductUpdate();
-        }}
-        productData={productData || null}
-        currentFragranceName={currentFragranceName}
-      />
     </Dialog>
   );
 }

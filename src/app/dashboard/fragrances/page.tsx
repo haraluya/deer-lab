@@ -11,6 +11,7 @@ import { FragranceDialog, FragranceData } from './FragranceDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { MoreHorizontal, ShoppingCart, Search, Package, Calculator, FileSpreadsheet, Warehouse, Plus, Eye, Edit, Droplets, Building, Calendar, AlertTriangle, X, Shield, HelpCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import FragranceCalculations from '@/utils/fragranceCalculations';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
@@ -491,28 +492,6 @@ function FragrancesPageContent() {
     setIsStocktakeMode(false);
   };
 
-  // 四捨五入到小數點第二位的函數
-  const roundToTwoDecimals = (value: number): number => {
-    return Math.round(value * 100) / 100;
-  };
-
-  // 計算 PG 和 VG 比例的函數（使用正確的配方邏輯）
-  const calculatePGRatios = (fragrancePercentage: number): { pgRatio: number; vgRatio: number } => {
-    let pgRatio = 0;
-    let vgRatio = 0;
-    
-    if (fragrancePercentage <= 60) {
-      // 香精+PG補滿60%，VG為40%
-      pgRatio = roundToTwoDecimals(60 - fragrancePercentage);
-      vgRatio = 40;
-    } else {
-      // 香精超過60%，PG為0，VG補滿
-      pgRatio = 0;
-      vgRatio = roundToTwoDecimals(100 - fragrancePercentage);
-    }
-    
-    return { pgRatio, vgRatio };
-  };
 
   // 匯入/匯出處理函式
   const handleImport = async (data: any[], options?: { updateMode?: boolean }, onProgress?: (current: number, total: number) => void) => {
@@ -640,16 +619,16 @@ function FragrancesPageContent() {
             }
 
             // 處理數值欄位
-            const percentage = item.percentage !== undefined && item.percentage !== null && item.percentage !== '' ? roundToTwoDecimals(Number(item.percentage)) : 0;
-            let pgRatio = item.pgRatio !== undefined && item.pgRatio !== null && item.pgRatio !== '' ? roundToTwoDecimals(Number(item.pgRatio)) : 0;
-            let vgRatio = item.vgRatio !== undefined && item.vgRatio !== null && item.vgRatio !== '' ? roundToTwoDecimals(Number(item.vgRatio)) : 0;
+            const percentage = item.percentage !== undefined && item.percentage !== null && item.percentage !== '' ? FragranceCalculations.roundToDecimals(Number(item.percentage)) : 0;
+            let pgRatio = item.pgRatio !== undefined && item.pgRatio !== null && item.pgRatio !== '' ? FragranceCalculations.roundToDecimals(Number(item.pgRatio)) : 0;
+            let vgRatio = item.vgRatio !== undefined && item.vgRatio !== null && item.vgRatio !== '' ? FragranceCalculations.roundToDecimals(Number(item.vgRatio)) : 0;
             const currentStock = item.currentStock !== undefined && item.currentStock !== null && item.currentStock !== '' ? Number(item.currentStock) : 0;
             const safetyStockLevel = item.safetyStockLevel !== undefined && item.safetyStockLevel !== null && item.safetyStockLevel !== '' ? Number(item.safetyStockLevel) : 0;
             const costPerUnit = item.costPerUnit !== undefined && item.costPerUnit !== null && item.costPerUnit !== '' ? Number(item.costPerUnit) : 0;
             
             // 如果提供了香精比例但沒有提供 PG/VG 比例，則自動計算
             if (percentage > 0 && (pgRatio === 0 || vgRatio === 0)) {
-              const calculatedRatios = calculatePGRatios(percentage);
+              const calculatedRatios = FragranceCalculations.calculatePGVGRatios(percentage);
               pgRatio = calculatedRatios.pgRatio;
               vgRatio = calculatedRatios.vgRatio;
               
