@@ -1000,7 +1000,7 @@ function ProductsPageContent() {
         isOpen={isFragranceCalculatorOpen}
         onOpenChange={setIsFragranceCalculatorOpen}
         selectedProductIds={selectedProducts}
-        products={filteredProducts}
+        products={products}
         onProductSelectionChange={handleSelectProduct}
       />
     </div>
