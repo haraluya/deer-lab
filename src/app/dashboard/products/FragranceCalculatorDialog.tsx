@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
 import { FlaskConical, Package, AlertTriangle, ShoppingCart, X, Calculator } from 'lucide-react';
 
 // 香精試算項目介面
@@ -39,23 +40,42 @@ interface FragranceCalculatorDialogProps {
   onOpenChange: (isOpen: boolean) => void;
   selectedProductIds: Set<string>;
   products: any[]; // 產品列表
+  onProductSelectionChange: (productId: string, checked: boolean) => void; // 新增：產品選擇變更回調
 }
 
 export function FragranceCalculatorDialog({
   isOpen,
   onOpenChange,
   selectedProductIds,
-  products
+  products,
+  onProductSelectionChange
 }: FragranceCalculatorDialogProps) {
   const [calculationItems, setCalculationItems] = useState<FragranceCalculationItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // 當對話框開啟時載入資料
+  // 本地產品選擇狀態
+  const [localSelectedProducts, setLocalSelectedProducts] = useState<Set<string>>(new Set());
+
+  // 當對話框開啟時載入資料並初始化本地選擇狀態
   useEffect(() => {
     if (isOpen && selectedProductIds.size > 0) {
+      setLocalSelectedProducts(new Set(selectedProductIds));
       loadCalculationData();
     }
   }, [isOpen, selectedProductIds]);
+
+  // 當本地選擇狀態改變時，過濾計算項目
+  useEffect(() => {
+    if (calculationItems.length > 0) {
+      const filteredItems = calculationItems.filter(item => 
+        localSelectedProducts.has(item.productId)
+      );
+      // 如果過濾後的項目數量與原始項目不同，更新計算項目
+      if (filteredItems.length !== calculationItems.length) {
+        setCalculationItems(filteredItems);
+      }
+    }
+  }, [localSelectedProducts, calculationItems]);
 
   const loadCalculationData = async () => {
     setIsLoading(true);
@@ -126,12 +146,38 @@ export function FragranceCalculatorDialog({
         }
       }
 
-      setCalculationItems(items);
+      // 只保留本地選中的產品項目
+      const filteredItems = items.filter(item => 
+        localSelectedProducts.has(item.productId)
+      );
+      setCalculationItems(filteredItems);
     } catch (error) {
       console.error('載入香精試算資料失敗:', error);
       toast.error('載入香精試算資料失敗');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // 處理產品勾選狀態變更
+  const handleProductSelectionChange = (productId: string, checked: boolean) => {
+    // 更新本地選擇狀態
+    const newLocalSelected = new Set(localSelectedProducts);
+    if (checked) {
+      newLocalSelected.add(productId);
+    } else {
+      newLocalSelected.delete(productId);
+    }
+    setLocalSelectedProducts(newLocalSelected);
+    
+    // 通知父組件更新選擇狀態
+    onProductSelectionChange(productId, checked);
+    
+    // 如果取消勾選，從計算項目中移除
+    if (!checked) {
+      setCalculationItems(prev => 
+        prev.filter(item => item.productId !== productId)
+      );
     }
   };
 
@@ -270,7 +316,7 @@ export function FragranceCalculatorDialog({
                     <Card key={item.productId} className="border border-purple-100 hover:border-purple-200 transition-colors">
                       <CardHeader className="pb-3">
                         <div className="flex items-start justify-between">
-                          <div>
+                          <div className="flex-1">
                             <CardTitle className="text-base font-semibold text-gray-900">
                               {item.productName}
                             </CardTitle>
@@ -280,6 +326,15 @@ export function FragranceCalculatorDialog({
                               </Badge>
                               <span className="text-xs text-gray-500">{item.seriesName}</span>
                             </div>
+                          </div>
+                          <div className="flex items-start gap-2 ml-3">
+                            <Checkbox
+                              checked={localSelectedProducts.has(item.productId)}
+                              onCheckedChange={(checked) => 
+                                handleProductSelectionChange(item.productId, checked as boolean)
+                              }
+                              className="mt-1"
+                            />
                           </div>
                         </div>
                       </CardHeader>

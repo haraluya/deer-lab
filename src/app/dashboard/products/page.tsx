@@ -998,6 +998,7 @@ function ProductsPageContent() {
         onOpenChange={setIsFragranceCalculatorOpen}
         selectedProductIds={selectedProducts}
         products={filteredProducts}
+        onProductSelectionChange={handleSelectProduct}
       />
     </div>
   );
