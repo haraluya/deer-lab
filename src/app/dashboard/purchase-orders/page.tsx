@@ -232,6 +232,15 @@ function PurchaseOrdersPageContent() {
       const fragrancesSnapshot = await getDocs(collection(db, 'fragrances'));
       const fragrancesList = fragrancesSnapshot.docs.map(doc => {
         const data = doc.data();
+        
+        console.log(`📋 載入香精資料:`, {
+          id: doc.id,
+          name: data.name,
+          code: data.code,
+          costPerUnit: data.costPerUnit,
+          原始costPerUnit類型: typeof data.costPerUnit
+        });
+        
         return {
           id: doc.id,
           name: data.name,
@@ -566,6 +575,24 @@ function PurchaseOrdersPageContent() {
         }
       } else if (item.type === 'fragrance') {
         const latestFragrance = fragrances.find(f => f.id === item.id);
+        
+        console.log(`🔍 查找香精資料匹配:`, {
+          購物車項目: {
+            id: item.id,
+            name: item.name,
+            code: item.code,
+            costPerUnit: item.costPerUnit
+          },
+          香精資料總數: fragrances.length,
+          找到匹配: !!latestFragrance,
+          匹配結果: latestFragrance ? {
+            id: latestFragrance.id,
+            name: latestFragrance.name,
+            code: latestFragrance.code,
+            costPerUnit: latestFragrance.costPerUnit
+          } : '無匹配'
+        });
+        
         if (latestFragrance) {
           updatedItem = {
             ...item,
@@ -578,6 +605,12 @@ function PurchaseOrdersPageContent() {
             series: latestFragrance.series,
             usedInProducts: latestFragrance.usedInProducts,
           };
+        } else {
+          console.warn(`⚠️ 找不到香精資料匹配:`, {
+            購物車項目ID: item.id,
+            購物車項目名稱: item.name,
+            可用香精IDs: fragrances.map(f => ({ id: f.id, name: f.name }))
+          });
         }
       }
       
