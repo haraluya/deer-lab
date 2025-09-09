@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fixFragranceStatus = exports.diagnoseFragranceStatus = exports.deleteFragrance = exports.updateFragranceByCode = exports.updateFragrance = exports.createFragrance = void 0;
+exports.diagnoseFragranceRatios = exports.fixAllFragranceRatios = exports.fixFragranceStatus = exports.diagnoseFragranceStatus = exports.deleteFragrance = exports.updateFragranceByCode = exports.updateFragrance = exports.createFragrance = void 0;
 // functions/src/api/fragrances.ts
 const firebase_functions_1 = require("firebase-functions");
 const https_1 = require("firebase-functions/v2/https");
@@ -350,6 +350,141 @@ exports.fixFragranceStatus = (0, https_1.onCall)(async (request) => {
     catch (error) {
         firebase_functions_1.logger.error('修復香精狀態失敗:', error);
         throw new https_1.HttpsError('internal', '修復香精狀態時發生錯誤');
+    }
+});
+// 計算正確的香精比例（與前端邏輯一致）
+const calculateCorrectRatios = (fragrancePercentage) => {
+    let pgRatio = 0;
+    let vgRatio = 0;
+    if (fragrancePercentage <= 60) {
+        // 香精+PG補滿60%，VG為40%
+        pgRatio = Math.round((60 - fragrancePercentage) * 100) / 100;
+        vgRatio = 40;
+    }
+    else {
+        // 香精超過60%，PG為0，VG補滿
+        pgRatio = 0;
+        vgRatio = Math.round((100 - fragrancePercentage) * 100) / 100;
+    }
+    return { pgRatio, vgRatio };
+};
+// 批量修正所有香精的比例
+exports.fixAllFragranceRatios = (0, https_1.onCall)(async (request) => {
+    const { auth: contextAuth } = request;
+    // await ensureIsAdmin(contextAuth?.uid);
+    try {
+        firebase_functions_1.logger.info('開始批量修正香精比例...');
+        // 獲取所有香精
+        const fragrancesQuery = await db.collection('fragrances').get();
+        let fixedCount = 0;
+        const batch = db.batch();
+        const fixDetails = [];
+        fragrancesQuery.docs.forEach(doc => {
+            const data = doc.data();
+            const fragrancePercentage = data.percentage || 0;
+            if (fragrancePercentage > 0) {
+                const { pgRatio, vgRatio } = calculateCorrectRatios(fragrancePercentage);
+                const currentPgRatio = data.pgRatio || 0;
+                const currentVgRatio = data.vgRatio || 0;
+                // 檢查是否需要修正（允許小數點誤差）
+                if (Math.abs(currentPgRatio - pgRatio) > 0.1 || Math.abs(currentVgRatio - vgRatio) > 0.1) {
+                    batch.update(doc.ref, {
+                        pgRatio,
+                        vgRatio,
+                        updatedAt: firestore_1.FieldValue.serverTimestamp()
+                    });
+                    fixDetails.push({
+                        code: data.code,
+                        name: data.name,
+                        percentage: fragrancePercentage,
+                        oldPgRatio: currentPgRatio,
+                        newPgRatio: pgRatio,
+                        oldVgRatio: currentVgRatio,
+                        newVgRatio: vgRatio
+                    });
+                    fixedCount++;
+                    firebase_functions_1.logger.info(`修正香精 ${data.name} (${data.code}) 比例: 香精=${fragrancePercentage}%, PG=${currentPgRatio}->${pgRatio}%, VG=${currentVgRatio}->${vgRatio}%`);
+                }
+            }
+        });
+        if (fixedCount > 0) {
+            await batch.commit();
+            firebase_functions_1.logger.info(`批量修正完成，共修正 ${fixedCount} 個香精的比例`);
+        }
+        else {
+            firebase_functions_1.logger.info('所有香精比例都正確，無需修正');
+        }
+        return {
+            success: true,
+            fixedCount,
+            fixDetails,
+            message: `修正完成，共修正 ${fixedCount} 個香精的 PG/VG 比例`
+        };
+    }
+    catch (error) {
+        firebase_functions_1.logger.error('批量修正香精比例失敗:', error);
+        throw new https_1.HttpsError('internal', '批量修正香精比例時發生錯誤');
+    }
+});
+// 診斷香精比例問題
+exports.diagnoseFragranceRatios = (0, https_1.onCall)(async (request) => {
+    const { auth: contextAuth } = request;
+    // await ensureIsAdmin(contextAuth?.uid);
+    try {
+        firebase_functions_1.logger.info('開始診斷香精比例...');
+        // 獲取所有香精
+        const fragrancesQuery = await db.collection('fragrances').get();
+        const problematicFragrances = [];
+        const correctFragrances = [];
+        fragrancesQuery.docs.forEach(doc => {
+            const data = doc.data();
+            const fragrancePercentage = data.percentage || 0;
+            const currentPgRatio = data.pgRatio || 0;
+            const currentVgRatio = data.vgRatio || 0;
+            if (fragrancePercentage > 0) {
+                const { pgRatio: correctPgRatio, vgRatio: correctVgRatio } = calculateCorrectRatios(fragrancePercentage);
+                const pgDiff = Math.abs(currentPgRatio - correctPgRatio);
+                const vgDiff = Math.abs(currentVgRatio - correctVgRatio);
+                if (pgDiff > 0.1 || vgDiff > 0.1) {
+                    problematicFragrances.push({
+                        code: data.code,
+                        name: data.name,
+                        percentage: fragrancePercentage,
+                        currentPgRatio,
+                        correctPgRatio,
+                        pgDiff,
+                        currentVgRatio,
+                        correctVgRatio,
+                        vgDiff,
+                        total: fragrancePercentage + currentPgRatio + currentVgRatio,
+                        correctTotal: fragrancePercentage + correctPgRatio + correctVgRatio
+                    });
+                }
+                else {
+                    correctFragrances.push({
+                        code: data.code,
+                        name: data.name,
+                        percentage: fragrancePercentage,
+                        pgRatio: currentPgRatio,
+                        vgRatio: currentVgRatio
+                    });
+                }
+            }
+        });
+        firebase_functions_1.logger.info(`診斷完成：總共 ${fragrancesQuery.docs.length} 個香精，${problematicFragrances.length} 個比例錯誤，${correctFragrances.length} 個比例正確`);
+        return {
+            success: true,
+            totalFragrances: fragrancesQuery.docs.length,
+            problematicCount: problematicFragrances.length,
+            correctCount: correctFragrances.length,
+            problematicFragrances,
+            correctFragrances,
+            message: `診斷完成：找到 ${problematicFragrances.length} 個比例錯誤的香精`
+        };
+    }
+    catch (error) {
+        firebase_functions_1.logger.error('診斷香精比例失敗:', error);
+        throw new https_1.HttpsError('internal', '診斷香精比例時發生錯誤');
     }
 });
 //# sourceMappingURL=fragrances.js.map
