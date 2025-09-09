@@ -816,12 +816,12 @@ function FragrancesPageContent() {
         fragranceType: getFragranceTypeText(fragrance.fragranceType || fragrance.status),
         fragranceStatus: getFragranceStatusText(fragrance.fragranceStatus || fragrance.status || 'active'),
         supplierName: fragrance.supplierName,
+        currentStock: fragrance.currentStock,
         safetyStockLevel: fragrance.safetyStockLevel,
         costPerUnit: fragrance.costPerUnit,
         percentage: fragrance.percentage,
         pgRatio: fragrance.pgRatio,
         vgRatio: fragrance.vgRatio,
-        currentStock: fragrance.currentStock,
         unit: 'KG'
       };
     });
@@ -1656,7 +1656,7 @@ function FragrancesPageContent() {
         onImport={handleImport}
         onExport={handleExport}
         title="香精資料"
-        description="匯入或匯出香精資料，支援 Excel 和 CSV 格式。匯入時會智能匹配香精代號：如果代號不存在則新增，如果代號已存在則更新覆蓋有填入的欄位。"
+        description="匯入或匯出香精資料，支援 Excel 和 CSV 格式。香精代號為必填欄位。匯入時會智能匹配香精代號：如果代號不存在則新增，如果代號已存在則更新覆蓋有填入的欄位。"
         color="purple"
         showUpdateOption={false}
         maxBatchSize={500}
@@ -1667,25 +1667,25 @@ function FragrancesPageContent() {
             fragranceType: "棉芯",
             fragranceStatus: "啟用",
             supplierName: "示例供應商",
+            currentStock: 500,
             safetyStockLevel: 1000,
             costPerUnit: 15.5,
             percentage: 5,
-            currentStock: 500,
             unit: "KG"
           }
         ]}
         fields={[
-          { key: "code", label: "香精代號", required: false, type: "string" },
-          { key: "name", label: "香精名稱", required: true, type: "string" },
+          { key: "code", label: "香精代號", required: true, type: "string" },
+          { key: "name", label: "香精名稱", required: false, type: "string" },
           { key: "fragranceType", label: "香精種類", required: false, type: "string" },
           { key: "fragranceStatus", label: "啟用狀態", required: false, type: "string" },
           { key: "supplierName", label: "供應商", required: false, type: "string" },
+          { key: "currentStock", label: "目前庫存", required: false, type: "number" },
           { key: "safetyStockLevel", label: "安全庫存", required: false, type: "number" },
           { key: "costPerUnit", label: "單位成本", required: false, type: "number" },
-          { key: "percentage", label: "香精比例", required: false, type: "number" },
+          { key: "percentage", label: "香精比例%", required: false, type: "number" },
           { key: "pgRatio", label: "PG比例", required: false, type: "number" },
           { key: "vgRatio", label: "VG比例", required: false, type: "number" },
-          { key: "currentStock", label: "目前庫存", required: false, type: "number" },
           { key: "unit", label: "單位", required: false, type: "string" }
         ]}
       />
