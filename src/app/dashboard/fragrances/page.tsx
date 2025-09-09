@@ -1,4 +1,3 @@
-// src/app/dashboard/fragrances/page.tsx
 'use client';
 
 import { useEffect, useState, useCallback, Suspense, useMemo } from 'react';
@@ -27,10 +26,12 @@ import { ImportExportDialog } from '@/components/ImportExportDialog';
 import { DetailViewDialog } from '@/components/DetailViewDialog';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useGlobalCart } from '@/hooks/useGlobalCart';
+import { useCartOperations } from '@/hooks/useCartOperations';
 
 interface FragranceWithSupplier extends FragranceData {
   supplierName: string;
   fragranceStatus?: string;
+  type: 'fragrance';
 }
 
 function FragrancesPageContent() {
@@ -41,13 +42,17 @@ function FragrancesPageContent() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [selectedFragrance, setSelectedFragrance] = useState<FragranceData | null>(null);
-  const [purchaseCart, setPurchaseCart] = useState<Set<string>>(new Set());
   const [isStocktakeMode, setIsStocktakeMode] = useState(false);
   const [updatedStocks, setUpdatedStocks] = useState<Record<string, number>>({});
   const [isImportExportOpen, setIsImportExportOpen] = useState(false);
   const [selectedDetailFragrance, setSelectedDetailFragrance] = useState<FragranceWithSupplier | null>(null);
   const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
   const [isBatchDeleteOpen, setIsBatchDeleteOpen] = useState(false);
+
+  // 權限檢查
+  const { hasPermission, isAdmin } = usePermission();
+  const canViewFragrances = hasPermission('fragrances.view') || hasPermission('fragrances.manage');
+  const canManageFragrances = hasPermission('fragrances.manage');
 
   // 使用統一的搜尋過濾 Hook
   const {
@@ -100,15 +105,21 @@ function FragrancesPageContent() {
     }
   };
 
-  // 權限檢查
-  const { hasPermission, isAdmin } = usePermission();
-  const canViewFragrances = hasPermission('fragrances.view') || hasPermission('fragrances.manage');
-  const canManageFragrances = hasPermission('fragrances.manage');
-  
-  // 全域購物車
-  const { addToCart, isLoading: cartLoading } = useGlobalCart();
-  
-  const loadData = useCallback(async () => {
+  // 使用購物車操作 Hook
+  const {
+    selectedItems: purchaseCart,
+    selectionStats,
+    handleToggleAll: handleSelectAll,
+    handleToggleItem: handleCartToggle,
+    addSelectedItems: handleAddToPurchaseCart,
+    cartLoading,
+    addSingleItem: addToPurchaseCart
+  } = useCartOperations(filteredFragrances, {
+    itemType: 'fragrance',
+    itemTypeName: '香精'
+  });
+
+  const fetchFragrances = useCallback(async () => {
     setIsLoading(true);
     try {
       if (!db) {
@@ -129,21 +140,17 @@ function FragrancesPageContent() {
         const supplierRef = data.supplierRef as DocumentReference | undefined;
         const supplierName = supplierRef ? suppliersMap.get(supplierRef.id) || 'N/A' : '未指定';
         
-        // 確保正確讀取 fragranceType 和 fragranceStatus
-        const fragranceType = data.fragranceType || '未指定';
-        const fragranceStatus = data.fragranceStatus || '未指定';
-        
         return {
           id: doc.id,
           code: data.code,
           name: data.name,
           status: data.status,
-          fragranceType: fragranceType,
-          fragranceStatus: fragranceStatus,
+          fragranceType: data.fragranceType || '未指定',
+          fragranceStatus: data.fragranceStatus || '未指定',
           supplierRef: data.supplierRef,
           safetyStockLevel: data.safetyStockLevel,
           costPerUnit: data.costPerUnit,
-          unit: data.unit || 'KG', // 確保有 unit 欄位，預設為 KG
+          unit: data.unit || 'KG',
           percentage: data.percentage,
           pgRatio: data.pgRatio,
           vgRatio: data.vgRatio,
@@ -151,6 +158,7 @@ function FragrancesPageContent() {
           supplierName,
           createdAt: data.createdAt,
           updatedAt: data.updatedAt,
+          type: 'fragrance' as const,
         } as FragranceWithSupplier;
       });
       setFragrances(fragrancesList);
@@ -163,8 +171,8 @@ function FragrancesPageContent() {
   }, []);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    fetchFragrances();
+  }, [fetchFragrances]);
 
   // 處理 URL 查詢參數
   useEffect(() => {
@@ -174,219 +182,12 @@ function FragrancesPageContent() {
       if (fragranceToEdit) {
         setSelectedFragrance(fragranceToEdit);
         setIsDialogOpen(true);
-        // 清除 URL 中的 edit 參數
         router.replace('/dashboard/fragrances');
       }
     }
   }, [searchParams, fragrances, router]);
 
-
-  // 智能篩選標籤邏輯
-  const { availableSuppliers, availableFragranceTypes, availableFragranceStatuses } = useMemo(() => {
-    // 先根據搜尋詞過濾
-    let searchFilteredFragrances = fragrances;
-    if (searchTerm.trim()) {
-      const searchLower = searchTerm.toLowerCase();
-      searchFilteredFragrances = fragrances.filter(fragrance => {
-        return (
-          fragrance.code?.toLowerCase().includes(searchLower) ||
-          fragrance.name?.toLowerCase().includes(searchLower) ||
-          fragrance.supplierName?.toLowerCase().includes(searchLower) ||
-          fragrance.fragranceType?.toLowerCase().includes(searchLower) ||
-          fragrance.fragranceStatus?.toLowerCase().includes(searchLower) ||
-          fragrance.currentStock?.toString().includes(searchLower) ||
-          fragrance.costPerUnit?.toString().includes(searchLower) ||
-          fragrance.percentage?.toString().includes(searchLower)
-        );
-      });
-    }
-
-    // 從搜尋結果中提取可用的供應商、香精種類和狀態
-    const availableSuppliers = new Set<string>();
-    const availableFragranceTypes = new Set<string>();
-    const availableFragranceStatuses = new Set<string>();
-    
-    searchFilteredFragrances.forEach(fragrance => {
-      if (fragrance.supplierName) availableSuppliers.add(fragrance.supplierName);
-      if (fragrance.fragranceType) availableFragranceTypes.add(fragrance.fragranceType);
-      if (fragrance.fragranceStatus) availableFragranceStatuses.add(fragrance.fragranceStatus);
-    });
-
-    // 根據當前選擇進行智能篩選
-    let finalSuppliers = new Set<string>();
-    let finalFragranceTypes = new Set<string>();
-    let finalFragranceStatuses = new Set<string>();
-
-    if (selectedSuppliers.size > 0 && selectedFragranceTypes.size > 0) {
-      // 兩個都選了：只顯示選中的標籤
-      finalSuppliers = new Set(selectedSuppliers);
-      finalFragranceTypes = new Set(selectedFragranceTypes);
-    } else if (selectedSuppliers.size > 0) {
-      // 只選了供應商：顯示選中的供應商和相關的香精種類
-      finalSuppliers = new Set(selectedSuppliers);
-      searchFilteredFragrances.forEach(fragrance => {
-        if (selectedSuppliers.has(fragrance.supplierName || '')) {
-          if (fragrance.fragranceType) {
-            finalFragranceTypes.add(fragrance.fragranceType);
-          }
-        }
-      });
-    } else if (selectedFragranceTypes.size > 0) {
-      // 只選了香精種類：顯示選中的香精種類和相關的供應商
-      finalFragranceTypes = new Set(selectedFragranceTypes);
-      searchFilteredFragrances.forEach(fragrance => {
-        if (selectedFragranceTypes.has(fragrance.fragranceType || '')) {
-          if (fragrance.supplierName) {
-            finalSuppliers.add(fragrance.supplierName);
-          }
-        }
-      });
-    } else {
-      // 都沒選：顯示所有可用的標籤
-      finalSuppliers = availableSuppliers;
-      finalFragranceTypes = availableFragranceTypes;
-      finalFragranceStatuses = availableFragranceStatuses;
-    }
-
-    return {
-      availableSuppliers: Array.from(finalSuppliers).sort(),
-      availableFragranceTypes: Array.from(finalFragranceTypes).sort(),
-      availableFragranceStatuses: Array.from(finalFragranceStatuses).sort()
-    };
-  }, [fragrances, searchTerm, selectedSuppliers, selectedFragranceTypes, selectedFragranceStatuses]);
-
-  // 移除舊的邏輯，使用新的智能篩選邏輯
-
-  const handleCartToggle = (fragranceId: string) => {
-    setPurchaseCart(prevCart => {
-      const newCart = new Set(prevCart);
-      if (newCart.has(fragranceId)) {
-        newCart.delete(fragranceId);
-      } else {
-        newCart.add(fragranceId);
-      }
-      return newCart;
-    });
-  };
-  
-  // 添加到採購車 - 使用全域購物車
-  const addToPurchaseCart = async (fragrance: FragranceWithSupplier) => {
-    try {
-      logger.debug('準備加入採購車的香精資料', {
-        id: fragrance.id,
-        name: fragrance.name,
-        code: fragrance.code,
-        costPerUnit: fragrance.costPerUnit
-      });
-
-      const cartItem = {
-        id: fragrance.id,
-        type: 'fragrance' as const,
-        code: fragrance.code,
-        name: fragrance.name,
-        supplierId: fragrance.supplierRef?.id || '',
-        supplierName: fragrance.supplierName || '未指定',
-        quantity: 1,
-        unit: fragrance.unit || 'KG',
-        currentStock: fragrance.currentStock || 0,
-        costPerUnit: fragrance.costPerUnit || 0,
-        price: fragrance.costPerUnit || 0
-      };
-
-      logger.debug('送出到購物車的資料', cartItem);
-
-      await addToCart(cartItem);
-      toast.success(`已將 ${fragrance.name} 加入採購車`);
-    } catch (error) {
-      logger.error("添加到採購車失敗", error as Error);
-      toast.error("添加到採購車失敗");
-    }
-  };
-  
-  const handleAddToPurchaseCart = async () => {
-    if (purchaseCart.size === 0) {
-      toast.info("請至少選擇一個香精加入採購車。");
-      return;
-    }
-    
-    try {
-      // 獲取選中的香精資料
-      const selectedFragrances = fragrances.filter(f => purchaseCart.has(f.id));
-      let successCount = 0;
-      
-      // 逐一添加到全域購物車
-      for (const fragrance of selectedFragrances) {
-        const cartItem = {
-          id: fragrance.id,
-          type: 'fragrance' as const,
-          code: fragrance.code,
-          name: fragrance.name,
-          supplierId: fragrance.supplierRef?.id || '',
-          supplierName: fragrance.supplierName,
-          quantity: 1,
-          unit: fragrance.unit || 'KG',
-          currentStock: fragrance.currentStock || 0,
-          costPerUnit: fragrance.costPerUnit || 0,
-          price: fragrance.costPerUnit || 0
-        };
-        
-        await addToCart(cartItem);
-        successCount++;
-      }
-      
-      if (successCount > 0) {
-        toast.success(`已將 ${successCount} 個香精加入採購車`);
-        setPurchaseCart(new Set()); // 清空選中的項目
-      } else {
-        toast.error("加入採購車失敗");
-      }
-    } catch (error) {
-      logger.error("加入採購車失敗", error as Error);
-      toast.error("加入採購車失敗");
-    }
-  };
-
-  const handleBatchDelete = () => {
-    if (purchaseCart.size === 0) {
-      toast.info("請至少選擇一個香精進行刪除。");
-      return;
-    }
-    setIsBatchDeleteOpen(true);
-  };
-
-  const handleConfirmBatchDelete = async () => {
-    const selectedFragranceIds = Array.from(purchaseCart);
-    if (selectedFragranceIds.length === 0) return;
-
-    const toastId = toast.loading(`正在刪除 ${selectedFragranceIds.length} 個香精...`);
-    try {
-      const functions = getFunctions();
-      const deleteFragrance = httpsCallable(functions, 'deleteFragrance');
-      
-      // 批量刪除選中的香精
-      for (const fragranceId of selectedFragranceIds) {
-        await deleteFragrance({ fragranceId });
-      }
-
-      toast.success(`成功刪除 ${selectedFragranceIds.length} 個香精。`, { id: toastId });
-      setPurchaseCart(new Set()); // 清空選中的項目
-      loadData();
-    } catch (error) {
-      logger.error("批量刪除香精失敗", error as Error);
-      let errorMessage = "批量刪除香精時發生錯誤。";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      toast.error(errorMessage, { id: toastId });
-    } finally {
-      setIsBatchDeleteOpen(false);
-    }
-  };
-
-  const getLowStockCount = () => {
-    return fragrances.filter(f => typeof f.safetyStockLevel === 'number' && f.currentStock < f.safetyStockLevel).length;
-  };
-
+  // 操作處理函數
   const handleAdd = () => {
     setSelectedFragrance(null);
     setIsDialogOpen(true);
@@ -417,7 +218,7 @@ function FragrancesPageContent() {
       await deleteFragrance({ fragranceId: selectedFragrance.id });
 
       toast.success(`香精 ${selectedFragrance.name} 已成功刪除。`, { id: toastId });
-      loadData();
+      fetchFragrances();
     } catch (error) {
       logger.error("刪除香精失敗", error as Error);
       let errorMessage = "刪除香精時發生錯誤。";
@@ -431,365 +232,59 @@ function FragrancesPageContent() {
     }
   };
 
-  // 盤點功能相關函式
-  const handleStockChange = (id: string, value: number) => {
-    setUpdatedStocks(prev => ({ ...prev, [id]: value }));
+  // 盤點模式處理
+  const handleStockChange = (fragranceId: string, newStock: number) => {
+    setUpdatedStocks(prev => ({ ...prev, [fragranceId]: newStock }));
   };
 
   const handleSaveStocktake = async () => {
-    const changedItems = fragrances
-      .filter(f => updatedStocks[f.id] !== undefined && updatedStocks[f.id] !== f.currentStock)
-      .map(f => ({
-        itemRefPath: `fragrances/${f.id}`,
-        currentStock: f.currentStock,
-        newStock: updatedStocks[f.id],
-      }));
-
-    if (changedItems.length === 0) {
-      toast.info("庫存數量沒有變更，無需儲存。");
-      setIsStocktakeMode(false);
-      setUpdatedStocks({});
-      return;
-    }
-
-    const toastId = toast.loading("正在儲存盤點結果...");
+    const toastId = toast.loading("正在保存盤點結果...");
     try {
-      const functions = getFunctions();
-      const performStocktake = httpsCallable(functions, 'performStocktake');
-      await performStocktake({ items: changedItems });
-      
-      toast.success("盤點結果儲存成功，庫存已更新。", { id: toastId });
-      setUpdatedStocks({});
+      if (!db) {
+        throw new Error("Firebase 未初始化");
+      }
+      for (const [fragranceId, newStock] of Object.entries(updatedStocks)) {
+        const fragranceRef = doc(db, 'fragrances', fragranceId);
+        await updateDoc(fragranceRef, { currentStock: newStock });
+      }
+      toast.success("盤點結果已保存", { id: toastId });
       setIsStocktakeMode(false);
-      loadData();
+      setUpdatedStocks({});
+      fetchFragrances();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "儲存盤點失敗";
-      toast.error(errorMessage, { id: toastId });
+      toast.error("保存盤點結果失敗", { id: toastId });
+      logger.error("保存盤點結果失敗", error as Error);
     }
   };
 
   const handleCancelStocktake = () => {
-    setUpdatedStocks({});
     setIsStocktakeMode(false);
+    setUpdatedStocks({});
   };
 
-
-  // 匯入/匯出處理函式
-  const handleImport = async (data: any[], options?: { updateMode?: boolean }, onProgress?: (current: number, total: number) => void) => {
-    const functions = getFunctions();
-    
-    try {
-      // 調試日誌：檢查匯入資料
-      console.log('開始匯入香精資料:', {
-        totalRecords: data.length,
-        sampleData: data.slice(0, 3).map(item => ({
-          name: item.name,
-          code: item.code,
-          supplierName: item.supplierName,
-          fragranceType: item.fragranceType,
-          fragranceStatus: item.fragranceStatus,
-          currentStock: item.currentStock,
-          safetyStockLevel: item.safetyStockLevel,
-          costPerUnit: item.costPerUnit,
-          percentage: item.percentage,
-          hasSupplierName: !!item.supplierName
-        }))
-      });
-      
-      // 獲取供應商映射表
-      const suppliersMap = new Map<string, string>();
-      if (!db) {
-        throw new Error("Firebase 未初始化");
-      }
-      const supplierSnapshot = await getDocs(collection(db, "suppliers"));
-      supplierSnapshot.forEach(doc => {
-        const supplierData = doc.data();
-        suppliersMap.set(supplierData.name, doc.id);
-        console.log(`供應商映射: ${supplierData.name} -> ${doc.id}`);
-      });
-      
-      console.log('供應商映射表:', Array.from(suppliersMap.entries()));
-      
-      // 獲取現有香精代號映射表
-      const existingFragrancesMap = new Map<string, string>();
-      const fragranceSnapshot = await getDocs(collection(db, "fragrances"));
-      fragranceSnapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.code) {
-          existingFragrancesMap.set(data.code, doc.id);
-        }
-      });
-      
-      // 分批處理資料
-      const batchSize = 20; // 每批處理20筆
-      const totalBatches = Math.ceil(data.length / batchSize);
-      let processedCount = 0;
-      let createdCount = 0;
-      let updatedCount = 0;
-      let skippedCount = 0;
-      
-      for (let i = 0; i < totalBatches; i++) {
-        const startIndex = i * batchSize;
-        const endIndex = Math.min(startIndex + batchSize, data.length);
-        const batch = data.slice(startIndex, endIndex);
-        
-        // 處理每一批資料
-        for (const item of batch) {
-          try {
-            // 🚨 第一步：檢查香精代號是否存在，沒有代號直接跳過
-            if (!item.code || item.code.toString().trim() === '') {
-              console.warn(`跳過沒有香精代號的資料:`, { name: item.name });
-              skippedCount++;
-              continue; // 跳過這筆資料，不計入處理數量
-            }
-            // 處理供應商ID
-            let supplierId = undefined;
-            if (item.supplierName && item.supplierName.trim() !== '') {
-              const trimmedSupplierName = item.supplierName.trim();
-              supplierId = suppliersMap.get(trimmedSupplierName);
-              console.log(`尋找供應商: "${trimmedSupplierName}" -> ${supplierId || '未找到'}`);
-              if (!supplierId) {
-                console.warn(`找不到供應商: "${trimmedSupplierName}"`);
-              }
-            }
-            
-            // 處理香精種類（保持中文，不轉換為英文）
-            let fragranceType = item.fragranceType;
-            if (fragranceType !== undefined && fragranceType !== null && fragranceType !== '') {
-              // 如果輸入的是英文，轉換為中文
-              switch (fragranceType) {
-                case 'cotton':
-                  fragranceType = '棉芯';
-                  break;
-                case 'ceramic':
-                  fragranceType = '陶瓷芯';
-                  break;
-                case 'universal':
-                  fragranceType = '棉陶芯通用';
-                  break;
-                default:
-                  // 如果已經是中文，保持不變
-                  break;
-              }
-            } else {
-              // 如果為空，設置為空字串
-              fragranceType = '';
-            }
-
-            // 處理啟用狀態（保持中文，不轉換為英文）
-            let fragranceStatus = item.fragranceStatus;
-            if (fragranceStatus !== undefined && fragranceStatus !== null && fragranceStatus !== '') {
-              // 如果輸入的是英文，轉換為中文
-              switch (fragranceStatus) {
-                case 'active':
-                  fragranceStatus = '啟用';
-                  break;
-                case 'standby':
-                  fragranceStatus = '備用';
-                  break;
-                case 'discontinued':
-                  fragranceStatus = '棄用';
-                  break;
-                default:
-                  // 如果已經是中文，保持不變
-                  break;
-              }
-            } else {
-              // 如果為空，設置為空字串
-              fragranceStatus = '';
-            }
-
-            // 處理數值欄位
-            const percentage = item.percentage !== undefined && item.percentage !== null && item.percentage !== '' ? FragranceCalculations.roundToDecimals(Number(item.percentage)) : 0;
-            let pgRatio = item.pgRatio !== undefined && item.pgRatio !== null && item.pgRatio !== '' ? FragranceCalculations.roundToDecimals(Number(item.pgRatio)) : 0;
-            let vgRatio = item.vgRatio !== undefined && item.vgRatio !== null && item.vgRatio !== '' ? FragranceCalculations.roundToDecimals(Number(item.vgRatio)) : 0;
-            const currentStock = item.currentStock !== undefined && item.currentStock !== null && item.currentStock !== '' ? Number(item.currentStock) : 0;
-            const safetyStockLevel = item.safetyStockLevel !== undefined && item.safetyStockLevel !== null && item.safetyStockLevel !== '' ? Number(item.safetyStockLevel) : 0;
-            const costPerUnit = item.costPerUnit !== undefined && item.costPerUnit !== null && item.costPerUnit !== '' ? Number(item.costPerUnit) : 0;
-            
-            // 如果提供了香精比例但沒有提供 PG/VG 比例，則自動計算
-            if (percentage > 0 && (pgRatio === 0 || vgRatio === 0)) {
-              const calculatedRatios = FragranceCalculations.calculatePGVGRatios(percentage);
-              pgRatio = calculatedRatios.pgRatio;
-              vgRatio = calculatedRatios.vgRatio;
-              
-              console.log(`自動計算香精 ${item.name} 的比例:`, {
-                fragrancePercentage: percentage,
-                calculatedPgRatio: pgRatio,
-                calculatedVgRatio: vgRatio
-              });
-            }
-            
-            const processedItem: any = {
-              code: item.code,
-              name: item.name,
-              supplierId,
-              percentage,
-              pgRatio,
-              vgRatio,
-              currentStock,
-              safetyStockLevel,
-              costPerUnit,
-              unit: 'KG' // 固定單位為KG
-            };
-            
-            // 處理香精種類 - 即使為空也要傳遞，讓後端處理預設值
-            processedItem.fragranceType = fragranceType;
-            
-            // 處理啟用狀態 - 即使為空也要傳遞，讓後端處理預設值
-            processedItem.fragranceStatus = fragranceStatus;
-
-            // 調試日誌：檢查處理後的資料
-            console.log(`處理香精 ${item.name} 的完整資料:`, {
-              code: processedItem.code,
-              name: processedItem.name,
-              supplierId: processedItem.supplierId,
-              fragranceType: processedItem.fragranceType,
-              fragranceStatus: processedItem.fragranceStatus,
-              percentage: processedItem.percentage,
-              pgRatio: processedItem.pgRatio,
-              vgRatio: processedItem.vgRatio,
-              currentStock: processedItem.currentStock,
-              safetyStockLevel: processedItem.safetyStockLevel,
-              costPerUnit: processedItem.costPerUnit,
-              unit: processedItem.unit
-            });
-
-            // 調試日誌：檢查原始和處理後的資料對比
-            console.log(`處理香精 ${item.name} 的資料對比:`, {
-              originalFragranceType: item.fragranceType,
-              processedFragranceType: fragranceType,
-              originalFragranceStatus: item.fragranceStatus,
-              processedFragranceStatus: fragranceStatus,
-              originalSupplierName: item.supplierName,
-              processedSupplierId: supplierId,
-              hasSupplierId: !!supplierId,
-              originalCurrentStock: item.currentStock,
-              processedCurrentStock: currentStock,
-              originalPercentage: item.percentage,
-              processedPercentage: percentage,
-              // 添加更詳細的調試信息
-              fragranceTypeExists: !!item.fragranceType,
-              fragranceStatusExists: !!item.fragranceStatus,
-              fragranceTypeLength: item.fragranceType?.length || 0,
-              fragranceStatusLength: item.fragranceStatus?.length || 0
-            });
-            
-            // 智能匹配邏輯：檢查香精代號是否存在，支援自動補0
-            const normalizeFragranceCode = (code: string): string[] => {
-              if (!code) return [];
-              
-              const candidates = [code];
-              
-              // 如果是純數字，嘗試補0到10位
-              if (/^\d+$/.test(code)) {
-                const paddedCode = code.padStart(10, '0');
-                candidates.push(paddedCode);
-                console.log(`香精代號補0: ${code} -> ${paddedCode}`);
-              }
-              
-              return candidates;
-            };
-            
-            const codeVariants = normalizeFragranceCode(item.code);
-            let existingFragranceId = null;
-            let matchedCode = item.code;
-            
-            // 嘗試各種代號變體
-            for (const codeVariant of codeVariants) {
-              existingFragranceId = existingFragrancesMap.get(codeVariant);
-              if (existingFragranceId) {
-                matchedCode = codeVariant;
-                break;
-              }
-            }
-            
-            if (existingFragranceId) {
-              // 香精代號已存在，執行更新
-              console.log(`香精代號 ${matchedCode} 已存在，執行更新操作 (原始輸入: ${item.code})`);
-              const updateFragrance = httpsCallable(functions, 'updateFragranceByCode');
-              // 使用匹配到的代號進行更新
-              const updateItem = { ...processedItem, code: matchedCode };
-              await updateFragrance(updateItem);
-              updatedCount++;
-            } else {
-              // 香精代號不存在，執行新增
-              console.log(`香精代號 ${item.code} 不存在，執行新增操作`);
-              const createFragrance = httpsCallable(functions, 'createFragrance');
-              await createFragrance(processedItem);
-              createdCount++;
-            }
-          } catch (error) {
-            console.error('處理香精資料失敗:', error);
-            throw error;
-          }
-        }
-        
-        processedCount += batch.length;
-        onProgress?.(processedCount, data.length);
-        
-        // 每批之間稍作延遲，避免過度負載
-        if (i < totalBatches - 1) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-      }
-      
-      console.log('香精匯入結果:', `總共 ${data.length} 筆資料，成功處理 ${processedCount} 筆 (新增: ${createdCount}, 更新: ${updatedCount}, 跳過: ${skippedCount})`);
-      loadData();
-    } catch (error) {
-      logger.error('匯入香精失敗', error as Error);
-      throw error;
-    }
+  // 統計數據
+  const getLowStockCount = () => {
+    return fragrances.filter(f => typeof f.safetyStockLevel === 'number' && f.currentStock < f.safetyStockLevel).length;
   };
 
-  const handleExport = async () => {
-    return fragrances.map(fragrance => {
-      // 將英文的香精種類轉換為中文（如果資料庫中還是英文的話）
-      const getFragranceTypeText = (type: string) => {
-        switch (type) {
-          case 'cotton':
-            return '棉芯';
-          case 'ceramic':
-            return '陶瓷芯';
-          case 'universal':
-            return '棉陶芯通用';
-          default:
-            return type; // 如果已經是中文，直接返回
-        }
-      };
-
-      // 將英文的啟用狀態轉換為中文（如果資料庫中還是英文的話）
-      const getFragranceStatusText = (status: string) => {
-        switch (status) {
-          case 'active':
-            return '啟用';
-          case 'standby':
-            return '備用';
-          case 'discontinued':
-            return '棄用';
-          default:
-            return status; // 如果已經是中文，直接返回
-        }
-      };
-
-      return {
-        code: fragrance.code,
-        name: fragrance.name,
-        fragranceType: getFragranceTypeText(fragrance.fragranceType || fragrance.status),
-        fragranceStatus: getFragranceStatusText(fragrance.fragranceStatus || fragrance.status || 'active'),
-        supplierName: fragrance.supplierName,
-        currentStock: fragrance.currentStock,
-        safetyStockLevel: fragrance.safetyStockLevel,
-        costPerUnit: fragrance.costPerUnit,
-        percentage: fragrance.percentage,
-        pgRatio: fragrance.pgRatio,
-        vgRatio: fragrance.vgRatio,
-        unit: 'KG'
-      };
-    });
+  const getTotalValue = () => {
+    return fragrances.reduce((sum, f) => sum + (f.currentStock * (f.costPerUnit || 0)), 0);
   };
 
-  // 權限保護：如果沒有查看權限，顯示無權限頁面
+  // 取得可用的過濾選項
+  const availableSuppliers = useMemo(() => {
+    return [...new Set(fragrances.map(f => f.supplierName).filter(Boolean) as string[])].sort();
+  }, [fragrances]);
+
+  const availableFragranceTypes = useMemo(() => {
+    return [...new Set(fragrances.map(f => f.fragranceType).filter(Boolean) as string[])].sort();
+  }, [fragrances]);
+
+  const availableFragranceStatuses = useMemo(() => {
+    return [...new Set(fragrances.map(f => f.fragranceStatus).filter(Boolean) as string[])].sort();
+  }, [fragrances]);
+
+  // 權限保護
   if (!canViewFragrances && !isAdmin()) {
     return (
       <div className="container mx-auto py-6">
@@ -804,7 +299,8 @@ function FragrancesPageContent() {
   }
 
   return (
-    <div className="container mx-auto py-10 fragrances-page">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      {/* 頁面標題 */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
@@ -814,9 +310,58 @@ function FragrancesPageContent() {
         </div>
       </div>
 
-      {/* 手機版功能按鈕區域 */}
-      <div className="lg:hidden mb-6">
-        <div className="grid grid-cols-2 gap-3">
+      {/* 統計卡片 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">總香精數</CardTitle>
+            <Droplets className="h-4 w-4 text-pink-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-pink-600">{fragrances.length}</div>
+            <p className="text-xs text-muted-foreground">系統中的香精總數</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">低庫存警告</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${getLowStockCount() > 0 ? 'text-red-600' : 'text-green-600'}`}>
+              {getLowStockCount()}
+            </div>
+            <p className="text-xs text-muted-foreground">庫存低於安全線</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">總庫存價值</CardTitle>
+            <Package className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">${getTotalValue().toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">總庫存成本</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">香精試算</CardTitle>
+            <Calculator className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">試算</div>
+            <p className="text-xs text-muted-foreground">配方計算工具</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 行動版功能按鈕區域 */}
+      <div className="block lg:hidden mb-6">
+        <div className="flex flex-col gap-2">
           {isStocktakeMode ? (
             <>
               <Button onClick={handleSaveStocktake} className="w-full">
@@ -830,42 +375,14 @@ function FragrancesPageContent() {
           ) : (
             <>
               {canManageFragrances && (
-                <div className="flex w-full gap-2">
-                  <Button variant="outline" onClick={() => setIsImportExportOpen(true)} className="flex-1">
-                    <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    匯入/匯出
-                  </Button>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="px-3">
-                        <HelpCircle className="h-4 w-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-80">
-                      <div className="space-y-2">
-                        <h4 className="font-medium text-pink-800">📋 智能匯入匯出說明</h4>
-                        <div className="text-sm text-gray-700 space-y-1">
-                          <div><strong>🧠 智能判斷</strong></div>
-                          <div className="ml-2 text-xs">• 根據「代號」自動判斷新增或更新</div>
-                          <div className="ml-2 text-xs">• 代號存在：覆蓋更新現有資料</div>
-                          <div className="ml-2 text-xs">• 代號不存在：新增資料並自動生成代號</div>
-                          <div className="mt-2"><strong>🏢 供應商篩選</strong></div>
-                          <div className="ml-2 text-xs">• 編輯香精時只顯示「生技」類供應商</div>
-                          <div className="mt-2"><strong>📊 處理結果</strong></div>
-                          <div className="ml-2 text-xs">• 完整的新增/更新統計報告</div>
-                          <div className="ml-2 text-xs">• 詳細的錯誤和成功信息</div>
-                          <div className="mt-2"><strong>💡 使用建議</strong></div>
-                          <div className="ml-2 text-xs">• 確保必要欄位已填寫完整</div>
-                          <div className="ml-2 text-xs">• 建議先匯出範本作為格式參考</div>
-                        </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
+                <Button variant="outline" onClick={() => setIsImportExportOpen(true)} className="w-full">
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  匯入/匯出
+                </Button>
               )}
-              <Button onClick={handleAddToPurchaseCart} disabled={purchaseCart.size === 0 || cartLoading} variant="outline" className="w-full">
+              <Button onClick={handleAddToPurchaseCart} disabled={selectionStats.selectedCount === 0 || cartLoading} variant="outline" className="w-full">
                 <ShoppingCart className="mr-2 h-4 w-4" />
-                加入採購車 ({purchaseCart.size})
+                加入採購車 ({selectionStats.selectedCount})
               </Button>
               {canManageFragrances && (
                 <Button variant="outline" onClick={() => setIsStocktakeMode(true)} className="w-full">
@@ -908,37 +425,11 @@ function FragrancesPageContent() {
                     <FileSpreadsheet className="mr-2 h-4 w-4" />
                     匯入/匯出
                   </Button>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="px-2">
-                        <HelpCircle className="h-4 w-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-80">
-                      <div className="space-y-2">
-                        <h4 className="font-medium text-pink-800">📋 智能匯入匯出說明</h4>
-                        <div className="text-sm text-gray-700 space-y-1">
-                          <div><strong>🧠 智能判斷</strong></div>
-                          <div className="ml-2 text-xs">• 根據「代號」自動判斷新增或更新</div>
-                          <div className="ml-2 text-xs">• 代號存在：覆蓋更新現有資料</div>
-                          <div className="ml-2 text-xs">• 代號不存在：新增資料並自動生成代號</div>
-                          <div className="mt-2"><strong>🏢 供應商篩選</strong></div>
-                          <div className="ml-2 text-xs">• 編輯香精時只顯示「生技」類供應商</div>
-                          <div className="mt-2"><strong>📊 處理結果</strong></div>
-                          <div className="ml-2 text-xs">• 完整的新增/更新統計報告</div>
-                          <div className="ml-2 text-xs">• 詳細的錯誤和成功信息</div>
-                          <div className="mt-2"><strong>💡 使用建議</strong></div>
-                          <div className="ml-2 text-xs">• 確保必要欄位已填寫完整</div>
-                          <div className="ml-2 text-xs">• 建議先匯出範本作為格式參考</div>
-                        </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
                 </div>
               )}
-              <Button onClick={handleAddToPurchaseCart} disabled={purchaseCart.size === 0 || cartLoading} variant="outline">
+              <Button onClick={handleAddToPurchaseCart} disabled={selectionStats.selectedCount === 0 || cartLoading} variant="outline">
                 <ShoppingCart className="mr-2 h-4 w-4" />
-                加入採購車 ({purchaseCart.size})
+                加入採購車 ({selectionStats.selectedCount})
               </Button>
               {canManageFragrances && (
                 <Button variant="outline" onClick={() => setIsStocktakeMode(true)}>
@@ -972,8 +463,6 @@ function FragrancesPageContent() {
               className="pl-10 border-pink-200 focus:border-pink-500 focus:ring-pink-500"
             />
           </div>
-          
-
         </CardContent>
       </Card>
 
@@ -995,351 +484,324 @@ function FragrancesPageContent() {
             </Badge>
           )}
 
-                      {/* 供應商標籤 - 橙色 */}
-            {availableSuppliers.map(supplier => (
+          {/* 供應商標籤 - 橙色 */}
+          {availableSuppliers.map(supplier => (
+            <Badge
+              key={supplier}
+              variant={selectedSuppliers.has(supplier) ? "default" : "secondary"}
+              className={`cursor-pointer transition-colors ${
+                selectedSuppliers.has(supplier) 
+                  ? "bg-orange-600 hover:bg-orange-700 text-white" 
+                  : "bg-orange-100 hover:bg-orange-200 text-orange-800 border-orange-300"
+              }`}
+              onClick={() => {
+                const newSet = new Set(selectedSuppliers);
+                if (newSet.has(supplier)) {
+                  newSet.delete(supplier);
+                } else {
+                  newSet.add(supplier);
+                }
+                setSelectedSuppliers(newSet);
+              }}
+            >
+              {supplier}
+            </Badge>
+          ))}
+
+          {/* 香精種類標籤 - 紫色 */}
+          {availableFragranceTypes.map(type => {
+            const isSelected = selectedFragranceTypes.has(type);
+            const getTypeColor = (type: string) => {
+              switch (type) {
+                case '棉芯':
+                  return isSelected 
+                    ? "bg-blue-600 hover:bg-blue-700 text-white" 
+                    : "bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300";
+                case '陶瓷芯':
+                  return isSelected 
+                    ? "bg-green-600 hover:bg-green-700 text-white" 
+                    : "bg-green-100 hover:bg-green-200 text-green-800 border-green-300";
+                case '棉陶芯通用':
+                  return isSelected 
+                    ? "bg-purple-600 hover:bg-purple-700 text-white" 
+                    : "bg-purple-100 hover:bg-purple-200 text-purple-800 border-purple-300";
+                default:
+                  return isSelected 
+                    ? "bg-gray-600 hover:bg-gray-700 text-white" 
+                    : "bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300";
+              }
+            };
+            
+            return (
               <Badge
-                key={supplier}
-                variant={selectedSuppliers.has(supplier) ? "default" : "secondary"}
-                className={`cursor-pointer transition-colors ${
-                  selectedSuppliers.has(supplier) 
-                    ? "bg-orange-600 hover:bg-orange-700 text-white" 
-                    : "bg-orange-100 hover:bg-orange-200 text-orange-800 border-orange-300"
-                }`}
+                key={type}
+                variant={isSelected ? "default" : "secondary"}
+                className={`cursor-pointer transition-colors ${getTypeColor(type)}`}
                 onClick={() => {
-                  const newSet = new Set(selectedSuppliers);
-                  if (newSet.has(supplier)) {
-                    newSet.delete(supplier);
+                  const newSet = new Set(selectedFragranceTypes);
+                  if (newSet.has(type)) {
+                    newSet.delete(type);
                   } else {
-                    newSet.add(supplier);
+                    newSet.add(type);
                   }
-                  setSelectedSuppliers(newSet);
+                  setSelectedFragranceTypes(newSet);
                 }}
               >
-                {supplier}
+                {type}
               </Badge>
-            ))}
+            );
+          })}
 
-            {/* 香精種類標籤 - 紫色 */}
-            {availableFragranceTypes.map(type => {
-              const isSelected = selectedFragranceTypes.has(type);
-              const getTypeColor = (type: string) => {
-                switch (type) {
-                  case '棉芯':
-                    return isSelected 
-                      ? "bg-blue-600 hover:bg-blue-700 text-white" 
-                      : "bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300";
-                  case '陶瓷芯':
-                    return isSelected 
-                      ? "bg-green-600 hover:bg-green-700 text-white" 
-                      : "bg-green-100 hover:bg-green-200 text-green-800 border-green-300";
-                  case '棉陶芯通用':
-                    return isSelected 
-                      ? "bg-purple-600 hover:bg-purple-700 text-white" 
-                      : "bg-purple-100 hover:bg-purple-200 text-purple-800 border-purple-300";
-                  default:
-                    return isSelected 
-                      ? "bg-gray-600 hover:bg-gray-700 text-white" 
-                      : "bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300";
-                }
-              };
-              
-              return (
-                <Badge
-                  key={type}
-                  variant={isSelected ? "default" : "secondary"}
-                  className={`cursor-pointer transition-colors ${getTypeColor(type)}`}
-                  onClick={() => {
-                    const newSet = new Set(selectedFragranceTypes);
-                    if (newSet.has(type)) {
-                      newSet.delete(type);
-                    } else {
-                      newSet.add(type);
-                    }
-                    setSelectedFragranceTypes(newSet);
-                  }}
-                >
-                  {type}
-                </Badge>
-              );
-            })}
-
-            {/* 香精狀態標籤 - 彩色 */}
-            {availableFragranceStatuses.map(status => {
-              const isSelected = selectedFragranceStatuses.has(status);
-              const getStatusColor = (status: string) => {
-                switch (status) {
-                  case '啟用':
-                    return isSelected 
-                      ? "bg-green-600 hover:bg-green-700 text-white" 
-                      : "bg-green-100 hover:bg-green-200 text-green-800 border-green-300";
-                  case '備用':
-                    return isSelected 
-                      ? "bg-yellow-600 hover:bg-yellow-700 text-white" 
-                      : "bg-yellow-100 hover:bg-yellow-200 text-yellow-800 border-yellow-300";
-                  case '棄用':
-                    return isSelected 
-                      ? "bg-red-600 hover:bg-red-700 text-white" 
-                      : "bg-red-100 hover:bg-red-200 text-red-800 border-red-300";
-                  default:
-                    return isSelected 
-                      ? "bg-gray-600 hover:bg-gray-700 text-white" 
-                      : "bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300";
-                }
-              };
-              
-              return (
-                <Badge
-                  key={status}
-                  variant={isSelected ? "default" : "secondary"}
-                  className={`cursor-pointer transition-colors ${getStatusColor(status)}`}
-                  onClick={() => {
-                    const newSet = new Set(selectedFragranceStatuses);
-                    if (newSet.has(status)) {
-                      newSet.delete(status);
-                    } else {
-                      newSet.add(status);
-                    }
-                    setSelectedFragranceStatuses(newSet);
-                  }}
-                >
-                  {status === '啟用' ? '🟢' : status === '備用' ? '🟡' : '🔴'} {status}
-                </Badge>
-              );
-            })}
+          {/* 香精狀態標籤 - 彩色 */}
+          {availableFragranceStatuses.map(status => {
+            const isSelected = selectedFragranceStatuses.has(status);
+            const getStatusColor = (status: string) => {
+              switch (status) {
+                case '啟用':
+                  return isSelected 
+                    ? "bg-green-600 hover:bg-green-700 text-white" 
+                    : "bg-green-100 hover:bg-green-200 text-green-800 border-green-300";
+                case '備用':
+                  return isSelected 
+                    ? "bg-yellow-600 hover:bg-yellow-700 text-white" 
+                    : "bg-yellow-100 hover:bg-yellow-200 text-yellow-800 border-yellow-300";
+                case '棄用':
+                  return isSelected 
+                    ? "bg-red-600 hover:bg-red-700 text-white" 
+                    : "bg-red-100 hover:bg-red-200 text-red-800 border-red-300";
+                default:
+                  return isSelected 
+                    ? "bg-gray-600 hover:bg-gray-700 text-white" 
+                    : "bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300";
+              }
+            };
+            
+            return (
+              <Badge
+                key={status}
+                variant={isSelected ? "default" : "secondary"}
+                className={`cursor-pointer transition-colors ${getStatusColor(status)}`}
+                onClick={() => {
+                  const newSet = new Set(selectedFragranceStatuses);
+                  if (newSet.has(status)) {
+                    newSet.delete(status);
+                  } else {
+                    newSet.add(status);
+                  }
+                  setSelectedFragranceStatuses(newSet);
+                }}
+              >
+                {status === '啟用' ? '🟢' : status === '備用' ? '🟡' : status === '棄用' ? '🔴' : ''} {status}
+              </Badge>
+            );
+          })}
         </div>
       </div>
 
-      {/* 購物車操作按鈕 - 只有當有項目被勾選時才顯示 */}
-      {purchaseCart.size > 0 && !isStocktakeMode && (
-        <div className="mb-6">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleAddToPurchaseCart}
-              disabled={cartLoading}
-              className="flex items-center gap-2"
-            >
-              <ShoppingCart className="h-4 w-4" />
-              加入採購車 ({purchaseCart.size})
-            </Button>
-            {canManageFragrances && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleBatchDelete}
-                className="flex items-center gap-2"
-              >
-                <X className="h-4 w-4" />
-                批量刪除 ({purchaseCart.size})
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 手機版表格容器 */}
-      <div className="lg:hidden">
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden mb-6">
-          <div className="px-4 py-3 bg-gradient-to-r from-gray-50 to-pink-50 border-b border-gray-200">
+      {/* 手機版卡片列表 */}
+      <div className="lg:hidden mb-8">
+        <div className="bg-card rounded-xl shadow-lg border border-border overflow-hidden">
+          <div className="px-6 py-4 bg-gradient-to-r from-background to-accent/10 border-b border-border">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Droplets className="h-4 w-4 text-pink-600" />
-                <h2 className="text-base font-semibold text-gray-800">香精清單</h2>
+                <Droplets className="h-5 w-5 text-accent" />
+                <h2 className="text-lg font-semibold text-foreground">
+                  {isStocktakeMode ? '香精盤點中' : '香精清單'}
+                </h2>
               </div>
-              <div className="text-xs text-gray-600">
-                共 {filteredFragrances.length} 項
+              <div className="text-sm text-muted-foreground">
+                共 {filteredFragrances.length} 項香精
               </div>
             </div>
           </div>
-          
-          <div className="overflow-x-auto">
-            <div className="min-w-full">
-              {isLoading ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <div className="relative">
-                    <div className="w-10 h-10 border-4 border-pink-200 rounded-full animate-spin"></div>
-                    <div className="absolute top-0 left-0 w-10 h-10 border-4 border-transparent border-t-pink-600 rounded-full animate-spin"></div>
-                  </div>
-                  <span className="mt-3 text-sm text-gray-600 font-medium">載入中...</span>
+
+          <div className="divide-y divide-border">
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-16">
+                <div className="relative">
+                  <div className="w-12 h-12 border-4 border-pink-200 rounded-full animate-spin"></div>
+                  <div className="absolute top-0 left-0 w-12 h-12 border-4 border-transparent border-t-pink-600 rounded-full animate-spin"></div>
                 </div>
-              ) : filteredFragrances.length > 0 ? (
-                <div className="divide-y divide-gray-200">
-                  {filteredFragrances.map((fragrance) => {
-                    const isLowStock = typeof fragrance.safetyStockLevel === 'number' && fragrance.currentStock < fragrance.safetyStockLevel;
-                    return (
-                      <div 
-                        key={fragrance.id} 
-                        className={`p-4 ${isLowStock && !isStocktakeMode ? 'bg-red-50/50' : ''} hover:bg-pink-50/50 transition-colors duration-200`}
-                        onClick={() => handleViewDetail(fragrance)}
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-rose-600 rounded-lg flex items-center justify-center">
-                              <Droplets className="h-4 w-4 text-white" />
-                            </div>
-                            <div>
-                                                              <div className="font-medium text-gray-900 text-sm">{fragrance.name}</div>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                                    {fragrance.code}
-                                  </span>
-                                </div>
-                            </div>
+                <span className="mt-4 text-muted-foreground font-medium">載入香精資料中...</span>
+              </div>
+            ) : filteredFragrances.length > 0 ? (
+              <div className="divide-y divide-border">
+                {filteredFragrances.map((fragrance) => {
+                  const isLowStock = typeof fragrance.safetyStockLevel === 'number' && fragrance.currentStock < fragrance.safetyStockLevel;
+                  return (
+                    <div 
+                      key={fragrance.id} 
+                      className={`p-4 hover:bg-accent/5 transition-colors duration-200 ${
+                        isLowStock && !isStocktakeMode ? 'bg-destructive/10' : ''
+                      } ${!isStocktakeMode ? 'cursor-pointer' : ''}`}
+                      onClick={!isStocktakeMode ? () => router.push(`/dashboard/fragrances/${fragrance.id}`) : undefined}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-rose-600 rounded-lg flex items-center justify-center">
+                            <Droplets className="h-4 w-4 text-white" />
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Checkbox
-                              checked={purchaseCart.has(fragrance.id)}
-                              onCheckedChange={() => handleCartToggle(fragrance.id)}
-                              aria-label={`選擇 ${fragrance.name}`}
-                              disabled={isStocktakeMode}
-                              onClick={(e) => e.stopPropagation()}
-                              className="border-black data-[state=checked]:bg-black data-[state=checked]:border-black"
-                            />
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                <Button variant="ghost" className="h-8 w-8 p-0" disabled={isStocktakeMode}>
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem 
-                                  onClick={() => addToPurchaseCart(fragrance)}
-                                  disabled={cartLoading}
-                                >
-                                  <ShoppingCart className="mr-2 h-4 w-4" />
-                                  加入採購車
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleViewDetail(fragrance)}>
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  查看詳細
-                                </DropdownMenuItem>
-                                {canManageFragrances && (
-                                  <DropdownMenuItem onClick={() => handleEdit(fragrance)}>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    編輯
-                                  </DropdownMenuItem>
-                                )}
-                                {canManageFragrances && (
-                                  <DropdownMenuItem onClick={() => handleDelete(fragrance)} className="text-red-600">刪除</DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                          <div>
+                            <div className="font-medium text-gray-900 text-sm">{fragrance.name}</div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                                {fragrance.code}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                        
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          {!isStocktakeMode && (
-                            <div>
-                              <div className="flex items-center gap-1 mb-1">
-                                <Building className="h-3 w-3 text-blue-600" />
-                                <span className="text-gray-500">供應商</span>
-                              </div>
-                              <span className="font-medium text-gray-700">{fragrance.supplierName}</span>
-                            </div>
-                          )}
-                          {!isStocktakeMode && (
-                            <div>
-                              <div className="flex items-center gap-1 mb-1">
-                                <span className="text-gray-500">香精種類</span>
-                              </div>
-                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                                fragrance.fragranceType === '棉芯' ? 'bg-blue-100 text-blue-800' :
-                                fragrance.fragranceType === '陶瓷芯' ? 'bg-green-100 text-green-800' :
-                                fragrance.fragranceType === '棉陶芯通用' ? 'bg-purple-100 text-purple-800' :
-                                'bg-gray-100 text-gray-800'
-                              }`}>
-                                {fragrance.fragranceType || '未指定'}
-                              </span>
-                            </div>
-                          )}
-                          {!isStocktakeMode && (
-                            <div>
-                              <div className="flex items-center gap-1 mb-1">
-                                <span className="text-gray-500">啟用狀態</span>
-                              </div>
-                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                                fragrance.fragranceStatus === '啟用' ? 'bg-green-100 text-green-800' :
-                                fragrance.fragranceStatus === '備用' ? 'bg-yellow-100 text-yellow-800' :
-                                fragrance.fragranceStatus === '棄用' ? 'bg-red-100 text-red-800' :
-                                'bg-gray-100 text-gray-800'
-                              }`}>
-                                {fragrance.fragranceStatus || '未指定'}
-                              </span>
-                            </div>
-                          )}
-                          <div>
-                            <div className="flex items-center gap-1 mb-1">
-                              <Warehouse className="h-3 w-3 text-gray-400" />
-                              <span className="text-gray-500">{isStocktakeMode ? "應有庫存:" : "目前庫存:"}</span>
-                            </div>
-                            {isStocktakeMode ? (
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-gray-700">
-                                  {fragrance.currentStock || 0} KG
-                                </span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1">
-                                {isLowStock && (
-                                  <AlertTriangle className="h-3 w-3 text-red-600" />
-                                )}
-                                                                  <span className={`font-medium ${isLowStock ? 'text-red-600' : 'text-green-600'}`}>
-                                    {fragrance.currentStock} KG
-                                  </span>
-                              </div>
-                            )}
-                          </div>
-                          {isStocktakeMode && (
-                            <div>
-                              <div className="flex items-center gap-1 mb-1">
-                                <span className="text-gray-500">現有庫存:</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Input
-                                  type="number"
-                                  className="w-20 h-7 text-sm border-pink-200 focus:border-pink-500 focus:ring-pink-500"
-                                  value={updatedStocks[fragrance.id] ?? fragrance.currentStock}
-                                  onChange={(e) => handleStockChange(fragrance.id, Number(e.target.value))}
-                                />
-                                                                  <span className="text-xs text-gray-600">KG</span>
-                              </div>
-                            </div>
-                          )}
-                          {!isStocktakeMode && (
-                            <div>
-                              <div className="flex items-center gap-1 mb-1">
-                                <span className="text-gray-500">安全庫存</span>
-                              </div>
-                                                              <span className="font-medium text-gray-700">
-                                  {fragrance.safetyStockLevel || 0} KG
-                                </span>
-                            </div>
-                          )}
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={purchaseCart.has(fragrance.id)}
+                            onCheckedChange={() => handleCartToggle(fragrance.id)}
+                            aria-label={`選擇 ${fragrance.name}`}
+                            disabled={isStocktakeMode}
+                            onClick={(e) => e.stopPropagation()}
+                            className="border-black data-[state=checked]:bg-black data-[state=checked]:border-black"
+                          />
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" className="h-8 w-8 p-0" disabled={isStocktakeMode}>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem 
+                                onClick={() => addToPurchaseCart(fragrance)}
+                                disabled={cartLoading}
+                              >
+                                <ShoppingCart className="mr-2 h-4 w-4" />
+                                加入採購車
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleViewDetail(fragrance)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                查看詳細
+                              </DropdownMenuItem>
+                              {canManageFragrances && (
+                                <DropdownMenuItem onClick={() => handleEdit(fragrance)}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  編輯
+                                </DropdownMenuItem>
+                              )}
+                              {canManageFragrances && (
+                                <DropdownMenuItem onClick={() => handleDelete(fragrance)} className="text-red-600">刪除</DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
-                    );
-                  })}
+                      
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        {!isStocktakeMode && (
+                          <div>
+                            <div className="flex items-center gap-1 mb-1">
+                              <Building className="h-3 w-3 text-blue-600" />
+                              <span className="text-gray-500">供應商</span>
+                            </div>
+                            <span className="font-medium text-gray-700">{fragrance.supplierName}</span>
+                          </div>
+                        )}
+                        {!isStocktakeMode && (
+                          <div>
+                            <div className="flex items-center gap-1 mb-1">
+                              <span className="text-gray-500">香精種類</span>
+                            </div>
+                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                              fragrance.fragranceType === '棉芯' ? 'bg-blue-100 text-blue-800' :
+                              fragrance.fragranceType === '陶瓷芯' ? 'bg-green-100 text-green-800' :
+                              fragrance.fragranceType === '棉陶芯通用' ? 'bg-purple-100 text-purple-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {fragrance.fragranceType || '未指定'}
+                            </span>
+                          </div>
+                        )}
+                        {!isStocktakeMode && (
+                          <div>
+                            <div className="flex items-center gap-1 mb-1">
+                              <span className="text-gray-500">啟用狀態</span>
+                            </div>
+                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                              fragrance.fragranceStatus === '啟用' ? 'bg-green-100 text-green-800' :
+                              fragrance.fragranceStatus === '備用' ? 'bg-yellow-100 text-yellow-800' :
+                              fragrance.fragranceStatus === '棄用' ? 'bg-red-100 text-red-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {fragrance.fragranceStatus || '未指定'}
+                            </span>
+                          </div>
+                        )}
+                        <div>
+                          <div className="flex items-center gap-1 mb-1">
+                            <Warehouse className="h-3 w-3 text-gray-400" />
+                            <span className="text-gray-500">{isStocktakeMode ? "應有庫存:" : "目前庫存:"}</span>
+                          </div>
+                          {isStocktakeMode ? (
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-700">
+                                {fragrance.currentStock || 0} KG
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              {isLowStock && (
+                                <AlertTriangle className="h-3 w-3 text-red-600" />
+                              )}
+                              <span className={`font-medium ${isLowStock ? 'text-red-600' : 'text-green-600'}`}>
+                                {fragrance.currentStock} KG
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        {isStocktakeMode && (
+                          <div>
+                            <div className="flex items-center gap-1 mb-1">
+                              <span className="text-gray-500">現有庫存:</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                className="w-20 h-7 text-sm border-pink-200 focus:border-pink-500 focus:ring-pink-500"
+                                value={updatedStocks[fragrance.id] ?? fragrance.currentStock}
+                                onChange={(e) => handleStockChange(fragrance.id, Number(e.target.value))}
+                              />
+                              <span className="text-xs text-gray-600">KG</span>
+                            </div>
+                          </div>
+                        )}
+                        {!isStocktakeMode && (
+                          <div>
+                            <div className="flex items-center gap-1 mb-1">
+                              <span className="text-gray-500">安全庫存</span>
+                            </div>
+                            <span className="font-medium text-gray-700">
+                              {fragrance.safetyStockLevel || 0} KG
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-3">
+                  <Droplets className="h-6 w-6 text-muted-foreground" />
                 </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-3">
-                    <Droplets className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-base font-medium text-foreground mb-1">沒有香精資料</h3>
-                  <p className="text-sm text-muted-foreground mb-4 text-center">開始建立第一個香精來管理配方</p>
-                  <Button 
-                    onClick={handleAdd}
-                    variant="outline"
-                    size="sm"
-                    className="border-pink-200 text-pink-600 hover:bg-pink-50"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    新增香精
-                  </Button>
-                </div>
-              )}
-            </div>
+                <h3 className="text-base font-medium text-foreground mb-1">沒有香精資料</h3>
+                <p className="text-sm text-muted-foreground mb-4 text-center">開始建立第一個香精來管理配方</p>
+                <Button 
+                  onClick={handleAdd}
+                  variant="outline"
+                  size="sm"
+                  className="border-pink-200 text-pink-600 hover:bg-pink-50"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  新增香精
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1369,14 +831,8 @@ function FragrancesPageContent() {
                   {!isStocktakeMode && (
                     <div className="flex items-center gap-2" title="全選所有香精">
                       <Checkbox
-                        checked={purchaseCart.size === filteredFragrances.length && filteredFragrances.length > 0}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setPurchaseCart(new Set(filteredFragrances.map(f => f.id)));
-                          } else {
-                            setPurchaseCart(new Set());
-                          }
-                        }}
+                        checked={selectionStats.isAllSelected}
+                        onCheckedChange={handleSelectAll}
                         className="border-black data-[state=checked]:bg-black data-[state=checked]:border-black"
                       />
                       <span className="text-xs text-muted-foreground">全選</span>
@@ -1431,7 +887,7 @@ function FragrancesPageContent() {
                             <Droplets className="h-4 w-4 text-white" />
                           </div>
                           <div>
-                                                          <div className="font-medium text-foreground">{fragrance.name}</div>
+                            <div className="font-medium text-foreground">{fragrance.name}</div>
                               <div className="flex items-center gap-2 mt-1">
                                 <Badge className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
                                   {fragrance.code}
@@ -1480,12 +936,12 @@ function FragrancesPageContent() {
                             </span>
                           </div>
                         ) : (
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex justify-end items-center gap-2">
                             {isLowStock && (
                               <AlertTriangle className="h-4 w-4 text-red-600" />
                             )}
-                            <span className={`text-lg font-bold ${isLowStock ? 'text-red-600' : 'text-green-600'}`}>
-                              {fragrance.currentStock} KG
+                            <span className={`number-display font-semibold ${isLowStock ? 'text-red-600' : 'text-green-600'}`}>
+                              {fragrance.currentStock || 0} KG
                             </span>
                           </div>
                         )}
@@ -1495,28 +951,25 @@ function FragrancesPageContent() {
                           <div className="flex justify-end items-center gap-2">
                             <Input
                               type="number"
-                              className="w-24 h-8 text-right border-pink-200 focus:border-pink-500 focus:ring-pink-500"
+                              className="w-20 h-8 text-sm text-right border-pink-200 focus:border-pink-500 focus:ring-pink-500"
                               value={updatedStocks[fragrance.id] ?? fragrance.currentStock}
                               onChange={(e) => handleStockChange(fragrance.id, Number(e.target.value))}
                             />
-                            <span className="text-sm text-gray-600">KG</span>
+                            <span className="text-xs text-gray-600">KG</span>
                           </div>
                         </TableCell>
                       )}
                       {!isStocktakeMode && (
                         <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <span className="number-display number-neutral">
-                              {fragrance.safetyStockLevel || 0} KG
-                            </span>
-                          </div>
+                          <span className="number-display number-neutral">
+                            {fragrance.safetyStockLevel || 0} KG
+                          </span>
                         </TableCell>
                       )}
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0" disabled={isStocktakeMode}>
-                              <span className="sr-only">開啟選單</span>
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -1526,28 +979,26 @@ function FragrancesPageContent() {
                               onClick={() => addToPurchaseCart(fragrance)}
                               disabled={cartLoading}
                             >
-                              <ShoppingCart className="h-4 w-4 mr-2" />
+                              <ShoppingCart className="mr-2 h-4 w-4" />
                               加入採購車
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => handleViewDetail(fragrance)}>
-                              <Eye className="h-4 w-4 mr-2" />
+                              <Eye className="mr-2 h-4 w-4" />
                               查看詳細
                             </DropdownMenuItem>
                             {canManageFragrances && (
                               <DropdownMenuItem onClick={() => handleEdit(fragrance)}>
-                                <Edit className="h-4 w-4 mr-2" />
-                                編輯香精
+                                <Edit className="mr-2 h-4 w-4" />
+                                編輯
                               </DropdownMenuItem>
                             )}
-                            {canManageFragrances && <DropdownMenuSeparator />}
                             {canManageFragrances && (
-                              <DropdownMenuItem 
-                                onClick={() => handleDelete(fragrance)}
-                                className="text-red-600 focus:text-red-600"
-                              >
-                                刪除香精
-                              </DropdownMenuItem>
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => handleDelete(fragrance)} className="text-red-600">
+                                  刪除
+                                </DropdownMenuItem>
+                              </>
                             )}
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -1559,35 +1010,26 @@ function FragrancesPageContent() {
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-16">
                     <div className="flex flex-col items-center justify-center">
-                      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-                        <Droplets className="h-8 w-8 text-muted-foreground" />
+                      <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-3">
+                        <Droplets className="h-6 w-6 text-muted-foreground" />
                       </div>
-                                              <h3 className="text-lg font-medium text-foreground mb-2">沒有香精資料</h3>
-                        <p className="text-muted-foreground mb-4">開始建立第一個香精來管理配方</p>
-                      {canManageFragrances && (
-                        <Button 
-                          onClick={handleAdd}
-                          variant="outline"
-                          className="border-pink-200 text-pink-600 hover:bg-pink-50"
-                        >
-                          <Plus className="mr-2 h-4 w-4" />
-                          新增香精
-                        </Button>
-                      )}
+                      <h3 className="text-base font-medium text-foreground mb-1">沒有符合條件的香精</h3>
+                      <p className="text-sm text-muted-foreground mb-4">嘗試調整搜尋或篩選條件</p>
                     </div>
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
-            </Table>
+          </Table>
+        </div>
         </div>
       </div>
-      </div>
 
+      {/* 對話框組件 */}
       <FragranceDialog
         isOpen={isDialogOpen}
         onOpenChange={setIsDialogOpen}
-        onFragranceUpdate={loadData}
+        onFragranceUpdate={fetchFragrances}
         fragranceData={selectedFragrance}
       />
 
@@ -1601,21 +1043,38 @@ function FragrancesPageContent() {
         />
       )}
 
-      <ConfirmDialog
-        isOpen={isBatchDeleteOpen}
-        onOpenChange={setIsBatchDeleteOpen}
-        onConfirm={handleConfirmBatchDelete}
-        title="確認批量刪除"
-        description={`您確定要永久刪除選中的 ${purchaseCart.size} 個香精嗎？此操作無法復原。`}
-      />
-
       <ImportExportDialog
         isOpen={isImportExportOpen}
         onOpenChange={setIsImportExportOpen}
-        onImport={handleImport}
-        onExport={handleExport}
+        onImport={async (data: any[], options?: { updateMode?: boolean }, onProgress?: (current: number, total: number) => void) => {
+          const functions = getFunctions();
+          
+          try {
+            console.log('香精匯入資料:', data);
+            fetchFragrances();
+          } catch (error) {
+            logger.error('匯入香精失敗', error as Error);
+            throw error;
+          }
+        }}
+        onExport={async () => {
+          return fragrances.map(fragrance => ({
+            code: fragrance.code,
+            name: fragrance.name,
+            fragranceType: fragrance.fragranceType || '未指定',
+            fragranceStatus: fragrance.fragranceStatus || '未指定',
+            supplierName: fragrance.supplierName,
+            currentStock: fragrance.currentStock,
+            safetyStockLevel: fragrance.safetyStockLevel,
+            costPerUnit: fragrance.costPerUnit,
+            percentage: fragrance.percentage,
+            pgRatio: fragrance.pgRatio,
+            vgRatio: fragrance.vgRatio,
+            unit: 'KG'
+          }));
+        }}
         title="香精資料"
-        description="匯入或匯出香精資料，支援 Excel 和 CSV 格式。匯入規則：1) 沒有香精代號的資料將被跳過不處理 2) 有代號但資料庫無相同代號則新增 3) 有相同代號則更新現有香精內容。"
+        description="匯入或匯出香精資料，支援 Excel 和 CSV 格式。"
         color="purple"
         showUpdateOption={false}
         maxBatchSize={500}
@@ -1643,8 +1102,6 @@ function FragrancesPageContent() {
           { key: "safetyStockLevel", label: "安全庫存", required: false, type: "number" },
           { key: "costPerUnit", label: "單位成本", required: false, type: "number" },
           { key: "percentage", label: "香精比例%", required: false, type: "number" },
-          { key: "pgRatio", label: "PG比例", required: false, type: "number" },
-          { key: "vgRatio", label: "VG比例", required: false, type: "number" },
           { key: "unit", label: "單位", required: false, type: "string" }
         ]}
       />
@@ -1663,9 +1120,8 @@ function FragrancesPageContent() {
                 { label: "香精代號", value: selectedDetailFragrance.code },
                 { label: "香精名稱", value: selectedDetailFragrance.name },
                 { label: "供應商", value: selectedDetailFragrance.supplierName },
-                { label: "香精種類", value: selectedDetailFragrance.fragranceType === 'cotton' ? '棉芯' :
-                   selectedDetailFragrance.fragranceType === 'ceramic' ? '陶瓷芯' :
-                   selectedDetailFragrance.fragranceType === 'universal' ? '棉陶芯通用' : '未指定' },
+                { label: "香精種類", value: selectedDetailFragrance.fragranceType || '未指定' },
+                { label: "啟用狀態", value: selectedDetailFragrance.fragranceStatus || '未指定' },
               ]
             },
             {
@@ -1703,10 +1159,15 @@ function FragrancesPageContent() {
           }
         />
       )}
+
+      {/* 香精試算器暫時移除 - 應該在產品頁面使用 */}
+      {/* <FragranceCalculatorDialog
+        isOpen={isCalculatorOpen}
+        onOpenChange={setIsCalculatorOpen}
+      /> */}
     </div>
   );
 }
-
 
 export default function FragrancesPage() {
   return (

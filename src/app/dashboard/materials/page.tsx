@@ -8,6 +8,7 @@ import { db } from '@/lib/firebase';
 import { CartItem } from '@/types';
 import { useGlobalCart } from '@/hooks/useGlobalCart';
 import { useDataSearch, createMaterialSearchConfig } from '@/hooks/useDataSearch';
+import { useCartOperations } from '@/hooks/useCartOperations';
 
 import { MaterialDialog } from './MaterialDialog';
 import { MaterialData } from '@/types/entities';
@@ -42,20 +43,18 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 interface MaterialWithSupplier extends MaterialData {
   supplierName: string;
   refPath: string; // 確保文檔路徑存在
+  type: 'material';
 }
 
 function MaterialsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { addToCart, isLoading: cartLoading } = useGlobalCart();
-
   const [materials, setMaterials] = useState<MaterialWithSupplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isBatchDeleteOpen, setIsBatchDeleteOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<MaterialData | null>(null);
-  const [purchaseCart, setPurchaseCart] = useState<Set<string>>(new Set());
 
   // 使用統一的搜尋過濾 Hook
   const {
@@ -68,6 +67,18 @@ function MaterialsPageContent() {
     totalCount,
     filteredCount
   } = useDataSearch(materials, createMaterialSearchConfig<MaterialWithSupplier>());
+
+  // 統一的購物車操作 Hook
+  const {
+    selectedItems: purchaseCart,
+    cartLoading,
+    handleToggleItem: handleCartToggle,
+    handleToggleAll: handleSelectAll,
+    clearSelection: clearPurchaseCart,
+    addSingleItem: addToPurchaseCart,
+    addSelectedItems: handleAddToPurchaseCart,
+    selectionStats
+  } = useCartOperations(filteredMaterials, { itemType: 'material' });
 
   // 便利方法：獲取當前過濾器值
   const selectedCategory = (activeFilters.category as Set<string>)?.values().next().value || "";
@@ -159,6 +170,7 @@ function MaterialsPageContent() {
           unit: data.unit,
           currentStock: data.currentStock || 0,
           notes: data.notes,
+          type: 'material' as const,
         };
       }) as MaterialWithSupplier[];
       
@@ -393,7 +405,7 @@ function MaterialsPageContent() {
       }
       
       toast.success(`成功刪除 ${selectedMaterials.length} 個物料。`, { id: toastId });
-      setPurchaseCart(new Set());
+      clearPurchaseCart();
       const suppliersMap = await fetchSuppliers();
       await fetchMaterials(suppliersMap);
     } catch (error) {
@@ -434,80 +446,7 @@ function MaterialsPageContent() {
     await fetchMaterials(suppliersMap);
   };
 
-  // 購物車相關功能
-  const handleCartToggle = (materialId: string) => {
-    setPurchaseCart(prevCart => {
-      const newCart = new Set(prevCart);
-      if (newCart.has(materialId)) {
-        newCart.delete(materialId);
-      } else {
-        newCart.add(materialId);
-      }
-      return newCart;
-    });
-  };
-  
-  // 添加到採購車
-  const addToPurchaseCart = async (material: MaterialWithSupplier) => {
-    try {
-      const cartItem = {
-        id: material.id,
-        name: material.name,
-        code: material.code,
-        type: 'material' as const,
-        supplierId: material.supplierRef?.id || '',
-        supplierName: material.supplierName || '未指定',
-        unit: material.unit || '',
-        quantity: 1,
-        costPerUnit: material.costPerUnit || 0,
-        price: material.costPerUnit || 0,
-        currentStock: material.currentStock || 0,
-      };
-
-      await addToCart(cartItem);
-      toast.success(`已將 ${material.name} 加入採購車`);
-    } catch (error) {
-      console.error("添加到採購車失敗:", error);
-      toast.error("添加到採購車失敗");
-    }
-  };
-  
-  const handleAddToPurchaseCart = async () => {
-    if (purchaseCart.size === 0) {
-      toast.info("請至少選擇一個物料加入採購車。");
-      return;
-    }
-    
-    try {
-      // 獲取選中的物料資料
-      const selectedMaterials = materials.filter(m => purchaseCart.has(m.id));
-      
-      // 將選中的物料逐一加入全域採購車
-      for (const material of selectedMaterials) {
-        const cartItem = {
-          id: material.id,
-          name: material.name,
-          code: material.code,
-          type: 'material' as const,
-          supplierId: material.supplierRef?.id || '',
-          supplierName: material.supplierName || '未指定',
-          unit: material.unit || '',
-          quantity: 1,
-          costPerUnit: material.costPerUnit || 0,
-          price: material.costPerUnit || 0,
-          currentStock: material.currentStock || 0,
-        };
-        
-        await addToCart(cartItem);
-      }
-      
-      toast.success(`已將 ${selectedMaterials.length} 個物料加入採購車`);
-      setPurchaseCart(new Set()); // 清空選中的項目
-    } catch (error) {
-      console.error("加入採購車失敗:", error);
-      toast.error("加入採購車失敗");
-    }
-  };
+  // 購物車相關功能已移動至 useCartOperations Hook
 
   // 盤點功能相關函式
   const handleStockChange = (id: string, value: number) => {
@@ -828,7 +767,7 @@ function MaterialsPageContent() {
                className="flex items-center gap-2"
              >
                <ShoppingCart className="h-4 w-4" />
-               加入採購車 ({purchaseCart.size})
+               加入採購車 ({selectionStats.selectedCount})
              </Button>
              {canManageMaterials && (
                <Button
@@ -1014,14 +953,8 @@ function MaterialsPageContent() {
                       {!isStocktakeMode && (
                         <div className="flex items-center gap-2" title="全選所有物料">
                           <Checkbox
-                            checked={purchaseCart.size === filteredMaterials.length && filteredMaterials.length > 0}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setPurchaseCart(new Set(filteredMaterials.map(m => m.id)));
-                              } else {
-                                setPurchaseCart(new Set());
-                              }
-                            }}
+                            checked={selectionStats.isAllSelected}
+                            onCheckedChange={handleSelectAll}
                             className="border-black data-[state=checked]:bg-black data-[state=checked]:border-black"
                           />
                           <span className="text-xs text-muted-foreground">全選</span>

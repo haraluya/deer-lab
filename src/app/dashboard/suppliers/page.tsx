@@ -1,7 +1,7 @@
-// src/app/dashboard/suppliers/page.tsx
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { collection, getDocs, QueryDocumentSnapshot, DocumentData, doc as firestoreDoc, getDoc, query, where, doc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
@@ -34,6 +34,7 @@ interface SupplierWithLiaison extends SupplierData {
 }
 
 function SuppliersPageContent() {
+  const router = useRouter();
   const [suppliers, setSuppliers] = useState<SupplierWithLiaison[]>([]);
   const [filteredSuppliers, setFilteredSuppliers] = useState<SupplierWithLiaison[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -138,6 +139,12 @@ function SuppliersPageContent() {
     setIsConfirmOpen(true);
   };
 
+  // 導航到詳情頁面
+  const handleNavigateToDetail = (supplier: SupplierWithLiaison) => {
+    router.push(`/dashboard/suppliers/${supplier.id}`);
+  };
+
+  // 在對話框中查看詳細資訊
   const handleViewDetail = (supplier: SupplierWithLiaison) => {
     setSelectedDetailSupplier(supplier);
     setIsDetailViewOpen(true);
@@ -356,7 +363,7 @@ function SuppliersPageContent() {
                     <TableRow 
                       key={supplier.id} 
                       className="hover:bg-gradient-to-r hover:from-blue-50/70 hover:via-indigo-50/50 hover:to-purple-50/30 transition-all duration-300 cursor-pointer border-b border-slate-100/50 group"
-                      onClick={() => handleViewDetail(supplier)}
+                      onClick={() => handleNavigateToDetail(supplier)}
                     >
                       <TableCell className="font-medium py-4">
                         <div className="flex items-center gap-4">
@@ -476,7 +483,7 @@ function SuppliersPageContent() {
                 <div 
                   key={supplier.id} 
                   className="group bg-gradient-to-br from-white/90 via-white/70 to-slate-50/50 backdrop-blur-sm rounded-2xl border border-white/40 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden"
-                  onClick={() => handleViewDetail(supplier)}
+                  onClick={() => handleNavigateToDetail(supplier)}
                 >
                   {/* 卡片頭部 */}
                   <div className="bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-purple-500/5 p-4 border-b border-slate-100/50">
