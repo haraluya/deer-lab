@@ -1037,6 +1037,7 @@ function MaterialsPageContent() {
                           <Checkbox
                             checked={purchaseCart.has(material.id)}
                             onCheckedChange={() => handleCartToggle(material.id)}
+                            className="border-black data-[state=checked]:bg-black data-[state=checked]:border-black"
                           />
                           <Button
                             variant="outline"
@@ -1078,6 +1079,7 @@ function MaterialsPageContent() {
                                 setPurchaseCart(new Set());
                               }
                             }}
+                            className="border-black data-[state=checked]:bg-black data-[state=checked]:border-black"
                           />
                           <span className="text-xs text-muted-foreground">全選</span>
                         </div>
@@ -1105,6 +1107,7 @@ function MaterialsPageContent() {
                            <Checkbox
                              checked={purchaseCart.has(material.id)}
                              onCheckedChange={() => handleCartToggle(material.id)}
+                             className="border-black data-[state=checked]:bg-black data-[state=checked]:border-black"
                            />
                          )}
                        </TableCell>

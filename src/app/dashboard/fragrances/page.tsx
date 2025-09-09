@@ -1269,6 +1269,7 @@ function FragrancesPageContent() {
                               aria-label={`選擇 ${fragrance.name}`}
                               disabled={isStocktakeMode}
                               onClick={(e) => e.stopPropagation()}
+                              className="border-black data-[state=checked]:bg-black data-[state=checked]:border-black"
                             />
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -1451,6 +1452,7 @@ function FragrancesPageContent() {
                             setPurchaseCart(new Set());
                           }
                         }}
+                        className="border-black data-[state=checked]:bg-black data-[state=checked]:border-black"
                       />
                       <span className="text-xs text-muted-foreground">全選</span>
                     </div>
@@ -1495,6 +1497,7 @@ function FragrancesPageContent() {
                           onCheckedChange={() => handleCartToggle(fragrance.id)}
                           aria-label={`選擇 ${fragrance.name}`}
                           disabled={isStocktakeMode}
+                          className="border-black data-[state=checked]:bg-black data-[state=checked]:border-black"
                         />
                       </TableCell>
                       <TableCell>
