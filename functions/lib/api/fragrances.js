@@ -5,6 +5,7 @@ exports.diagnoseFragranceRatios = exports.fixAllFragranceRatios = exports.fixFra
 const firebase_functions_1 = require("firebase-functions");
 const https_1 = require("firebase-functions/v2/https");
 const firestore_1 = require("firebase-admin/firestore");
+const fragranceCalculations_1 = require("../utils/fragranceCalculations");
 const db = (0, firestore_1.getFirestore)();
 exports.createFragrance = (0, https_1.onCall)(async (request) => {
     const { data, auth: contextAuth } = request;
@@ -353,21 +354,7 @@ exports.fixFragranceStatus = (0, https_1.onCall)(async (request) => {
     }
 });
 // 計算正確的香精比例（與前端邏輯一致）
-const calculateCorrectRatios = (fragrancePercentage) => {
-    let pgRatio = 0;
-    let vgRatio = 0;
-    if (fragrancePercentage <= 60) {
-        // 香精+PG補滿60%，VG為40%
-        pgRatio = Math.round((60 - fragrancePercentage) * 100) / 100;
-        vgRatio = 40;
-    }
-    else {
-        // 香精超過60%，PG為0，VG補滿
-        pgRatio = 0;
-        vgRatio = Math.round((100 - fragrancePercentage) * 100) / 100;
-    }
-    return { pgRatio, vgRatio };
-};
+// 注意：此函數已移至 utils/fragranceCalculations.ts 統一管理
 // 批量修正所有香精的比例
 exports.fixAllFragranceRatios = (0, https_1.onCall)(async (request) => {
     const { auth: contextAuth } = request;
@@ -383,7 +370,7 @@ exports.fixAllFragranceRatios = (0, https_1.onCall)(async (request) => {
             const data = doc.data();
             const fragrancePercentage = data.percentage || 0;
             if (fragrancePercentage > 0) {
-                const { pgRatio, vgRatio } = calculateCorrectRatios(fragrancePercentage);
+                const { pgRatio, vgRatio } = (0, fragranceCalculations_1.calculateCorrectRatios)(fragrancePercentage);
                 const currentPgRatio = data.pgRatio || 0;
                 const currentVgRatio = data.vgRatio || 0;
                 // 檢查是否需要修正（允許小數點誤差）
@@ -442,7 +429,7 @@ exports.diagnoseFragranceRatios = (0, https_1.onCall)(async (request) => {
             const currentPgRatio = data.pgRatio || 0;
             const currentVgRatio = data.vgRatio || 0;
             if (fragrancePercentage > 0) {
-                const { pgRatio: correctPgRatio, vgRatio: correctVgRatio } = calculateCorrectRatios(fragrancePercentage);
+                const { pgRatio: correctPgRatio, vgRatio: correctVgRatio } = (0, fragranceCalculations_1.calculateCorrectRatios)(fragrancePercentage);
                 const pgDiff = Math.abs(currentPgRatio - correctPgRatio);
                 const vgDiff = Math.abs(currentVgRatio - correctVgRatio);
                 if (pgDiff > 0.1 || vgDiff > 0.1) {
