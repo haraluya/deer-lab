@@ -58,17 +58,30 @@ export default function FragranceDetailPage() {
   const [isSupplierDetailOpen, setIsSupplierDetailOpen] = useState(false);
   const [supplierData, setSupplierData] = useState<any>(null);
 
-  // 直接使用資料庫中儲存的原始比例
-  const getOriginalRatios = (percentage: number, pgRatio: number, vgRatio: number) => {
-    if (percentage <= 0) {
+  // 使用正確的配方比例計算邏輯（與 FragranceDialog 一致）
+  const getCorrectRatios = (fragrancePercentage: number) => {
+    if (fragrancePercentage <= 0) {
       return { fragrance: 0, pg: 0, vg: 0, total: 0 };
     }
     
+    let pgRatio = 0;
+    let vgRatio = 0;
+    
+    if (fragrancePercentage <= 60) {
+      // 香精+PG補滿60%，VG為40%
+      pgRatio = Math.round((60 - fragrancePercentage) * 100) / 100;
+      vgRatio = 40;
+    } else {
+      // 香精超過60%，PG為0，VG補滿
+      pgRatio = 0;
+      vgRatio = Math.round((100 - fragrancePercentage) * 100) / 100;
+    }
+    
     return {
-      fragrance: percentage,
+      fragrance: fragrancePercentage,
       pg: pgRatio,
       vg: vgRatio,
-      total: percentage + pgRatio + vgRatio
+      total: fragrancePercentage + pgRatio + vgRatio
     };
   };
 
@@ -550,11 +563,7 @@ export default function FragranceDetailPage() {
            <CardContent className="space-y-4">
              <div className="space-y-3">
                {(() => {
-                 const correctRatios = getOriginalRatios(
-                   fragrance.percentage || 0,
-                   fragrance.pgRatio || 0,
-                   fragrance.vgRatio || 0
-                 );
+                 const correctRatios = getCorrectRatios(fragrance.percentage || 0);
                  return (
                    <>
                      <div className="flex justify-between items-center py-2 border-b border-blue-200">
