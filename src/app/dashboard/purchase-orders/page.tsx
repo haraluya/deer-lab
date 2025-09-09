@@ -12,7 +12,7 @@ import { useGlobalCart } from '@/hooks/useGlobalCart';
 import { toast } from 'sonner';
 import { 
   MoreHorizontal, Eye, Edit, Trash2, ShoppingCart, Calendar, Building, User, Plus, 
-  Search, Package, Droplets, X, ChevronLeft, ChevronRight, Filter, Shield
+  Search, Package, Droplets, X, ChevronLeft, ChevronRight, Filter, Shield, RefreshCw
 } from 'lucide-react';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -561,8 +561,11 @@ function PurchaseOrdersPageContent() {
       if (item.type === 'material') {
         const latestMaterial = materials.find(m => m.id === item.id);
         if (latestMaterial) {
+          const oldPrice = item.costPerUnit || item.price || 0;
+          const newPrice = latestMaterial.costPerUnit || 0;
+          
           updatedItem = {
-            ...item,
+            ...item, // 保留數量和其他用戶設定
             name: latestMaterial.name,
             code: latestMaterial.code,
             costPerUnit: latestMaterial.costPerUnit,
@@ -572,6 +575,16 @@ function PurchaseOrdersPageContent() {
             category: latestMaterial.category,
             subcategory: latestMaterial.subcategory,
           };
+          
+          if (oldPrice !== newPrice) {
+            console.log(`🔄 物料 ${item.name} 價格已更新:`, {
+              原價格: oldPrice,
+              新價格: newPrice,
+              數量: item.quantity // 數量保持不變
+            });
+          }
+        } else {
+          console.warn(`⚠️ 找不到物料 ${item.name} (${item.id}) 的最新數據`);
         }
       } else if (item.type === 'fragrance') {
         const latestFragrance = fragrances.find(f => f.id === item.id);
@@ -595,8 +608,11 @@ function PurchaseOrdersPageContent() {
         });
         
         if (latestFragrance) {
+          const oldPrice = item.costPerUnit || item.price || 0;
+          const newPrice = latestFragrance.costPerUnit || 0;
+          
           updatedItem = {
-            ...item,
+            ...item, // 保留數量和其他用戶設定
             name: latestFragrance.name,
             code: latestFragrance.code,
             costPerUnit: latestFragrance.costPerUnit,
@@ -606,6 +622,14 @@ function PurchaseOrdersPageContent() {
             series: latestFragrance.series,
             usedInProducts: latestFragrance.usedInProducts,
           };
+          
+          if (oldPrice !== newPrice) {
+            console.log(`🔄 香精 ${item.name} 價格已更新:`, {
+              原價格: oldPrice,
+              新價格: newPrice,
+              數量: item.quantity // 數量保持不變
+            });
+          }
         } else {
           // 🔧 修復：找不到最新香精資料時，確保使用購物車項目本身的價格
           console.warn(`⚠️ 找不到香精資料匹配，使用購物車原有價格:`, {
@@ -657,6 +681,39 @@ function PurchaseOrdersPageContent() {
     loadPurchaseOrders();
     loadItems();
   }, [loadPurchaseOrders, loadItems]);
+
+  // 🔄 每次採購車內容變化時，重新載入最新的物料和香精數據
+  useEffect(() => {
+    if (cartItems.length > 0) {
+      console.log('🔄 採購車內容變化，重新載入最新數據...');
+      loadItems(); // 重新載入最新的物料和香精數據
+    }
+  }, [cartItems.length, loadItems]); // 當採購車項目數量變化時觸發
+
+  // 🔄 頁面獲得焦點時重新載入最新數據（確保跨頁面操作後數據同步）
+  useEffect(() => {
+    const handleFocus = () => {
+      if (cartItems.length > 0) {
+        console.log('🔄 頁面獲得焦點，重新載入最新數據...');
+        loadItems();
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden && cartItems.length > 0) {
+        console.log('🔄 頁面可見性變化，重新載入最新數據...');
+        loadItems();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [cartItems.length, loadItems]);
 
   // 篩選採購單
   useEffect(() => {
@@ -1104,6 +1161,18 @@ function PurchaseOrdersPageContent() {
             <div className="flex items-center gap-2">
               <ShoppingCart className="h-5 w-5 text-amber-600" />
               <CardTitle>採購車</CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  console.log('🔄 手動刷新採購車數據...');
+                  loadItems();
+                  toast.success('已刷新採購車數據');
+                }}
+                className="ml-2 h-6 w-6 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+              >
+                <RefreshCw className="h-3 w-3" />
+              </Button>
               <span className="text-sm text-gray-500">
                 ({cartItems.length} 個項目，總計 NT$ {totalAmount.toLocaleString()})
               </span>
