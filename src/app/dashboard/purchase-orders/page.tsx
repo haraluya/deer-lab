@@ -191,6 +191,14 @@ function PurchaseOrdersPageContent() {
       const suppliersMap = new Map<string, string>();
       suppliersSnapshot.forEach(doc => suppliersMap.set(doc.id, doc.data().name));
 
+      // 載入產品系列資料
+      const productSeriesSnapshot = await getDocs(collection(db, 'productSeries'));
+      const seriesMap = new Map<string, string>();
+      productSeriesSnapshot.forEach(doc => {
+        const data = doc.data();
+        seriesMap.set(doc.id, data.name);
+      });
+
       // 載入產品資料，用於找出香精的使用產品
       const productsSnapshot = await getDocs(collection(db, 'products'));
       const productsMap = new Map<string, string[]>(); // fragranceId -> productDisplayNames[]
@@ -198,7 +206,8 @@ function PurchaseOrdersPageContent() {
       productsSnapshot.docs.forEach(doc => {
         const productData = doc.data();
         const productName = productData.name;
-        const seriesName = productData.seriesName; // 產品系列名稱
+        // 從 productSeries 集合中獲取系列名稱
+        const seriesName = seriesMap.get(productData.seriesRef?.id);
         
         // 組合顯示名稱：如果有系列名稱，則顯示為「系列名稱 - 產品名稱」
         // 專門針對香精採購車顯示，確保包含產品系列資訊
