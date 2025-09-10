@@ -830,7 +830,11 @@ export const StandardDataListPage = <T,>({
     return (
       <div className={`space-y-6 ${className || ''}`}>
         {showStats && stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className={`grid gap-3 mb-6 ${
+            isMobile 
+              ? 'grid-cols-1' // 手機端：單列
+              : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' // 桌面端：響應式多列
+          }`}>
             {stats.map((_, index) => (
               <Card key={index}>
                 <CardHeader>
@@ -891,7 +895,7 @@ export const StandardDataListPage = <T,>({
   if (!data || data.length === 0) {
     return (
       <div className={`space-y-6 ${className || ''}`}>
-        {showStats && stats && <StatsCards stats={stats} />}
+        {showStats && stats && <StatsCards stats={stats} isMobile={isMobile} />}
         
         {showToolbar && (
           <Toolbar
@@ -1004,7 +1008,7 @@ export const StandardDataListPage = <T,>({
   return (
     <div className={`space-y-6 ${className || ''}`} style={{ height }}>
       {/* 統計卡片 */}
-      {showStats && stats && <StatsCards stats={stats} />}
+      {showStats && stats && <StatsCards stats={stats} isMobile={isMobile} />}
       
       {/* 工具列 */}
       {showToolbar && (
