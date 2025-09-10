@@ -30,9 +30,17 @@ const nextApp = (0, next_1.default)({
     dir: process.cwd(),
 });
 const nextHandle = nextApp.getRequestHandler();
-// 建立 nextServer 雲端函數
-exports.nextServer = (0, https_1.onRequest)({ maxInstances: 10 }, async (req, res) => {
+// 建立 nextServer 雲端函數 - 優化設定以降低費用
+exports.nextServer = (0, https_1.onRequest)({
+    maxInstances: 3,
+    memory: '512MiB',
+    timeoutSeconds: 60,
+    concurrency: 10,
+    cpu: 1 // 限制 CPU 使用
+}, async (req, res) => {
     try {
+        // 設定快取標頭以減少重複請求
+        res.set('Cache-Control', 'public, max-age=300, s-maxage=600');
         await nextApp.prepare();
         return nextHandle(req, res);
     }
