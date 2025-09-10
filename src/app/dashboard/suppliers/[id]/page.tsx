@@ -4,31 +4,16 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { ArrowLeft, Building, Edit, MapPin, Phone, Mail, Globe } from 'lucide-react';
+import { ArrowLeft, Building, Edit, MapPin, Phone, Mail, Globe, User, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SupplierDialog, SupplierData } from '../SupplierDialog';
 
-interface Supplier {
-  id: string;
-  code: string;
-  name: string;
-  contactPerson?: string;
-  phone?: string;
-  email?: string;
-  address?: string;
-  website?: string;
-  status: 'active' | 'inactive';
-  createdAt: Date;
-  createdBy: string;
-  createdByName?: string;
-}
-
 export default function SupplierDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const [supplier, setSupplier] = useState<Supplier | null>(null);
+  const [supplier, setSupplier] = useState<SupplierData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -54,33 +39,30 @@ export default function SupplierDetailPage() {
 
         const data = supplierDoc.data();
 
-        // 獲取創建者名稱
-        let createdByName = '未知';
-        if (data.createdBy) {
+        // 獲取對接人員名稱
+        let liaisonPersonName = '';
+        if (data.liaisonPersonId) {
           try {
-            const userDoc = await getDoc(doc(db, 'users', data.createdBy));
+            const userDoc = await getDoc(doc(db, 'users', data.liaisonPersonId));
             if (userDoc.exists()) {
               const userData = userDoc.data() as any;
-              createdByName = userData?.name || userData?.email || '未知';
+              liaisonPersonName = userData?.name || userData?.email || '';
             }
           } catch (error) {
-            console.error('Failed to fetch creator name:', error);
+            console.error('Failed to fetch liaison person name:', error);
           }
         }
 
         setSupplier({
           id: supplierDoc.id,
-          code: data.code,
           name: data.name,
-          contactPerson: data.contactPerson,
-          phone: data.phone,
-          email: data.email,
-          address: data.address,
-          website: data.website,
-          status: data.status,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          createdBy: data.createdBy,
-          createdByName,
+          products: data.products,
+          contactWindow: data.contactWindow,
+          contactMethod: data.contactMethod,
+          liaisonPersonId: data.liaisonPersonId,
+          liaisonPersonName,
+          notes: data.notes,
+          createdAt: data.createdAt,
         });
       } catch (error) {
         console.error('Failed to fetch supplier:', error);
@@ -118,33 +100,30 @@ export default function SupplierDetailPage() {
 
       const data = supplierDoc.data();
 
-      // 獲取創建者名稱
-      let createdByName = '未知';
-      if (data.createdBy) {
+      // 獲取對接人員名稱
+      let liaisonPersonName = '';
+      if (data.liaisonPersonId) {
         try {
-          const userDoc = await getDoc(doc(db, 'users', data.createdBy));
+          const userDoc = await getDoc(doc(db, 'users', data.liaisonPersonId));
           if (userDoc.exists()) {
             const userData = userDoc.data() as any;
-            createdByName = userData?.name || userData?.email || '未知';
+            liaisonPersonName = userData?.name || userData?.email || '';
           }
         } catch (error) {
-          console.error('Failed to fetch creator name:', error);
+          console.error('Failed to fetch liaison person name:', error);
         }
       }
 
       setSupplier({
         id: supplierDoc.id,
-        code: data.code,
         name: data.name,
-        contactPerson: data.contactPerson,
-        phone: data.phone,
-        email: data.email,
-        address: data.address,
-        website: data.website,
-        status: data.status,
-        createdAt: data.createdAt?.toDate() || new Date(),
-        createdBy: data.createdBy,
-        createdByName,
+        products: data.products,
+        contactWindow: data.contactWindow,
+        contactMethod: data.contactMethod,
+        liaisonPersonId: data.liaisonPersonId,
+        liaisonPersonName,
+        notes: data.notes,
+        createdAt: data.createdAt,
       });
     } catch (error) {
       console.error('Failed to refresh supplier data:', error);
@@ -199,7 +178,7 @@ export default function SupplierDetailPage() {
           <h1 className="text-3xl font-bold text-primary">
             供應商詳情
           </h1>
-          <p className="text-muted-foreground font-mono">{supplier.code}</p>
+          <p className="text-muted-foreground font-mono">{supplier.name}</p>
         </div>
         <Button onClick={handleEdit} className="bg-primary hover:bg-primary/90">
           <Edit className="mr-2 h-4 w-4" />
@@ -227,41 +206,36 @@ export default function SupplierDetailPage() {
               </div>
             </div>
 
-            {/* 供應商編號 */}
+            {/* 供應商品 */}
             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg">
               <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
-                <MapPin className="h-5 w-5 text-white" />
+                <Package className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-sm text-green-600 font-medium">供應商編號</p>
-                <p className="text-lg font-semibold text-green-800">{supplier.code}</p>
+                <p className="text-sm text-green-600 font-medium">供應商品</p>
+                <p className="text-lg font-semibold text-green-800">{supplier.products || '未指定'}</p>
               </div>
             </div>
 
-            {/* 聯絡人 */}
+            {/* 聯絡窗口 */}
             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg">
               <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
                 <Phone className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-sm text-purple-600 font-medium">聯絡人</p>
-                <p className="text-lg font-semibold text-purple-800">{supplier.contactPerson || '未指定'}</p>
+                <p className="text-sm text-purple-600 font-medium">聯絡窗口</p>
+                <p className="text-lg font-semibold text-purple-800">{supplier.contactWindow || '未指定'}</p>
               </div>
             </div>
 
-            {/* 狀態 */}
+            {/* 對接人員 */}
             <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg">
               <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-                <Globe className="h-5 w-5 text-white" />
+                <User className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-sm text-orange-600 font-medium">狀態</p>
-                <Badge className={
-                  supplier.status === 'active' ? 'bg-green-100 text-green-800 border-green-300' :
-                  'bg-red-100 text-red-800 border-red-300'
-                }>
-                  {supplier.status === 'active' ? '啟用' : '停用'}
-                </Badge>
+                <p className="text-sm text-orange-600 font-medium">對接人員</p>
+                <p className="text-lg font-semibold text-orange-800">{supplier.liaisonPersonName || '未指定'}</p>
               </div>
             </div>
           </div>
@@ -282,21 +256,16 @@ export default function SupplierDetailPage() {
                 <span className="font-medium">{supplier.name}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">供應商編號</span>
-                <span className="font-medium">{supplier.code}</span>
+                <span className="text-muted-foreground">供應商品</span>
+                <span className="font-medium">{supplier.products || '未指定'}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">聯絡人</span>
-                <span className="font-medium">{supplier.contactPerson || '未指定'}</span>
+                <span className="text-muted-foreground">聯絡窗口</span>
+                <span className="font-medium">{supplier.contactWindow || '未指定'}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">狀態</span>
-                <Badge className={
-                  supplier.status === 'active' ? 'bg-green-100 text-green-800 border-green-300' :
-                  'bg-red-100 text-red-800 border-red-300'
-                }>
-                  {supplier.status === 'active' ? '啟用' : '停用'}
-                </Badge>
+                <span className="text-muted-foreground">對接人員</span>
+                <span className="font-medium">{supplier.liaisonPersonName || '未指定'}</span>
               </div>
             </div>
           </CardContent>
@@ -310,20 +279,20 @@ export default function SupplierDetailPage() {
           <CardContent className="space-y-4">
             <div className="space-y-3">
               <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">電話</span>
-                <span className="font-medium">{supplier.phone || '未指定'}</span>
+                <span className="text-muted-foreground">聯絡方式</span>
+                <span className="font-medium">{supplier.contactMethod || '未指定'}</span>
               </div>
+              {supplier.notes && (
+                <div className="flex flex-col gap-2 py-2 border-b">
+                  <span className="text-muted-foreground">備註</span>
+                  <span className="font-medium whitespace-pre-wrap">{supplier.notes}</span>
+                </div>
+              )}
               <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">電子郵件</span>
-                <span className="font-medium">{supplier.email || '未指定'}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">地址</span>
-                <span className="font-medium">{supplier.address || '未指定'}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">網站</span>
-                <span className="font-medium">{supplier.website || '未指定'}</span>
+                <span className="text-muted-foreground">建立時間</span>
+                <span className="font-medium">
+                  {supplier.createdAt ? new Date(supplier.createdAt.toDate()).toLocaleString('zh-TW') : '未知'}
+                </span>
               </div>
             </div>
           </CardContent>

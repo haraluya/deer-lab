@@ -1002,7 +1002,7 @@ export const StandardDataListPage = <T,>({
 
   // 主要渲染邏輯
   return (
-    <div className={`space-y-6 px-3 md:px-0 ${className || ''}`} style={{ height }}>
+    <div className={`space-y-6 ${className || ''}`} style={{ height }}>
       {/* 統計卡片 */}
       {showStats && stats && <StatsCards stats={stats} />}
       
@@ -1210,7 +1210,7 @@ export const StandardDataListPage = <T,>({
           
           {/* 卡片視圖 */}
           {currentViewMode === 'card' && (
-            <div className="p-3 md:p-6 w-full overflow-hidden">
+            <div className="p-4 md:p-6 w-full overflow-hidden">
               {/* 響應式網格：手機端單列，平板雙列，桌面多列 */}
               <div className={`grid gap-3 md:gap-4 w-full ${
                 isMobile 

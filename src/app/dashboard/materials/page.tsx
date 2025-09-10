@@ -529,7 +529,7 @@ export default function MaterialsPage() {
         // 行點擊
         onRowClick={(material) => router.push(`/dashboard/materials/${material.id}`)}
         
-        className="container mx-auto py-6"
+        className="container mx-auto px-4 py-6 max-w-full overflow-hidden"
       />
 
       {/* 新增/編輯對話框 */}
