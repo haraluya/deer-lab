@@ -358,6 +358,208 @@ xl: 1280px  /* 桌面電腦 */
 - **效能優化**: useMemo、useCallback 適當使用
 - **錯誤處理**: 統一的錯誤處理機制
 
+### StandardDataListPage 統一頁面元件
+
+**⚠️ 重要：所有清單頁面必須使用 StandardDataListPage 元件**
+
+#### 🎯 元件位置與用途
+- **檔案路徑**: `src/components/StandardDataListPage.tsx`
+- **用途**: 提供統一的資料清單介面，包含搜尋、篩選、分頁、操作等功能
+- **適用頁面**: 原料庫、香精庫、產品目錄、供應商、人員管理等所有清單頁面
+
+#### 🔧 核心功能特性
+```typescript
+// 主要功能
+- 統一的表格/卡片視圖模式切換
+- 響應式設計（桌面/平板/手機）
+- 快速篩選標籤系統
+- 高級搜尋與過濾
+- 批量操作支援
+- 分頁與虛擬滾動
+- 庫存盤點模式
+- 統計資訊卡片
+- 匯入/匯出功能
+```
+
+#### 📋 重要介面類型
+```typescript
+// 快速篩選標籤
+interface QuickFilter {
+  key: string;           // 篩選欄位名稱
+  label: string;         // 顯示標籤文字（🚨 關鍵：直接顯示此內容）
+  value: any;           // 篩選值
+  count?: number;       // 項目數量
+  color?: 'blue' | 'green' | 'yellow' | 'red' | 'purple' | 'orange' | 'gray';
+}
+
+// 欄位定義
+interface StandardColumn<T> {
+  key: string;
+  title: string;
+  sortable?: boolean;
+  filterable?: boolean;
+  searchable?: boolean;
+  render?: (value: any, record: T, index: number) => ReactNode;
+  mobileRender?: (value: any, record: T, index: number) => ReactNode;
+  priority?: number;     // 響應式優先級 (1-5, 5最重要)
+  hideOnMobile?: boolean;
+}
+
+// 操作按鈕
+interface StandardAction<T> {
+  key: string;
+  title: string;
+  icon?: ReactNode;
+  onClick: (record: T, index: number) => void;
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary';
+  confirmMessage?: string;
+}
+```
+
+#### 🛠️ 使用模式與最佳實務
+```tsx
+// 標準使用模式
+export default function MaterialsPage() {
+  // 1. 資料狀態管理
+  const [materials, setMaterials] = useState<MaterialWithSupplier[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // 2. 搜尋配置
+  const searchConfig = {
+    searchFields: [
+      { key: 'name' as keyof MaterialWithSupplier },
+      { key: 'code' as keyof MaterialWithSupplier },
+      { key: 'categoryName' as keyof MaterialWithSupplier }
+    ],
+    filterConfigs: [
+      { key: 'categoryName', type: 'set' as const },
+      { key: 'isLowStock', type: 'boolean' as const }
+    ]
+  };
+
+  // 3. 快速篩選標籤（🚨 重點：label 直接顯示）
+  const quickFilters: QuickFilter[] = useMemo(() => {
+    return [
+      {
+        key: 'isLowStock',
+        label: '低庫存',  // 🚨 這裡的文字會直接顯示
+        value: true,
+        count: materials.filter(m => m.isLowStock).length,
+        color: 'red'
+      },
+      // 分類標籤範例
+      ...categories.map(category => ({
+        key: 'categoryName',
+        label: `${mainCategory}/${subCategory}`, // 🚨 格式：主分類/細分分類
+        value: category,
+        count: materials.filter(m => m.categoryName === category).length,
+        color: 'blue'
+      }))
+    ];
+  }, [materials]);
+
+  // 4. 使用 StandardDataListPage
+  return (
+    <StandardDataListPage
+      data={filteredMaterials}
+      loading={isLoading}
+      columns={columns}
+      actions={actions}
+      quickFilters={quickFilters}  // 🚨 快速篩選標籤
+      searchable={true}
+      searchValue={searchTerm}
+      onSearchChange={setSearchTerm}
+      stats={stats}
+      showStats={true}
+      onAdd={handleAdd}
+      // ... 其他 props
+    />
+  );
+}
+```
+
+#### 🐛 常見問題與除錯
+
+##### 問題 1：快速篩選標籤顯示不正確
+```typescript
+// ❌ 錯誤：標籤沒有更新
+const quickFilters = [
+  { key: 'category', label: '📂 舊格式', value: 'old' }
+];
+
+// ✅ 正確：檢查 label 內容
+const quickFilters = useMemo(() => {
+  console.log('🔧 [除錯] 快速篩選標籤:', quickFilters);
+  return [
+    { key: 'category', label: '新格式分類', value: 'new' }
+  ];
+}, [依賴項]);
+```
+
+##### 問題 2：響應式顯示異常
+```typescript
+// ✅ 正確設定欄位優先級
+const columns: StandardColumn<T>[] = [
+  {
+    key: 'name',
+    title: '名稱',
+    priority: 5,        // 最高優先級，一定顯示
+    mobileRender: (value, record) => (
+      <div className="font-medium">{record.name}</div>
+    )
+  },
+  {
+    key: 'details',
+    title: '詳細資訊',
+    priority: 2,        // 低優先級，手機版可能隱藏
+    hideOnMobile: true  // 手機版直接隱藏
+  }
+];
+```
+
+##### 問題 3：資料更新不同步
+```typescript
+// ✅ 確保資料依賴正確
+const quickFilters = useMemo(() => {
+  // 重新計算快速篩選標籤
+  return generateQuickFilters(materials);
+}, [materials]); // 🚨 確保依賴項包含 materials
+```
+
+#### 🎨 客製化與擴展
+```typescript
+// 自訂樣式
+<StandardDataListPage
+  className="custom-list-page"
+  tableStyleConfig={{
+    headerStyle: 'gradient',
+    rowStyle: 'striped',
+    compactMode: true,
+    roundedCorners: true
+  }}
+  
+  // 權限控制
+  permissions={{
+    view: canViewMaterials,
+    create: canManageMaterials,
+    edit: canManageMaterials,
+    delete: canManageMaterials
+  }}
+  
+  // 盤點模式
+  stocktakeMode={stocktakeMode}
+  stocktakeUpdates={stocktakeUpdates}
+  onStocktakeSave={handleStocktakeSave}
+/>
+```
+
+#### 🚨 AI 助理注意事項
+1. **修改清單頁面功能時，必須檢查 StandardDataListPage 是否需要修改**
+2. **快速篩選標籤問題，優先檢查 `quickFilters` 陣列的 `label` 屬性**
+3. **響應式問題，檢查 `columns` 的 `priority` 和 `mobileRender` 設定**
+4. **搜尋篩選問題，檢查 `searchConfig` 和 `useDataSearch` hook**
+5. **統計資訊問題，檢查 `stats` 陣列的計算邏輯**
+
 ### 程式碼使用規範
 
 #### 標準 Hook 使用模式

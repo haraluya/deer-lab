@@ -165,53 +165,65 @@ export default function MaterialsPage() {
       const materialsData: MaterialWithSupplier[] = querySnapshot.docs.map((doc) => {
         const data = { id: doc.id, ...doc.data() } as MaterialData;
         
-        // 除錯：顯示原料的供應商資訊
-        console.log(`原料: ${data.name}, 供應商ID: ${data.supplierId || '無'}`);
+        // 獲取供應商名稱 - 處理 supplierRef（Firebase 引用）
+        let supplierName = '未指定';
         
-        // 獲取供應商名稱
-        const supplierName = data.supplierId ? suppliersMap.get(data.supplierId) || '未知供應商' : '未指定';
-        
-        // 除錯：檢查供應商匹配情況
-        if (data.supplierId && !suppliersMap.get(data.supplierId)) {
-          console.warn(`原料 ${data.name} 的供應商ID ${data.supplierId} 未找到對應供應商`);
-        } else if (data.supplierId) {
-          console.log(`原料 ${data.name} 匹配到供應商: ${supplierName}`);
+        // 優先順序：直接欄位 > ID 查找 > Firebase 引用 > 其他格式
+        if (data.supplierName && data.supplierName.trim() !== '') {
+          supplierName = data.supplierName.trim();
+        } else if (data.supplierId && suppliersMap.has(data.supplierId)) {
+          supplierName = suppliersMap.get(data.supplierId)!;
+        } else if (data.supplierRef && data.supplierRef.id) {
+          // 處理 Firebase DocumentReference
+          const refId = data.supplierRef.id;
+          supplierName = suppliersMap.get(refId) || '未知供應商';
+        } else if (data.supplier && typeof data.supplier === 'string') {
+          supplierName = data.supplier;
+        } else if (data.supplier && data.supplier.name) {
+          supplierName = data.supplier.name;
         }
         
-        // 獲取分類名稱
+        console.log(`[供應商除錯] 原料: ${data.name}`);
+        console.log(`  - supplierName: "${data.supplierName}"`);
+        console.log(`  - supplierId: "${data.supplierId}"`);
+        console.log(`  - supplierRef: `, data.supplierRef);
+        console.log(`  - supplierRef.id: `, data.supplierRef?.id);
+        console.log(`  - supplier: `, data.supplier);
+        console.log(`  - 最終供應商: "${supplierName}"`);
+        
+        // 獲取分類名稱 - 統一處理各種可能的分類格式
         let categoryName = '';
         let subCategoryName = '';
         
-        if (data.category) {
-          // 如果是舊格式的 category，直接使用
-          if (typeof data.category === 'string') {
-            categoryName = data.category;
-          }
-        }
-        
-        // 如果有分類ID，從分類資料中獲取名稱
+        // 1. 優先使用 mainCategoryId 和 subCategoryId
         if (data.mainCategoryId) {
-          const mainCatName = categoriesMap.get(data.mainCategoryId);
-          if (mainCatName) {
-            categoryName = mainCatName;
-          }
+          categoryName = categoriesMap.get(data.mainCategoryId) || '';
         }
-        
         if (data.subCategoryId) {
-          const subCatName = subCategoriesMap.get(data.subCategoryId);
-          if (subCatName) {
-            subCategoryName = subCatName;
+          subCategoryName = subCategoriesMap.get(data.subCategoryId) || '';
+        }
+        
+        // 2. 如果沒有 ID，檢查 category 字段
+        if (!categoryName && data.category) {
+          if (typeof data.category === 'string') {
+            if (data.category.includes('/')) {
+              // 分類格式: "主分類/細分類"
+              const categoryParts = data.category.split('/');
+              categoryName = categoryParts[0]?.trim() || '';
+              subCategoryName = categoryParts[1]?.trim() || '';
+            } else {
+              // 單一分類
+              categoryName = data.category.trim();
+            }
           }
         }
         
-        // 如果都沒有，使用 category 字段中的分類
-        if (!categoryName && data.category) {
-          const categoryParts = data.category.split('/');
-          categoryName = categoryParts[0] || '';
-          if (categoryParts.length > 1) {
-            subCategoryName = categoryParts[1] || '';
-          }
+        // 3. 如果還是沒有，檢查是否有獨立的 subCategory 字段
+        if (!subCategoryName && data.subCategory) {
+          subCategoryName = data.subCategory;
         }
+        
+        console.log(`[分類除錯] 原料: ${data.name}, 主分類: ${categoryName}, 細分類: ${subCategoryName}`);
         
         return {
           ...data,
@@ -476,59 +488,63 @@ export default function MaterialsPage() {
 
   // 快速篩選標籤
   const quickFilters: QuickFilter[] = useMemo(() => {
-    // 取得所有主分類和細分類的組合
-    const categoryMap = new Map<string, Set<string>>();
+    console.log('🔧 [快選標籤除錯] 開始產生快選標籤，原料總數:', materials.length);
+    
+    // 收集所有主分類和細分類
+    const mainCategories = new Map<string, number>();
+    const subCategories = new Map<string, number>();
     
     materials.forEach(material => {
-      const mainCategory = material.categoryName || '未分類';
-      const subCategory = material.subCategoryName || '';
+      const mainCat = material.categoryName || '未分類';
+      const subCat = material.subCategoryName || '';
       
-      if (!categoryMap.has(mainCategory)) {
-        categoryMap.set(mainCategory, new Set());
+      // 統計主分類
+      if (mainCat && mainCat !== '未分類') {
+        mainCategories.set(mainCat, (mainCategories.get(mainCat) || 0) + 1);
       }
-      if (subCategory) {
-        categoryMap.get(mainCategory)!.add(subCategory);
+      
+      // 統計細分類
+      if (subCat) {
+        subCategories.set(subCat, (subCategories.get(subCat) || 0) + 1);
       }
     });
     
-    // 產生分類標籤
-    const categoryTags: Array<{key: string, label: string, value: any, count: number, color: 'blue' | 'green' | 'purple' | 'orange' | 'yellow' | 'red' | 'gray'}> = [];
+    console.log('🔧 [快選標籤除錯] 主分類:', Array.from(mainCategories.entries()));
+    console.log('🔧 [快選標籤除錯] 細分類:', Array.from(subCategories.entries()));
     
-    // 定義顏色映射
+    // 定義顏色
     const colors: Array<'blue' | 'green' | 'purple' | 'orange' | 'yellow' | 'red'> = ['blue', 'green', 'purple', 'orange', 'yellow', 'red'];
     let colorIndex = 0;
     
-    categoryMap.forEach((subCategories, mainCategory) => {
-      if (mainCategory === '未分類') return;
-      
-      if (subCategories.size === 0) {
-        // 只有主分類，沒有細分類
-        categoryTags.push({
-          key: 'categoryName',
-          label: mainCategory,
-          value: mainCategory,
-          count: materials.filter(m => m.categoryName === mainCategory && !m.subCategoryName).length,
-          color: colors[colorIndex % colors.length]
-        });
-      } else {
-        // 有細分類，為每個組合創建標籤
-        subCategories.forEach(subCategory => {
-          const combinedLabel = `${mainCategory}/${subCategory}`;
-          categoryTags.push({
-            key: 'subCategoryName', // 使用細分類作為篩選鍵
-            label: combinedLabel,
-            value: subCategory, // 使用細分類名稱作為值
-            count: materials.filter(m => m.categoryName === mainCategory && m.subCategoryName === subCategory).length,
-            color: colors[colorIndex % colors.length]
-          });
-        });
-      }
-      colorIndex++;
-    });
+    // 產生主分類標籤 - 統一使用藍色
+    const mainCategoryTags = Array.from(mainCategories.entries()).map(([categoryName, count]) => ({
+      key: 'categoryName',
+      label: categoryName,
+      value: categoryName,
+      count: count,
+      color: 'blue' as const
+    }));
     
+    // 產生細分類標籤 - 統一使用綠色
+    const subCategoryTags = Array.from(subCategories.entries()).map(([subCategoryName, count]) => ({
+      key: 'subCategoryName',
+      label: subCategoryName,
+      value: subCategoryName,
+      count: count,
+      color: 'green' as const
+    }));
+    
+    // 供應商標籤 (排除"未指定")
     const suppliers = Array.from(new Set(materials.map(m => m.supplierName).filter(s => s && s !== '未指定')));
+    const supplierTags = suppliers.slice(0, 4).map((supplier) => ({
+      key: 'supplierName',
+      label: supplier,
+      value: supplier,
+      count: materials.filter(m => m.supplierName === supplier).length,
+      color: 'gray' as const
+    }));
     
-    return [
+    const finalQuickFilters = [
       // 狀態篩選
       {
         key: 'isLowStock',
@@ -537,17 +553,16 @@ export default function MaterialsPage() {
         count: materials.filter(m => m.isLowStock).length,
         color: 'red' as const
       },
-      // 分類組合標籤
-      ...categoryTags,
-      // 供應商篩選 (顯示前4個)
-      ...suppliers.slice(0, 4).map((supplier, index) => ({
-        key: 'supplierName',
-        label: supplier,
-        value: supplier,
-        count: materials.filter(m => m.supplierName === supplier).length,
-        color: 'gray' as const
-      }))
+      // 主分類標籤
+      ...mainCategoryTags,
+      // 細分類標籤
+      ...subCategoryTags,
+      // 供應商標籤
+      ...supplierTags
     ];
+    
+    console.log('🔧 [快選標籤除錯] 最終快選標籤:', finalQuickFilters);
+    return finalQuickFilters;
   }, [materials]);
 
   // 操作處理函式
