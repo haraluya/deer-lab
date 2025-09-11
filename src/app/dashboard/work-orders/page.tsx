@@ -360,110 +360,94 @@ function WorkOrdersPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-      <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-        {/* 頁面標題區域 */}
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-                工單管理中心
-              </h1>
-              <p className="text-gray-600 mt-2 text-lg font-medium">專業的生產工單管理與進度追蹤系統</p>
-            </div>
-            {canManageWorkOrders && (
-              <Button 
-                onClick={handleCreateWorkOrder}
-                className="bg-gradient-to-r from-pink-400 to-purple-500 hover:from-pink-500 hover:to-purple-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 h-12 px-6 text-base font-semibold"
-              >
-                <Plus className="mr-2 h-5 w-5" />
-                建立新工單
-              </Button>
-            )}
+    <div className="container mx-auto py-10">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+            生產工單
+          </h1>
+          <p className="text-gray-600 mt-2">管理所有生產工單，追蹤生產進度和狀態</p>
+        </div>
+        {canManageWorkOrders && (
+          <Button 
+            onClick={handleCreateWorkOrder}
+            className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold px-4 py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            建立新工單
+          </Button>
+        )}
+      </div>
+
+      <StandardDataListPage
+        data={filteredWorkOrders}
+        loading={loading}
+        columns={columns}
+        actions={actions}
+        onRowClick={(record) => router.push(`/dashboard/work-orders/${record.id}`)}
+        
+        // 搜尋與過濾
+        searchable={true}
+        searchPlaceholder="搜尋工單編號、產品名稱、系列..."
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        quickFilters={quickFilters}
+        activeFilters={activeFilters}
+        onFilterChange={(key, value) => {
+          if (value === null) {
+            clearFilter(key);
+          } else {
+            setFilter(key, value);
+          }
+        }}
+        onClearFilters={() => {
+          Object.keys(activeFilters).forEach(key => clearFilter(key));
+        }}
+        
+        // 統計資訊
+        stats={stats}
+        showStats={true}
+        
+        // 工具列功能
+        showToolbar={true}
+        
+        // 新增功能
+        showAddButton={canManageWorkOrders}
+        addButtonText="建立新工單"
+        onAdd={handleCreateWorkOrder}
+        
+        className="space-y-6"
+      />
+
+      {/* 分頁載入區域 */}
+      <div className="space-y-4">
+        {/* 載入更多按鈕 */}
+        {hasMore && (
+          <div className="flex justify-center">
+            <Button 
+              onClick={loadMore} 
+              disabled={loadingMore}
+              variant="outline"
+              className="px-8 py-2 bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border-blue-200 text-blue-700 transition-all duration-200"
+            >
+              {loadingMore ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                  載入中...
+                </>
+              ) : (
+                '載入更多工單'
+              )}
+            </Button>
           </div>
-        </div>
-
-        <div className="container mx-auto py-10">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-                生產工單
-              </h1>
-              <p className="text-gray-600 mt-2">管理所有生產工單，追蹤生產進度和狀態</p>
-            </div>
+        )}
+        
+        {/* 已載入所有資料的提示 */}
+        {!hasMore && workOrders.length > ITEMS_PER_PAGE && (
+          <div className="text-center text-gray-500 py-4">
+            已載入所有 {workOrders.length} 筆工單
           </div>
-
-          <StandardDataListPage
-          data={filteredWorkOrders}
-          loading={loading}
-          columns={columns}
-          actions={actions}
-          onRowClick={(record) => router.push(`/dashboard/work-orders/${record.id}`)}
-          
-          // 搜尋與過濾
-          searchable={true}
-          searchPlaceholder="搜尋工單編號、產品名稱、系列..."
-          searchValue={searchTerm}
-          onSearchChange={setSearchTerm}
-          quickFilters={quickFilters}
-          activeFilters={activeFilters}
-          onFilterChange={(key, value) => {
-            if (value === null) {
-              clearFilter(key);
-            } else {
-              setFilter(key, value);
-            }
-          }}
-          onClearFilters={() => {
-            Object.keys(activeFilters).forEach(key => clearFilter(key));
-          }}
-          
-          // 統計資訊
-          stats={stats}
-          showStats={true}
-          
-          // 工具列功能
-          showToolbar={true}
-          
-          // 新增功能
-          showAddButton={canManageWorkOrders}
-          addButtonText="建立新工單"
-          onAdd={handleCreateWorkOrder}
-          
-          className="space-y-6"
-        />
-
-        {/* 分頁載入區域 */}
-        <div className="space-y-4">
-          {/* 載入更多按鈕 */}
-          {hasMore && (
-            <div className="flex justify-center">
-              <Button 
-                onClick={loadMore} 
-                disabled={loadingMore}
-                variant="outline"
-                className="px-8 py-2 bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border-blue-200 text-blue-700 transition-all duration-200"
-              >
-                {loadingMore ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                    載入中...
-                  </>
-                ) : (
-                  '載入更多工單'
-                )}
-              </Button>
-            </div>
-          )}
-          
-          {/* 已載入所有資料的提示 */}
-          {!hasMore && workOrders.length > ITEMS_PER_PAGE && (
-            <div className="text-center text-gray-500 py-4">
-              已載入所有 {workOrders.length} 筆工單
-            </div>
-          )}
-        </div>
-        </div>
+        )}
       </div>
     </div>
   )

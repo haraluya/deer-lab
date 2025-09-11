@@ -483,14 +483,13 @@ function PersonnelPageContent() {
   };
 
   return (
-    <div className="container mx-auto py-6">
-      {/* 頁面標題區域 */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
+    <div className="container mx-auto py-10">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
             成員管理
           </h1>
-          <p className="text-gray-600 mt-2 text-lg">管理團隊成員資訊與權限設定</p>
+          <p className="text-gray-600 mt-2">管理團隊成員資訊，包括權限設置和聯絡方式</p>
         </div>
         
         <div className="flex gap-3">
@@ -500,7 +499,6 @@ function PersonnelPageContent() {
               <Button 
                 variant="outline"
                 className="gap-2 border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-300 shadow-sm hover:shadow-md transition-all duration-200"
-                size="lg"
               >
                 <Settings className="h-5 w-5" />
                 權限管理
@@ -509,16 +507,6 @@ function PersonnelPageContent() {
           )}
         </div>
       </div>
-
-      <div className="container mx-auto py-10">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              成員管理
-            </h1>
-            <p className="text-gray-600 mt-2">管理團隊成員資訊，包括權限設置和聯絡方式</p>
-          </div>
-        </div>
 
         <StandardDataListPage
         data={filteredUsers}
@@ -780,7 +768,6 @@ function PersonnelPageContent() {
           </DialogContent>
         </Dialog>
       )}
-      </div>
     </div>
   );
 }
