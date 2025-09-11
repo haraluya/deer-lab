@@ -200,13 +200,6 @@ function WorkOrdersPageContent() {
 
     return [
       {
-        title: '總工單數',
-        value: total,
-        subtitle: '所有工單',
-        icon: <Factory className="h-4 w-4" />,
-        color: 'blue'
-      },
-      {
         title: '預報中',
         value: forecast,
         subtitle: '待開始工單',

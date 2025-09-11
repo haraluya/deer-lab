@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { collection, getDocs, doc, getDoc, DocumentReference } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, DocumentReference, query, orderBy } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 import { AppUser } from '@/context/AuthContext';
@@ -23,6 +23,18 @@ import { StandardDataListPage, StandardColumn, StandardAction, QuickFilter, Stan
 import { toast } from 'sonner';
 import { useDataSearch } from '@/hooks/useDataSearch';
 
+interface Role {
+  id: string;
+  name: string;
+  displayName: string;
+  description: string;
+  permissions: string[];
+  isDefault: boolean;
+  color: string;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
 interface UserWithRole {
   id: string;
   uid: string;
@@ -31,11 +43,13 @@ interface UserWithRole {
   phone: string;
   roleRef?: DocumentReference;
   roleName: string;
+  roleId?: string;
   status: string;
 }
 
 function PersonnelPageContent() {
   const [users, setUsers] = useState<UserWithRole[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   const { isAdmin, userRole, userPermissions } = usePermission();
@@ -78,6 +92,57 @@ function PersonnelPageContent() {
     filteredCount
   } = useDataSearch(users, searchConfig);
 
+  // 角色顏色對應 - 和權限管理頁面保持一致
+  const getRoleColor = useCallback((color?: string) => {
+    switch (color) {
+      case '#dc2626': return 'red';
+      case '#2563eb': return 'blue';
+      case '#059669': return 'green';
+      case '#7c3aed': return 'purple';
+      case '#ea580c': return 'orange';
+      default: return 'gray';
+    }
+  }, []);
+
+  const getRoleColorClasses = useCallback((color?: string) => {
+    const baseColor = getRoleColor(color);
+    switch (baseColor) {
+      case 'red':
+        return 'bg-red-50 text-red-700 border-red-200';
+      case 'blue':
+        return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'green':
+        return 'bg-green-50 text-green-700 border-green-200';
+      case 'purple':
+        return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'orange':
+        return 'bg-orange-50 text-orange-700 border-orange-200';
+      default:
+        return 'bg-gray-50 text-gray-700 border-gray-200';
+    }
+  }, [getRoleColor]);
+
+  // 載入角色列表
+  const fetchRoles = useCallback(async () => {
+    try {
+      if (!db) {
+        throw new Error("Firebase 未初始化");
+      }
+      const rolesQuery = query(collection(db, 'roles'), orderBy('createdAt', 'asc'));
+      const rolesSnapshot = await getDocs(rolesQuery);
+      
+      const rolesList = rolesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Role[];
+      
+      setRoles(rolesList);
+    } catch (error) {
+      console.error("讀取角色資料失敗:", error);
+      // 不顯示錯誤訊息，角色資料是輔助功能
+    }
+  }, []);
+
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -91,6 +156,7 @@ function PersonnelPageContent() {
           const userData = userDoc.data();
           const uid = userDoc.id;
           let roleName = '未設定';
+          let roleId = '';
           
           // 優先使用直接設定的 roleName 欄位
           if (userData.roleName && typeof userData.roleName === 'string') {
@@ -102,7 +168,8 @@ function PersonnelPageContent() {
               try {
                 const roleDocSnap = await getDoc(roleRef);
                 if (roleDocSnap.exists()) {
-                  roleName = roleDocSnap.data()?.name || '未知角色';
+                  roleName = roleDocSnap.data()?.displayName || roleDocSnap.data()?.name || '未知角色';
+                  roleId = roleRef.id;
                 }
               } catch (roleError) {
                 console.error(`無法讀取角色資料 for user ${uid}:`, roleError);
@@ -110,7 +177,17 @@ function PersonnelPageContent() {
               }
             }
           }
-          return { ...userData, id: uid, uid, roleName } as UserWithRole;
+          
+          // 如果有 roleId，從已載入的角色中查找對應資料
+          if (userData.roleId && roles.length > 0) {
+            const role = roles.find(r => r.id === userData.roleId);
+            if (role) {
+              roleName = role.displayName;
+              roleId = role.id;
+            }
+          }
+          
+          return { ...userData, id: uid, uid, roleName, roleId } as UserWithRole;
         })
       );
       setUsers(usersData);
@@ -120,11 +197,15 @@ function PersonnelPageContent() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [roles]);
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    const initializeData = async () => {
+      await fetchRoles();
+      await fetchUsers();
+    };
+    initializeData();
+  }, [fetchRoles, fetchUsers]);
 
   // 統計數據
   const stats: StandardStats[] = [
@@ -208,20 +289,20 @@ function PersonnelPageContent() {
       sortable: true,
       filterable: true,
       priority: 4,
-      render: (value) => (
-        <Badge 
-          variant="outline"
-          className={`${
-            value === '管理員' 
-              ? 'bg-purple-50 text-purple-700 border-purple-200'
-              : value === '主管' 
-              ? 'bg-blue-50 text-blue-700 border-blue-200'
-              : 'bg-gray-50 text-gray-700 border-gray-200'
-          }`}
-        >
-          {value}
-        </Badge>
-      )
+      render: (value, record) => {
+        // 從角色資料中查找對應的顏色
+        const role = roles.find(r => r.displayName === value || r.name === value);
+        const roleColor = role?.color;
+        
+        return (
+          <Badge 
+            variant="outline"
+            className={getRoleColorClasses(roleColor)}
+          >
+            {value}
+          </Badge>
+        );
+      }
     },
     {
       key: 'status',
@@ -306,13 +387,20 @@ function PersonnelPageContent() {
     ...Array.from(new Set(users.map(u => u.roleName)))
       .filter(role => role !== '未設定')
       .sort()
-      .map(role => ({
-        key: 'roleName',
-        label: role,
-        value: role,
-        color: (role === '管理員' ? 'purple' : role === '主管' ? 'blue' : 'gray') as 'purple' | 'blue' | 'gray',
-        count: users.filter(u => u.roleName === role).length
-      }))
+      .map(role => {
+        // 從角色資料中查找對應的顏色
+        const roleData = roles.find(r => r.displayName === role || r.name === role);
+        const roleColor = roleData?.color;
+        const quickFilterColor = getRoleColor(roleColor) as 'purple' | 'blue' | 'green' | 'red' | 'orange' | 'gray';
+        
+        return {
+          key: 'roleName',
+          label: role,
+          value: role,
+          color: quickFilterColor,
+          count: users.filter(u => u.roleName === role).length
+        };
+      })
   ];
 
   // 操作處理函式
@@ -520,19 +608,19 @@ function PersonnelPageContent() {
                     <Badge variant="outline" className="bg-white/80 text-blue-700 border-blue-200 font-mono">
                       {selectedDetailUser.employeeId}
                     </Badge>
-                    <Badge 
-                      variant="outline"
-                      className={`${
-                        selectedDetailUser.roleName === '管理員' 
-                          ? 'bg-purple-100 text-purple-700 border-purple-300'
-                          : selectedDetailUser.roleName === '主管' 
-                          ? 'bg-blue-100 text-blue-700 border-blue-300'
-                          : 'bg-gray-100 text-gray-700 border-gray-300'
-                      }`}
-                    >
-                      <Shield className="w-3 h-3 mr-1" />
-                      {selectedDetailUser.roleName}
-                    </Badge>
+                    {(() => {
+                      const role = roles.find(r => r.displayName === selectedDetailUser.roleName || r.name === selectedDetailUser.roleName);
+                      const roleColor = role?.color;
+                      return (
+                        <Badge 
+                          variant="outline"
+                          className={getRoleColorClasses(roleColor)}
+                        >
+                          <Shield className="w-3 h-3 mr-1" />
+                          {selectedDetailUser.roleName}
+                        </Badge>
+                      );
+                    })()}
                   </div>
                 </div>
               </DialogTitle>
@@ -568,9 +656,9 @@ function PersonnelPageContent() {
                   <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center shadow-sm">
                     <Calendar className="h-5 w-5 text-white" />
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <p className="text-sm text-orange-600 font-medium">聯絡電話</p>
-                    <p className="text-lg font-semibold text-orange-800">
+                    <p className="text-base font-semibold text-orange-800 truncate">
                       {selectedDetailUser.phone || '未設定'}
                     </p>
                   </div>
@@ -619,18 +707,18 @@ function PersonnelPageContent() {
                   <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-purple-100">
                     <label className="text-sm font-semibold text-purple-700 block mb-2">系統角色</label>
                     <div className="flex items-center gap-2">
-                      <Badge 
-                        variant="outline"
-                        className={`text-base px-3 py-1 ${
-                          selectedDetailUser.roleName === '管理員' 
-                            ? 'bg-purple-100 text-purple-800 border-purple-300'
-                            : selectedDetailUser.roleName === '主管' 
-                            ? 'bg-blue-100 text-blue-800 border-blue-300'
-                            : 'bg-gray-100 text-gray-800 border-gray-300'
-                        }`}
-                      >
-                        {selectedDetailUser.roleName || '未設定'}
-                      </Badge>
+                      {(() => {
+                        const role = roles.find(r => r.displayName === selectedDetailUser.roleName || r.name === selectedDetailUser.roleName);
+                        const roleColor = role?.color;
+                        return (
+                          <Badge 
+                            variant="outline"
+                            className={`text-base px-3 py-1 ${getRoleColorClasses(roleColor)}`}
+                          >
+                            {selectedDetailUser.roleName || '未設定'}
+                          </Badge>
+                        );
+                      })()}
                     </div>
                   </div>
                   

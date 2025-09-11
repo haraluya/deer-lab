@@ -296,13 +296,13 @@ const StatsCards: React.FC<StatsCardsPropsWithMobile> = ({ stats, isMobile = fal
             isMobile ? 'pb-0.5 pt-1.5 px-2' : 'pb-2 pt-4 px-6'
           }`}>
             <CardTitle className={`font-medium text-muted-foreground leading-tight ${
-              isMobile ? 'text-xs' : 'text-sm'
+              isMobile ? 'text-base' : 'text-lg'
             }`}>
               {stat.title}
             </CardTitle>
             {stat.icon && (
               <div className={`text-muted-foreground flex-shrink-0 ${
-                isMobile ? 'text-sm' : 'text-base'
+                isMobile ? 'text-base' : 'text-lg'
               }`}>
                 {stat.icon}
               </div>
@@ -312,13 +312,13 @@ const StatsCards: React.FC<StatsCardsPropsWithMobile> = ({ stats, isMobile = fal
             isMobile ? 'pt-0 pb-1.5 px-2' : 'pt-0 pb-4 px-6'
           }`}>
             <div className={`font-bold mb-1 leading-tight ${
-              isMobile ? 'text-2xl' : 'text-2xl' // 手機版字體更大
+              isMobile ? 'text-2xl' : 'text-3xl' // 桌面版字體更大
             }`}>
               {stat.value}
             </div>
             {stat.subtitle && (
               <p className={`text-muted-foreground leading-tight ${
-                isMobile ? 'text-xs' : 'text-xs'
+                isMobile ? 'text-sm' : 'text-sm'
               }`}>
                 {stat.subtitle}
               </p>

@@ -12,7 +12,7 @@ import { useGlobalCart } from '@/hooks/useGlobalCart';
 import { toast } from 'sonner';
 import { 
   MoreHorizontal, Eye, Edit, Trash2, ShoppingCart, Calendar, Building, User, Plus, 
-  Search, Package, Droplets, X, ChevronLeft, ChevronRight, Filter, Shield, RefreshCw
+  Search, Package, Droplets, X, ChevronLeft, ChevronRight, Filter, Shield, RefreshCw, AlertCircle, CheckCircle, Clock
 } from 'lucide-react';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -28,6 +28,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { BUSINESS_CONFIG } from '@/config/business';
+
+// 引入統一架構組件
+import { StandardDataListPage, StandardColumn, StandardAction, QuickFilter, StandardStats } from '@/components/StandardDataListPage';
+import { useDataSearch } from '@/hooks/useDataSearch';
 
 // 定義從 Firestore 讀取並處理後的採購單資料結構
 interface PurchaseOrderView {
@@ -66,19 +70,225 @@ interface SearchResult {
   usedInProducts?: string[];
 }
 
+// 採購單狀態Badge組件
+const StatusBadge = ({ status }: { status: string }) => {
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case "預報單":
+        return {
+          className: "bg-gradient-to-r from-purple-200 to-purple-300 text-purple-800 border border-purple-200 shadow-sm",
+          icon: "⏳"
+        }
+      case "已訂購":
+        return {
+          className: "bg-gradient-to-r from-green-200 to-green-300 text-green-800 border border-green-200 shadow-sm",
+          icon: "📋"
+        }
+      case "已收貨":
+        return {
+          className: "bg-gradient-to-r from-gray-200 to-gray-300 text-gray-800 border border-gray-200 shadow-sm",
+          icon: "📦"
+        }
+      case "已取消":
+        return {
+          className: "bg-gradient-to-r from-red-200 to-red-300 text-red-800 border border-red-200 shadow-sm",
+          icon: "❌"
+        }
+      default:
+        return {
+          className: "bg-gradient-to-r from-gray-200 to-gray-300 text-gray-800 border border-gray-200 shadow-sm",
+          icon: "❓"
+        }
+    }
+  }
+
+  const config = getStatusConfig(status)
+
+  return (
+    <Badge className={`${config.className} font-semibold px-3 py-1.5 rounded-full text-sm transition-all duration-200 hover:scale-105`}>
+      <span className="mr-1.5">{config.icon}</span>
+      {status}
+    </Badge>
+  )
+}
+
 function PurchaseOrdersPageContent() {
   const router = useRouter();
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderView[]>([]);
-  const [filteredPurchaseOrders, setFilteredPurchaseOrders] = useState<PurchaseOrderView[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // 採購清單相關狀態
-  const [statusFilter, setStatusFilter] = useState<'all' | '預報單' | '已訂購' | '已收貨'>('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(BUSINESS_CONFIG.ui.pagination.itemsPerPage);
+  // 使用統一的搜尋過濾 Hook
+  const searchConfig = {
+    searchFields: [
+      { key: 'code' as keyof PurchaseOrderView },
+      { key: 'supplierName' as keyof PurchaseOrderView },
+      { key: 'createdByName' as keyof PurchaseOrderView }
+    ],
+    filterConfigs: [
+      {
+        key: 'status' as keyof PurchaseOrderView,
+        type: 'set' as const
+      }
+    ]
+  };
+
+  const {
+    searchTerm,
+    setSearchTerm,
+    activeFilters,
+    setFilter,
+    clearFilter,
+    filteredData: filteredPurchaseOrders,
+    totalCount,
+    filteredCount
+  } = useDataSearch(purchaseOrders, searchConfig);
+
+  // 計算統計數據
+  const stats: StandardStats[] = useMemo(() => {
+    const forecast = purchaseOrders.filter(po => po.status === '預報單').length
+    const ordered = purchaseOrders.filter(po => po.status === '已訂購').length
+    const received = purchaseOrders.filter(po => po.status === '已收貨').length
+    const cancelled = purchaseOrders.filter(po => po.status === '已取消').length
+
+    return [
+      {
+        title: '預報單',
+        value: forecast,
+        subtitle: '待訂購',
+        icon: <AlertCircle className="h-4 w-4" />,
+        color: 'purple'
+      },
+      {
+        title: '已訂購',
+        value: ordered,
+        subtitle: '進行中',
+        icon: <Clock className="h-4 w-4" />,
+        color: 'green'
+      },
+      {
+        title: '已收貨',
+        value: received,
+        subtitle: '已完成',
+        icon: <CheckCircle className="h-4 w-4" />,
+        color: 'blue'
+      }
+    ];
+  }, [purchaseOrders]);
+
+  // 配置欄位
+  const columns: StandardColumn<PurchaseOrderView>[] = [
+    {
+      key: 'code',
+      title: '採購單資訊',
+      sortable: true,
+      searchable: true,
+      priority: 5,
+      render: (value, record) => (
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
+            <ShoppingCart className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <div className="font-semibold text-gray-900">{record.code}</div>
+            <div className="text-sm text-gray-500">{record.createdAt}</div>
+          </div>
+        </div>
+      ),
+      mobileRender: (value, record) => (
+        <div>
+          <div className="font-medium text-gray-900">{record.code}</div>
+          <div className="text-xs text-gray-500">{record.createdAt}</div>
+        </div>
+      )
+    },
+    {
+      key: 'supplierName',
+      title: '供應商',
+      sortable: true,
+      searchable: true,
+      priority: 4,
+      render: (value, record) => (
+        <div className="flex items-center gap-2">
+          <Building className="h-4 w-4 text-blue-600" />
+          <span className="text-sm font-medium text-gray-700">{record.supplierName}</span>
+        </div>
+      )
+    },
+    {
+      key: 'createdByName',
+      title: '建立人員',
+      sortable: true,
+      searchable: true,
+      priority: 3,
+      hideOnMobile: true,
+      render: (value, record) => (
+        <div className="flex items-center gap-2">
+          <User className="h-4 w-4 text-gray-400" />
+          <span className="text-sm font-medium text-gray-700">{record.createdByName}</span>
+        </div>
+      )
+    },
+    {
+      key: 'status',
+      title: '狀態',
+      sortable: true,
+      filterable: true,
+      priority: 4,
+      align: 'center',
+      render: (value) => <StatusBadge status={value} />
+    },
+    {
+      key: 'totalAmount',
+      title: '採購金額',
+      sortable: true,
+      priority: 3,
+      align: 'right',
+      render: (value) => (
+        <div className="text-sm font-semibold text-amber-600">
+          NT$ {value ? Math.round(value).toLocaleString() : '0'}
+        </div>
+      ),
+      hideOnMobile: true
+    }
+  ];
+
+  // 配置操作
+  const actions: StandardAction<PurchaseOrderView>[] = [
+    {
+      key: 'view',
+      title: '查看詳情',
+      icon: <Eye className="h-4 w-4" />,
+      onClick: (record) => router.push(`/dashboard/purchase-orders/${record.id}`)
+    }
+  ];
+
+  // 配置快速篩選
+  const quickFilters: QuickFilter[] = [
+    {
+      key: 'status',
+      label: '預報單',
+      value: '預報單',
+      color: 'purple',
+      count: purchaseOrders.filter(po => po.status === '預報單').length
+    },
+    {
+      key: 'status',
+      label: '已訂購',
+      value: '已訂購',
+      color: 'green',
+      count: purchaseOrders.filter(po => po.status === '已訂購').length
+    },
+    {
+      key: 'status',
+      label: '已收貨',
+      value: '已收貨',
+      color: 'blue',
+      count: purchaseOrders.filter(po => po.status === '已收貨').length
+    }
+  ];
   
-  // 搜尋相關狀態
-  const [searchTerm, setSearchTerm] = useState('');
+  // 搜尋相關狀態（保留用於物料香精搜尋）
+  const [itemSearchTerm, setItemSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [materials, setMaterials] = useState<SearchResult[]>([]);
@@ -290,7 +500,7 @@ function PurchaseOrdersPageContent() {
 
   // 搜尋功能
   const handleSearch = useCallback((term: string) => {
-    setSearchTerm(term);
+    setItemSearchTerm(term);
     if (!term.trim()) {
       setSearchResults([]);
       return;
@@ -540,22 +750,6 @@ function PurchaseOrdersPageContent() {
 
 
 
-  // 計算分頁
-  const paginatedPurchaseOrders = useMemo(() => {
-    const filtered = statusFilter === 'all' 
-      ? purchaseOrders 
-      : purchaseOrders.filter(po => po.status === statusFilter);
-    
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filtered.slice(startIndex, startIndex + itemsPerPage);
-  }, [purchaseOrders, statusFilter, currentPage, itemsPerPage]);
-
-  const totalPages = useMemo(() => {
-    const filtered = statusFilter === 'all' 
-      ? purchaseOrders 
-      : purchaseOrders.filter(po => po.status === statusFilter);
-    return Math.ceil(filtered.length / itemsPerPage);
-  }, [purchaseOrders, statusFilter, itemsPerPage]);
 
   // 按供應商分組採購車 - 動態更新最新資料
   const cartBySupplier = useMemo(() => {
@@ -730,10 +924,6 @@ function PurchaseOrdersPageContent() {
     };
   }, [cartItems.length, loadItems]);
 
-  // 篩選採購單
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [statusFilter]);
 
   // 權限保護：如果沒有查看權限，顯示無權限頁面
   if (!canViewPurchase && !isAdmin()) {
@@ -759,7 +949,7 @@ function PurchaseOrdersPageContent() {
         <p className="text-gray-600 mt-2">管理採購訂單與供應商交易</p>
       </div>
 
-      {/* 1. 採購清單區域 */}
+      {/* 1. 採購清單區域 - 使用 StandardDataListPage */}
       <Card className="mb-6">
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -773,272 +963,38 @@ function PurchaseOrdersPageContent() {
           </div>
         </CardHeader>
         <CardContent>
-          {/* 狀態篩選 - 手機版優化 */}
-          <div className="mb-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Filter className="h-4 w-4 text-gray-500" />
-              <span className="text-sm text-gray-600">狀態篩選：</span>
-            </div>
-            <div className="grid grid-cols-2 sm:flex gap-2">
-              <Button
-                variant={statusFilter === 'all' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setStatusFilter('all')}
-                className="bg-amber-600 hover:bg-amber-700 h-10"
-              >
-                全部
-              </Button>
-              <Button
-                variant={statusFilter === '預報單' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setStatusFilter('預報單')}
-                className={`h-10 ${statusFilter === '預報單' ? 'bg-purple-600 hover:bg-purple-700' : 'border-purple-200 text-purple-600 hover:bg-purple-50'}`}
-              >
-                預報單
-              </Button>
-              <Button
-                variant={statusFilter === '已訂購' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setStatusFilter('已訂購')}
-                className={`h-10 ${statusFilter === '已訂購' ? 'bg-green-600 hover:bg-green-700' : 'border-green-200 text-green-600 hover:bg-green-50'}`}
-              >
-                已訂購
-              </Button>
-              <Button
-                variant={statusFilter === '已收貨' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setStatusFilter('已收貨')}
-                className={`h-10 ${statusFilter === '已收貨' ? 'bg-gray-600 hover:bg-gray-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-              >
-                已入庫
-              </Button>
-            </div>
-          </div>
-
-          {/* 桌面版採購單表格 */}
-          <div className="hidden md:block overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>採購單資訊</TableHead>
-                  <TableHead>供應商</TableHead>
-                                      <TableHead>建立人員</TableHead>
-                    <TableHead>狀態</TableHead>
-                    <TableHead>採購金額</TableHead>
-                    <TableHead>操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
-                        <div className="flex items-center justify-center">
-                          <div className="w-6 h-6 border-2 border-amber-200 border-t-amber-600 rounded-full animate-spin mr-2"></div>
-                          載入中...
-                        </div>
-                      </TableCell>
-                  </TableRow>
-                ) : paginatedPurchaseOrders.length > 0 ? (
-                  paginatedPurchaseOrders.map((order) => (
-                    <TableRow 
-                      key={order.id} 
-                      className="hover:bg-amber-50/50 cursor-pointer"
-                      onClick={() => router.push(`/dashboard/purchase-orders/${order.id}`)}
-                    >
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
-                            <ShoppingCart className="h-5 w-5 text-white" />
-                          </div>
-                          <div>
-                            <div className="font-semibold text-gray-900">{order.code}</div>
-                            <div className="text-xs text-gray-500">ID: {order.id}</div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Building className="h-4 w-4 text-blue-600" />
-                          <span className="text-sm font-medium text-gray-700">{order.supplierName}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm font-medium text-gray-700">{order.createdByName}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                                               <Badge className={`${
-                         order.status === '預報單' ? 'bg-purple-100 text-purple-800' : 
-                         order.status === '已訂購' ? 'bg-green-100 text-green-800' : 
-                         order.status === '已收貨' ? 'bg-gray-600 text-white' : 
-                         order.status === '已取消' ? 'bg-red-100 text-red-800' : 
-                         'bg-gray-600 text-white'
-                       }`}>
-                         {order.status}
-                       </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-amber-600">
-                            NT$ {order.totalAmount ? Math.round(order.totalAmount).toLocaleString() : '0'}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => router.push(`/dashboard/purchase-orders/${order.id}`)}
-                          className="text-amber-600 hover:text-amber-700"
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          查看
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
-                      <div className="text-gray-500">
-                        {statusFilter === 'all' ? '沒有採購單資料' : `沒有${statusFilter}狀態的採購單`}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          {/* 手機版採購單卡片 */}
-          <div className="md:hidden">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="w-8 h-8 border-2 border-amber-200 border-t-amber-600 rounded-full animate-spin"></div>
-                  <span className="text-sm text-gray-600">載入中...</span>
-                </div>
-              </div>
-            ) : paginatedPurchaseOrders.length > 0 ? (
-              <div className="space-y-4">
-                {paginatedPurchaseOrders.map((order) => (
-                  <div 
-                    key={order.id}
-                    onClick={() => router.push(`/dashboard/purchase-orders/${order.id}`)}
-                    className="bg-white border border-amber-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
-                  >
-                    {/* 卡片標題區 */}
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3 flex-1">
-                        <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center shrink-0">
-                          <ShoppingCart className="h-6 w-6 text-white" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-gray-900 text-lg mb-1 truncate">{order.code}</div>
-                          <div className="text-xs text-gray-500">
-                            <Calendar className="inline h-3 w-3 mr-1" />
-                            {order.createdAt}
-                          </div>
-                        </div>
-                      </div>
-                      <Badge className={`shrink-0 ml-2 ${
-                        order.status === '預報單' ? 'bg-purple-100 text-purple-800' : 
-                        order.status === '已訂購' ? 'bg-green-100 text-green-800' : 
-                        order.status === '已收貨' ? 'bg-gray-600 text-white' : 
-                        order.status === '已取消' ? 'bg-red-100 text-red-800' : 
-                        'bg-gray-600 text-white'
-                      }`}>
-                        {order.status}
-                      </Badge>
-                    </div>
-
-                    {/* 詳細資訊區 */}
-                    <div className="space-y-3">
-                      {/* 供應商資訊 */}
-                      <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
-                        <Building className="h-4 w-4 text-blue-600 shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs text-blue-600 font-medium mb-1">供應商</div>
-                          <div className="text-sm font-semibold text-blue-800 truncate">{order.supplierName}</div>
-                        </div>
-                      </div>
-
-                      {/* 建立人員與金額 */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="p-3 bg-gray-50 rounded-lg">
-                          <div className="flex items-center gap-2 mb-1">
-                            <User className="h-3 w-3 text-gray-500" />
-                            <span className="text-xs text-gray-600 font-medium">建立人員</span>
-                          </div>
-                          <div className="text-sm font-semibold text-gray-800 truncate">{order.createdByName}</div>
-                        </div>
-                        
-                        <div className="p-3 bg-amber-50 rounded-lg">
-                          <div className="text-xs text-amber-600 font-medium mb-1">採購金額</div>
-                          <div className="text-sm font-bold text-amber-800">
-                            NT$ {order.totalAmount ? Math.round(order.totalAmount).toLocaleString() : '0'}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 操作按鈕 */}
-                    <div className="flex justify-end mt-4 pt-3 border-t border-gray-100">
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(`/dashboard/purchase-orders/${order.id}`);
-                        }}
-                        className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm hover:shadow transition-all duration-200 min-h-[44px]"
-                      >
-                        <Eye className="mr-2 h-4 w-4" />
-                        檢視採購單
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <ShoppingCart className="h-8 w-8 text-amber-500" />
-                </div>
-                <div className="text-lg font-medium text-gray-800 mb-2">
-                  {statusFilter === 'all' ? '沒有採購單資料' : `沒有${statusFilter}狀態的採購單`}
-                </div>
-                <p className="text-sm text-gray-500">建立第一個採購單開始管理採購流程</p>
-              </div>
-            )}
-          </div>
-
-          {/* 分頁控制 */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-                className="border-amber-200 text-amber-600 hover:bg-amber-50"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-sm text-gray-600">
-                第 {currentPage} 頁，共 {totalPages} 頁
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
-                className="border-amber-200 text-amber-600 hover:bg-amber-50"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+          <StandardDataListPage
+            data={filteredPurchaseOrders}
+            loading={isLoading}
+            columns={columns}
+            actions={actions}
+            onRowClick={(record) => router.push(`/dashboard/purchase-orders/${record.id}`)}
+            
+            // 搜尋與過濾
+            searchable={true}
+            searchPlaceholder="搜尋採購單編號、供應商、建立人員..."
+            searchValue={searchTerm}
+            onSearchChange={setSearchTerm}
+            quickFilters={quickFilters}
+            activeFilters={activeFilters}
+            onFilterChange={(key, value) => {
+              if (value === null) {
+                clearFilter(key);
+              } else {
+                setFilter(key, value);
+              }
+            }}
+            onClearFilters={() => {
+              Object.keys(activeFilters).forEach(key => clearFilter(key));
+            }}
+            
+            // 統計資訊
+            stats={stats}
+            showStats={true}
+            
+            // 工具列功能
+            showToolbar={true}
+          />
         </CardContent>
       </Card>
 
@@ -1057,7 +1013,7 @@ function PurchaseOrdersPageContent() {
                 onClick={() => {
                   setSearchType('items');
                   setSearchResults([]);
-                  setSearchTerm('');
+                  setItemSearchTerm('');
                 }}
                 className={searchType === 'items' ? 'bg-amber-600 hover:bg-amber-700' : 'border-amber-200 text-amber-600 hover:bg-amber-50'}
               >
@@ -1069,7 +1025,7 @@ function PurchaseOrdersPageContent() {
                 onClick={() => {
                   setSearchType('suppliers');
                   setSearchResults([]);
-                  setSearchTerm('');
+                  setItemSearchTerm('');
                 }}
                 className={searchType === 'suppliers' ? 'bg-amber-600 hover:bg-amber-700' : 'border-amber-200 text-amber-600 hover:bg-amber-50'}
               >
@@ -1083,7 +1039,7 @@ function PurchaseOrdersPageContent() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               placeholder={searchType === 'suppliers' ? "輸入供應商名稱搜尋..." : "輸入物料名稱、代號、香精名稱或供應商名稱搜尋..."}
-              value={searchTerm}
+              value={itemSearchTerm}
               onChange={(e) => handleSearch(e.target.value)}
               className="pl-10 pr-4 py-3 border-amber-200 focus:border-amber-500 focus:ring-amber-500"
             />
@@ -1093,7 +1049,7 @@ function PurchaseOrdersPageContent() {
                 size="sm"
                 onClick={() => {
                   setSearchResults([]);
-                  setSearchTerm('');
+                  setItemSearchTerm('');
                 }}
                 className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 text-gray-400 hover:text-gray-600"
               >
