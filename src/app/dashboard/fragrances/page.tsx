@@ -661,7 +661,9 @@ export default function FragrancesPage() {
     <>
       {/* 頁面標題 */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">香精配方庫</h1>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          香精配方庫
+        </h1>
         <p className="text-gray-600 mt-2">管理所有香精配方，包括庫存監控和品質管理</p>
       </div>
 

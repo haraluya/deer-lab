@@ -942,7 +942,7 @@ function PurchaseOrdersPageContent() {
   return (
     <div className="container mx-auto py-10 purchase-orders-page">
       {/* 頁面標題 */}
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
           採購管理
         </h1>

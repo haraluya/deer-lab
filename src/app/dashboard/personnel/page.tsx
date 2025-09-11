@@ -512,7 +512,9 @@ function PersonnelPageContent() {
 
       {/* 頁面標題 */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">成員管理</h1>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+          成員管理
+        </h1>
         <p className="text-gray-600 mt-2">管理團隊成員資訊，包括權限設置和聯絡方式</p>
       </div>
 
