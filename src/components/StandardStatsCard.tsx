@@ -112,10 +112,10 @@ export const StandardStatsCard: React.FC<StandardStatsCardProps> = ({
               `}
               onClick={stat.onClick}
             >
-              <div className={`${isMobile ? 'p-2' : 'p-3'} h-full`}>
+              <div className={`${isMobile ? 'px-2 py-1' : 'px-3 py-2'} h-full`}>
                 {/* 頂部：標題和圖標 */}
-                <div className="flex items-start justify-between">
-                  <h3 className={`font-medium text-gray-700 leading-none ${
+                <div className="flex items-center justify-between">
+                  <h3 className={`font-medium text-gray-700 leading-tight ${
                     isMobile ? 'text-xs' : 'text-sm'
                   }`}>
                     {stat.title}
@@ -123,7 +123,7 @@ export const StandardStatsCard: React.FC<StandardStatsCardProps> = ({
                   {stat.icon && (
                     <div className={`${colors.iconBg} ${colors.iconColor} rounded-full flex-shrink-0 ${
                       isMobile ? 'w-6 h-6' : 'w-8 h-8'
-                    } flex items-center justify-center ml-2`}>
+                    } flex items-center justify-center`}>
                       <div className={isMobile ? 'text-xs' : 'text-sm'}>
                         {stat.icon}
                       </div>
@@ -132,16 +132,16 @@ export const StandardStatsCard: React.FC<StandardStatsCardProps> = ({
                 </div>
                 
                 {/* 主要數值 - 緊接著標題 */}
-                <div className={`font-bold text-gray-900 leading-none ${
-                  isMobile ? 'text-xl mt-2' : 'text-3xl mt-3'
+                <div className={`font-bold text-gray-900 leading-tight ${
+                  isMobile ? 'text-xl mt-1' : 'text-3xl mt-1'
                 }`}>
                   {stat.value}
                 </div>
                 
                 {/* 副標題 */}
                 {stat.subtitle && (
-                  <p className={`text-gray-500 leading-none ${
-                    isMobile ? 'text-xs mt-1' : 'text-sm mt-1'
+                  <p className={`text-gray-500 leading-tight ${
+                    isMobile ? 'text-xs' : 'text-sm'
                   }`}>
                     {stat.subtitle}
                   </p>
@@ -155,7 +155,7 @@ export const StandardStatsCard: React.FC<StandardStatsCardProps> = ({
                       : stat.trend.direction === 'down' 
                         ? 'text-red-600' 
                         : 'text-gray-600'
-                  } ${isMobile ? 'text-xs mt-1' : 'text-sm mt-2'}`}>
+                  } ${isMobile ? 'text-xs' : 'text-sm'}`}>
                     <span>{stat.trend.value}</span>
                   </div>
                 )}
