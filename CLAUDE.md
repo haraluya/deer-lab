@@ -162,12 +162,25 @@ npm run lint               # 程式碼檢查
 
 ## 核心系統功能
 
-### 1. 統一頁面系統 (StandardDataListPage)
+### 1. 統一頁面系統 (StandardDataListPage) ✅ 已全面實施
 **⚠️ 重要：所有清單頁面必須使用 StandardDataListPage 元件**
 
 - **檔案位置**: `src/components/StandardDataListPage.tsx`
-- **適用範圍**: 原料庫、香精庫、產品目錄、供應商、人員管理等所有清單頁面
+- **適用範圍**: 原料庫、香精庫、產品目錄、供應商、人員管理、工單管理、採購管理等所有清單頁面
 - **核心功能**: 統一的表格/卡片視圖、響應式設計、快速篩選、搜尋、分頁、統計等
+
+#### 🎯 已完成統一架構遷移的頁面 (2024-09-11)
+- ✅ **原料庫管理頁面** (`materials/page.tsx`) - 完全統一
+- ✅ **香精庫管理頁面** (`fragrances/page.tsx`) - 完全統一
+- ✅ **供應商管理頁面** (`suppliers/page.tsx`) - 完全統一
+- ✅ **人員管理頁面** (`personnel/page.tsx`) - 完全統一 + 權限顏色全局化
+- ✅ **工單管理頁面** (`work-orders/page.tsx`) - 完全統一 + 保留分頁機制
+- ✅ **採購管理頁面** (`purchase-orders/page.tsx`) - 清單區域統一 + 複雜功能保留
+
+#### 📊 統計卡片全局優化特性
+- **層次化字體設計**: 標題 `text-base`→`text-lg`，數值 `text-2xl`→`text-3xl`，副標題 `text-xs`→`text-sm`
+- **響應式適配**: 桌面與手機版字體自動調適，視覺層次更清晰
+- **統一顏色系統**: 支援 `blue`、`green`、`yellow`、`red`、`purple`、`orange` 六種主題色彩
 
 ### 2. 統一對話框系統 (StandardFormDialog)
 **⚠️ 重要：所有CRUD對話框必須使用 StandardFormDialog 元件與統一載入機制**
@@ -327,13 +340,28 @@ try {
 2. 確認 supplierRef 欄位格式
 3. 驗證供應商集合資料
 
-### AI 助理注意事項
-1. **修改清單頁面時，優先檢查 StandardDataListPage 設定**
-2. **修改對話框時，必須使用 StandardFormDialog + dataLoaderConfig 統一載入機制**
-3. **快速篩選問題，檢查 `quickFilters` 的 `label` 屬性**
-4. **供應商資料問題，檢查多種欄位格式的處理邏輯**
-5. **載入卡住問題，檢查是否正確使用 dataLoaderConfig 而非手動載入**
-6. **每次修改後必須確保線上部署同步**
+### AI 助理開發指引 🤖
+
+#### 統一架構優先原則
+1. **清單頁面開發**：
+   - 🎯 **優先使用** StandardDataListPage 元件 
+   - 📋 檢查現有配置：columns、actions、quickFilters、stats
+   - 🔄 參考已完成的頁面模式：personnel、work-orders、purchase-orders
+   
+2. **對話框開發**：
+   - 🎯 **必須使用** StandardFormDialog + dataLoaderConfig 統一載入機制
+   - 🚫 **禁止手動載入**：避免無限載入和性能問題
+   - 💡 **智能欄位命名**：使用語義化命名以利自動選項匹配
+
+#### 常見問題診斷指南
+3. **快速篩選標籤問題** → 檢查 `quickFilters` 的 `label` 屬性是否正確
+4. **供應商資料顯示問題** → 檢查多種欄位格式處理：supplierName、supplierId、supplierRef
+5. **載入卡住問題** → 確認使用 dataLoaderConfig，避免手動載入邏輯
+6. **統計卡片字體問題** → 已全局優化，新頁面自動繼承層次化字體設計
+
+#### 部署與測試要求  
+7. **每次修改後必須確保線上部署同步**：`npm run build` → 部署檢查清單
+8. **統一架構測試重點**：響應式佈局、搜尋篩選、統計數據、操作按鈕
 
 ## 重要提醒
 

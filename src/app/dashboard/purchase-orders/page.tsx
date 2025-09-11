@@ -964,6 +964,8 @@ function PurchaseOrdersPageContent() {
         </CardHeader>
         <CardContent>
           <StandardDataListPage
+            title="採購訂單管理"
+            subtitle="管理所有採購訂單，追蹤訂單狀態和供應商"
             data={filteredPurchaseOrders}
             loading={isLoading}
             columns={columns}

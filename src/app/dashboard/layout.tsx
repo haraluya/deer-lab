@@ -50,7 +50,7 @@ const navLinks: NavItem[] = [
   
   { isSeparator: true, label: '生產中心' },
   { href: '/dashboard/materials', label: '原料庫', icon: Package },
-  { href: '/dashboard/fragrances', label: '配方庫', icon: Beaker },
+  { href: '/dashboard/fragrances', label: '香精配方庫', icon: Beaker },
   { href: '/dashboard/products', label: '產品目錄', icon: Box },
   { href: '/dashboard/work-orders', label: '生產工單', icon: Factory },
   

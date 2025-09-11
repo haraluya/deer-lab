@@ -116,6 +116,10 @@ export interface StandardDataListPageProps<T = any> {
   error?: string | Error;
   columns: StandardColumn<T>[];
   
+  // 頁面標題
+  title?: string;
+  subtitle?: string;
+  
   // 操作相關
   actions?: StandardAction<T>[];
   bulkActions?: StandardAction<T[]>[];
@@ -293,7 +297,7 @@ const StatsCards: React.FC<StatsCardsPropsWithMobile> = ({ stats, isMobile = fal
         >
           <div className={`absolute inset-0 bg-gradient-to-br ${getColorClasses(stat.color)} opacity-10`} />
           <CardHeader className={`flex flex-row items-center justify-between space-y-0 relative z-10 ${
-            isMobile ? 'pb-0.5 pt-1.5 px-2' : 'pb-2 pt-4 px-6'
+            isMobile ? 'pb-1 pt-2 px-3' : 'pb-2 pt-3 px-4'
           }`}>
             <CardTitle className={`font-medium text-muted-foreground leading-tight ${
               isMobile ? 'text-base' : 'text-lg'
@@ -309,7 +313,7 @@ const StatsCards: React.FC<StatsCardsPropsWithMobile> = ({ stats, isMobile = fal
             )}
           </CardHeader>
           <CardContent className={`relative z-10 ${
-            isMobile ? 'pt-0 pb-1.5 px-2' : 'pt-0 pb-4 px-6'
+            isMobile ? 'pt-0 pb-2 px-3' : 'pt-0 pb-3 px-4'
           }`}>
             <div className={`font-bold mb-1 leading-tight ${
               isMobile ? 'text-2xl' : 'text-3xl' // 桌面版字體更大
@@ -732,6 +736,8 @@ export const StandardDataListPage = <T,>({
   error,
   columns,
   actions,
+  title,
+  subtitle,
   bulkActions,
   onRowClick,
   onRowDoubleClick,
@@ -1172,12 +1178,15 @@ export const StandardDataListPage = <T,>({
       {/* 資料展示區域 */}
       <Card className={`${cardClassName} ${isMobile ? 'mx-2 max-w-full overflow-hidden w-full' : 'mx-3 md:mx-0'}`}>
         <CardContent className="p-0 w-full max-w-full overflow-hidden">
-          {/* 舊版相容模式下的表格標題區域 */}
-          {legacyMode && currentViewMode === 'table' && !isMobile && (
+          {/* 頁面標題區域 */}
+          {title && (
             <div className="px-6 py-4 border-b border-gray-200 bg-white">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">香精清單</h2>
-                <span className="text-sm text-gray-600">共 {data.length} 項香精</span>
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900">{title}</h1>
+                  {subtitle && <p className="text-sm text-gray-600 mt-1">{subtitle}</p>}
+                </div>
+                <span className="text-sm text-gray-600">共 {data.length} 項</span>
               </div>
             </div>
           )}

@@ -708,6 +708,8 @@ export default function MaterialsPage() {
       </div>
 
       <StandardDataListPage
+        title="原料庫管理"
+        subtitle="管理所有原料物品，包括庫存監控和採購管理"
         data={filteredMaterials}
         loading={isLoading}
         columns={columns}

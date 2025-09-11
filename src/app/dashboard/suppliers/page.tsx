@@ -589,6 +589,8 @@ export default function SuppliersPage() {
   return (
     <>
       <StandardDataListPage
+        title="供應商管理"
+        subtitle="管理所有供應商資訊，包括聯絡方式和產品供應情況"
         data={filteredData}
         loading={isLoading}
         columns={columns}

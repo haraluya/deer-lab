@@ -660,6 +660,8 @@ export default function FragrancesPage() {
   return (
     <>
       <StandardDataListPage
+        title="香精配方庫管理"
+        subtitle="管理所有香精配方，包括庫存監控和品質管理"
         data={filteredData}
         loading={isLoading}
         columns={columns}

@@ -511,6 +511,8 @@ function PersonnelPageContent() {
       </div>
 
       <StandardDataListPage
+        title="成員管理"
+        subtitle="管理團隊成員資訊，包括權限設置和聯絡方式"
         data={filteredUsers}
         loading={isLoading}
         columns={columns}

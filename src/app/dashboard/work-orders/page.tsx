@@ -384,6 +384,8 @@ function WorkOrdersPageContent() {
         </div>
 
         <StandardDataListPage
+          title="生產工單管理"
+          subtitle="管理所有生產工單，追蹤生產進度和狀態"
           data={filteredWorkOrders}
           loading={loading}
           columns={columns}
