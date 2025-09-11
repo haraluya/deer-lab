@@ -353,6 +353,7 @@ interface ToolbarProps<T> {
   onClearFilters?: () => void;
   quickFilters?: QuickFilter[];
   showQuickFilters?: boolean;
+  legacyMode?: boolean;
   showAddButton?: boolean;
   addButtonText?: string;
   onAdd?: () => void;
@@ -385,6 +386,7 @@ const Toolbar = <T,>({
   onClearFilters,
   quickFilters,
   showQuickFilters = true,
+  legacyMode = false,
   showAddButton,
   addButtonText = "新增",
   onAdd,
@@ -414,7 +416,22 @@ const Toolbar = <T,>({
     return value !== undefined && value !== null && value !== '';
   });
   
-  const getQuickFilterColorClasses = (color?: string) => {
+  const getQuickFilterColorClasses = (color?: string, isLegacyMode: boolean = false) => {
+    // 舊版相容模式使用更鮮豔的顏色
+    if (isLegacyMode) {
+      const legacyColorMap = {
+        blue: 'bg-blue-500 text-white border-blue-600 hover:bg-blue-600',
+        green: 'bg-green-500 text-white border-green-600 hover:bg-green-600',
+        yellow: 'bg-yellow-500 text-white border-yellow-600 hover:bg-yellow-600',
+        red: 'bg-red-500 text-white border-red-600 hover:bg-red-600',
+        purple: 'bg-purple-500 text-white border-purple-600 hover:bg-purple-600',
+        orange: 'bg-orange-500 text-white border-orange-600 hover:bg-orange-600',
+        gray: 'bg-gray-500 text-white border-gray-600 hover:bg-gray-600'
+      };
+      return legacyColorMap[color as keyof typeof legacyColorMap] || legacyColorMap.gray;
+    }
+    
+    // 新版使用較淡的顏色
     const colorMap = {
       blue: 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200',
       green: 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200',
@@ -457,7 +474,7 @@ const Toolbar = <T,>({
                   font-medium
                   ${isActive 
                     ? 'bg-gradient-to-r from-orange-500 to-blue-500 text-white shadow-md' 
-                    : `${getQuickFilterColorClasses(filter.color)} border`
+                    : `${getQuickFilterColorClasses(filter.color, legacyMode)} border`
                   }
                 `}
               >
@@ -466,7 +483,11 @@ const Toolbar = <T,>({
                   <Badge 
                     variant="secondary" 
                     className={`${isMobile ? 'ml-1 h-3 px-1 text-[9px]' : 'ml-1.5 h-4 px-1.5 text-[10px]'} w-auto ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-white/60'
+                      isActive 
+                        ? 'bg-white/20 text-white' 
+                        : legacyMode && !isActive 
+                          ? 'bg-black/20 text-white' 
+                          : 'bg-white/60'
                     }`}
                   >
                     {filter.count}
@@ -1007,6 +1028,7 @@ export const StandardDataListPage = <T,>({
             onClearFilters={onClearFilters}
             quickFilters={quickFilters}
             showQuickFilters={showQuickFilters}
+            legacyMode={legacyMode}
             showAddButton={showAddButton && permissions?.create !== false}
             addButtonText={addButtonText}
             onAdd={onAdd}
@@ -1123,6 +1145,7 @@ export const StandardDataListPage = <T,>({
           onClearFilters={onClearFilters}
           quickFilters={quickFilters}
           showQuickFilters={showQuickFilters}
+          legacyMode={legacyMode}
           showAddButton={showAddButton && permissions?.create !== false}
           addButtonText={addButtonText}
           onAdd={onAdd}
@@ -1155,6 +1178,16 @@ export const StandardDataListPage = <T,>({
       {/* 資料展示區域 */}
       <Card className={`${cardClassName} ${isMobile ? 'mx-2 max-w-full overflow-hidden w-full' : 'mx-3 md:mx-0'}`}>
         <CardContent className="p-0 w-full max-w-full overflow-hidden">
+          {/* 舊版相容模式下的表格標題區域 */}
+          {legacyMode && currentViewMode === 'table' && !isMobile && (
+            <div className="px-6 py-4 border-b border-gray-200 bg-white">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">香精清單</h2>
+                <span className="text-sm text-gray-600">共 {data.length} 項香精</span>
+              </div>
+            </div>
+          )}
+          
           {(currentViewMode === 'table' && !isMobile) && (
             <div className="overflow-x-auto">
               <Table className={tableClassName}>

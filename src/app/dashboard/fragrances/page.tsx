@@ -189,80 +189,34 @@ export default function FragrancesPage() {
   // 定義欄位
   const columns: StandardColumn<FragranceWithSupplier>[] = [
     {
-      key: 'code',
-      title: '香精編號',
+      key: 'fragranceInfo',
+      title: '香精資訊',
       sortable: true,
       priority: 5,
-      render: (value) => (
-        <span className="font-mono text-sm font-medium">{value}</span>
-      )
-    },
-    {
-      key: 'name',
-      title: '香精名稱',
-      sortable: true,
-      priority: 5,
-      render: (value) => (
-        <span className="font-semibold">{value}</span>
-      )
-    },
-    {
-      key: 'currentStock',
-      title: '目前庫存',
-      sortable: true,
-      align: 'right',
-      priority: 4,
-      render: (value, record) => {
-        const isLowStock = record.safetyStockLevel && value < record.safetyStockLevel;
-        return (
-          <div className={`font-semibold ${isLowStock ? 'text-red-600' : 'text-gray-900'}`}>
-            {value} {record.unit || 'ml'}
+      render: (value, record) => (
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center flex-shrink-0">
+            <Droplets className="h-4 w-4 text-white" />
           </div>
-        );
-      },
-      mobileRender: (value, record) => {
-        const isLowStock = record.safetyStockLevel && value < record.safetyStockLevel;
-        return (
-          <div className={`font-bold ${isLowStock ? 'text-red-600' : 'text-green-600'}`}>
-            {value} {record.unit || 'ml'}
+          <div className="flex flex-col">
+            <span className="font-semibold text-gray-900">{record.name}</span>
+            <span className="font-mono text-sm text-gray-500">{record.code}</span>
           </div>
-        );
-      }
-    },
-    {
-      key: 'percentage',
-      title: '香精比例',
-      sortable: true,
-      align: 'right',
-      priority: 4,
-      render: (value) => value ? `${value}%` : '-',
-      mobileRender: (value) => (
-        <span className="font-semibold text-purple-600">{value ? `${value}%` : '-'}</span>
-      )
-    },
-    {
-      key: 'costPerUnit',
-      title: '單位成本',
-      sortable: true,
-      align: 'right',
-      priority: 3,
-      render: (value) => value ? `$${value.toFixed(2)}` : '-',
-      mobileRender: (value) => (
-        <span className="font-semibold text-green-600">{value ? `$${value.toFixed(2)}` : '-'}</span>
+        </div>
       )
     },
     {
       key: 'fragranceType',
       title: '香精種類',
-      priority: 3,
+      priority: 4,
       render: (value) => value ? (
         <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">{value}</Badge>
       ) : '-'
     },
     {
       key: 'fragranceStatus',
-      title: '狀態',
-      priority: 2,
+      title: '啟用狀態',
+      priority: 4,
       render: (value) => {
         const colorMap: Record<string, string> = {
           'active': 'bg-green-50 text-green-700 border-green-200',
@@ -279,16 +233,39 @@ export default function FragrancesPage() {
     {
       key: 'supplierName',
       title: '供應商',
-      priority: 2,
+      priority: 3,
       render: (value) => (
         <span className="text-sm">{value}</span>
       )
     },
     {
+      key: 'currentStock',
+      title: '目前庫存',
+      sortable: true,
+      align: 'right',
+      priority: 3,
+      render: (value, record) => {
+        const isLowStock = record.safetyStockLevel && value < record.safetyStockLevel;
+        return (
+          <div className={`font-semibold ${isLowStock ? 'text-red-600' : 'text-green-600'}`}>
+            {value} {record.unit || 'ml'}
+          </div>
+        );
+      },
+      mobileRender: (value, record) => {
+        const isLowStock = record.safetyStockLevel && value < record.safetyStockLevel;
+        return (
+          <div className={`font-bold ${isLowStock ? 'text-red-600' : 'text-green-600'}`}>
+            {value} {record.unit || 'ml'}
+          </div>
+        );
+      }
+    },
+    {
       key: 'safetyStockLevel',
       title: '安全庫存',
       align: 'right',
-      priority: 1,
+      priority: 2,
       hideOnMobile: true,
       render: (value, record) => value ? `${value} ${record.unit || 'ml'}` : '-'
     }
@@ -664,9 +641,9 @@ export default function FragrancesPage() {
         onSelectionChange={(selected: string[] | number[]) => setSelectedRows(selected as string[])}
         rowKey="id"
         
-        // 統計資訊
+        // 統計資訊 - 舊版模式下隱藏統計卡片
         stats={stats}
-        showStats={true}
+        showStats={false}
         
         // 工具列功能
         showToolbar={true}

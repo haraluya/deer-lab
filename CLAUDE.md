@@ -1138,12 +1138,11 @@ const UserInputSchema = z.object({
 - 評估 Firestore 讀寫次數
 
 此文檔專注於系統架構理解和維護指引。如需詳細的 API 文檔或元件說明，請參考程式碼內的 TypeScript 類型定義和註解。
-- 修改後都先本地部署，直到我有說再推送github
+- 修改後都先本地部署建置，直到我有說再推送github
 - 重要：除非用戶明確說"推送到 GitHub"或"git push"，否則只能執行：
   1. `git add .`
   2. `git commit -m "..."`  
-  3. 本地測試 (`npm run build`, `npm run dev`)
-  4. 絕對不能執行 `git push` 命令
+  3. 絕對不能執行 `git push` 命令
 - 在沒得到我的同意之前都不要部署到firebase
 - 每次有修改都要檢查claude.me，確保這份檔案能正確詮釋本專案
-- 每次都把運行本地的任務kill掉，避免佔用port，再運行新的本地專案
+- 只要執行run build，不要執行run dev
