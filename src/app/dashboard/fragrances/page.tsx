@@ -704,7 +704,7 @@ export default function FragrancesPage() {
         // 啟用原版相容模式
         legacyMode={true}
         
-        className="container mx-auto px-4 py-6 max-w-full overflow-hidden"
+        className="w-full max-w-full overflow-hidden px-2 md:px-4 py-4 md:py-6"
       />
 
       {/* 新增/編輯對話框 */}

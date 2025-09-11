@@ -268,42 +268,51 @@ interface StatsCardsPropsWithMobile extends StatsCardsProps {
 
 const StatsCards: React.FC<StatsCardsPropsWithMobile> = ({ stats, isMobile = false }) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <div className={`grid gap-3 mb-4 ${
+      isMobile 
+        ? 'grid-cols-2 px-2' // 手機版：2欄 + 側邊距
+        : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6'
+    }`}>
       {stats.map((stat, index) => (
         <Card 
           key={index} 
           className={`
-            relative overflow-hidden transition-all hover:shadow-lg 
-            ${stat.onClick ? 'cursor-pointer hover:scale-[1.02]' : ''}
-            ${isMobile ? 'shadow-sm' : 'shadow-sm hover:shadow-md'}
+            relative overflow-hidden transition-all 
+            ${stat.onClick ? 'cursor-pointer' : ''}
+            ${isMobile 
+              ? 'shadow-sm hover:shadow-md min-h-[100px] max-w-full' // 手機版：緊湊尺寸
+              : 'shadow-sm hover:shadow-lg hover:scale-[1.02]'
+            }
           `}
           onClick={stat.onClick}
         >
           <div className={`absolute inset-0 bg-gradient-to-br ${getColorClasses(stat.color)} opacity-10`} />
           <CardHeader className={`flex flex-row items-center justify-between space-y-0 relative z-10 ${
-            isMobile ? 'pb-2 pt-3 px-4' : 'pb-2 pt-4 px-6'
+            isMobile ? 'pb-1 pt-2 px-3' : 'pb-2 pt-4 px-6'
           }`}>
-            <CardTitle className={`font-medium text-muted-foreground ${
+            <CardTitle className={`font-medium text-muted-foreground leading-tight ${
               isMobile ? 'text-xs' : 'text-sm'
             }`}>
               {stat.title}
             </CardTitle>
             {stat.icon && (
-              <div className={`text-muted-foreground ${isMobile ? 'text-sm' : 'text-base'}`}>
+              <div className={`text-muted-foreground flex-shrink-0 ${
+                isMobile ? 'text-sm' : 'text-base'
+              }`}>
                 {stat.icon}
               </div>
             )}
           </CardHeader>
           <CardContent className={`relative z-10 ${
-            isMobile ? 'pt-0 pb-3 px-4' : 'pt-0 pb-4 px-6'
+            isMobile ? 'pt-0 pb-2 px-3' : 'pt-0 pb-4 px-6'
           }`}>
-            <div className={`font-bold mb-1 ${
-              isMobile ? 'text-xl' : 'text-2xl'
+            <div className={`font-bold mb-1 leading-tight ${
+              isMobile ? 'text-2xl' : 'text-2xl' // 手機版字體更大
             }`}>
               {stat.value}
             </div>
             {stat.subtitle && (
-              <p className={`text-muted-foreground ${
+              <p className={`text-muted-foreground leading-tight ${
                 isMobile ? 'text-xs' : 'text-xs'
               }`}>
                 {stat.subtitle}
@@ -413,10 +422,10 @@ const Toolbar = <T,>({
   };
 
   return (
-    <div className="space-y-4 mb-6">
+    <div className={`space-y-4 mb-6 ${typeof window !== 'undefined' && window.innerWidth < 768 ? 'px-2' : ''}`}>
       {/* 快速篩選標籤 */}
       {showQuickFilters && quickFilters && quickFilters.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 max-w-full overflow-hidden">
           {quickFilters.map((filter) => {
             const isActive = activeFilters?.[filter.key] === filter.value;
             return (
@@ -1082,7 +1091,7 @@ export const StandardDataListPage = <T,>({
 
   // 主要渲染邏輯
   return (
-    <div className={`space-y-6 ${className || ''}`} style={{ height }}>
+    <div className={`${isMobile ? 'space-y-3 max-w-full overflow-hidden' : 'space-y-6'} ${className || ''}`} style={{ height }}>
       {/* 統計卡片 */}
       {showStats && stats && <StatsCards stats={stats} isMobile={isMobile} />}
       
@@ -1129,7 +1138,7 @@ export const StandardDataListPage = <T,>({
       {renderActiveFilterTags()}
       
       {/* 資料展示區域 */}
-      <Card className={`${cardClassName} mx-3 md:mx-0`}>
+      <Card className={`${cardClassName} ${isMobile ? 'mx-2 max-w-full overflow-hidden' : 'mx-3 md:mx-0'}`}>
         <CardContent className="p-0">
           {(currentViewMode === 'table' && !isMobile) && (
             <div className="overflow-x-auto">
@@ -1289,11 +1298,13 @@ export const StandardDataListPage = <T,>({
             <div className="w-full">
               {/* 使用 CSS Container Queries 和 Flexbox 的專業響應式佈局 */}
               <div 
-                className="
-                  flex flex-wrap gap-4 p-4
-                  justify-center sm:justify-start
-                  w-full overflow-hidden
-                "
+                className={`
+                  flex flex-wrap gap-3 w-full overflow-hidden
+                  ${isMobile 
+                    ? 'p-2 justify-center' // 手機版：較小間距
+                    : 'gap-4 p-4 justify-center sm:justify-start'
+                  }
+                `}
                 style={{
                   // 確保每張卡片有最佳寬度
                   '--card-min-width': isMobile ? '100%' : '280px',
@@ -1309,11 +1320,13 @@ export const StandardDataListPage = <T,>({
                     return (
                       <div
                         key={String(recordKey)}
-                        className="
-                          flex-shrink-0
-                          w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.75rem)] xl:w-[calc(25%-0.75rem)]
-                          min-w-0 max-w-full overflow-hidden
-                        "
+                        className={`
+                          flex-shrink-0 min-w-0 max-w-full overflow-hidden
+                          ${isMobile 
+                            ? 'w-full' // 手機版：全寬
+                            : 'w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.75rem)] xl:w-[calc(25%-0.75rem)]'
+                          }
+                        `}
                         style={{ containIntrinsicSize: '100%' }}
                       >
                         <div className="w-full h-full overflow-hidden">
@@ -1332,10 +1345,11 @@ export const StandardDataListPage = <T,>({
                         ${onRowClick ? 'cursor-pointer' : ''}
                         transition-all duration-200 relative border-0 shadow-sm
                         bg-gradient-to-br from-white to-gray-50/50
-                        flex-shrink-0
-                        w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.75rem)] xl:w-[calc(25%-0.75rem)]
-                        min-w-0 max-w-full min-h-[160px]
-                        overflow-hidden
+                        flex-shrink-0 min-w-0 max-w-full overflow-hidden
+                        ${isMobile 
+                          ? 'w-full min-h-[140px]' // 手機版：全寬，較小高度
+                          : 'w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.75rem)] xl:w-[calc(25%-0.75rem)] min-h-[160px]'
+                        }
                       `}
                       onClick={() => onRowClick?.(record, index)}
                     >
