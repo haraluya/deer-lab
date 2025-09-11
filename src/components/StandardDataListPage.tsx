@@ -586,6 +586,9 @@ const Toolbar = <T,>({
             </>
           )}
           
+          {/* 自定義工具列動作 */}
+          {toolbarActions}
+          
           {/* 新增按鈕 */}
           {showAddButton && onAdd && (
             <Button 
@@ -596,9 +599,6 @@ const Toolbar = <T,>({
               {addButtonText}
             </Button>
           )}
-          
-          {/* 自定義工具列動作 */}
-          {toolbarActions}
         </div>
       </div>
       

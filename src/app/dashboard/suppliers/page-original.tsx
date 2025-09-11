@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { SupplierData } from './SupplierDialogUnified';
+import { SupplierData } from './SupplierDialog';
 import { usePermission } from '@/hooks/usePermission';
 import { StandardDataListPage, StandardColumn, StandardAction, StandardStats, StandardFilter, QuickFilter } from '@/components/StandardDataListPage';
 import { Building, User, Phone, Package, Eye, Edit, Trash2, Plus, MoreHorizontal } from 'lucide-react';
@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
-import { SupplierDialogUnified } from './SupplierDialogUnified';
+import { SupplierDialog } from './SupplierDialog';
 
 // 擴展 SupplierData 以包含統計資訊
 interface SupplierWithStats extends SupplierData {
@@ -660,7 +660,7 @@ export default function SuppliersPage() {
       />
 
       {/* 新增/編輯對話框 */}
-      <SupplierDialogUnified
+      <SupplierDialog
         isOpen={isDialogOpen}
         onOpenChange={(open) => {
           setIsDialogOpen(open);

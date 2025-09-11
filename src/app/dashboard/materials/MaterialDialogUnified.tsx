@@ -1,4 +1,4 @@
-// src/app/dashboard/materials/MaterialDialog.tsx
+// src/app/dashboard/materials/MaterialDialogUnified.tsx
 'use client';
 
 import { useMemo } from 'react';
@@ -29,7 +29,7 @@ interface MaterialDialogProps {
   materialData?: MaterialData | null;
 }
 
-export function MaterialDialog({
+export function MaterialDialogUnified({
   isOpen,
   onOpenChange,
   onMaterialUpdate,
@@ -37,7 +37,7 @@ export function MaterialDialog({
 }: MaterialDialogProps) {
   const isEditMode = !!materialData;
 
-  // 使用統一化表單配置 - 不再需要依賴外部資料狀態
+  // 使用 useMemo 來穩定表單配置
   const formSections: FormSectionConfig<FormData>[] = useMemo(() => [
     {
       title: '基本資料',
@@ -137,7 +137,7 @@ export function MaterialDialog({
         },
       ],
     },
-  ], []); // 空依賴陣列，因為配置現在是靜態的
+  ], []); // 空依賴陣列，因為配置是靜態的
 
   // 預設值
   const defaultValues: Partial<FormData> = {
