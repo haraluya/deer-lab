@@ -80,7 +80,7 @@ const StatsLayout01 = ({ stats }: { stats: typeof testStats }) => (
     {stats.map((stat, index) => {
       const colors = getColorClasses(stat.color);
       return (
-        <Card key={index} className={`${colors.background} ${colors.border} shadow-sm h-[100px]`}>
+        <Card key={index} className={`${colors.background} ${colors.border} shadow-sm h-[100px] p-0`}>
           <div className="p-1 h-full">
             <div className="flex items-center justify-between mb-1">
               <h3 className="text-xs font-medium text-gray-700">{stat.title}</h3>
@@ -102,7 +102,7 @@ const StatsLayout02 = ({ stats }: { stats: typeof testStats }) => (
     {stats.map((stat, index) => {
       const colors = getColorClasses(stat.color);
       return (
-        <Card key={index} className={`${colors.background} ${colors.border} shadow-sm h-[110px]`}>
+        <Card key={index} className={`${colors.background} ${colors.border} shadow-sm h-[110px] p-0`}>
           <div className="p-2.5 h-full">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-medium text-gray-700">{stat.title}</h3>
@@ -124,7 +124,7 @@ const StatsLayout03 = ({ stats }: { stats: typeof testStats }) => (
     {stats.map((stat, index) => {
       const colors = getColorClasses(stat.color);
       return (
-        <Card key={index} className={`${colors.background} ${colors.border} shadow-sm h-[120px]`}>
+        <Card key={index} className={`${colors.background} ${colors.border} shadow-sm h-[120px] p-0`}>
           <div className="p-3 h-full flex flex-col justify-center">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-medium text-gray-700">{stat.title}</h3>
@@ -146,7 +146,7 @@ const StatsLayout04 = ({ stats }: { stats: typeof testStats }) => (
     {stats.map((stat, index) => {
       const colors = getColorClasses(stat.color);
       return (
-        <Card key={index} className={`${colors.background} ${colors.border} shadow-sm h-[100px]`}>
+        <Card key={index} className={`${colors.background} ${colors.border} shadow-sm h-[100px] p-0`}>
           <div className="px-3 py-1 h-full">
             <div className="flex items-start justify-between">
               <h3 className="text-sm font-medium text-gray-700 leading-none">{stat.title}</h3>
@@ -168,7 +168,7 @@ const StatsLayout05 = ({ stats }: { stats: typeof testStats }) => (
     {stats.map((stat, index) => {
       const colors = getColorClasses(stat.color);
       return (
-        <Card key={index} className={`${colors.background} ${colors.border} shadow-sm h-[120px]`}>
+        <Card key={index} className={`${colors.background} ${colors.border} shadow-sm h-[120px] p-0`}>
           <div className="p-3 h-full flex flex-col">
             <div className="flex items-center justify-between pb-2 border-b border-gray-200/50">
               <h3 className="text-sm font-medium text-gray-700">{stat.title}</h3>
@@ -194,7 +194,7 @@ const StatsLayout06 = ({ stats }: { stats: typeof testStats }) => (
     {stats.map((stat, index) => {
       const colors = getColorClasses(stat.color);
       return (
-        <Card key={index} className={`${colors.background} ${colors.border} shadow-sm h-[100px]`}>
+        <Card key={index} className={`${colors.background} ${colors.border} shadow-sm h-[100px] p-0`}>
           <div className="px-2 py-1.5 h-full">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-medium text-gray-700 max-w-[120px] truncate">{stat.title}</h3>
@@ -216,7 +216,7 @@ const StatsLayout07 = ({ stats }: { stats: typeof testStats }) => (
     {stats.map((stat, index) => {
       const colors = getColorClasses(stat.color);
       return (
-        <Card key={index} className={`${colors.background} ${colors.border} shadow-sm h-[130px]`}>
+        <Card key={index} className={`${colors.background} ${colors.border} shadow-sm h-[130px] p-0`}>
           <div className="p-3 h-full">
             <div className="flex items-center justify-between mb-1">
               <h3 className="text-xs font-medium text-gray-700">{stat.title}</h3>
@@ -238,7 +238,7 @@ const StatsLayout08 = ({ stats }: { stats: typeof testStats }) => (
     {stats.map((stat, index) => {
       const colors = getColorClasses(stat.color);
       return (
-        <Card key={index} className={`${colors.background} ${colors.border} shadow-sm h-[110px]`}>
+        <Card key={index} className={`${colors.background} ${colors.border} shadow-sm h-[110px] p-0`}>
           <div className="p-2 h-full">
             <div className="flex items-start">
               <div className="flex-1 min-w-0">
@@ -262,7 +262,7 @@ const StatsLayout09 = ({ stats }: { stats: typeof testStats }) => (
     {stats.map((stat, index) => {
       const colors = getColorClasses(stat.color);
       return (
-        <Card key={index} className={`${colors.background} ${colors.border} shadow-sm h-[115px]`}>
+        <Card key={index} className={`${colors.background} ${colors.border} shadow-sm h-[115px] p-0`}>
           <div className="px-4 py-3 h-full">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-semibold text-gray-700">{stat.title}</h3>
@@ -284,7 +284,7 @@ const StatsLayout10 = ({ stats }: { stats: typeof testStats }) => (
     {stats.map((stat, index) => {
       const colors = getColorClasses(stat.color);
       return (
-        <Card key={index} className={`${colors.background} ${colors.border} shadow-sm h-[105px] hover:shadow-md transition-shadow`}>
+        <Card key={index} className={`${colors.background} ${colors.border} shadow-sm h-[105px] hover:shadow-md transition-shadow p-0`}>
           <div className="px-2.5 py-2 h-full flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-medium text-gray-700 flex-1 truncate pr-2">{stat.title}</h3>

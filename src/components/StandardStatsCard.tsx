@@ -105,7 +105,7 @@ export const StandardStatsCard: React.FC<StandardStatsCardProps> = ({
             <Card 
               key={index} 
               className={`
-                relative overflow-hidden transition-all duration-200 rounded-lg
+                relative overflow-hidden transition-all duration-200 rounded-lg p-0
                 ${colors.background} ${colors.border}
                 ${stat.onClick ? 'cursor-pointer hover:shadow-md' : 'shadow-sm'}
                 ${isMobile ? 'h-[100px]' : 'h-[120px]'}
