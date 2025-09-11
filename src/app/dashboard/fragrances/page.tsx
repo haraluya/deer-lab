@@ -659,9 +659,13 @@ export default function FragrancesPage() {
 
   return (
     <>
+      {/* 頁面標題 */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900">香精配方庫</h1>
+        <p className="text-gray-600 mt-2">管理所有香精配方，包括庫存監控和品質管理</p>
+      </div>
+
       <StandardDataListPage
-        title="香精配方庫管理"
-        subtitle="管理所有香精配方，包括庫存監控和品質管理"
         data={filteredData}
         loading={isLoading}
         columns={columns}

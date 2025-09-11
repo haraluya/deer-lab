@@ -383,9 +383,13 @@ function WorkOrdersPageContent() {
           </div>
         </div>
 
+        {/* 頁面標題 */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">生產工單</h1>
+          <p className="text-gray-600 mt-2">管理所有生產工單，追蹤生產進度和狀態</p>
+        </div>
+
         <StandardDataListPage
-          title="生產工單管理"
-          subtitle="管理所有生產工單，追蹤生產進度和狀態"
           data={filteredWorkOrders}
           loading={loading}
           columns={columns}

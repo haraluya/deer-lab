@@ -701,15 +701,13 @@ export default function MaterialsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
-            原料庫管理
+            原料庫
           </h1>
           <p className="text-gray-600 mt-2">管理原料庫存、分類與供應商資訊</p>
         </div>
       </div>
 
       <StandardDataListPage
-        title="原料庫管理"
-        subtitle="管理所有原料物品，包括庫存監控和採購管理"
         data={filteredMaterials}
         loading={isLoading}
         columns={columns}
