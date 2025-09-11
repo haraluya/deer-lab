@@ -587,13 +587,14 @@ export default function SuppliersPage() {
   }
 
   return (
-    <>
-      {/* 頁面標題 */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
-          供應商管理
-        </h1>
-        <p className="text-gray-600 mt-2">管理所有供應商資訊，包括聯絡方式和產品供應情況</p>
+    <div className="container mx-auto py-10">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+            供應商管理
+          </h1>
+          <p className="text-gray-600 mt-2">管理所有供應商資訊，包括聯絡方式和產品供應情況</p>
+        </div>
       </div>
 
       <StandardDataListPage
@@ -679,6 +680,6 @@ export default function SuppliersPage() {
         }}
         supplierData={selectedSupplier}
       />
-    </>
+    </div>
   );
 }

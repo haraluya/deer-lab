@@ -333,14 +333,13 @@ export default function PersonalTimeRecordsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* 頁面標題和用戶資訊 */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+    <div className="container mx-auto py-10">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             工時統計
           </h1>
-          <p className="text-gray-600 mt-1">
+          <p className="text-gray-600 mt-2">
             {appUser?.name} ({appUser?.employeeId}) 的工時記錄總覽
           </p>
         </div>

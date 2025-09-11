@@ -510,15 +510,17 @@ function PersonnelPageContent() {
         </div>
       </div>
 
-      {/* 頁面標題 */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-          成員管理
-        </h1>
-        <p className="text-gray-600 mt-2">管理團隊成員資訊，包括權限設置和聯絡方式</p>
-      </div>
+      <div className="container mx-auto py-10">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              成員管理
+            </h1>
+            <p className="text-gray-600 mt-2">管理團隊成員資訊，包括權限設置和聯絡方式</p>
+          </div>
+        </div>
 
-      <StandardDataListPage
+        <StandardDataListPage
         data={filteredUsers}
         loading={isLoading}
         columns={columns}
@@ -778,6 +780,7 @@ function PersonnelPageContent() {
           </DialogContent>
         </Dialog>
       )}
+      </div>
     </div>
   );
 }

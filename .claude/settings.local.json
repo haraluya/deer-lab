@@ -22,7 +22,8 @@
       "Read(/D:\\APP\\deer-lab\\src\\app\\dashboard/**)",
       "Read(/D:\\APP\\deer-lab\\src\\utils/**)",
       "Read(/D:\\APP\\deer-lab/**)",
-      "WebSearch"
+      "WebSearch",
+      "Read(//e/PrtSrc/Screenshots/2025-09/**)"
     ],
     "deny": [],
     "ask": []

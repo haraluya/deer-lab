@@ -248,14 +248,13 @@ export default function TimeReportsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* 頁面標題 */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+    <div className="container mx-auto py-10">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
             工時報表
           </h1>
-          <p className="text-gray-600 mt-1">
+          <p className="text-gray-600 mt-2">
             所有工單的工時申報記錄統計分析
           </p>
         </div>

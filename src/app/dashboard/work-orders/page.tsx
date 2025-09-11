@@ -383,15 +383,17 @@ function WorkOrdersPageContent() {
           </div>
         </div>
 
-        {/* 頁面標題 */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-            生產工單
-          </h1>
-          <p className="text-gray-600 mt-2">管理所有生產工單，追蹤生產進度和狀態</p>
-        </div>
+        <div className="container mx-auto py-10">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+                生產工單
+              </h1>
+              <p className="text-gray-600 mt-2">管理所有生產工單，追蹤生產進度和狀態</p>
+            </div>
+          </div>
 
-        <StandardDataListPage
+          <StandardDataListPage
           data={filteredWorkOrders}
           loading={loading}
           columns={columns}
@@ -460,6 +462,7 @@ function WorkOrdersPageContent() {
               已載入所有 {workOrders.length} 筆工單
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>

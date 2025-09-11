@@ -658,13 +658,14 @@ export default function FragrancesPage() {
   }
 
   return (
-    <>
-      {/* 頁面標題 */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-          香精配方庫
-        </h1>
-        <p className="text-gray-600 mt-2">管理所有香精配方，包括庫存監控和品質管理</p>
+    <div className="container mx-auto py-10">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            香精配方庫
+          </h1>
+          <p className="text-gray-600 mt-2">管理所有香精配方，包括庫存監控和品質管理</p>
+        </div>
       </div>
 
       <StandardDataListPage
@@ -811,6 +812,6 @@ export default function FragrancesPage() {
           { key: "unit", label: "單位", required: false, type: "string" }
         ]}
       />
-    </>
+    </div>
   );
 }
