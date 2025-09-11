@@ -27,7 +27,7 @@ interface ImportExportDialogProps {
     type?: "string" | "number" | "boolean"
     format?: "percentage" // 新增百分比格式
   }>
-  color?: "blue" | "green" | "purple" | "yellow" | "red" | "gray"
+  color?: "blue" | "green" | "purple" | "yellow" | "red" | "orange" | "gray"
   showUpdateOption?: boolean
   maxBatchSize?: number
 }

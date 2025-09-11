@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { MaterialDialog } from './MaterialDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { ImportExportDialog } from '@/components/ImportExportDialog';
 
 // 擴展 MaterialData 以包含供應商資訊
 interface MaterialWithSupplier extends MaterialData {
@@ -38,6 +39,7 @@ export default function MaterialsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<MaterialData | null>(null);
+  const [isImportExportOpen, setIsImportExportOpen] = useState(false);
 
   // 權限檢查
   const { hasPermission } = usePermission();
@@ -293,12 +295,18 @@ export default function MaterialsPage() {
       render: (value, record) => (
         <div className="space-y-1">
           {record.categoryName && record.categoryName !== '未分類' ? (
-            <Badge className="bg-blue-100 text-blue-800 border-blue-200">
-              {record.subCategoryName ? 
-                `${record.categoryName}/${record.subCategoryName}` : 
-                record.categoryName
-              }
-            </Badge>
+            <div className="space-y-1">
+              {/* 主分類標籤 */}
+              <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs font-medium">
+                {record.categoryName}
+              </Badge>
+              {/* 細分分類標籤 */}
+              {record.subCategoryName && record.subCategoryName !== '' && (
+                <Badge className="bg-green-100 text-green-800 border-green-200 text-xs font-medium ml-1">
+                  {record.subCategoryName}
+                </Badge>
+              )}
+            </div>
           ) : (
             <span className="text-gray-400 text-sm">未分類</span>
           )}
@@ -307,12 +315,18 @@ export default function MaterialsPage() {
       mobileRender: (value, record) => (
         <div className="space-y-1">
           {record.categoryName && record.categoryName !== '未分類' ? (
-            <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
-              {record.subCategoryName ? 
-                `${record.categoryName}/${record.subCategoryName}` : 
-                record.categoryName
-              }
-            </Badge>
+            <div className="space-y-1">
+              {/* 主分類標籤 */}
+              <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
+                {record.categoryName}
+              </Badge>
+              {/* 細分分類標籤 */}
+              {record.subCategoryName && record.subCategoryName !== '' && (
+                <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">
+                  {record.subCategoryName}
+                </Badge>
+              )}
+            </div>
           ) : (
             <span className="text-gray-400 text-xs">未分類</span>
           )}
@@ -442,6 +456,31 @@ export default function MaterialsPage() {
           toast.success(`已將 ${materials.length} 項物料加入購物車`);
         } catch (error) {
           toast.error("批量加入購物車失敗");
+        }
+      }
+    },
+    {
+      key: 'batchDelete',
+      title: '批量刪除',
+      icon: <Trash2 className="h-4 w-4" />,
+      variant: 'destructive',
+      confirmMessage: '確定要刪除選中的物料嗎？此操作不可復原。',
+      onClick: async (materials) => {
+        const toastId = toast.loading("正在刪除物料...");
+        try {
+          const functions = getFunctions();
+          const deleteMaterial = httpsCallable(functions, 'deleteMaterial');
+          
+          for (const material of materials) {
+            await deleteMaterial({ materialId: material.id });
+          }
+          
+          toast.success(`已成功刪除 ${materials.length} 項物料`, { id: toastId });
+          fetchMaterials();
+          setSelectedRows([]); // 清除選中狀態
+        } catch (error) {
+          console.error("批量刪除物料失敗", error);
+          toast.error("批量刪除物料失敗", { id: toastId });
         }
       }
     }
@@ -708,8 +747,7 @@ export default function MaterialsPage() {
         showToolbar={true}
         toolbarActions={toolbarActions}
         showImportExport={canManageMaterials}
-        onImport={() => toast.info('匯入功能開發中...')}
-        onExport={() => toast.info('匯出功能開發中...')}
+        onImport={() => setIsImportExportOpen(true)}
         
         // 新增功能
         showAddButton={canManageMaterials}
@@ -757,6 +795,67 @@ export default function MaterialsPage() {
           description={`您確定要永久刪除物料「${selectedMaterial.name}」嗎？此操作無法復原。`}
         />
       )}
+
+      <ImportExportDialog
+        isOpen={isImportExportOpen}
+        onOpenChange={setIsImportExportOpen}
+        onImport={async (data: any[], options?: { updateMode?: boolean }, onProgress?: (current: number, total: number) => void) => {
+          const functions = getFunctions();
+          
+          try {
+            console.log('原料匯入資料:', data);
+            fetchMaterials();
+          } catch (error) {
+            console.error('匯入原料失敗', error);
+            throw error;
+          }
+        }}
+        onExport={async () => {
+          return materials.map(material => ({
+            code: material.code,
+            name: material.name,
+            categoryName: material.categoryName,
+            subCategoryName: material.subCategoryName,
+            supplierName: material.supplierName,
+            currentStock: material.currentStock,
+            safetyStockLevel: material.safetyStockLevel,
+            costPerUnit: material.costPerUnit,
+            unit: material.unit,
+            status: material.status
+          }));
+        }}
+        title="原料資料"
+        description="匯入或匯出原料資料，支援 Excel 和 CSV 格式。"
+        color="orange"
+        showUpdateOption={false}
+        maxBatchSize={500}
+        sampleData={[
+          {
+            code: "",
+            name: "示例原料",
+            categoryName: "紙盒",
+            subCategoryName: "彩盒",
+            supplierName: "示例供應商",
+            currentStock: 100,
+            safetyStockLevel: 50,
+            costPerUnit: 12.5,
+            unit: "KG",
+            status: "啟用"
+          }
+        ]}
+        fields={[
+          { key: "code", label: "原料代號 (留空自動生成)", required: false, type: "string" },
+          { key: "name", label: "原料名稱", required: true, type: "string" },
+          { key: "categoryName", label: "主分類", required: false, type: "string" },
+          { key: "subCategoryName", label: "細分分類", required: false, type: "string" },
+          { key: "supplierName", label: "供應商", required: false, type: "string" },
+          { key: "currentStock", label: "目前庫存", required: false, type: "number" },
+          { key: "safetyStockLevel", label: "安全庫存", required: false, type: "number" },
+          { key: "costPerUnit", label: "單位成本", required: false, type: "number" },
+          { key: "unit", label: "單位", required: false, type: "string" },
+          { key: "status", label: "狀態", required: false, type: "string" }
+        ]}
+      />
     </div>
   );
 }

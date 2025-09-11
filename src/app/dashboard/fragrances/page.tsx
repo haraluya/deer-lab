@@ -17,6 +17,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { FragranceDialog } from './FragranceDialog';
+import { ImportExportDialog } from '@/components/ImportExportDialog';
 
 // 擴展 FragranceData 以包含供應商資訊
 interface FragranceWithSupplier extends FragranceData {
@@ -35,6 +36,7 @@ export default function FragrancesPage() {
   // 對話框狀態
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedFragrance, setSelectedFragrance] = useState<FragranceData | null>(null);
+  const [isImportExportOpen, setIsImportExportOpen] = useState(false);
 
   // 權限檢查
   const { hasPermission } = usePermission();
@@ -305,6 +307,50 @@ export default function FragrancesPage() {
       visible: () => canManageFragrances
     }
   ];
+
+  // 批量操作
+  const bulkActions: StandardAction<FragranceWithSupplier[]>[] = canManageFragrances ? [
+    {
+      key: 'batchAddToCart',
+      title: '批量加入購物車',
+      icon: <ShoppingCart className="h-4 w-4" />,
+      onClick: async (fragrances) => {
+        try {
+          for (const fragrance of fragrances) {
+            await addToPurchaseCart(fragrance);
+          }
+          toast.success(`已將 ${fragrances.length} 項香精加入購物車`);
+        } catch (error) {
+          toast.error("批量加入購物車失敗");
+        }
+      }
+    },
+    {
+      key: 'batchDelete',
+      title: '批量刪除',
+      icon: <Trash2 className="h-4 w-4" />,
+      variant: 'destructive',
+      confirmMessage: '確定要刪除選中的香精嗎？此操作不可復原。',
+      onClick: async (fragrances) => {
+        const toastId = toast.loading("正在刪除香精...");
+        try {
+          const functions = getFunctions();
+          const deleteFragrance = httpsCallable(functions, 'deleteFragrance');
+          
+          for (const fragrance of fragrances) {
+            await deleteFragrance({ fragranceId: fragrance.id });
+          }
+          
+          toast.success(`已成功刪除 ${fragrances.length} 項香精`, { id: toastId });
+          fetchFragrances();
+          setSelectedRows([]); // 清除選中狀態
+        } catch (error) {
+          console.error("批量刪除香精失敗", error);
+          toast.error("批量刪除香精失敗", { id: toastId });
+        }
+      }
+    }
+  ] : [];
 
   // 統計資訊
   const stats: StandardStats[] = useMemo(() => {
@@ -618,6 +664,7 @@ export default function FragrancesPage() {
         loading={isLoading}
         columns={columns}
         actions={actions}
+        bulkActions={bulkActions}
         
         // 搜尋功能
         searchable={true}
@@ -641,21 +688,14 @@ export default function FragrancesPage() {
         onSelectionChange={(selected: string[] | number[]) => setSelectedRows(selected as string[])}
         rowKey="id"
         
-        // 統計資訊 - 舊版模式下隱藏統計卡片
+        // 統計資訊
         stats={stats}
-        showStats={false}
+        showStats={true}
         
         // 工具列功能
         showToolbar={true}
-        showImportExport={true}
-        onImport={() => {
-          // TODO: 實作匯入功能
-          toast.info('匯入功能開發中...');
-        }}
-        onExport={() => {
-          // TODO: 實作匯出功能  
-          toast.info('匯出功能開發中...');
-        }}
+        showImportExport={canManageFragrances}
+        onImport={() => setIsImportExportOpen(true)}
         
         // 新增功能
         showAddButton={canManageFragrances}
@@ -695,6 +735,73 @@ export default function FragrancesPage() {
           fetchFragrances();
         }}
         fragranceData={selectedFragrance}
+      />
+
+      <ImportExportDialog
+        isOpen={isImportExportOpen}
+        onOpenChange={setIsImportExportOpen}
+        onImport={async (data: any[], options?: { updateMode?: boolean }, onProgress?: (current: number, total: number) => void) => {
+          const functions = getFunctions();
+          
+          try {
+            console.log('香精匯入資料:', data);
+            fetchFragrances();
+          } catch (error) {
+            console.error('匯入香精失敗', error);
+            throw error;
+          }
+        }}
+        onExport={async () => {
+          return fragrances.map(fragrance => ({
+            code: fragrance.code,
+            name: fragrance.name,
+            fragranceType: fragrance.fragranceType || '未指定',
+            fragranceStatus: fragrance.fragranceStatus || '未指定',
+            supplierName: fragrance.supplierName,
+            currentStock: fragrance.currentStock,
+            safetyStockLevel: fragrance.safetyStockLevel,
+            costPerUnit: fragrance.costPerUnit,
+            percentage: fragrance.percentage,
+            pgRatio: fragrance.pgRatio,
+            vgRatio: fragrance.vgRatio,
+            unit: 'KG'
+          }));
+        }}
+        title="香精資料"
+        description="匯入或匯出香精資料，支援 Excel 和 CSV 格式。"
+        color="purple"
+        showUpdateOption={false}
+        maxBatchSize={500}
+        sampleData={[
+          {
+            code: "FRAG001",
+            name: "示例香精",
+            fragranceType: "棉芯",
+            fragranceStatus: "啟用",
+            supplierName: "示例供應商",
+            currentStock: 500,
+            safetyStockLevel: 1000,
+            costPerUnit: 15.5,
+            percentage: 5,
+            pgRatio: 50,
+            vgRatio: 50,
+            unit: "KG"
+          }
+        ]}
+        fields={[
+          { key: "code", label: "香精代號", required: true, type: "string" },
+          { key: "name", label: "香精名稱", required: true, type: "string" },
+          { key: "fragranceType", label: "香精種類", required: false, type: "string" },
+          { key: "fragranceStatus", label: "啟用狀態", required: false, type: "string" },
+          { key: "supplierName", label: "供應商", required: false, type: "string" },
+          { key: "currentStock", label: "目前庫存", required: false, type: "number" },
+          { key: "safetyStockLevel", label: "安全庫存", required: false, type: "number" },
+          { key: "costPerUnit", label: "單位成本", required: false, type: "number" },
+          { key: "percentage", label: "香精比例%", required: false, type: "number" },
+          { key: "pgRatio", label: "PG比例", required: false, type: "number" },
+          { key: "vgRatio", label: "VG比例", required: false, type: "number" },
+          { key: "unit", label: "單位", required: false, type: "string" }
+        ]}
       />
     </>
   );

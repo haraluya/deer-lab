@@ -7,35 +7,106 @@ import { db } from "@/lib/firebase"
 
 import { toast } from "sonner"
 import { error } from "@/utils/logger"
-import { DataTable } from "./data-table"
-import { columns } from "./columns"
-import { WorkOrderColumn } from "./columns"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { usePermission } from '@/hooks/usePermission'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Factory, Filter, Search, TrendingUp, Clock, CheckCircle, Package, AlertCircle, Shield } from "lucide-react"
+import { StandardDataListPage, StandardColumn, StandardAction, QuickFilter, StandardStats } from '@/components/StandardDataListPage'
+import { useDataSearch } from '@/hooks/useDataSearch'
+import { Plus, Factory, Filter, Search, TrendingUp, Clock, CheckCircle, Package, AlertCircle, Shield, Eye, ExternalLink } from "lucide-react"
 
 const ITEMS_PER_PAGE = 20;
+
+export interface WorkOrderColumn {
+  id: string
+  code: string
+  productName: string
+  seriesName: string
+  targetQuantity: number
+  status: string
+  createdAt: string
+}
+
+// 現代化狀態Badge組件
+const StatusBadge = ({ status }: { status: string }) => {
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case "預報":
+        return {
+          className: "bg-gradient-to-r from-orange-200 to-orange-300 text-orange-800 border border-orange-200 shadow-sm",
+          icon: "⏳"
+        }
+      case "進行":
+        return {
+          className: "bg-gradient-to-r from-green-200 to-green-300 text-green-800 border border-green-200 shadow-sm",
+          icon: "🔄"
+        }
+      case "完工":
+        return {
+          className: "bg-gradient-to-r from-emerald-200 to-emerald-300 text-emerald-800 border border-emerald-200 shadow-sm",
+          icon: "✅"
+        }
+      case "入庫":
+        return {
+          className: "bg-gradient-to-r from-purple-200 to-purple-300 text-purple-800 border border-purple-200 shadow-sm",
+          icon: "📦"
+        }
+      default:
+        return {
+          className: "bg-gradient-to-r from-gray-200 to-gray-300 text-gray-800 border border-gray-200 shadow-sm",
+          icon: "❓"
+        }
+    }
+  }
+
+  const config = getStatusConfig(status)
+
+  return (
+    <Badge className={`${config.className} font-semibold px-3 py-1.5 rounded-full text-sm transition-all duration-200 hover:scale-105`}>
+      <span className="mr-1.5">{config.icon}</span>
+      {status}
+    </Badge>
+  )
+}
 
 function WorkOrdersPageContent() {
   const router = useRouter()
   const [workOrders, setWorkOrders] = useState<WorkOrderColumn[]>([])
-  const [filteredWorkOrders, setFilteredWorkOrders] = useState<WorkOrderColumn[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null)
   
-  // 篩選狀態
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-
   // 權限檢查
   const { hasPermission, isAdmin } = usePermission();
   const canViewWorkOrders = hasPermission('workOrders.view') || hasPermission('workOrders:view');
   const canManageWorkOrders = hasPermission('workOrders.manage') || hasPermission('workOrders:manage') || hasPermission('workOrders:create') || hasPermission('workOrders:edit');
+
+  // 使用統一的搜尋過濾 Hook
+  const searchConfig = {
+    searchFields: [
+      { key: 'code' as keyof WorkOrderColumn },
+      { key: 'productName' as keyof WorkOrderColumn },
+      { key: 'seriesName' as keyof WorkOrderColumn }
+    ],
+    filterConfigs: [
+      {
+        key: 'status' as keyof WorkOrderColumn,
+        type: 'set' as const
+      }
+    ]
+  };
+
+  const {
+    searchTerm,
+    setSearchTerm,
+    activeFilters,
+    setFilter,
+    clearFilter,
+    filteredData: filteredWorkOrders,
+    totalCount,
+    filteredCount
+  } = useDataSearch(workOrders, searchConfig);
 
   const loadWorkOrders = useCallback(async (reset = false) => {
     if (reset) {
@@ -104,22 +175,10 @@ function WorkOrdersPageContent() {
     }
   }, [lastDoc])
 
-  // 篩選工單
-  useEffect(() => {
-    let filtered = workOrders
-
-    // 狀態篩選
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(order => order.status === statusFilter)
-    }
-
-    setFilteredWorkOrders(filtered)
-  }, [workOrders, statusFilter])
-
   useEffect(() => {
     loadWorkOrders(true)
   }, [])
-  
+
   // 載入更多資料
   const loadMore = () => {
     if (!loadingMore && hasMore) {
@@ -132,15 +191,166 @@ function WorkOrdersPageContent() {
   }
 
   // 計算統計數據
-  const stats = useMemo(() => {
+  const stats: StandardStats[] = useMemo(() => {
     const total = workOrders.length
     const forecast = workOrders.filter(w => w.status === '預報').length
     const inProgress = workOrders.filter(w => w.status === '進行').length
     const completed = workOrders.filter(w => w.status === '完工').length
     const warehoused = workOrders.filter(w => w.status === '入庫').length
 
-    return { total, forecast, inProgress, completed, warehoused }
+    return [
+      {
+        title: '總工單數',
+        value: total,
+        subtitle: '所有工單',
+        icon: <Factory className="h-4 w-4" />,
+        color: 'blue'
+      },
+      {
+        title: '預報中',
+        value: forecast,
+        subtitle: '待開始工單',
+        icon: <AlertCircle className="h-4 w-4" />,
+        color: 'orange'
+      },
+      {
+        title: '進行中',
+        value: inProgress,
+        subtitle: '生產中工單',
+        icon: <Clock className="h-4 w-4" />,
+        color: 'green'
+      },
+      {
+        title: '已完工',
+        value: completed,
+        subtitle: '已完成工單',
+        icon: <CheckCircle className="h-4 w-4" />,
+        color: 'green'
+      },
+      {
+        title: '已入庫',
+        value: warehoused,
+        subtitle: '入庫完成',
+        icon: <Package className="h-4 w-4" />,
+        color: 'purple'
+      }
+    ];
   }, [workOrders])
+
+  // 配置欄位
+  const columns: StandardColumn<WorkOrderColumn>[] = [
+    {
+      key: 'code',
+      title: '工單資訊',
+      sortable: true,
+      searchable: true,
+      priority: 5,
+      render: (value, record) => (
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+            <Factory className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <div className="font-semibold text-gray-900">{record.code}</div>
+            <div className="text-sm text-gray-500">工單編號</div>
+          </div>
+        </div>
+      ),
+      mobileRender: (value, record) => (
+        <div>
+          <div className="font-medium text-gray-900">{record.code}</div>
+          <div className="text-xs text-gray-500">工單編號</div>
+        </div>
+      )
+    },
+    {
+      key: 'productName',
+      title: '產品資訊',
+      sortable: true,
+      searchable: true,
+      priority: 4,
+      render: (value, record) => (
+        <div>
+          <div className="font-medium text-gray-900">{record.productName}</div>
+          <div className="text-sm text-gray-500">{record.seriesName}</div>
+        </div>
+      )
+    },
+    {
+      key: 'targetQuantity',
+      title: '目標數量',
+      sortable: true,
+      priority: 3,
+      align: 'center',
+      render: (value) => (
+        <div className="font-medium text-gray-900">
+          {value.toLocaleString()}
+        </div>
+      ),
+      hideOnMobile: true
+    },
+    {
+      key: 'status',
+      title: '狀態',
+      sortable: true,
+      filterable: true,
+      priority: 4,
+      align: 'center',
+      render: (value) => <StatusBadge status={value} />
+    },
+    {
+      key: 'createdAt',
+      title: '建立日期',
+      sortable: true,
+      priority: 2,
+      hideOnMobile: true,
+      render: (value) => (
+        <div className="text-sm text-gray-600">{value}</div>
+      )
+    }
+  ];
+
+  // 配置操作
+  const actions: StandardAction<WorkOrderColumn>[] = [
+    {
+      key: 'view',
+      title: '查看詳情',
+      icon: <Eye className="h-4 w-4" />,
+      onClick: (record) => router.push(`/dashboard/work-orders/${record.id}`)
+    }
+  ];
+
+  // 配置快速篩選
+  const quickFilters: QuickFilter[] = [
+    {
+      key: 'status',
+      label: '預報',
+      value: '預報',
+      color: 'orange',
+      count: workOrders.filter(w => w.status === '預報').length
+    },
+    {
+      key: 'status',
+      label: '進行',
+      value: '進行',
+      color: 'green',
+      count: workOrders.filter(w => w.status === '進行').length
+    },
+    {
+      key: 'status',
+      label: '完工',
+      value: '完工',
+      color: 'green',
+      count: workOrders.filter(w => w.status === '完工').length
+    },
+    {
+      key: 'status',
+      label: '入庫',
+      value: '入庫',
+      color: 'purple',
+      count: workOrders.filter(w => w.status === '入庫').length
+    }
+  ];
 
   // 權限保護：如果沒有查看權限，顯示無權限頁面
   if (!canViewWorkOrders && !isAdmin()) {
@@ -178,212 +388,78 @@ function WorkOrdersPageContent() {
               </Button>
             )}
           </div>
-
-          {/* 統計卡片 */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-            <Card className="bg-gradient-to-br from-blue-200 to-blue-300 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-blue-700">總工單數</p>
-                    <p className="text-2xl font-bold text-blue-800">{stats.total}</p>
-                  </div>
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Factory className="h-5 w-5 text-blue-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-orange-200 to-orange-300 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-orange-700">預報中</p>
-                    <p className="text-2xl font-bold text-orange-800">{stats.forecast}</p>
-                  </div>
-                  <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                    <AlertCircle className="h-5 w-5 text-orange-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-green-200 to-green-300 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-green-700">進行中</p>
-                    <p className="text-2xl font-bold text-green-800">{stats.inProgress}</p>
-                  </div>
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                    <Clock className="h-5 w-5 text-green-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-emerald-200 to-emerald-300 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-emerald-700">已完工</p>
-                    <p className="text-2xl font-bold text-emerald-800">{stats.completed}</p>
-                  </div>
-                  <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-                    <CheckCircle className="h-5 w-5 text-emerald-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-purple-200 to-purple-300 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 col-span-2 lg:col-span-1">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-purple-700">已入庫</p>
-                    <p className="text-2xl font-bold text-purple-800">{stats.warehoused}</p>
-                  </div>
-                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <Package className="h-5 w-5 text-purple-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </div>
 
-        {/* 狀態篩選 */}
-        <div className="mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">狀態篩選：</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant={statusFilter === 'all' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setStatusFilter('all')}
-                className={`font-medium transition-all duration-200 ${
-                  statusFilter === 'all' 
-                    ? 'bg-gradient-to-r from-blue-400 to-purple-500 hover:from-blue-500 hover:to-purple-600 text-white shadow-lg' 
-                    : 'border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 bg-white'
-                }`}
-              >
-                全部 ({stats.total})
-              </Button>
-              <Button
-                variant={statusFilter === '預報' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setStatusFilter('預報')}
-                className={`font-medium transition-all duration-200 ${
-                  statusFilter === '預報' 
-                    ? 'bg-gradient-to-r from-orange-400 to-red-400 hover:from-orange-500 hover:to-red-500 text-white shadow-lg' 
-                    : 'border-orange-200 text-orange-600 hover:bg-orange-50 hover:border-orange-300 bg-white'
-                }`}
-              >
-                預報 ({stats.forecast})
-              </Button>
-              <Button
-                variant={statusFilter === '進行' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setStatusFilter('進行')}
-                className={`font-medium transition-all duration-200 ${
-                  statusFilter === '進行' 
-                    ? 'bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 text-white shadow-lg' 
-                    : 'border-green-200 text-green-600 hover:bg-green-50 hover:border-green-300 bg-white'
-                }`}
-              >
-                進行 ({stats.inProgress})
-              </Button>
-              <Button
-                variant={statusFilter === '完工' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setStatusFilter('完工')}
-                className={`font-medium transition-all duration-200 ${
-                  statusFilter === '完工' 
-                    ? 'bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-500 hover:to-teal-600 text-white shadow-lg' 
-                    : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-300 bg-white'
-                }`}
-              >
-                完工 ({stats.completed})
-              </Button>
-              <Button
-                variant={statusFilter === '入庫' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setStatusFilter('入庫')}
-                className={`font-medium transition-all duration-200 ${
-                  statusFilter === '入庫' 
-                    ? 'bg-gradient-to-r from-purple-400 to-pink-500 hover:from-purple-500 hover:to-pink-600 text-white shadow-lg' 
-                    : 'border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-300 bg-white'
-                }`}
-              >
-                入庫 ({stats.warehoused})
-              </Button>
-            </div>
-          </div>
+        <StandardDataListPage
+          data={filteredWorkOrders}
+          loading={loading}
+          columns={columns}
+          actions={actions}
+          onRowClick={(record) => router.push(`/dashboard/work-orders/${record.id}`)}
+          
+          // 搜尋與過濾
+          searchable={true}
+          searchPlaceholder="搜尋工單編號、產品名稱、系列..."
+          searchValue={searchTerm}
+          onSearchChange={setSearchTerm}
+          quickFilters={quickFilters}
+          activeFilters={activeFilters}
+          onFilterChange={(key, value) => {
+            if (value === null) {
+              clearFilter(key);
+            } else {
+              setFilter(key, value);
+            }
+          }}
+          onClearFilters={() => {
+            Object.keys(activeFilters).forEach(key => clearFilter(key));
+          }}
+          
+          // 統計資訊
+          stats={stats}
+          showStats={true}
+          
+          // 工具列功能
+          showToolbar={true}
+          
+          // 新增功能
+          showAddButton={canManageWorkOrders}
+          addButtonText="建立新工單"
+          onAdd={handleCreateWorkOrder}
+          
+          className="space-y-6"
+        />
 
-          {/* 篩選結果提示 */}
-          {statusFilter !== "all" && (
-            <div className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg p-3 mb-6">
-              <div className="flex items-center gap-2">
-                <Search className="h-4 w-4 text-pink-500" />
-                <span className="text-sm text-pink-700 font-medium">
-                  顯示 {statusFilter} 狀態的工單，共 {filteredWorkOrders.length} 個
-                </span>
-              </div>
+        {/* 分頁載入區域 */}
+        <div className="space-y-4">
+          {/* 載入更多按鈕 */}
+          {hasMore && (
+            <div className="flex justify-center">
+              <Button 
+                onClick={loadMore} 
+                disabled={loadingMore}
+                variant="outline"
+                className="px-8 py-2 bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border-blue-200 text-blue-700 transition-all duration-200"
+              >
+                {loadingMore ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                    載入中...
+                  </>
+                ) : (
+                  '載入更多工單'
+                )}
+              </Button>
+            </div>
+          )}
+          
+          {/* 已載入所有資料的提示 */}
+          {!hasMore && workOrders.length > ITEMS_PER_PAGE && (
+            <div className="text-center text-gray-500 py-4">
+              已載入所有 {workOrders.length} 筆工單
             </div>
           )}
         </div>
-
-        {/* 工單表格 */}
-        {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="flex flex-col items-center justify-center">
-              <div className="relative">
-                <div className="w-16 h-16 border-4 border-gray-200 rounded-full animate-spin"></div>
-                <div className="absolute top-0 left-0 w-16 h-16 border-4 border-transparent border-t-blue-500 rounded-full animate-spin"></div>
-              </div>
-              <span className="mt-6 text-gray-600 font-medium text-lg">載入工單資料中...</span>
-              <p className="text-gray-500 text-sm mt-2">請稍候，正在從資料庫讀取資料</p>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="overflow-hidden rounded-xl border border-gray-200">
-              <DataTable columns={columns} data={filteredWorkOrders} />
-            </div>
-            
-            {/* 載入更多按鈕 */}
-            {hasMore && (
-              <div className="flex justify-center">
-                <Button 
-                  onClick={loadMore} 
-                  disabled={loadingMore}
-                  variant="outline"
-                  className="px-8 py-2"
-                >
-                  {loadingMore ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                      載入中...
-                    </>
-                  ) : (
-                    '載入更多工單'
-                  )}
-                </Button>
-              </div>
-            )}
-            
-            {/* 已載入所有資料的提示 */}
-            {!hasMore && workOrders.length > ITEMS_PER_PAGE && (
-              <div className="text-center text-gray-500 py-4">
-                已載入所有 {workOrders.length} 筆工單
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   )

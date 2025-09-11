@@ -642,7 +642,6 @@ function ProductsPageContent() {
         toolbarActions={toolbarActions}
         showImportExport={canManageProducts}
         onImport={() => setIsImportExportOpen(true)}
-        onExport={() => setIsImportExportOpen(true)}
         
         // 新增功能
         showAddButton={canManageProducts}

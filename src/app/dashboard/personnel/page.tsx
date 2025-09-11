@@ -10,32 +10,18 @@ import { AppUser } from '@/context/AuthContext';
 import { PersonnelDialog } from './PersonnelDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { MoreHorizontal, Trash2, Eye, Edit, User, Shield, Calendar, Users, UserCheck, UserX, Search, Filter, Plus, Activity, TrendingUp, Settings } from 'lucide-react';
+import { 
+  MoreHorizontal, Trash2, Eye, Edit, User, Shield, Calendar, Users, UserCheck, UserX, 
+  Search, Filter, Plus, Activity, TrendingUp, Settings
+} from 'lucide-react';
 import { usePermission } from '@/hooks/usePermission';
 import Link from 'next/link';
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { StandardDataListPage, StandardColumn, StandardAction, QuickFilter, StandardStats } from '@/components/StandardDataListPage';
 import { toast } from 'sonner';
+import { useDataSearch } from '@/hooks/useDataSearch';
 
 interface UserWithRole {
   id: string;
@@ -49,17 +35,11 @@ interface UserWithRole {
 }
 
 function PersonnelPageContent() {
-
   const [users, setUsers] = useState<UserWithRole[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<UserWithRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [roleFilter, setRoleFilter] = useState('all');
   
   const { isAdmin, userRole, userPermissions } = usePermission();
   
-  // 調試：顯示當前用戶權限狀態
   const [isPersonnelDialogOpen, setIsPersonnelDialogOpen] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -68,8 +48,37 @@ function PersonnelPageContent() {
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
   const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('add');
 
+  // 使用統一的搜尋過濾 Hook
+  const searchConfig = {
+    searchFields: [
+      { key: 'name' as keyof UserWithRole },
+      { key: 'employeeId' as keyof UserWithRole },
+      { key: 'phone' as keyof UserWithRole }
+    ],
+    filterConfigs: [
+      {
+        key: 'status' as keyof UserWithRole,
+        type: 'set' as const
+      },
+      {
+        key: 'roleName' as keyof UserWithRole,
+        type: 'set' as const
+      }
+    ]
+  };
+
+  const {
+    searchTerm,
+    setSearchTerm,
+    activeFilters,
+    setFilter,
+    clearFilter,
+    filteredData: filteredUsers,
+    totalCount,
+    filteredCount
+  } = useDataSearch(users, searchConfig);
+
   const fetchUsers = useCallback(async () => {
-    // ... (fetchUsers 函式內容保持不變)
     setIsLoading(true);
     try {
       if (!db) {
@@ -105,7 +114,6 @@ function PersonnelPageContent() {
         })
       );
       setUsers(usersData);
-      setFilteredUsers(usersData);
     } catch (error) {
       console.error("讀取人員資料失敗:", error);
       toast.error("讀取人員資料失敗，請檢查網路連線或聯絡管理員。");
@@ -114,44 +122,200 @@ function PersonnelPageContent() {
     }
   }, []);
 
-  // 篩選邏輯
-  useEffect(() => {
-    let filtered = users;
-    
-    // 搜尋篩選
-    if (searchTerm) {
-      filtered = filtered.filter(user => 
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.employeeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.phone.includes(searchTerm)
-      );
-    }
-    
-    // 狀態篩選
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(user => user.status === statusFilter);
-    }
-    
-    // 角色篩選
-    if (roleFilter !== 'all') {
-      filtered = filtered.filter(user => user.roleName === roleFilter);
-    }
-    
-    setFilteredUsers(filtered);
-  }, [users, searchTerm, statusFilter, roleFilter]);
-
-  // 統計數據
-  const stats = {
-    total: users.length,
-    active: users.filter(u => u.status === 'active').length,
-    inactive: users.filter(u => u.status === 'inactive').length,
-    roles: [...new Set(users.map(u => u.roleName))].length
-  };
-
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
 
+  // 統計數據
+  const stats: StandardStats[] = [
+    {
+      title: '總成員',
+      value: users.length,
+      subtitle: '位團隊成員',
+      icon: <Users className="h-4 w-4" />,
+      color: 'blue'
+    },
+    {
+      title: '活躍成員',
+      value: users.filter(u => u.status === 'active').length,
+      subtitle: '位在職成員',
+      icon: <UserCheck className="h-4 w-4" />,
+      color: 'green'
+    },
+    {
+      title: '停用帳號',
+      value: users.filter(u => u.status === 'inactive').length,
+      subtitle: '位停用帳號',
+      icon: <UserX className="h-4 w-4" />,
+      color: 'red'
+    },
+    {
+      title: '角色類型',
+      value: [...new Set(users.map(u => u.roleName))].length,
+      subtitle: '種權限角色',
+      icon: <Shield className="h-4 w-4" />,
+      color: 'purple'
+    }
+  ];
+
+  // 配置欄位
+  const columns: StandardColumn<UserWithRole>[] = [
+    {
+      key: 'name',
+      title: '成員資訊',
+      sortable: true,
+      searchable: true,
+      priority: 5,
+      render: (value, record) => (
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold">
+            {record.name.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <div className="font-semibold text-gray-900">{record.name}</div>
+            <div className="text-sm text-gray-500">系統用戶</div>
+          </div>
+        </div>
+      ),
+      mobileRender: (value, record) => (
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold">
+            {record.name.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900">{record.name}</h3>
+            <p className="text-sm text-gray-500">工號: {record.employeeId}</p>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'employeeId',
+      title: '工號',
+      sortable: true,
+      searchable: true,
+      priority: 4,
+      render: (value) => (
+        <Badge variant="outline" className="bg-gray-50">
+          {value}
+        </Badge>
+      ),
+      hideOnMobile: true
+    },
+    {
+      key: 'roleName',
+      title: '角色',
+      sortable: true,
+      filterable: true,
+      priority: 4,
+      render: (value) => (
+        <Badge 
+          variant="outline"
+          className={`${
+            value === '管理員' 
+              ? 'bg-purple-50 text-purple-700 border-purple-200'
+              : value === '主管' 
+              ? 'bg-blue-50 text-blue-700 border-blue-200'
+              : 'bg-gray-50 text-gray-700 border-gray-200'
+          }`}
+        >
+          {value}
+        </Badge>
+      )
+    },
+    {
+      key: 'status',
+      title: '狀態',
+      sortable: true,
+      filterable: true,
+      priority: 4,
+      align: 'center',
+      render: (value) => (
+        <Badge 
+          variant={value === 'active' ? 'default' : 'destructive'}
+          className={value === 'active' 
+            ? 'bg-green-100 text-green-800 border-green-200' 
+            : 'bg-red-100 text-red-800 border-red-200'
+          }
+        >
+          {value === 'active' ? '活躍' : '停用'}
+        </Badge>
+      )
+    },
+    {
+      key: 'phone',
+      title: '聯絡方式',
+      priority: 2,
+      hideOnMobile: true,
+      render: (value) => (
+        <div className="text-sm text-gray-600">
+          {value || '未設定'}
+        </div>
+      )
+    }
+  ];
+
+  // 配置操作
+  const actions: StandardAction<UserWithRole>[] = [
+    {
+      key: 'view',
+      title: '查看詳情',
+      icon: <Eye className="h-4 w-4" />,
+      onClick: (record) => handleViewDetail(record)
+    },
+    {
+      key: 'edit',
+      title: '編輯資訊',
+      icon: <Edit className="h-4 w-4" />,
+      onClick: (record) => handleEdit(record)
+    },
+    {
+      key: 'changeStatus',
+      title: (record) => record.status === 'active' ? '停用帳號' : '啟用帳號',
+      icon: (record) => record.status === 'active' ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />,
+      onClick: (record) => handleChangeStatus(record)
+    },
+    {
+      key: 'delete',
+      title: '刪除成員',
+      icon: <Trash2 className="h-4 w-4" />,
+      variant: 'destructive' as const,
+      confirmMessage: '確定要刪除此成員嗎？此操作無法復原。',
+      onClick: (record) => handleDelete(record)
+    }
+  ];
+
+  // 配置快速篩選
+  const quickFilters: QuickFilter[] = [
+    // 狀態篩選
+    {
+      key: 'status',
+      label: '活躍',
+      value: 'active',
+      color: 'green',
+      count: users.filter(u => u.status === 'active').length
+    },
+    {
+      key: 'status',
+      label: '停用',
+      value: 'inactive', 
+      color: 'red',
+      count: users.filter(u => u.status === 'inactive').length
+    },
+    // 角色篩選
+    ...Array.from(new Set(users.map(u => u.roleName)))
+      .filter(role => role !== '未設定')
+      .sort()
+      .map(role => ({
+        key: 'roleName',
+        label: role,
+        value: role,
+        color: (role === '管理員' ? 'purple' : role === '主管' ? 'blue' : 'gray') as 'purple' | 'blue' | 'gray',
+        count: users.filter(u => u.roleName === role).length
+      }))
+  ];
+
+  // 操作處理函式
   const handleAdd = () => {
     setDialogMode('add');
     setSelectedUser(null);
@@ -205,9 +369,6 @@ function PersonnelPageContent() {
     }
   };
 
-  // 取得角色清單
-  const uniqueRoles = [...new Set(users.map(u => u.roleName).filter(role => role !== '未設定'))];
-
   const handleConfirmDelete = async () => {
     if (!selectedUser) return;
 
@@ -235,8 +396,7 @@ function PersonnelPageContent() {
 
   return (
     <div className="container mx-auto py-6">
-
-      {/* 標題區 */}
+      {/* 頁面標題區域 */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
@@ -259,408 +419,50 @@ function PersonnelPageContent() {
               </Button>
             </Link>
           )}
-          
-          {/* 新增成員按鈕 */}
-          <Button 
-            onClick={handleAdd}
-            className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-200"
-            size="lg"
-          >
-            <Plus className="h-5 w-5" />
-            新增成員
-          </Button>
         </div>
       </div>
 
-      {/* 統計卡片區 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-blue-200 hover:shadow-lg transition-all duration-300">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-bold text-blue-800">總成員</CardTitle>
-              <div className="p-2 bg-blue-500 rounded-lg">
-                <Users className="h-4 w-4 text-white" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              <div className="text-3xl font-bold text-blue-900">{stats.total}</div>
-              <p className="text-xs text-blue-600 font-medium">位團隊成員</p>
-            </div>
-          </CardContent>
-          <div className="absolute inset-0 bg-gradient-to-br from-transparent to-blue-600/10 pointer-events-none" />
-        </Card>
-
-        <Card className="relative overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100 border-2 border-green-200 hover:shadow-lg transition-all duration-300">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-bold text-green-800">活躍成員</CardTitle>
-              <div className="p-2 bg-green-500 rounded-lg">
-                <UserCheck className="h-4 w-4 text-white" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              <div className="text-3xl font-bold text-green-900">{stats.active}</div>
-              <p className="text-xs text-green-600 font-medium">位在職成員</p>
-            </div>
-          </CardContent>
-          <div className="absolute inset-0 bg-gradient-to-br from-transparent to-green-600/10 pointer-events-none" />
-        </Card>
-
-        <Card className="relative overflow-hidden bg-gradient-to-br from-red-50 to-pink-100 border-2 border-red-200 hover:shadow-lg transition-all duration-300">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-bold text-red-800">停用帳號</CardTitle>
-              <div className="p-2 bg-red-500 rounded-lg">
-                <UserX className="h-4 w-4 text-white" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              <div className="text-3xl font-bold text-red-900">{stats.inactive}</div>
-              <p className="text-xs text-red-600 font-medium">位停用帳號</p>
-            </div>
-          </CardContent>
-          <div className="absolute inset-0 bg-gradient-to-br from-transparent to-red-600/10 pointer-events-none" />
-        </Card>
-
-        <Card className="relative overflow-hidden bg-gradient-to-br from-purple-50 to-violet-100 border-2 border-purple-200 hover:shadow-lg transition-all duration-300">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-bold text-purple-800">角色類型</CardTitle>
-              <div className="p-2 bg-purple-500 rounded-lg">
-                <Shield className="h-4 w-4 text-white" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              <div className="text-3xl font-bold text-purple-900">{stats.roles}</div>
-              <p className="text-xs text-purple-600 font-medium">種權限角色</p>
-            </div>
-          </CardContent>
-          <div className="absolute inset-0 bg-gradient-to-br from-transparent to-purple-600/10 pointer-events-none" />
-        </Card>
-      </div>
-
-      {/* 搜尋和篩選區 */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            搜尋與篩選
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">搜尋成員</label>
-              <div className="relative">
-                <Input
-                  placeholder="姓名、工號、電話..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-white border-2 border-gray-200 focus:border-blue-500"
-                />
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">帳號狀態</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="bg-white border-2 border-gray-200 focus:border-blue-500">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">全部狀態</SelectItem>
-                  <SelectItem value="active">活躍</SelectItem>
-                  <SelectItem value="inactive">停用</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">角色權限</label>
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger className="bg-white border-2 border-gray-200 focus:border-blue-500">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">全部角色</SelectItem>
-                  {uniqueRoles.map(role => (
-                    <SelectItem key={role} value={role}>{role}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          {(searchTerm || statusFilter !== 'all' || roleFilter !== 'all') && (
-            <div className="mt-4 flex items-center justify-between">
-              <p className="text-sm text-gray-600">
-                顯示 {filteredUsers.length} 位成員，共 {users.length} 位
-              </p>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSearchTerm('');
-                  setStatusFilter('all');
-                  setRoleFilter('all');
-                }}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                清除篩選
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-
-      {/* 成員列表 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            成員列表
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <div className="relative">
-                <div className="w-10 h-10 border-4 border-blue-200 rounded-full animate-spin"></div>
-                <div className="absolute top-0 left-0 w-10 h-10 border-4 border-transparent border-t-blue-600 rounded-full animate-spin"></div>
-              </div>
-              <span className="mt-3 text-sm text-gray-600 font-medium">載入中...</span>
-            </div>
-          ) : filteredUsers.length === 0 ? (
-            <div className="text-center py-12">
-              <Users className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-              <p className="text-gray-500">
-                {searchTerm || statusFilter !== 'all' || roleFilter !== 'all' 
-                  ? '找不到符合條件的成員'
-                  : '尚無成員資料'
-                }
-              </p>
-            </div>
-          ) : (
-            <>
-              {/* 桌面版表格 */}
-              <div className="hidden md:block overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead className="font-semibold text-gray-700">成員資訊</TableHead>
-                      <TableHead className="font-semibold text-gray-700">工號</TableHead>
-                      <TableHead className="font-semibold text-gray-700">角色</TableHead>
-                      <TableHead className="font-semibold text-gray-700">狀態</TableHead>
-                      <TableHead className="font-semibold text-gray-700">聯絡方式</TableHead>
-                      <TableHead className="text-right font-semibold text-gray-700">操作</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredUsers.map((user) => (
-                      <TableRow key={user.uid} className="hover:bg-blue-50/50 transition-colors">
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold">
-                              {user.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <div className="font-semibold text-gray-900">{user.name}</div>
-                              <div className="text-sm text-gray-500">系統用戶</div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="bg-gray-50">
-                            {user.employeeId}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant="outline"
-                            className={`${
-                              user.roleName === '管理員' 
-                                ? 'bg-purple-50 text-purple-700 border-purple-200'
-                                : user.roleName === '主管' 
-                                ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                : 'bg-gray-50 text-gray-700 border-gray-200'
-                            }`}
-                          >
-                            {user.roleName}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant={user.status === 'active' ? 'default' : 'destructive'}
-                            className={user.status === 'active' 
-                              ? 'bg-green-100 text-green-800 border-green-200' 
-                              : 'bg-red-100 text-red-800 border-red-200'
-                            }
-                          >
-                            {user.status === 'active' ? '活躍' : '停用'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm text-gray-600">
-                            {user.phone || '未設定'}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-gray-100">
-                                <span className="sr-only">開啟選單</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                              <DropdownMenuLabel>操作選單</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => handleViewDetail(user)} className="gap-2">
-                                <Eye className="h-4 w-4" />
-                                查看詳情
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleEdit(user)} className="gap-2">
-                                <Edit className="h-4 w-4" />
-                                編輯資訊
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleChangeStatus(user)} className="gap-2">
-                                {user.status === 'active' ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                                {user.status === 'active' ? '停用帳號' : '啟用帳號'}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem 
-                                onClick={() => handleDelete(user)} 
-                                className="gap-2 text-red-600 focus:text-red-600 focus:bg-red-50"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                刪除成員
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {/* 手機版卡片 */}
-              <div className="md:hidden space-y-3">
-                {filteredUsers.map((user) => (
-                  <Card key={user.uid} className="overflow-hidden hover:shadow-md transition-shadow">
-                    <div className="p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold">
-                              {user.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <h3 className="font-semibold text-gray-900">{user.name}</h3>
-                              <p className="text-sm text-gray-500">工號: {user.employeeId}</p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <Badge 
-                            variant={user.status === 'active' ? 'default' : 'destructive'}
-                            className={`text-xs mb-1 ${
-                              user.status === 'active' 
-                                ? 'bg-green-100 text-green-800 border-green-200' 
-                                : 'bg-red-100 text-red-800 border-red-200'
-                            }`}
-                          >
-                            {user.status === 'active' ? '活躍' : '停用'}
-                          </Badge>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">角色：</span>
-                          <Badge 
-                            variant="outline"
-                            className={`text-xs ${
-                              user.roleName === '管理員' 
-                                ? 'bg-purple-50 text-purple-700 border-purple-200'
-                                : user.roleName === '主管' 
-                                ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                : 'bg-gray-50 text-gray-700 border-gray-200'
-                            }`}
-                          >
-                            {user.roleName}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">聯絡：</span>
-                          <span className="text-gray-900 font-medium">{user.phone || '未設定'}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="flex gap-2 mt-4 pt-3 border-t border-gray-100">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => handleViewDetail(user)}
-                          className="flex-1 gap-1 text-xs hover:bg-blue-50 hover:border-blue-200"
-                        >
-                          <Eye className="h-3 w-3" />
-                          查看
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => handleEdit(user)}
-                          className="flex-1 gap-1 text-xs hover:bg-green-50 hover:border-green-200"
-                        >
-                          <Edit className="h-3 w-3" />
-                          編輯
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="px-2 hover:bg-gray-100">
-                              <MoreHorizontal className="h-3 w-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuLabel>更多操作</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleChangeStatus(user)} className="gap-2">
-                              {user.status === 'active' ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                              {user.status === 'active' ? '停用帳號' : '啟用帳號'}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              onClick={() => handleDelete(user)} 
-                              className="gap-2 text-red-600 focus:text-red-600 focus:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              刪除成員
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+      <StandardDataListPage
+        data={filteredUsers}
+        loading={isLoading}
+        columns={columns}
+        actions={actions}
+        onRowClick={(record) => handleViewDetail(record)}
+        
+        // 搜尋與過濾
+        searchable={true}
+        searchPlaceholder="搜尋成員姓名、工號、電話..."
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        quickFilters={quickFilters}
+        activeFilters={activeFilters}
+        onFilterChange={(key, value) => {
+          if (value === null) {
+            clearFilter(key);
+          } else {
+            setFilter(key, value);
+          }
+        }}
+        onClearFilters={() => {
+          Object.keys(activeFilters).forEach(key => clearFilter(key));
+        }}
+        
+        // 統計資訊
+        stats={stats}
+        showStats={true}
+        
+        // 工具列功能
+        showToolbar={true}
+        
+        // 新增功能
+        showAddButton={true}
+        addButtonText="新增成員"
+        onAdd={handleAdd}
+        
+        className="space-y-6"
+      />
 
       {/* 對話框組件 */}
-
       <PersonnelDialog 
         isOpen={isPersonnelDialogOpen} 
         onOpenChange={setIsPersonnelDialogOpen} 
@@ -693,78 +495,176 @@ function PersonnelPageContent() {
       {/* 詳細資料對話框 */}
       {selectedDetailUser && (
         <Dialog open={isDetailViewOpen} onOpenChange={setIsDetailViewOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white">
-            <DialogHeader className="pb-4 border-b border-gray-200">
-              <DialogTitle className="flex items-center gap-3 text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-                  <User className="h-5 w-5 text-white" />
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
+            <DialogHeader className="pb-6 border-b border-gradient-to-r from-blue-200 to-indigo-200">
+              <DialogTitle className="flex items-center gap-4 text-3xl font-bold">
+                {/* 大頭照區域 */}
+                <div className="relative">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+                    <span className="text-2xl font-bold text-white">
+                      {selectedDetailUser.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="absolute -bottom-1 -right-1">
+                    <div className={`w-5 h-5 rounded-full border-2 border-white ${
+                      selectedDetailUser.status === 'active' ? 'bg-green-500' : 'bg-gray-400'
+                    }`} />
+                  </div>
                 </div>
-                員工詳情
+                
+                <div className="flex-1">
+                  <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                    {selectedDetailUser.name}
+                  </div>
+                  <div className="flex items-center gap-3 mt-1">
+                    <Badge variant="outline" className="bg-white/80 text-blue-700 border-blue-200 font-mono">
+                      {selectedDetailUser.employeeId}
+                    </Badge>
+                    <Badge 
+                      variant="outline"
+                      className={`${
+                        selectedDetailUser.roleName === '管理員' 
+                          ? 'bg-purple-100 text-purple-700 border-purple-300'
+                          : selectedDetailUser.roleName === '主管' 
+                          ? 'bg-blue-100 text-blue-700 border-blue-300'
+                          : 'bg-gray-100 text-gray-700 border-gray-300'
+                      }`}
+                    >
+                      <Shield className="w-3 h-3 mr-1" />
+                      {selectedDetailUser.roleName}
+                    </Badge>
+                  </div>
+                </div>
               </DialogTitle>
-              <DialogDescription className="text-gray-600 mt-2">
-                工號: {selectedDetailUser.employeeId} - 查看員工的完整資訊和權限設定
-              </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-6">
-              {/* 基本資訊 */}
-              <div className="space-y-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm">
-                <h3 className="text-xl font-bold flex items-center gap-3 text-blue-800">
-                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <User className="h-4 w-4 text-blue-600" />
+            <div className="space-y-6 pt-6">
+              {/* 基本資訊卡片區域 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* 姓名卡片 */}
+                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-blue-100/80 rounded-xl border border-blue-200/50 shadow-sm">
+                  <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-sm">
+                    <User className="h-5 w-5 text-white" />
                   </div>
-                  基本資訊
+                  <div>
+                    <p className="text-sm text-blue-600 font-medium">姓名</p>
+                    <p className="text-lg font-semibold text-blue-800">{selectedDetailUser.name}</p>
+                  </div>
+                </div>
+
+                {/* 工號卡片 */}
+                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-emerald-50 to-emerald-100/80 rounded-xl border border-emerald-200/50 shadow-sm">
+                  <div className="w-10 h-10 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center shadow-sm">
+                    <Badge className="h-5 w-5 text-white bg-transparent border-0" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-emerald-600 font-medium">工號</p>
+                    <p className="text-lg font-semibold text-emerald-800 font-mono">{selectedDetailUser.employeeId}</p>
+                  </div>
+                </div>
+
+                {/* 聯絡電話卡片 */}
+                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-orange-50 to-orange-100/80 rounded-xl border border-orange-200/50 shadow-sm">
+                  <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center shadow-sm">
+                    <Calendar className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-orange-600 font-medium">聯絡電話</p>
+                    <p className="text-lg font-semibold text-orange-800">
+                      {selectedDetailUser.phone || '未設定'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 帳號狀態卡片 */}
+                <div className={`flex items-center gap-3 p-4 rounded-xl border shadow-sm ${
+                  selectedDetailUser.status === 'active' 
+                    ? 'bg-gradient-to-r from-green-50 to-green-100/80 border-green-200/50'
+                    : 'bg-gradient-to-r from-red-50 to-red-100/80 border-red-200/50'
+                }`}>
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shadow-sm ${
+                    selectedDetailUser.status === 'active'
+                      ? 'bg-gradient-to-r from-green-500 to-green-600'
+                      : 'bg-gradient-to-r from-red-500 to-red-600'
+                  }`}>
+                    {selectedDetailUser.status === 'active' ? (
+                      <UserCheck className="h-5 w-5 text-white" />
+                    ) : (
+                      <UserX className="h-5 w-5 text-white" />
+                    )}
+                  </div>
+                  <div>
+                    <p className={`text-sm font-medium ${
+                      selectedDetailUser.status === 'active' ? 'text-green-600' : 'text-red-600'
+                    }`}>帳號狀態</p>
+                    <p className={`text-lg font-semibold ${
+                      selectedDetailUser.status === 'active' ? 'text-green-800' : 'text-red-800'
+                    }`}>
+                      {selectedDetailUser.status === 'active' ? '啟用中' : '已停用'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 權限資訊詳細卡片 */}
+              <div className="bg-gradient-to-r from-purple-50 via-pink-50 to-purple-50 rounded-2xl border border-purple-200/50 shadow-lg p-6">
+                <h3 className="text-xl font-bold flex items-center gap-3 text-purple-800 mb-6">
+                  <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-sm">
+                    <Shield className="h-5 w-5 text-white" />
+                  </div>
+                  權限與角色資訊
                 </h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700">姓名</label>
-                    <div className="text-lg font-medium text-gray-900">{selectedDetailUser.name || '-'}</div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700">工號</label>
-                    <div className="text-lg font-medium text-gray-900">{selectedDetailUser.employeeId || '-'}</div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700">電話</label>
-                    <div className="text-lg font-medium text-gray-900">{selectedDetailUser.phone || '-'}</div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700">狀態</label>
-                    <div className="text-lg">
-                      <Badge variant={selectedDetailUser.status === 'active' ? 'default' : 'secondary'}>
-                        {selectedDetailUser.status === 'active' ? '啟用' : '停用'}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-purple-100">
+                    <label className="text-sm font-semibold text-purple-700 block mb-2">系統角色</label>
+                    <div className="flex items-center gap-2">
+                      <Badge 
+                        variant="outline"
+                        className={`text-base px-3 py-1 ${
+                          selectedDetailUser.roleName === '管理員' 
+                            ? 'bg-purple-100 text-purple-800 border-purple-300'
+                            : selectedDetailUser.roleName === '主管' 
+                            ? 'bg-blue-100 text-blue-800 border-blue-300'
+                            : 'bg-gray-100 text-gray-800 border-gray-300'
+                        }`}
+                      >
+                        {selectedDetailUser.roleName || '未設定'}
                       </Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-purple-100">
+                    <label className="text-sm font-semibold text-purple-700 block mb-2">權限等級</label>
+                    <div className="text-lg font-medium text-purple-900">
+                      {selectedDetailUser.roleName === '管理員' ? '最高權限' : 
+                       selectedDetailUser.roleName === '主管' ? '管理權限' : 
+                       selectedDetailUser.roleName === '計時人員' ? '基本權限' : '未分配'}
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-purple-100">
+                    <label className="text-sm font-semibold text-purple-700 block mb-2">登入狀態</label>
+                    <div className={`flex items-center gap-2 ${
+                      selectedDetailUser.status === 'active' ? 'text-green-700' : 'text-red-700'
+                    }`}>
+                      {selectedDetailUser.status === 'active' ? (
+                        <><UserCheck className="h-4 w-4" /> 可正常登入</>
+                      ) : (
+                        <><UserX className="h-4 w-4" /> 禁止登入</>
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
-
-              {/* 權限資訊 */}
-              <div className="space-y-6 p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200 shadow-sm">
-                <h3 className="text-xl font-bold flex items-center gap-3 text-purple-800">
-                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <Shield className="h-4 w-4 text-purple-600" />
-                  </div>
-                  權限資訊
-                </h3>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-700">角色</label>
-                  <div className="text-lg font-medium text-gray-900">{selectedDetailUser.roleName || '未設定'}</div>
-                </div>
-              </div>
             </div>
 
-            {/* 操作按鈕 */}
-            <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+            {/* 操作按鈕區域 */}
+            <div className="flex justify-end gap-3 pt-6 border-t border-gradient-to-r from-gray-200 to-gray-300 mt-6">
               <Button 
                 variant="outline" 
                 onClick={() => setIsDetailViewOpen(false)}
-                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
               >
                 關閉
               </Button>
@@ -773,10 +673,10 @@ function PersonnelPageContent() {
                   setIsDetailViewOpen(false);
                   handleEdit(selectedDetailUser);
                 }}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 px-6"
               >
                 <Edit className="mr-2 h-4 w-4" />
-                編輯
+                編輯成員
               </Button>
             </div>
           </DialogContent>

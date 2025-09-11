@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, ReactNode, useMemo } from 'react';
-import { Search, Filter, Plus, Download, Upload, MoreHorizontal, Eye, Edit, Trash2, ShoppingCart, ListChecks, Save, X, Loader2, Package, AlertTriangle, Settings, Grid3X3, List, ChevronDown } from 'lucide-react';
+import { Search, Filter, Plus, Download, Upload, MoreHorizontal, Eye, Edit, Trash2, ShoppingCart, ListChecks, Save, X, Loader2, Package, AlertTriangle, Settings, Grid3X3, List, ChevronDown, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -40,8 +40,8 @@ export interface StandardColumn<T = any> {
 
 export interface StandardAction<T = any> {
   key: string;
-  title: string;
-  icon?: ReactNode;
+  title: string | ((record: T) => string);
+  icon?: ReactNode | ((record: T) => ReactNode);
   onClick: (record: T, index: number) => void;
   visible?: (record: T) => boolean;
   disabled?: (record: T) => boolean;
@@ -574,16 +574,10 @@ const Toolbar = <T,>({
           
           {/* 匯入匯出 */}
           {showImportExport && (
-            <>
-              <Button variant="outline" onClick={onImport}>
-                <Upload className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">匯入</span>
-              </Button>
-              <Button variant="outline" onClick={onExport}>
-                <Download className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">匯出</span>
-              </Button>
-            </>
+            <Button variant="outline" onClick={onImport}>
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">匯入匯出</span>
+            </Button>
           )}
           
           {/* 自定義工具列動作 */}
@@ -650,8 +644,8 @@ const Toolbar = <T,>({
                 onClick={() => onBulkAction?.(action, [])}
                 className={action.className}
               >
-                {action.icon && <span className="mr-2">{action.icon}</span>}
-                {action.title}
+                {action.icon && <span className="mr-2">{typeof action.icon === 'function' ? action.icon([]) : action.icon}</span>}
+                {typeof action.title === 'function' ? action.title([]) : action.title}
               </Button>
             ))}
           </div>
@@ -1324,8 +1318,8 @@ export const StandardDataListPage = <T,>({
                                       disabled={isDisabled}
                                       className={action.className}
                                     >
-                                      {action.icon && <span className="mr-2">{action.icon}</span>}
-                                      {action.title}
+                                      {action.icon && <span className="mr-2">{typeof action.icon === 'function' ? action.icon(record) : action.icon}</span>}
+                                      {typeof action.title === 'function' ? action.title(record) : action.title}
                                     </DropdownMenuItem>
                                   );
                                 })}
@@ -1539,10 +1533,10 @@ export const StandardDataListPage = <T,>({
                                         }
                                         ${action.className || ''}
                                       `}
-                                      title={action.title}
+                                      title={typeof action.title === 'function' ? action.title(record) : action.title}
                                     >
-                                      {action.icon && <span className="mr-1 text-xs">{action.icon}</span>}
-                                      <span className="truncate">{action.title}</span>
+                                      {action.icon && <span className="mr-1 text-xs">{typeof action.icon === 'function' ? action.icon(record) : action.icon}</span>}
+                                      <span className="truncate">{typeof action.title === 'function' ? action.title(record) : action.title}</span>
                                     </Button>
                                   );
                                 })}
@@ -1572,10 +1566,10 @@ export const StandardDataListPage = <T,>({
                                           >
                                             {action.icon && (
                                               <span className="mr-2 h-3 w-3 flex items-center justify-center">
-                                                {action.icon}
+                                                {typeof action.icon === 'function' ? action.icon(record) : action.icon}
                                               </span>
                                             )}
-                                            {action.title}
+                                            {typeof action.title === 'function' ? action.title(record) : action.title}
                                           </DropdownMenuItem>
                                         );
                                       })}
