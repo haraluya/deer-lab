@@ -9,7 +9,12 @@ import { MaterialData } from '@/types/entities';
 import { usePermission } from '@/hooks/usePermission';
 import { useCartOperations } from '@/hooks/useCartOperations';
 import { StandardDataListPage, StandardColumn, StandardAction, StandardStats, StandardFilter, QuickFilter } from '@/components/StandardDataListPage';
-import { Package, DollarSign, AlertTriangle, Building, Eye, Edit, Trash2, ShoppingCart, Plus } from 'lucide-react';
+import { Package, DollarSign, AlertTriangle, Building, Eye, Edit, Trash2, ShoppingCart, Plus, Warehouse, MoreHorizontal } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { MaterialDialog } from './MaterialDialog';
 
@@ -51,8 +56,11 @@ export default function MaterialsPage() {
       }
       const querySnapshot = await getDocs(collection(db, "suppliers"));
       querySnapshot.forEach((doc) => {
-        suppliersMap.set(doc.id, doc.data().name);
+        const supplierData = doc.data();
+        suppliersMap.set(doc.id, supplierData.name);
+        console.log(`供應商:`, { id: doc.id, name: supplierData.name });
       });
+      console.log(`總共載入 ${suppliersMap.size} 個供應商`);
     } catch (error) {
       console.error("獲取供應商資料失敗:", error);
     }
@@ -73,9 +81,18 @@ export default function MaterialsPage() {
       
       const materialsData: MaterialWithSupplier[] = querySnapshot.docs.map((doc) => {
         const data = { id: doc.id, ...doc.data() } as MaterialData;
+        const supplierName = data.supplierId ? suppliersMap.get(data.supplierId) || '未知供應商' : '未指定';
+        
+        // Debug: 檢查供應商資料
+        console.log(`原料 ${data.name}:`, {
+          supplierId: data.supplierId,
+          supplierName: supplierName,
+          hasSupplierInMap: data.supplierId ? suppliersMap.has(data.supplierId) : false
+        });
+        
         return {
           ...data,
-          supplierName: data.supplierId ? suppliersMap.get(data.supplierId) || '未知供應商' : '未指定',
+          supplierName: supplierName,
           type: 'material' as const
         };
       });
@@ -212,77 +229,112 @@ export default function MaterialsPage() {
     return result;
   }, [materials, searchValue, activeFilters]);
 
-  // 定義欄位
+  // 定義欄位 - 根據原版截圖排版（精簡版）
   const columns: StandardColumn<MaterialWithSupplier>[] = [
     {
-      key: 'code',
-      title: '原料編號',
+      key: 'info',
+      title: '物料資訊',
       sortable: true,
       priority: 5,
-      render: (value) => (
-        <span className="font-mono text-sm font-medium">{value}</span>
-      )
-    },
-    {
-      key: 'name',
-      title: '原料名稱',
-      sortable: true,
-      priority: 5,
-      render: (value) => (
-        <span className="font-semibold">{value}</span>
-      )
-    },
-    {
-      key: 'currentStock',
-      title: '目前庫存',
-      sortable: true,
-      align: 'right',
-      priority: 4,
       render: (value, record) => (
-        <div className={`font-semibold ${value < record.minStock ? 'text-red-600' : 'text-gray-900'}`}>
-          {value} {record.unit}
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-blue-600 rounded-lg flex items-center justify-center">
+            <Package className="h-4 w-4 text-white" />
+          </div>
+          <div>
+            <div className="font-semibold text-gray-900">{record.name}</div>
+            <div className="text-sm text-gray-500">代號: {record.code}</div>
+          </div>
         </div>
-      ),
-      mobileRender: (value, record) => (
-        <div className={`font-bold ${value < record.minStock ? 'text-red-600' : 'text-green-600'}`}>
-          {value} {record.unit}
-        </div>
-      )
-    },
-    {
-      key: 'costPerUnit',
-      title: '單位成本',
-      sortable: true,
-      align: 'right',
-      priority: 3,
-      render: (value) => `$${value.toFixed(2)}`,
-      mobileRender: (value) => (
-        <span className="font-semibold text-green-600">${value.toFixed(2)}</span>
       )
     },
     {
       key: 'category',
       title: '分類',
-      priority: 2,
-      render: (value) => value ? (
-        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-sm">{value}</span>
-      ) : '-'
+      priority: 4,
+      render: (value, record) => {
+        // 支援主分類+細分類格式
+        if (record.category) {
+          const categoryParts = record.category.split('/');
+          if (categoryParts.length > 1) {
+            // 主分類/細分類格式
+            return (
+              <div className="flex flex-col gap-1">
+                <Badge className="bg-blue-100 text-blue-800 text-xs">
+                  {categoryParts[0]}
+                </Badge>
+                <Badge variant="outline" className="text-xs text-gray-600 border-gray-300">
+                  {categoryParts[1]}
+                </Badge>
+              </div>
+            );
+          } else {
+            // 單一分類
+            return <Badge className="bg-blue-100 text-blue-800">{record.category}</Badge>;
+          }
+        }
+        return <span className="text-gray-400 text-sm">-</span>;
+      },
+      mobileRender: (value, record) => {
+        // 手機版使用更緊湊的顯示方式
+        if (record.category) {
+          const categoryParts = record.category.split('/');
+          if (categoryParts.length > 1) {
+            // 主分類/細分類格式 - 手機版使用 flex-wrap 且限制寬度
+            return (
+              <div className="flex flex-wrap gap-1 max-w-full">
+                <Badge className="bg-blue-100 text-blue-800 text-xs max-w-full truncate">
+                  {categoryParts[0]}
+                </Badge>
+                <Badge variant="outline" className="text-xs text-gray-600 border-gray-300 max-w-full truncate">
+                  {categoryParts[1]}
+                </Badge>
+              </div>
+            );
+          } else {
+            // 單一分類 - 手機版限制寬度
+            return <Badge className="bg-blue-100 text-blue-800 text-xs max-w-full truncate">{record.category}</Badge>;
+          }
+        }
+        return <span className="text-gray-400 text-sm">-</span>;
+      }
     },
     {
       key: 'supplierName',
       title: '供應商',
-      priority: 2,
-      render: (value) => (
-        <span className="text-sm">{value}</span>
+      priority: 3,
+      render: (value, record) => (
+        <span className="text-sm font-medium text-gray-700">
+          {record.supplierName || '未指定'}
+        </span>
       )
     },
     {
-      key: 'minStock',
-      title: '最低庫存',
+      key: 'stock',
+      title: '庫存',
+      sortable: true,
+      align: 'center',
+      priority: 4,
+      render: (value, record) => (
+        <div className="text-center">
+          <div className={`font-semibold ${
+            record.currentStock < record.minStock ? 'text-red-600' : 'text-green-600'
+          }`}>
+            {record.currentStock} {record.unit}
+          </div>
+          <div className="text-xs text-gray-500">
+            安全庫存: {record.minStock} {record.unit}
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'costPerUnit',
+      title: '成本',
+      sortable: true,
       align: 'right',
-      priority: 1,
-      hideOnMobile: true,
-      render: (value, record) => `${value} ${record.unit}`
+      priority: 3,
+      render: (value) => <span className="font-semibold">${value.toFixed(2)}</span>
     }
   ];
 
@@ -450,6 +502,7 @@ export default function MaterialsPage() {
     setActiveFilters({});
   };
 
+
   if (!canViewMaterials) {
     return (
       <div className="text-center py-8">
@@ -466,9 +519,12 @@ export default function MaterialsPage() {
         columns={columns}
         actions={actions}
         
+        // 移除 legacyMode 使手機版正常自適應
+        // legacyMode={true}
+        
         // 搜尋功能
         searchable={true}
-        searchPlaceholder="搜尋原料編號、名稱、分類或供應商..."
+        searchPlaceholder="搜尋物料名稱、代號、分類或供應商..."
         searchValue={searchValue}
         onSearchChange={setSearchValue}
         
@@ -494,15 +550,9 @@ export default function MaterialsPage() {
         
         // 工具列功能
         showToolbar={true}
-        showImportExport={true}
-        onImport={() => {
-          // TODO: 實作匯入功能
-          toast.info('匯入功能開發中...');
-        }}
-        onExport={() => {
-          // TODO: 實作匯出功能  
-          toast.info('匯出功能開發中...');
-        }}
+        showImportExport={canManageMaterials}
+        onImport={() => toast.info('匯入功能開發中...')}
+        onExport={() => toast.info('匯出功能開發中...')}
         
         // 新增功能
         showAddButton={canManageMaterials}

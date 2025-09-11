@@ -34,6 +34,8 @@ export interface StandardColumn<T = any> {
   priority?: number; // 響應式優先級 (1-5, 5最重要)
   hideOnMobile?: boolean;
   className?: string;
+  headerClassName?: string; // 表頭列樣式
+  cellClassName?: string;   // 儲存格樣式
 }
 
 export interface StandardAction<T = any> {
@@ -83,6 +85,28 @@ export interface StandardStats {
     value: string;
   };
   onClick?: () => void;
+}
+
+// 新增：表格樣式組態接口
+export interface TableStyleConfig {
+  headerStyle?: 'default' | 'gradient' | 'solid' | 'minimal';
+  headerClassName?: string;
+  rowStyle?: 'default' | 'striped' | 'bordered' | 'minimal';
+  rowClassName?: string;
+  hoverEffect?: boolean;
+  compactMode?: boolean;
+  roundedCorners?: boolean;
+  shadowLevel?: 'none' | 'sm' | 'md' | 'lg';
+}
+
+// 新增：卡片樣式組態接口
+export interface CardStyleConfig {
+  cardStyle?: 'default' | 'flat' | 'elevated' | 'outlined';
+  cardClassName?: string;
+  layout?: 'vertical' | 'horizontal' | 'compact';
+  spacing?: 'tight' | 'normal' | 'loose';
+  borderRadius?: 'none' | 'sm' | 'md' | 'lg';
+  showDividers?: boolean;
 }
 
 export interface StandardDataListPageProps<T = any> {
@@ -167,6 +191,13 @@ export interface StandardDataListPageProps<T = any> {
   cardClassName?: string;
   height?: string | number;
   
+  // 新增：進階樣式組態
+  tableStyle?: TableStyleConfig;
+  cardStyle?: CardStyleConfig;
+  
+  // 新增：原版相容模式
+  legacyMode?: boolean; // 是否使用原版樣式
+  
   // 權限控制
   permissions?: {
     view?: boolean;
@@ -237,11 +268,7 @@ interface StatsCardsPropsWithMobile extends StatsCardsProps {
 
 const StatsCards: React.FC<StatsCardsPropsWithMobile> = ({ stats, isMobile = false }) => {
   return (
-    <div className={`grid gap-3 mb-6 ${
-      isMobile 
-        ? 'grid-cols-1' // 手機端：單列
-        : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' // 桌面端：響應式多列
-    }`}>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
       {stats.map((stat, index) => (
         <Card 
           key={index} 
@@ -714,6 +741,9 @@ export const StandardDataListPage = <T,>({
   tableClassName,
   cardClassName,
   height,
+  tableStyle,
+  cardStyle,
+  legacyMode = false,
   permissions,
   stocktakeMode,
   onStocktakeModeChange,
@@ -723,22 +753,72 @@ export const StandardDataListPage = <T,>({
   responsive,
 }: StandardDataListPageProps<T>) => {
   // 所有 Hooks 必須在最頂部
-  const [currentViewMode, setCurrentViewMode] = useState<'table' | 'card' | 'grid'>(defaultViewMode);
   const [isMobile, setIsMobile] = useState(false);
+  const [currentViewMode, setCurrentViewMode] = useState<'table' | 'card' | 'grid'>(defaultViewMode);
+  
+  // 樣式組態邏輯
+  const getTableHeaderStyle = () => {
+    if (legacyMode) {
+      return 'bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200';
+    }
+    
+    switch (tableStyle?.headerStyle) {
+      case 'gradient':
+        return 'bg-gradient-to-r from-orange-50 to-blue-50';
+      case 'solid':
+        return 'bg-gray-100';
+      case 'minimal':
+        return 'bg-transparent border-b';
+      default:
+        return 'bg-gray-50';
+    }
+  };
+  
+  const getTableRowStyle = (isSelected: boolean, index: number) => {
+    let baseStyle = '';
+    
+    if (legacyMode) {
+      baseStyle = `
+        ${isSelected ? 'bg-orange-50 ring-1 ring-orange-200' : ''}
+        ${onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''}
+        transition-all duration-200
+        border-b border-gray-100 last:border-b-0
+      `;
+    } else {
+      baseStyle = `
+        ${isSelected ? 'bg-orange-50' : ''}
+        ${onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''}
+        transition-colors
+      `;
+    }
+    
+    return baseStyle.trim();
+  };
+  
+  const getCardContainerStyle = () => {
+    if (legacyMode) {
+      return 'p-2 sm:p-3 md:p-4 w-full max-w-full overflow-hidden'; // 原版響應式樣式
+    }
+    return `${isMobile ? 'px-2 py-4' : 'p-4 md:p-6'} w-full overflow-hidden`;
+  };
   
   // 檢查視窗大小並更新響應式狀態
   useEffect(() => {
     const checkScreenSize = () => {
-      setIsMobile(window.innerWidth < 768); // md breakpoint
+      if (typeof window !== 'undefined') {
+        setIsMobile(window.innerWidth < 768); // md breakpoint
+      }
     };
 
     // 初始檢查
     checkScreenSize();
 
     // 監聽視窗大小變化
-    window.addEventListener('resize', checkScreenSize);
-    
-    return () => window.removeEventListener('resize', checkScreenSize);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', checkScreenSize);
+      
+      return () => window.removeEventListener('resize', checkScreenSize);
+    }
   }, []);
 
   // 自動切換到合適的模式（手機端：卡片，桌面端：表格）
@@ -830,11 +910,7 @@ export const StandardDataListPage = <T,>({
     return (
       <div className={`space-y-6 ${className || ''}`}>
         {showStats && stats && (
-          <div className={`grid gap-3 mb-6 ${
-            isMobile 
-              ? 'grid-cols-1' // 手機端：單列
-              : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' // 桌面端：響應式多列
-          }`}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             {stats.map((_, index) => (
               <Card key={index}>
                 <CardHeader>
@@ -1055,10 +1131,10 @@ export const StandardDataListPage = <T,>({
       {/* 資料展示區域 */}
       <Card className={`${cardClassName} mx-3 md:mx-0`}>
         <CardContent className="p-0">
-          {currentViewMode === 'table' && (
+          {(currentViewMode === 'table' && !isMobile) && (
             <div className="overflow-x-auto">
               <Table className={tableClassName}>
-                <TableHeader>
+                <TableHeader className={getTableHeaderStyle()}>
                   <TableRow>
                     {/* 選擇欄 */}
                     {selectable && (
@@ -1121,11 +1197,7 @@ export const StandardDataListPage = <T,>({
                     return (
                       <TableRow
                         key={String(recordKey)}
-                        className={`
-                          ${isSelected ? 'bg-orange-50' : ''}
-                          ${onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''}
-                          transition-colors
-                        `}
+                        className={getTableRowStyle(isSelected, index)}
                         onClick={() => onRowClick?.(record, index)}
                         onDoubleClick={() => onRowDoubleClick?.(record, index)}
                       >
@@ -1212,20 +1284,47 @@ export const StandardDataListPage = <T,>({
             </div>
           )}
           
-          {/* 卡片視圖 */}
-          {currentViewMode === 'card' && (
-            <div className="p-4 md:p-6 w-full overflow-hidden">
-              {/* 響應式網格：手機端單列，平板雙列，桌面多列 */}
-              <div className={`grid gap-3 md:gap-4 w-full ${
-                isMobile 
-                  ? 'grid-cols-1' 
-                  : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-              }`}>
+          {/* 卡片視圖 - 專業響應式系統 */}
+          {(currentViewMode === 'card' || isMobile) && (
+            <div className="w-full">
+              {/* 使用 CSS Container Queries 和 Flexbox 的專業響應式佈局 */}
+              <div 
+                className="
+                  flex flex-wrap gap-4 p-4
+                  justify-center sm:justify-start
+                  w-full overflow-hidden
+                "
+                style={{
+                  // 確保每張卡片有最佳寬度
+                  '--card-min-width': isMobile ? '100%' : '280px',
+                  '--card-max-width': isMobile ? '100%' : '400px'
+                } as React.CSSProperties}
+              >
                 {data.map((record, index) => {
                   const recordKey = getRowKey(record, index, rowKey);
                   const isSelected = (selectedRows as any)?.includes(recordKey);
                   
-                  return renderCard ? renderCard(record, index) : (
+                  // 如果有自定義渲染函數，使用自定義渲染但加上響應式包裝
+                  if (renderCard) {
+                    return (
+                      <div
+                        key={String(recordKey)}
+                        className="
+                          flex-shrink-0
+                          w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.75rem)] xl:w-[calc(25%-0.75rem)]
+                          min-w-0 max-w-full overflow-hidden
+                        "
+                        style={{ containIntrinsicSize: '100%' }}
+                      >
+                        <div className="w-full h-full overflow-hidden">
+                          {renderCard(record, index)}
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  // 統一的專業響應式卡片渲染
+                  return (
                     <Card
                       key={String(recordKey)}
                       className={`
@@ -1233,8 +1332,10 @@ export const StandardDataListPage = <T,>({
                         ${onRowClick ? 'cursor-pointer' : ''}
                         transition-all duration-200 relative border-0 shadow-sm
                         bg-gradient-to-br from-white to-gray-50/50
-                        w-full min-w-0 max-w-full min-h-[120px]
-                        ${isMobile ? 'mx-auto' : ''}
+                        flex-shrink-0
+                        w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.75rem)] xl:w-[calc(25%-0.75rem)]
+                        min-w-0 max-w-full min-h-[160px]
+                        overflow-hidden
                       `}
                       onClick={() => onRowClick?.(record, index)}
                     >
@@ -1244,157 +1345,172 @@ export const StandardDataListPage = <T,>({
                           <Checkbox
                             checked={isSelected}
                             onCheckedChange={(checked) => handleRowSelection(recordKey, !!checked)}
-                            className="bg-white shadow-sm border-2"
+                            className="bg-white shadow-sm border-black"
                           />
                         </div>
                       )}
                       
-                      {/* 卡片標題區域 */}
-                      <CardHeader className="pb-2 pt-3 px-4 w-full">
-                        <div className="flex items-start justify-between w-full">
-                          <div className="flex-1 min-w-0 max-w-full pr-2">
-                            <CardTitle className="text-base font-semibold text-gray-900 leading-tight truncate w-full">
-                              {columns[0]?.render 
-                                ? columns[0].render((record as any)[columns[0].key], record, index)
-                                : String((record as any)[columns[0]?.key] || '')
-                              }
-                            </CardTitle>
-                            {/* 副標題（第二個欄位） */}
-                            {columns[1] && (
-                              <p className="text-sm text-gray-600 mt-1 truncate w-full">
-                                {columns[1].render 
-                                  ? columns[1].render((record as any)[columns[1].key], record, index)
-                                  : String((record as any)[columns[1].key] || '')
-                                }
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </CardHeader>
-                      
-                      {/* 卡片內容區域 */}
-                      <CardContent className="pt-0 pb-3 px-4 w-full">
-                        {/* 主要資訊區域 */}
-                        <div className="space-y-3 w-full">
-                          {/* 顯示優先級較高的欄位 */}
-                          {columns
-                            .slice(2)
-                            .filter(column => !column.hideOnMobile)
-                            .sort((a, b) => (b.priority || 0) - (a.priority || 0))
-                            .slice(0, isMobile ? 4 : 5)
-                            .map((column) => (
-                            <div key={column.key} className="flex items-center justify-between gap-3 w-full">
-                              <span className="text-sm text-gray-600 font-medium flex-shrink-0 truncate">
-                                {column.title}:
-                              </span>
-                              <div className="text-sm font-semibold text-gray-900 text-right flex-shrink-0 min-w-0 max-w-[65%] truncate">
-                                {column.mobileRender 
-                                  ? column.mobileRender((record as any)[column.key], record, index)
-                                  : column.render 
-                                    ? column.render((record as any)[column.key], record, index)
-                                    : String((record as any)[column.key] || '')
-                                }
+                      {/* 卡片內容 - 完全重新設計的佈局 */}
+                      <CardContent className="p-3 w-full h-full overflow-hidden">
+                        <div className="flex flex-col h-full justify-between gap-3">
+                          {/* 頂部：主要資訊 */}
+                          <div className="space-y-2">
+                            {/* 標題 */}
+                            <div className="flex items-start gap-3">
+                              <div className="flex-1 min-w-0">
+                                <h3 
+                                  className="font-semibold text-sm text-gray-900 leading-tight overflow-hidden"
+                                  style={{
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: 'vertical',
+                                    maxHeight: '2.5rem'
+                                  }}
+                                >
+                                  {columns[0]?.render 
+                                    ? columns[0].render((record as any)[columns[0].key], record, index)
+                                    : String((record as any)[columns[0]?.key] || '')
+                                  }
+                                </h3>
+                                {columns[1] && (
+                                  <p 
+                                    className="text-xs text-gray-600 mt-1 overflow-hidden"
+                                    style={{
+                                      display: '-webkit-box',
+                                      WebkitLineClamp: 1,
+                                      WebkitBoxOrient: 'vertical',
+                                      maxHeight: '1.2rem'
+                                    }}
+                                  >
+                                    {columns[1].render 
+                                      ? columns[1].render((record as any)[columns[1].key], record, index)
+                                      : String((record as any)[columns[1].key] || '')
+                                    }
+                                  </p>
+                                )}
                               </div>
+                              {selectable && <div className="w-6"></div>}
                             </div>
-                          ))}
-                        </div>
-                        
-                        {/* 盤點模式輸入 */}
-                        {stocktakeMode && (
-                          <div className="mt-4 pt-4 border-t border-gray-200" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center justify-between">
-                              <label className="text-sm font-medium text-gray-700">盤點數量:</label>
-                              <Input
-                                type="number"
-                                min="0"
-                                placeholder="0"
-                                value={stocktakeUpdates[String(recordKey)] ?? ''}
-                                onChange={(e) => handleStocktakeInputChange(String(recordKey), Number(e.target.value) || 0)}
-                                className="w-20 h-8 text-center border-orange-200 focus:border-orange-400"
-                              />
+                            
+                            {/* 關鍵資訊 - 緊湊的標籤式佈局 */}
+                            <div className="flex flex-wrap gap-1">
+                              {columns
+                                .slice(2)
+                                .filter(column => !column.hideOnMobile)
+                                .sort((a, b) => (b.priority || 0) - (a.priority || 0))
+                                .slice(0, 3)
+                                .map((column) => {
+                                  const value = (record as any)[column.key];
+                                  const renderedValue = column.mobileRender 
+                                    ? column.mobileRender(value, record, index)
+                                    : column.render 
+                                    ? column.render(value, record, index) 
+                                    : String(value || '-');
+                                  
+                                  return (
+                                    <div 
+                                      key={column.key}
+                                      className="inline-flex items-center gap-1 bg-gray-50 px-2 py-1 rounded text-xs min-w-0"
+                                    >
+                                      <span className="text-gray-500 truncate">{column.title}:</span>
+                                      <span className="font-medium text-gray-900 truncate max-w-20">
+                                        {renderedValue}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
                             </div>
                           </div>
-                        )}
-                        
-                        {/* 操作按鈕區域 */}
-                        {actions && actions.length > 0 && (
-                          <div className="mt-4 pt-3 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center justify-between">
-                              {/* 左側：快捷操作（手機端顯示圖示，桌面端顯示文字） */}
-                              <div className="flex items-center gap-2">
-                                {actions.slice(0, isMobile ? 3 : 4).map((action) => {
+                          
+                          {/* 底部：操作區域 */}
+                          <div className="space-y-2 mt-auto">
+                            {/* 盤點模式 */}
+                            {stocktakeMode && (
+                              <div className="flex items-center justify-between py-2 border-t border-gray-200" onClick={(e) => e.stopPropagation()}>
+                                <span className="text-xs font-medium text-gray-700">盤點:</span>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  placeholder="0"
+                                  value={stocktakeUpdates[String(recordKey)] ?? ''}
+                                  onChange={(e) => handleStocktakeInputChange(String(recordKey), Number(e.target.value) || 0)}
+                                  className="w-16 h-6 text-xs text-center border-orange-200 focus:border-orange-400"
+                                />
+                              </div>
+                            )}
+                            
+                            {/* 操作按鈕 */}
+                            {actions && actions.length > 0 && (
+                              <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                                {actions.slice(0, 2).map((action) => {
                                   if (action.visible && !action.visible(record)) return null;
                                   const isDisabled = action.disabled?.(record);
                                   
                                   return (
                                     <Button
                                       key={action.key}
-                                      variant={action.variant === 'destructive' ? "destructive" : "ghost"}
+                                      variant={action.variant === 'destructive' ? "destructive" : "outline"}
                                       disabled={isDisabled}
                                       size="sm"
                                       onClick={() => {
-                                        if (action.confirmMessage) {
-                                          if (!confirm(action.confirmMessage)) return;
-                                        }
+                                        if (action.confirmMessage && !confirm(action.confirmMessage)) return;
                                         action.onClick(record, index);
                                       }}
                                       className={`
-                                        h-9 px-3 text-sm
+                                        flex-1 h-6 px-2 text-xs
                                         ${action.variant === 'destructive' 
-                                          ? 'text-red-600 hover:text-red-700 hover:bg-red-50' 
-                                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                          ? 'border-red-300 text-red-600 hover:bg-red-50' 
+                                          : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                                         }
                                         ${action.className || ''}
                                       `}
                                       title={action.title}
                                     >
-                                      {action.icon}
-                                      <span className="ml-2 inline">{isMobile ? '' : action.title}</span>
+                                      {action.icon && <span className="mr-1 text-xs">{action.icon}</span>}
+                                      <span className="truncate">{action.title}</span>
                                     </Button>
                                   );
                                 })}
+                                
+                                {/* 更多操作 */}
+                                {actions.length > 2 && (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="outline" size="sm" className="h-6 w-6 p-0 border-gray-300">
+                                        <MoreHorizontal className="h-3 w-3" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-40">
+                                      {actions.slice(2).map((action) => {
+                                        if (action.visible && !action.visible(record)) return null;
+                                        const isDisabled = action.disabled?.(record);
+                                        
+                                        return (
+                                          <DropdownMenuItem
+                                            key={action.key}
+                                            onClick={() => {
+                                              if (action.confirmMessage && !confirm(action.confirmMessage)) return;
+                                              action.onClick(record, index);
+                                            }}
+                                            disabled={isDisabled}
+                                            className={`${action.className || ''} text-xs`}
+                                          >
+                                            {action.icon && (
+                                              <span className="mr-2 h-3 w-3 flex items-center justify-center">
+                                                {action.icon}
+                                              </span>
+                                            )}
+                                            {action.title}
+                                          </DropdownMenuItem>
+                                        );
+                                      })}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )}
                               </div>
-                              
-                              {/* 右側：更多操作 */}
-                              {actions.length > (isMobile ? 2 : 3) && (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-400 hover:text-gray-600">
-                                      <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="w-44">
-                                    {actions.slice(isMobile ? 2 : 3).map((action) => {
-                                      if (action.visible && !action.visible(record)) return null;
-                                      const isDisabled = action.disabled?.(record);
-                                      
-                                      return (
-                                        <DropdownMenuItem
-                                          key={action.key}
-                                          onClick={() => {
-                                            if (action.confirmMessage) {
-                                              if (!confirm(action.confirmMessage)) return;
-                                            }
-                                            action.onClick(record, index);
-                                          }}
-                                          disabled={isDisabled}
-                                          className={`${action.className || ''} text-sm`}
-                                        >
-                                          {action.icon && (
-                                            <span className="mr-2 h-4 w-4 flex items-center justify-center">
-                                              {action.icon}
-                                            </span>
-                                          )}
-                                          {action.title}
-                                        </DropdownMenuItem>
-                                      );
-                                    })}
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              )}
-                            </div>
+                            )}
                           </div>
-                        )}
+                        </div>
                       </CardContent>
                     </Card>
                   );
