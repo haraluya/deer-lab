@@ -23,7 +23,9 @@
       "Read(/D:\\APP\\deer-lab\\src\\utils/**)",
       "Read(/D:\\APP\\deer-lab/**)",
       "WebSearch",
-      "Read(//e/PrtSrc/Screenshots/2025-09/**)"
+      "Read(//e/PrtSrc/Screenshots/2025-09/**)",
+      "Bash(gsutil lifecycle:*)",
+      "Bash(gcloud storage buckets update:*)"
     ],
     "deny": [],
     "ask": []

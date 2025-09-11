@@ -346,7 +346,7 @@ const Toolbar = <T,>({
 
   return (
     <div className={`w-full max-w-full overflow-hidden ${
-      isMobile ? 'px-1 mx-auto space-y-2 mb-3' : 'space-y-4 mb-6'
+      isMobile ? 'px-3 mx-auto space-y-3 mb-4' : 'space-y-4 mb-6'
     }`}>
       {/* 快速篩選標籤 */}
       {showQuickFilters && quickFilters && quickFilters.length > 0 && (
@@ -397,7 +397,7 @@ const Toolbar = <T,>({
       )}
       
       {/* 主工具列 */}
-      <div className={`flex flex-col sm:flex-row gap-4 w-full max-w-full overflow-hidden ${isMobile ? 'items-center' : ''}`}>
+      <div className={`flex flex-col sm:flex-row gap-4 w-full max-w-full overflow-hidden ${isMobile ? 'items-center justify-center' : ''}`}>
         {/* 左側：搜尋 */}
         {searchable && (
           <div className={`relative min-w-0 max-w-full ${isMobile ? 'w-full' : 'flex-1'}`}>
@@ -1067,7 +1067,7 @@ export const StandardDataListPage = <T,>({
       {renderActiveFilterTags()}
       
       {/* 資料展示區域 */}
-      <Card className={`${cardClassName} ${isMobile ? 'mx-2 max-w-full overflow-hidden w-full' : 'mx-3 md:mx-0'}`}>
+      <Card className={`${cardClassName} ${isMobile ? 'mx-auto max-w-full overflow-hidden w-full' : 'mx-3 md:mx-0'}`}>
         <CardContent className="p-0 w-full max-w-full overflow-hidden">
           
           {(currentViewMode === 'table' && !isMobile) && (
@@ -1231,7 +1231,7 @@ export const StandardDataListPage = <T,>({
                 className={`
                   flex flex-wrap w-full overflow-hidden
                   ${isMobile 
-                    ? 'gap-1 p-1 justify-center mx-auto max-w-full' // 手機版：極緊湊間距，最大信息密度
+                    ? 'gap-2 p-3 justify-center mx-auto max-w-full' // 手機版：專業間距，完美居中
                     : 'gap-3 md:gap-4 p-4 justify-center sm:justify-start'
                   }
                 `}

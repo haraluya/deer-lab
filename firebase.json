@@ -23,6 +23,8 @@
       "firebase-debug.log",
       "firebase-debug.*.log",
       ".next/cache",
+      ".next/trace",
+      ".next/static/chunks/**/*.map",
       "src",
       "*.ts",
       "*.map",
@@ -30,7 +32,10 @@
       "tests",
       "__tests__",
       "coverage",
-      "docs"
+      "docs",
+      "*.md",
+      ".env*",
+      "package-lock.json"
     ]
   },
   "storage": {

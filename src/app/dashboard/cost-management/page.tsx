@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import { DollarSign, TrendingUp, TrendingDown, Package, Droplets, Factory, Calculator, Calendar, ChevronLeft, ChevronRight } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { StandardStatsCard, StandardStats } from '@/components/StandardStatsCard'
 import { BUSINESS_CONFIG } from '@/config/business'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
@@ -59,6 +60,7 @@ function CostManagementPageContent() {
   // 分頁狀態
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(BUSINESS_CONFIG.ui.pagination.itemsPerPage)
+  
 
   const loadCostData = async () => {
     setIsLoading(true)
@@ -173,8 +175,40 @@ function CostManagementPageContent() {
     setCurrentPage(page)
   }
 
+  // 統計資料 - 使用 StandardStats 格式
+  const stats: StandardStats[] = [
+    {
+      title: '總庫存價值',
+      value: formatCurrency(costSummary.totalInventoryCost),
+      subtitle: '物料 + 香精庫存',
+      icon: <DollarSign className="h-4 w-4" />,
+      color: 'green'
+    },
+    {
+      title: '物料成本',
+      value: formatCurrency(costSummary.totalMaterialCost),
+      subtitle: '當前物料庫存價值',
+      icon: <Package className="h-4 w-4" />,
+      color: 'blue'
+    },
+    {
+      title: '香精成本',
+      value: formatCurrency(costSummary.totalFragranceCost),
+      subtitle: '當前香精庫存價值',
+      icon: <Droplets className="h-4 w-4" />,
+      color: 'purple'
+    },
+    {
+      title: '工單成本',
+      value: formatCurrency(costSummary.totalWorkOrderCost),
+      subtitle: '平均單工單成本',
+      icon: <Factory className="h-4 w-4" />,
+      color: 'orange'
+    }
+  ];
+
   return (
-    <div className="container mx-auto py-10 cost-management-page">
+    <div className="container mx-auto py-10 px-3 max-w-full cost-management-page">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
@@ -184,127 +218,8 @@ function CostManagementPageContent() {
         </div>
       </div>
 
-      {/* 成本摘要卡片 - 手機版面優化 */}
-      <div className="hidden lg:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card className="bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-emerald-700">總庫存價值</CardTitle>
-            <DollarSign className="h-4 w-4 text-emerald-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-900">
-              {formatCurrency(costSummary.totalInventoryCost)}
-            </div>
-            <p className="text-xs text-emerald-600 mt-1">
-              物料 + 香精庫存
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-blue-700">物料成本</CardTitle>
-            <Package className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-900">
-              {formatCurrency(costSummary.totalMaterialCost)}
-            </div>
-            <p className="text-xs text-blue-600 mt-1">
-              當前物料庫存價值
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-pink-50 to-rose-50 border-pink-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-pink-700">香精成本</CardTitle>
-            <Droplets className="h-4 w-4 text-pink-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-pink-900">
-              {formatCurrency(costSummary.totalFragranceCost)}
-            </div>
-            <p className="text-xs text-pink-600 mt-1">
-              當前香精庫存價值
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-orange-700">工單成本</CardTitle>
-            <Factory className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-900">
-              {formatCurrency(costSummary.totalWorkOrderCost)}
-            </div>
-            <p className="text-xs text-orange-600 mt-1">
-              平均 {formatCurrency(costSummary.averageWorkOrderCost)}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* 手機版面摘要卡片 */}
-      <div className="lg:hidden grid grid-cols-2 gap-4 mb-6">
-        <Card className="bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-emerald-700 flex items-center gap-1">
-              <DollarSign className="h-3 w-3" />
-              總庫存價值
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-lg font-bold text-emerald-900">
-              {formatCurrency(costSummary.totalInventoryCost)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-blue-700 flex items-center gap-1">
-              <Package className="h-3 w-3" />
-              物料成本
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-lg font-bold text-blue-900">
-              {formatCurrency(costSummary.totalMaterialCost)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-pink-50 to-rose-50 border-pink-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-pink-700 flex items-center gap-1">
-              <Droplets className="h-3 w-3" />
-              香精成本
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-lg font-bold text-pink-900">
-              {formatCurrency(costSummary.totalFragranceCost)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-orange-700 flex items-center gap-1">
-              <Factory className="h-3 w-3" />
-              工單成本
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-lg font-bold text-orange-900">
-              {formatCurrency(costSummary.totalWorkOrderCost)}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* 統一統計卡片 - 使用 StandardStatsCard 確保手機版完美居中對齊 */}
+      <StandardStatsCard stats={stats} />
 
       {/* 詳細成本分析 */}
       <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">

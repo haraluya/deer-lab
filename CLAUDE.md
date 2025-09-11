@@ -363,6 +363,85 @@ try {
 7. **每次修改後必須確保線上部署同步**：`npm run build` → 部署檢查清單
 8. **統一架構測試重點**：響應式佈局、搜尋篩選、統計數據、操作按鈕
 
+## 手動備份系統
+
+**⚠️ 重要：已完全關閉 Firebase Functions 自動備份以節省儲存成本**
+
+### 📦 備份腳本使用方法
+
+#### 🔧 建立備份 - `backup-functions.bat`
+**執行方式**：
+```cmd
+# 在專案根目錄執行
+D:\APP\deer-lab\backup-functions.bat
+```
+
+**腳本執行內容**：
+1. **建立時間戳記備份資料夾** - 格式: `deer-lab-backup_YYYY-MM-DD_HH-NN-SS`
+2. **備份程式碼** - 使用 `robocopy` 複製所有原始碼（排除 node_modules, .git, .next）
+3. **備份 Firebase 設定** - 複製 `.firebaserc` 和 `firebase.json`
+4. **自動建構專案** - 執行 `npm run build` 產生 `.next` 建構產物
+5. **備份建構產物** - 複製 `.next` 和 `functions` 目錄（排除 node_modules）
+6. **建立備份資訊檔** - 包含備份時間、Git 提交資訊、恢復說明
+
+**備份位置**：`D:\APP\deer-lab-backups\[備份資料夾名稱]\`
+**備份內容**：
+```
+deer-lab-backup_2025-09-11_22-30-00\
+├── source\           # 完整原始碼
+├── build\            # 建構產物 (.next, functions)
+├── firebase_config\  # Firebase 設定檔
+└── 備份說明.txt       # 詳細備份資訊與恢復指南
+```
+
+#### 🔄 恢復備份 - `restore-from-backup.bat`
+**執行方式**：
+```cmd
+# 指定備份資料夾路径恢復
+D:\APP\deer-lab\restore-from-backup.bat "D:\APP\deer-lab-backups\deer-lab-backup_2025-09-11_22-30-00"
+```
+
+**腳本執行內容**：
+1. **驗證備份資料夾** - 檢查指定路径是否存在備份檔案
+2. **確認恢復操作** - 提示用戶確認是否覆蓋當前檔案
+3. **恢復程式碼** - 使用 `robocopy` 還原所有原始碼到專案目錄
+4. **恢復設定檔** - 還原 Firebase 配置檔案
+5. **自動安裝依賴** - 在主專案和 functions 目錄執行 `npm install`
+6. **恢復建構產物** - 還原 `.next` 檔案或重新建構（如果備份中沒有）
+7. **同步到 functions** - 確保 `functions/.next` 與主目錄同步
+
+**恢復後動作**：
+```cmd
+# 恢復完成後可直接部署
+firebase deploy --only functions:nextServer
+```
+
+### 💡 建議使用時機
+
+#### 🎯 建立備份時機
+1. **重大功能完成前** - 確保穩定版本
+2. **準備部署新功能前** - 萬一出問題可快速回滾  
+3. **週期性備份** - 每週或每兩週備份一次
+4. **重要里程碑** - 專案重要階段備份
+
+#### 🚀 快速備份流程
+```cmd
+# 1. 提交到 Git（主要版本控制）
+git add .
+git commit -m "功能完成前備份"
+
+# 2. 建立本地備份（緊急恢復用）
+backup-functions.bat
+
+# 3. 測試部署（如果需要）
+firebase deploy --only functions:nextServer
+```
+
+### 💰 成本效益
+- **之前**：每次部署產生 300MB+ 備份，累積可達數十 GB
+- **現在**：$0 USD 自動備份費用，完全本地控制
+- **安全保障**：GitHub 版本控制 + 本地完整備份雙重保護
+
 ## 重要提醒
 
 - **修改後先本地建構測試，確認用戶同意再推送 GitHub**
