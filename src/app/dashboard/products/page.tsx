@@ -301,6 +301,7 @@ function ProductsPageContent() {
 
   // 配置快速篩選
   const quickFilters: QuickFilter[] = [
+    // 狀態篩選
     {
       key: 'status',
       label: '啟用',
@@ -321,7 +322,18 @@ function ProductsPageContent() {
       value: '棄用',
       color: 'red',
       count: products.filter(p => p.status === '棄用').length
-    }
+    },
+    // 系列篩選
+    ...Array.from(new Set(products.map(p => p.seriesName)))
+      .filter(seriesName => seriesName && seriesName !== '未知系列')
+      .sort()
+      .map(seriesName => ({
+        key: 'seriesName',
+        label: seriesName,
+        value: seriesName,
+        color: 'purple' as const,
+        count: products.filter(p => p.seriesName === seriesName).length
+      }))
   ];
 
   // 配置統計資料

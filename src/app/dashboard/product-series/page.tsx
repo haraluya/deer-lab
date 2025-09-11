@@ -1,4 +1,3 @@
-// src/app/dashboard/product-series/page.tsx
 'use client';
 
 import { useEffect, useState, useCallback, Suspense } from 'react';
@@ -6,16 +5,16 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { collection, getDocs, DocumentReference } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
+import { useDataSearch } from '@/hooks/useDataSearch';
 
 import { SeriesDialog, SeriesData } from './SeriesDialog';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
-import { MoreHorizontal, Plus, Eye, Edit, Trash2, Tag, Calendar, Package, ArrowLeft } from 'lucide-react';
+import { MoreHorizontal, Plus, Eye, Edit, Trash2, Tag, Calendar, Package, ArrowLeft, Box, Hash, Layers, Boxes } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from '@/components/ui/badge';
+import { StandardDataListPage, StandardColumn, StandardAction, QuickFilter, StandardStats } from '@/components/StandardDataListPage';
 
 interface SeriesWithMaterials extends SeriesData {
   materialNames: string[];
@@ -30,6 +29,32 @@ function ProductSeriesPageContent() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [selectedSeries, setSelectedSeries] = useState<SeriesData | null>(null);
+
+  // 使用統一的搜尋過濾 Hook
+  const searchConfig = {
+    searchFields: [
+      { key: 'name' as keyof SeriesWithMaterials },
+      { key: 'code' as keyof SeriesWithMaterials },
+      { key: 'productType' as keyof SeriesWithMaterials }
+    ],
+    filterConfigs: [
+      {
+        key: 'productType' as keyof SeriesWithMaterials,
+        type: 'set' as const
+      }
+    ]
+  };
+
+  const {
+    searchTerm,
+    setSearchTerm,
+    activeFilters,
+    setFilter,
+    clearFilter,
+    filteredData: filteredSeries,
+    totalCount,
+    filteredCount
+  } = useDataSearch(series, searchConfig);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -68,7 +93,10 @@ function ProductSeriesPageContent() {
           updatedAt: data.updatedAt,
         } as SeriesWithMaterials;
       }));
-      setSeries(seriesList);
+      
+      // 按名稱排序
+      const sortedSeriesList = seriesList.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      setSeries(sortedSeriesList);
     } catch (error) {
       console.error("讀取產品系列資料失敗:", error);
       toast.error("讀取產品系列資料失敗。");
@@ -93,12 +121,167 @@ function ProductSeriesPageContent() {
     }
   }, [searchParams, series, router]);
 
-  const handleAdd = () => { setSelectedSeries(null); setIsDialogOpen(true); };
-  const handleEdit = (data: SeriesData) => { setSelectedSeries(data); setIsDialogOpen(true); };
-  const handleDelete = (data: SeriesData) => { setSelectedSeries(data); setIsConfirmOpen(true); };
-  const handleViewDetail = (data: SeriesData) => {
-    // 直接導航到產品系列詳情頁面
-    router.push(`/dashboard/product-series/${data.id}`);
+  // 配置欄位
+  const columns: StandardColumn<SeriesWithMaterials>[] = [
+    {
+      key: 'name',
+      title: '系列資訊',
+      sortable: true,
+      searchable: true,
+      priority: 5,
+      render: (value, record) => (
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+            <Tag className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <div className="font-semibold text-foreground">{record.name}</div>
+            <div className="text-xs text-emerald-600 font-medium">{record.code}</div>
+          </div>
+        </div>
+      ),
+      mobileRender: (value, record) => (
+        <div>
+          <div className="font-medium text-gray-900">{record.name}</div>
+          <div className="text-xs text-emerald-600 font-medium">{record.code}</div>
+        </div>
+      )
+    },
+    {
+      key: 'productType',
+      title: '產品類型',
+      sortable: true,
+      filterable: true,
+      priority: 4,
+      render: (value) => (
+        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+          {value}
+        </Badge>
+      )
+    },
+    {
+      key: 'productCount',
+      title: '產品數量',
+      sortable: true,
+      priority: 3,
+      align: 'center',
+      render: (value) => (
+        <div className="flex items-center justify-center gap-1">
+          <Package className="h-4 w-4 text-emerald-600" />
+          <span className="font-medium text-foreground">{value}</span>
+        </div>
+      )
+    },
+    {
+      key: 'materialNames',
+      title: '常用物料',
+      priority: 2,
+      hideOnMobile: true,
+      render: (value: string[]) => (
+        <div className="flex flex-wrap gap-1 max-w-xs">
+          {value.slice(0, 3).map((material, index) => (
+            <Badge 
+              key={index} 
+              variant="secondary" 
+              className="text-xs bg-gray-100 text-gray-700"
+            >
+              {material}
+            </Badge>
+          ))}
+          {value.length > 3 && (
+            <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">
+              +{value.length - 3}
+            </Badge>
+          )}
+        </div>
+      ),
+      mobileRender: (value: string[]) => (
+        <span className="text-sm text-gray-600">
+          {value.length > 0 ? `${value.length} 項物料` : '無常用物料'}
+        </span>
+      )
+    }
+  ];
+
+  // 配置操作
+  const actions: StandardAction<SeriesWithMaterials>[] = [
+    {
+      key: 'view',
+      title: '查看詳細',
+      icon: <Eye className="h-4 w-4" />,
+      onClick: (record) => router.push(`/dashboard/product-series/${record.id}`)
+    },
+    {
+      key: 'edit',
+      title: '編輯系列',
+      icon: <Edit className="h-4 w-4" />,
+      onClick: (record) => {
+        setSelectedSeries(record);
+        setIsDialogOpen(true);
+      }
+    },
+    {
+      key: 'delete',
+      title: '刪除系列',
+      icon: <Trash2 className="h-4 w-4" />,
+      variant: 'destructive' as const,
+      confirmMessage: '確定要刪除此系列嗎？此操作無法復原。',
+      onClick: (record) => {
+        setSelectedSeries(record);
+        setIsConfirmOpen(true);
+      }
+    }
+  ];
+
+  // 配置快速篩選
+  const quickFilters: QuickFilter[] = [
+    ...Array.from(new Set(series.map(s => s.productType)))
+      .sort()
+      .map(productType => ({
+        key: 'productType',
+        label: productType,
+        value: productType,
+        color: 'green' as const,
+        count: series.filter(s => s.productType === productType).length
+      }))
+  ];
+
+  // 配置統計資料
+  const stats: StandardStats[] = [
+    {
+      title: '總系列數',
+      value: series.length,
+      subtitle: '所有產品系列',
+      icon: <Tag className="h-4 w-4" />,
+      color: 'green'
+    },
+    {
+      title: '產品類型',
+      value: new Set(series.map(s => s.productType)).size,
+      subtitle: '不同類型',
+      icon: <Layers className="h-4 w-4" />,
+      color: 'blue'
+    },
+    {
+      title: '總產品數',
+      value: series.reduce((sum, s) => sum + s.productCount, 0),
+      subtitle: '所有系列產品',
+      icon: <Package className="h-4 w-4" />,
+      color: 'purple'
+    },
+    {
+      title: '平均產品數',
+      value: series.length > 0 ? Math.round(series.reduce((sum, s) => sum + s.productCount, 0) / series.length) : 0,
+      subtitle: '每個系列平均',
+      icon: <Boxes className="h-4 w-4" />,
+      color: 'orange'
+    }
+  ];
+
+  // 操作處理函式
+  const handleAdd = () => {
+    setSelectedSeries(null);
+    setIsDialogOpen(true);
   };
 
   const handleConfirmDelete = async () => {
@@ -131,7 +314,7 @@ function ProductSeriesPageContent() {
           variant="outline" 
           size="icon" 
           onClick={() => router.push('/dashboard/products')}
-          className="hover:bg-green-100 hover:border-green-300"
+          className="hover:bg-emerald-100 hover:border-emerald-300"
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -143,269 +326,145 @@ function ProductSeriesPageContent() {
         </div>
       </div>
 
-      {/* 手機版功能按鈕區域 */}
-      <div className="lg:hidden mb-6">
-        <div className="flex justify-end">
-          <Button 
-            onClick={handleAdd}
-            className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            新增系列
-          </Button>
-        </div>
-      </div>
-
-      {/* 桌面版功能按鈕區域 */}
-      <div className="hidden lg:block mb-6">
-        <div className="flex flex-wrap items-center gap-2 justify-end">
-          <Button 
-            onClick={handleAdd}
-            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            新增系列
-          </Button>
-        </div>
-      </div>
-
-      {/* 手機版表格容器 */}
-      <div className="lg:hidden">
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden mb-6">
-          <div className="px-4 py-3 bg-gradient-to-r from-gray-50 to-green-50 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Tag className="h-4 w-4 text-green-600" />
-                <h2 className="text-base font-semibold text-gray-800">產品系列清單</h2>
-              </div>
-              <div className="text-xs text-gray-600">
-                共 {series.length} 個
-              </div>
-            </div>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <div className="min-w-full">
-              {isLoading ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <div className="relative">
-                    <div className="w-10 h-10 border-4 border-green-200 rounded-full animate-spin"></div>
-                    <div className="absolute top-0 left-0 w-10 h-10 border-4 border-transparent border-t-green-600 rounded-full animate-spin"></div>
-                  </div>
-                  <span className="mt-3 text-sm text-gray-600 font-medium">載入中...</span>
-                </div>
-              ) : series.length > 0 ? (
-                <div className="divide-y divide-gray-200">
-                  {series.map((seriesItem) => (
-                    <div 
-                      key={seriesItem.id} 
-                      className="p-4 hover:bg-green-100/60 transition-all duration-200 cursor-pointer border border-transparent hover:border-green-300 hover:shadow-md rounded-lg"
-                      onClick={() => handleViewDetail(seriesItem)}
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
-                            <Tag className="h-4 w-4 text-white" />
-                          </div>
-                          <div>
-                            <div className="font-medium text-gray-900 text-sm">{seriesItem.name}</div>
-                          </div>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleViewDetail(seriesItem)}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              查看詳細
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(seriesItem)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              編輯系列
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleDelete(seriesItem)} className="text-red-600">
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              刪除系列
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <div className="flex items-center gap-1 mb-1">
-                            <span className="text-gray-500">類型</span>
-                          </div>
-                          <span className="text-sm text-gray-700">{seriesItem.productType}</span>
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-1 mb-1">
-                            <span className="text-gray-500">代號</span>
-                          </div>
-                          <span className="text-sm text-gray-700">{seriesItem.code}</span>
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-1 mb-1">
-                            <span className="text-gray-500">產品數量</span>
-                          </div>
-                          <span className="text-sm text-gray-700">{seriesItem.productCount}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-3">
-                    <Tag className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-base font-medium text-foreground mb-1">沒有產品系列資料</h3>
-                  <p className="text-sm text-muted-foreground mb-4 text-center">開始建立第一個產品系列來管理常用物料</p>
-                  <Button 
-                    onClick={handleAdd}
-                    variant="outline"
-                    size="sm"
-                    className="border-green-200 text-green-600 hover:bg-green-50"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    新增系列
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 桌面版表格容器 */}
-      <div className="hidden lg:block">
-        <div className="bg-card rounded-xl shadow-lg border border-border overflow-hidden">
-        <div className="px-6 py-4 bg-gradient-to-r from-background to-green-50 border-b border-border">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Tag className="h-5 w-5 text-green-600" />
-              <h2 className="text-lg font-semibold text-foreground">產品系列清單</h2>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              共 {series.length} 個系列
-            </div>
-          </div>
-        </div>
+      <StandardDataListPage
+        data={filteredSeries}
+        loading={isLoading}
+        columns={columns}
+        actions={actions}
+        onRowClick={(record) => router.push(`/dashboard/product-series/${record.id}`)}
         
-        <div className="table-responsive">
-          <Table className="table-enhanced">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-left">產品資訊</TableHead>
-                <TableHead className="text-left">類型</TableHead>
-                <TableHead className="text-left">代號</TableHead>
-                <TableHead className="text-left">產品數量</TableHead>
-                <TableHead className="text-right">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-16">
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="relative">
-                        <div className="w-12 h-12 border-4 border-green-200 rounded-full animate-spin"></div>
-                        <div className="absolute top-0 left-0 w-12 h-12 border-4 border-transparent border-t-green-600 rounded-full animate-spin"></div>
-                      </div>
-                      <span className="mt-4 text-muted-foreground font-medium">載入系列資料中...</span>
+        // 搜尋與過濾
+        searchable={true}
+        searchPlaceholder="搜尋系列名稱、代號或類型..."
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        quickFilters={quickFilters}
+        activeFilters={activeFilters}
+        onFilterChange={(key, value) => {
+          if (value === null) {
+            clearFilter(key);
+          } else {
+            setFilter(key, value);
+          }
+        }}
+        onClearFilters={() => {
+          Object.keys(activeFilters).forEach(key => clearFilter(key));
+        }}
+        
+        // 統計資訊
+        stats={stats}
+        showStats={true}
+        
+        // 工具列功能
+        showToolbar={true}
+        
+        // 新增功能
+        showAddButton={true}
+        addButtonText="新增系列"
+        onAdd={handleAdd}
+        
+        // 自定義卡片渲染以提高資訊密度
+        renderCard={(record, index) => {
+          const isSelected = false; // 暫時不支援選擇
+          
+          return (
+            <div
+              className={`
+                bg-gradient-to-br from-white to-emerald-50/30 border border-emerald-100
+                rounded-lg p-3 hover:shadow-md transition-all duration-200 cursor-pointer
+                hover:border-emerald-300 hover:bg-emerald-50/50
+                min-h-[120px] flex flex-col justify-between
+              `}
+              onClick={() => router.push(`/dashboard/product-series/${record.id}`)}
+            >
+              {/* 頂部：主要資訊 */}
+              <div className="space-y-2">
+                {/* 標題行 */}
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Tag className="h-4 w-4 text-white" />
                     </div>
-                  </TableCell>
-                </TableRow>
-              ) : series.length > 0 ? (
-                series.map((seriesItem) => (
-                  <TableRow 
-                    key={seriesItem.id} 
-                    className="hover:bg-green-100/60 transition-all duration-200 cursor-pointer"
-                    onClick={() => handleViewDetail(seriesItem)}
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-gray-900 text-sm leading-tight truncate">
+                        {record.name}
+                      </h3>
+                      <p className="text-xs text-emerald-600 font-medium truncate">
+                        {record.code}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* 操作菜單 */}
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 hover:bg-emerald-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // 可以添加快速操作菜單
+                      }}
+                    >
+                      <MoreHorizontal className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* 關鍵信息標籤 */}
+                <div className="flex flex-wrap gap-1">
+                  <Badge 
+                    variant="outline" 
+                    className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs px-2 py-0.5"
                   >
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
-                          <Tag className="h-5 w-5 text-white" />
-                        </div>
-                        <div>
-                          <div className="font-semibold text-foreground">{seriesItem.name}</div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm font-medium text-foreground">{seriesItem.productType}</span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm font-medium text-foreground">{seriesItem.code}</span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm font-medium text-foreground">{seriesItem.productCount}</span>
-                    </TableCell>
-                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            className="h-8 w-8 p-0"
-                          >
-                            <span className="sr-only">開啟選單</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>操作</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleViewDetail(seriesItem)}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            查看詳細
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEdit(seriesItem)}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            編輯系列
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            onClick={() => handleDelete(seriesItem)}
-                            className="text-red-600 focus:text-red-600"
-                          >
-                            刪除系列
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-16">
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-                        <Tag className="h-8 w-8 text-muted-foreground" />
-                      </div>
-                      <h3 className="text-lg font-medium text-foreground mb-2">沒有產品系列資料</h3>
-                      <p className="text-muted-foreground mb-4">開始建立第一個產品系列來管理產品分類</p>
-                      <Button 
-                        onClick={handleAdd}
-                        variant="outline"
-                        className="border-green-200 text-green-600 hover:bg-green-50"
+                    {record.productType}
+                  </Badge>
+                  <div className="flex items-center gap-1 bg-gray-50 rounded px-2 py-0.5">
+                    <Package className="h-3 w-3 text-gray-500" />
+                    <span className="text-xs font-medium text-gray-700">
+                      {record.productCount} 產品
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 bg-orange-50 rounded px-2 py-0.5">
+                    <Box className="h-3 w-3 text-orange-500" />
+                    <span className="text-xs font-medium text-orange-700">
+                      {record.materialNames.length} 物料
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* 底部：常用物料預覽 */}
+              {record.materialNames.length > 0 && (
+                <div className="border-t border-emerald-100 pt-2 mt-2">
+                  <div className="flex flex-wrap gap-1">
+                    {record.materialNames.slice(0, 2).map((material, idx) => (
+                      <Badge 
+                        key={idx} 
+                        variant="secondary" 
+                        className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 max-w-20 truncate"
+                        title={material}
                       >
-                        <Plus className="mr-2 h-4 w-4" />
-                        新增系列
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
+                        {material}
+                      </Badge>
+                    ))}
+                    {record.materialNames.length > 2 && (
+                      <Badge 
+                        variant="secondary" 
+                        className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5"
+                      >
+                        +{record.materialNames.length - 2}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
               )}
-            </TableBody>
-            </Table>
-        </div>
-      </div>
-      </div>
+            </div>
+          );
+        }}
+        
+        className="space-y-6"
+      />
 
       <SeriesDialog
         isOpen={isDialogOpen}
@@ -426,7 +485,6 @@ function ProductSeriesPageContent() {
     </div>
   );
 }
-
 
 export default function ProductSeriesPage() {
   return (
