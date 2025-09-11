@@ -12,7 +12,7 @@ import { useGlobalCart } from '@/hooks/useGlobalCart';
 import { toast } from 'sonner';
 import { 
   MoreHorizontal, Eye, Edit, Trash2, ShoppingCart, Calendar, Building, User, Plus, 
-  Search, Package, Droplets, X, ChevronLeft, ChevronRight, Filter, Shield, RefreshCw, AlertCircle, CheckCircle, Clock
+  Search, Package, Droplets, X, ChevronLeft, ChevronRight, Filter, Shield, RefreshCw, AlertCircle, CheckCircle, Clock, DollarSign
 } from 'lucide-react';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -151,6 +151,23 @@ function PurchaseOrdersPageContent() {
     const received = purchaseOrders.filter(po => po.status === '已收貨').length
     const cancelled = purchaseOrders.filter(po => po.status === '已取消').length
 
+    // 計算本月已採購金額（根據採購單日期）
+    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+    const monthlyPurchaseAmount = purchaseOrders
+      .filter(po => {
+        // 已訂購或已收貨的訂單才算已採購
+        if (po.status !== '已訂購' && po.status !== '已收貨') return false;
+        
+        // 檢查採購單日期是否在本月
+        try {
+          const orderMonth = new Date(po.createdAt).toISOString().slice(0, 7);
+          return orderMonth === currentMonth;
+        } catch {
+          return false;
+        }
+      })
+      .reduce((sum, po) => sum + (po.totalAmount || 0), 0);
+
     return [
       {
         title: '預報單',
@@ -172,6 +189,13 @@ function PurchaseOrdersPageContent() {
         subtitle: '已完成',
         icon: <CheckCircle className="h-4 w-4" />,
         color: 'blue'
+      },
+      {
+        title: '本月已採購',
+        value: `$${Math.round(monthlyPurchaseAmount).toLocaleString()}`,
+        subtitle: '本月採購金額',
+        icon: <DollarSign className="h-4 w-4" />,
+        color: 'orange'
       }
     ];
   }, [purchaseOrders]);

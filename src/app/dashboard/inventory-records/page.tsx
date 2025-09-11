@@ -26,6 +26,7 @@ import {
   Eye,
   Shield
 } from "lucide-react"
+import { StandardStatsCard, StandardStats } from "@/components/StandardStatsCard"
 import { 
   getInventoryRecords, 
   InventoryRecord, 
@@ -173,91 +174,36 @@ function InventoryRecordsPageContent() {
       </div>
 
       {/* 統計卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-blue-700 flex items-center gap-2">
-              <ClipboardList className="h-4 w-4" />
-              總紀錄
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-900">{currentStats.total}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-green-700 flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              採購購入
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-900">{currentStats.purchase}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-orange-700 flex items-center gap-2">
-              <Minus className="h-4 w-4" />
-              工單領料
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-900">{currentStats.workorder}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-blue-700 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              庫存盤點
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-900">{currentStats.inventoryCheck}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-red-700 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              直接修改
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-900">{currentStats.manualAdjustment}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-purple-700 flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              物料
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-900">{currentStats.materials}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-pink-50 to-pink-100 border-pink-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-pink-700 flex items-center gap-2">
-              <FlaskConical className="h-4 w-4" />
-              香精
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-pink-900">{currentStats.fragrances}</div>
-          </CardContent>
-        </Card>
-      </div>
+      <StandardStatsCard stats={[
+        {
+          title: "採購購入",
+          value: currentStats.purchase,
+          subtitle: "採購入庫紀錄",
+          icon: <Plus />,
+          color: "green"
+        },
+        {
+          title: "工單領料",
+          value: currentStats.workorder,
+          subtitle: "工單出庫紀錄",
+          icon: <Minus />,
+          color: "orange"
+        },
+        {
+          title: "庫存盤點",
+          value: currentStats.inventoryCheck,
+          subtitle: "盤點調整紀錄",
+          icon: <TrendingUp />,
+          color: "blue"
+        },
+        {
+          title: "直接修改",
+          value: currentStats.manualAdjustment,
+          subtitle: "手動調整紀錄",
+          icon: <TrendingUp />,
+          color: "red"
+        }
+      ]} />
 
       {/* 篩選區域 */}
       <Card className="bg-white/80 backdrop-blur-sm border-gray-200">

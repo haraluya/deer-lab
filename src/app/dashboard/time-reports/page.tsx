@@ -45,7 +45,7 @@ interface WorkOrderSummary {
 
 interface TimeReportStats {
   totalWorkOrders: number;
-  totalHours: number;
+  monthlyWorkOrders: number;
   monthlyHours: number;
   activePersonnel: number;
   avgHoursPerOrder: number;
@@ -57,7 +57,7 @@ export default function TimeReportsPage() {
   const [filteredSummaries, setFilteredSummaries] = useState<WorkOrderSummary[]>([]);
   const [stats, setStats] = useState<TimeReportStats>({
     totalWorkOrders: 0,
-    totalHours: 0,
+    monthlyWorkOrders: 0,
     monthlyHours: 0,
     activePersonnel: 0,
     avgHoursPerOrder: 0
@@ -192,15 +192,26 @@ export default function TimeReportsPage() {
     const totalHours = summaries.reduce((sum, order) => sum + order.totalHours, 0);
     const allPersonnel = new Set(entries.map(entry => entry.personnelId));
 
-    // 計算本月工時
+    // 計算本月工時和本月工單數
     const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
     const monthlyHours = entries
       .filter(entry => new Date(entry.startDate).toISOString().slice(0, 7) === currentMonth)
       .reduce((sum, entry) => sum + entry.duration, 0);
+    
+    const monthlyWorkOrders = summaries.filter(order => {
+      // 如果有完成時間，使用完成時間；否則使用工時記錄時間
+      if (order.completedAt) {
+        return order.completedAt.toDate().toISOString().slice(0, 7) === currentMonth;
+      }
+      // 檢查該工單是否有本月的工時記錄
+      return order.timeEntries.some(entry => 
+        new Date(entry.startDate).toISOString().slice(0, 7) === currentMonth
+      );
+    }).length;
 
     setStats({
       totalWorkOrders: summaries.length,
-      totalHours,
+      monthlyWorkOrders,
       monthlyHours,
       activePersonnel: allPersonnel.size,
       avgHoursPerOrder: summaries.length > 0 ? totalHours / summaries.length : 0
@@ -231,39 +242,32 @@ export default function TimeReportsPage() {
   // 統計卡片資料
   const statsCards: StandardStats[] = [
     {
-      title: '總工單數',
-      value: isLoading ? '-' : stats.totalWorkOrders,
-      subtitle: '個工單項目',
+      title: '本月工單數',
+      value: isLoading ? '-' : stats.monthlyWorkOrders,
+      subtitle: '本月工單項目',
       icon: <Factory className="h-4 w-4" />,
       color: 'blue'
-    },
-    {
-      title: '總工時',
-      value: isLoading ? '-' : formatDuration(stats.totalHours),
-      subtitle: '全部工單總計',
-      icon: <Clock className="h-4 w-4" />,
-      color: 'green'
     },
     {
       title: '本月總工時',
       value: isLoading ? '-' : formatDuration(stats.monthlyHours),
       subtitle: '本月工作時間',
       icon: <Calendar className="h-4 w-4" />,
-      color: 'orange'
+      color: 'green'
     },
     {
       title: '活躍人員',
       value: isLoading ? '-' : stats.activePersonnel,
       subtitle: '參與工時申報',
       icon: <Users className="h-4 w-4" />,
-      color: 'purple'
+      color: 'orange'
     },
     {
       title: '平均工時',
       value: isLoading ? '-' : formatDuration(stats.avgHoursPerOrder),
       subtitle: '每工單平均',
       icon: <BarChart3 className="h-4 w-4" />,
-      color: 'red'
+      color: 'purple'
     }
   ];
 
