@@ -30,7 +30,8 @@ import { Label } from '@/components/ui/label';
 import { BUSINESS_CONFIG } from '@/config/business';
 
 // 引入統一架構組件
-import { StandardDataListPage, StandardColumn, StandardAction, QuickFilter, StandardStats } from '@/components/StandardDataListPage';
+import { StandardDataListPage, StandardColumn, StandardAction, QuickFilter } from '@/components/StandardDataListPage';
+import { StandardStats } from '@/components/StandardStatsCard';
 import { useDataSearch } from '@/hooks/useDataSearch';
 
 // 定義從 Firestore 讀取並處理後的採購單資料結構

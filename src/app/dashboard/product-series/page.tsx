@@ -14,7 +14,8 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { StandardDataListPage, StandardColumn, StandardAction, QuickFilter, StandardStats } from '@/components/StandardDataListPage';
+import { StandardDataListPage, StandardColumn, StandardAction, QuickFilter } from '@/components/StandardDataListPage';
+import { StandardStats } from '@/components/StandardStatsCard';
 
 interface SeriesWithMaterials extends SeriesData {
   materialNames: string[];

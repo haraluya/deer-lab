@@ -11,7 +11,8 @@ import { Plus, Edit, Trash2, Tag, Calendar, MoreHorizontal, Eye, Package, ArrowL
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { StandardDataListPage, StandardColumn, StandardAction, StandardStats, QuickFilter } from '@/components/StandardDataListPage';
+import { StandardDataListPage, StandardColumn, StandardAction, QuickFilter } from '@/components/StandardDataListPage';
+import { StandardStats } from '@/components/StandardStatsCard';
 import { MaterialCategoryDialog } from '../materials/MaterialCategoryDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useRouter } from 'next/navigation';

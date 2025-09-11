@@ -21,7 +21,8 @@ import { FragranceChangeDialog } from './FragranceChangeDialog';
 import { DetailViewDialog } from '@/components/DetailViewDialog';
 import { ImportExportDialog } from '@/components/ImportExportDialog';
 import { FragranceCalculatorDialog } from './FragranceCalculatorDialog';
-import { StandardDataListPage, StandardColumn, StandardAction, QuickFilter, StandardStats } from '@/components/StandardDataListPage';
+import { StandardDataListPage, StandardColumn, StandardAction, QuickFilter } from '@/components/StandardDataListPage';
+import { StandardStats } from '@/components/StandardStatsCard';
 
 // 擴充介面，用於在前端顯示關聯資料的名稱
 interface ProductWithDetails extends ProductData {

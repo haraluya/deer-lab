@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { usePermission } from '@/hooks/usePermission'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { StandardDataListPage, StandardColumn, StandardAction, QuickFilter, StandardStats } from '@/components/StandardDataListPage'
+import { StandardDataListPage, StandardColumn, StandardAction, QuickFilter } from '@/components/StandardDataListPage'
+import { StandardStats } from '@/components/StandardStatsCard'
 import { useDataSearch } from '@/hooks/useDataSearch'
 import { Plus, Factory, Filter, Search, TrendingUp, Clock, CheckCircle, Package, AlertCircle, Shield, Eye, ExternalLink } from "lucide-react"
 

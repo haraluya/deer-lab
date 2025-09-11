@@ -19,7 +19,8 @@ import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { StandardDataListPage, StandardColumn, StandardAction, QuickFilter, StandardStats } from '@/components/StandardDataListPage';
+import { StandardDataListPage, StandardColumn, StandardAction, QuickFilter } from '@/components/StandardDataListPage';
+import { StandardStats } from '@/components/StandardStatsCard';
 import { toast } from 'sonner';
 import { useDataSearch } from '@/hooks/useDataSearch';
 
@@ -201,6 +202,7 @@ function PersonnelPageContent() {
         const loadUsers = async () => {
           setIsLoading(true);
           try {
+            if (!db) return;
             const usersCollectionRef = collection(db, 'users');
             const usersSnapshot = await getDocs(usersCollectionRef);
             const usersData = await Promise.all(

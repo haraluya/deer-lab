@@ -15,6 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
+import { StandardStatsCard, StandardStats } from '@/components/StandardStatsCard';
 
 // =============================================================================
 // 核心類型定義
@@ -74,18 +75,7 @@ export interface StandardViewMode {
   responsive?: boolean;
 }
 
-export interface StandardStats {
-  title: string;
-  value: string | number;
-  subtitle?: string;
-  icon?: ReactNode;
-  color?: 'blue' | 'green' | 'yellow' | 'red' | 'purple' | 'orange';
-  trend?: {
-    direction: 'up' | 'down' | 'stable';
-    value: string;
-  };
-  onClick?: () => void;
-}
+// StandardStats 介面已移至 StandardStatsCard 元件
 
 // 新增：表格樣式組態接口
 export interface TableStyleConfig {
@@ -243,105 +233,11 @@ const getRowKey = <T,>(record: T, index: number, rowKey?: string | ((record: T) 
   return index;
 };
 
-const getColorClasses = (color?: string) => {
-  const colorMap = {
-    blue: 'from-blue-500 to-blue-600 text-white',
-    green: 'from-green-500 to-green-600 text-white',
-    yellow: 'from-yellow-500 to-yellow-600 text-white',
-    red: 'from-red-500 to-red-600 text-white',
-    purple: 'from-purple-500 to-purple-600 text-white',
-    orange: 'from-orange-500 to-orange-600 text-white',
-  };
-  return colorMap[color as keyof typeof colorMap] || 'from-gray-500 to-gray-600 text-white';
-};
-
 // =============================================================================
 // 子組件
 // =============================================================================
 
-interface StatsCardsProps {
-  stats: StandardStats[];
-}
-
-interface StatsCardsPropsWithMobile extends StatsCardsProps {
-  isMobile?: boolean;
-}
-
-const StatsCards: React.FC<StatsCardsPropsWithMobile> = ({ stats, isMobile = false }) => {
-  return (
-    <div className={`w-full max-w-full overflow-hidden ${
-      isMobile 
-        ? 'px-1 mx-auto mb-2' // 手機版：極小邊距 + 更緊湊底部間距
-        : 'mb-6'
-    }`}>
-      <div className={`grid w-full ${
-        isMobile 
-          ? 'grid-cols-2 justify-items-center gap-1' // 手機版：極小間距 + 2欄 + 內容置中
-          : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'
-      }`}>
-      {stats.map((stat, index) => (
-        <Card 
-          key={index} 
-          className={`
-            relative overflow-hidden transition-all w-full min-w-0
-            ${stat.onClick ? 'cursor-pointer' : ''}
-            ${isMobile 
-              ? 'shadow-sm hover:shadow-md min-h-[80px] max-w-full' // 手機版：極緊湊尺寸
-              : 'shadow-sm hover:shadow-lg hover:scale-[1.02]'
-            }
-          `}
-          onClick={stat.onClick}
-        >
-          <div className={`absolute inset-0 bg-gradient-to-br ${getColorClasses(stat.color)} opacity-10`} />
-          <CardHeader className={`flex flex-row items-center justify-between space-y-0 relative z-10 ${
-            isMobile ? 'pb-1 pt-2 px-3' : 'pb-2 pt-3 px-4'
-          }`}>
-            <CardTitle className={`font-medium text-muted-foreground leading-tight ${
-              isMobile ? 'text-base' : 'text-lg'
-            }`}>
-              {stat.title}
-            </CardTitle>
-            {stat.icon && (
-              <div className={`text-muted-foreground flex-shrink-0 ${
-                isMobile ? 'text-base' : 'text-lg'
-              }`}>
-                {stat.icon}
-              </div>
-            )}
-          </CardHeader>
-          <CardContent className={`relative z-10 ${
-            isMobile ? 'pt-0 pb-2 px-3' : 'pt-0 pb-3 px-4'
-          }`}>
-            <div className={`font-bold mb-1 leading-tight ${
-              isMobile ? 'text-2xl' : 'text-3xl' // 桌面版字體更大
-            }`}>
-              {stat.value}
-            </div>
-            {stat.subtitle && (
-              <p className={`text-muted-foreground leading-tight ${
-                isMobile ? 'text-sm' : 'text-sm'
-              }`}>
-                {stat.subtitle}
-              </p>
-            )}
-            {stat.trend && (
-              <div className={`flex items-center mt-1 ${
-                stat.trend.direction === 'up' 
-                  ? 'text-green-600' 
-                  : stat.trend.direction === 'down' 
-                    ? 'text-red-600' 
-                    : 'text-gray-600'
-              } ${isMobile ? 'text-xs' : 'text-xs'}`}>
-                <span>{stat.trend.value}</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      ))}
-      </div>
-    </div>
-  );
-};
+// StatsCards 元件已由 StandardStatsCard 取代
 
 interface ToolbarProps<T> {
   searchable?: boolean;
@@ -1009,7 +905,7 @@ export const StandardDataListPage = <T,>({
   if (!data || data.length === 0) {
     return (
       <div className={`space-y-6 ${className || ''}`}>
-        {showStats && stats && <StatsCards stats={stats} isMobile={isMobile} />}
+        {showStats && stats && <StandardStatsCard stats={stats} isMobile={isMobile} />}
         
         {showToolbar && (
           <Toolbar
@@ -1125,7 +1021,7 @@ export const StandardDataListPage = <T,>({
   return (
     <div className={`${isMobile ? 'space-y-3 max-w-full overflow-hidden mx-auto' : 'space-y-6'} ${className || ''}`} style={{ height }}>
       {/* 統計卡片 */}
-      {showStats && stats && <StatsCards stats={stats} isMobile={isMobile} />}
+      {showStats && stats && <StandardStatsCard stats={stats} isMobile={isMobile} />}
       
       {/* 工具列 */}
       {showToolbar && (

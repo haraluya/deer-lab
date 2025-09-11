@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { StandardDataListPage, StandardColumn, StandardAction, StandardStats, StandardFilter, QuickFilter } from '@/components/StandardDataListPage';
+import { StandardDataListPage, StandardColumn, StandardAction, StandardFilter, QuickFilter } from '@/components/StandardDataListPage';
+import { StandardStats } from '@/components/StandardStatsCard';
 import { Package, DollarSign, AlertTriangle, Users, Eye, Edit, Trash2, ShoppingCart } from 'lucide-react';
 
 // 測試資料類型

@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { BUSINESS_CONFIG } from '@/config/business';
+import { StandardStatsCard, StandardStats } from '@/components/StandardStatsCard';
 
 // 介面定義
 interface TimeEntry {
@@ -257,6 +258,38 @@ export default function PersonalTimeRecordsPage() {
     return `${wholeHours}小時${minutes > 0 ? `${minutes}分鐘` : ''}`;
   };
 
+  // 統計卡片資料
+  const statsCards: StandardStats[] = [
+    {
+      title: '本月總工時',
+      value: isLoading ? '-' : formatDuration(stats.monthlyHours),
+      subtitle: '本月工作時間',
+      icon: <Calendar className="h-4 w-4" />,
+      color: 'green'
+    },
+    {
+      title: '累計總工時',
+      value: isLoading ? '-' : formatDuration(stats.totalHours),
+      subtitle: '累計工作時間',
+      icon: <Clock className="h-4 w-4" />,
+      color: 'blue'
+    },
+    {
+      title: '參與工單',
+      value: isLoading ? '-' : stats.totalWorkOrders,
+      subtitle: '個工單項目',
+      icon: <Factory className="h-4 w-4" />,
+      color: 'purple'
+    },
+    {
+      title: '平均工時',
+      value: isLoading ? '-' : formatDuration(stats.avgHoursPerEntry),
+      subtitle: '每筆記錄平均',
+      icon: <BarChart3 className="h-4 w-4" />,
+      color: 'red'
+    }
+  ];
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('zh-TW', {
       year: 'numeric',
@@ -353,88 +386,7 @@ export default function PersonalTimeRecordsPage() {
       </div>
 
       {/* 統計卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-50 to-green-100 border-2 border-emerald-200">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-bold text-emerald-800">本月總工時</CardTitle>
-              <div className="p-2 bg-emerald-500 rounded-lg">
-                <Calendar className="h-4 w-4 text-white" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-24 mb-2" />
-            ) : (
-              <div className="text-3xl font-bold text-emerald-900 mb-1">{formatDuration(stats.monthlyHours)}</div>
-            )}
-            <p className="text-xs text-emerald-600 font-medium">本月工作時間</p>
-          </CardContent>
-          <div className="absolute inset-0 bg-gradient-to-br from-transparent to-emerald-600/10 pointer-events-none" />
-        </Card>
-
-        <Card className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-blue-200">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-bold text-blue-800">累計總工時</CardTitle>
-              <div className="p-2 bg-blue-500 rounded-lg">
-                <Clock className="h-4 w-4 text-white" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-24 mb-2" />
-            ) : (
-              <div className="text-3xl font-bold text-blue-900 mb-1">{formatDuration(stats.totalHours)}</div>
-            )}
-            <p className="text-xs text-blue-600 font-medium">累計工作時間</p>
-          </CardContent>
-          <div className="absolute inset-0 bg-gradient-to-br from-transparent to-blue-600/10 pointer-events-none" />
-        </Card>
-
-
-        <Card className="relative overflow-hidden bg-gradient-to-br from-purple-50 to-violet-100 border-2 border-purple-200">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-bold text-purple-800">參與工單</CardTitle>
-              <div className="p-2 bg-purple-500 rounded-lg">
-                <Factory className="h-4 w-4 text-white" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-12 mb-2" />
-            ) : (
-              <div className="text-3xl font-bold text-purple-900 mb-1">{stats.totalWorkOrders}</div>
-            )}
-            <p className="text-xs text-purple-600 font-medium">個工單項目</p>
-          </CardContent>
-          <div className="absolute inset-0 bg-gradient-to-br from-transparent to-purple-600/10 pointer-events-none" />
-        </Card>
-
-        <Card className="relative overflow-hidden bg-gradient-to-br from-pink-50 to-rose-100 border-2 border-pink-200">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-bold text-pink-800">平均工時</CardTitle>
-              <div className="p-2 bg-pink-500 rounded-lg">
-                <BarChart3 className="h-4 w-4 text-white" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-20 mb-2" />
-            ) : (
-              <div className="text-3xl font-bold text-pink-900 mb-1">{formatDuration(stats.avgHoursPerEntry)}</div>
-            )}
-            <p className="text-xs text-pink-600 font-medium">每筆記錄平均</p>
-          </CardContent>
-          <div className="absolute inset-0 bg-gradient-to-br from-transparent to-pink-600/10 pointer-events-none" />
-        </Card>
-      </div>
+      <StandardStatsCard stats={statsCards} />
 
       {/* 搜尋和篩選 */}
       <Card>
