@@ -270,12 +270,12 @@ const StatsCards: React.FC<StatsCardsPropsWithMobile> = ({ stats, isMobile = fal
   return (
     <div className={`mb-4 w-full max-w-full overflow-hidden ${
       isMobile 
-        ? 'px-2' // 手機版：側邊距
+        ? 'px-2 mx-auto' // 手機版：側邊距 + 置中
         : 'mb-6'
     }`}>
       <div className={`grid gap-3 w-full ${
         isMobile 
-          ? 'grid-cols-2' // 手機版：2欄，無額外邊距
+          ? 'grid-cols-2 justify-items-center' // 手機版：2欄 + 內容置中
           : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'
       }`}>
       {stats.map((stat, index) => (
@@ -431,10 +431,10 @@ const Toolbar = <T,>({
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   return (
-    <div className={`space-y-4 mb-6 w-full max-w-full overflow-hidden ${isMobile ? 'px-2' : ''}`}>
+    <div className={`space-y-4 mb-6 w-full max-w-full overflow-hidden ${isMobile ? 'px-2 mx-auto' : ''}`}>
       {/* 快速篩選標籤 */}
       {showQuickFilters && quickFilters && quickFilters.length > 0 && (
-        <div className="flex flex-wrap gap-2 w-full max-w-full overflow-hidden">
+        <div className={`flex flex-wrap gap-2 w-full max-w-full overflow-hidden ${isMobile ? 'justify-center' : ''}`}>
           {quickFilters.map((filter) => {
             const isActive = activeFilters?.[filter.key] === filter.value;
             return (
@@ -477,10 +477,10 @@ const Toolbar = <T,>({
       )}
       
       {/* 主工具列 */}
-      <div className="flex flex-col sm:flex-row gap-4 w-full max-w-full overflow-hidden">
+      <div className={`flex flex-col sm:flex-row gap-4 w-full max-w-full overflow-hidden ${isMobile ? 'items-center' : ''}`}>
         {/* 左側：搜尋 */}
         {searchable && (
-          <div className="relative flex-1 min-w-0 max-w-full">
+          <div className={`relative min-w-0 max-w-full ${isMobile ? 'w-full' : 'flex-1'}`}>
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder={searchPlaceholder}
@@ -492,7 +492,7 @@ const Toolbar = <T,>({
         )}
         
         {/* 右側：操作按鈕 */}
-        <div className={`flex items-center gap-2 ${isMobile ? 'flex-wrap' : 'flex-shrink-0'}`}>
+        <div className={`flex items-center gap-2 ${isMobile ? 'flex-wrap justify-center w-full' : 'flex-shrink-0'}`}>
           {/* 過濾器按鈕 */}
           {filters && filters.length > 0 && (
             <Button
@@ -1085,7 +1085,9 @@ export const StandardDataListPage = <T,>({
     if (filterTags.length === 0) return null;
 
     return (
-      <div className="flex flex-wrap gap-2 mb-4 p-3 bg-orange-50 rounded-lg border border-orange-200">
+      <div className={`flex flex-wrap gap-2 mb-4 p-3 bg-orange-50 rounded-lg border border-orange-200 w-full max-w-full overflow-hidden ${
+        typeof window !== 'undefined' && window.innerWidth < 768 ? 'mx-auto justify-center' : ''
+      }`}>
         <span className="text-sm font-medium text-orange-700 mr-2">篩選條件:</span>
         {filterTags}
         <Button
@@ -1102,7 +1104,7 @@ export const StandardDataListPage = <T,>({
 
   // 主要渲染邏輯
   return (
-    <div className={`${isMobile ? 'space-y-3 max-w-full overflow-hidden' : 'space-y-6'} ${className || ''}`} style={{ height }}>
+    <div className={`${isMobile ? 'space-y-3 max-w-full overflow-hidden mx-auto' : 'space-y-6'} ${className || ''}`} style={{ height }}>
       {/* 統計卡片 */}
       {showStats && stats && <StatsCards stats={stats} isMobile={isMobile} />}
       
@@ -1149,8 +1151,8 @@ export const StandardDataListPage = <T,>({
       {renderActiveFilterTags()}
       
       {/* 資料展示區域 */}
-      <Card className={`${cardClassName} ${isMobile ? 'mx-2 max-w-full overflow-hidden' : 'mx-3 md:mx-0'}`}>
-        <CardContent className="p-0">
+      <Card className={`${cardClassName} ${isMobile ? 'mx-2 max-w-full overflow-hidden w-full' : 'mx-3 md:mx-0'}`}>
+        <CardContent className="p-0 w-full max-w-full overflow-hidden">
           {(currentViewMode === 'table' && !isMobile) && (
             <div className="overflow-x-auto">
               <Table className={tableClassName}>
@@ -1312,7 +1314,7 @@ export const StandardDataListPage = <T,>({
                 className={`
                   flex flex-wrap gap-3 w-full overflow-hidden
                   ${isMobile 
-                    ? 'p-2 justify-center' // 手機版：較小間距
+                    ? 'p-2 justify-center mx-auto' // 手機版：置中對齊
                     : 'gap-4 p-4 justify-center sm:justify-start'
                   }
                 `}
@@ -1332,15 +1334,18 @@ export const StandardDataListPage = <T,>({
                       <div
                         key={String(recordKey)}
                         className={`
-                          flex-shrink-0 min-w-0 max-w-full overflow-hidden
+                          flex-shrink-0 min-w-0 overflow-hidden
                           ${isMobile 
-                            ? 'w-full' // 手機版：全寬
-                            : 'w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.75rem)] xl:w-[calc(25%-0.75rem)]'
+                            ? 'w-full max-w-full' // 手機版：全寬 + 嚴格寬度限制
+                            : 'w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.75rem)] xl:w-[calc(25%-0.75rem)] max-w-full'
                           }
                         `}
-                        style={{ containIntrinsicSize: '100%' }}
+                        style={{ 
+                          containIntrinsicSize: '100%',
+                          maxWidth: isMobile ? '100vw' : undefined // 手機版：絕對不超過螢幕寬度
+                        }}
                       >
-                        <div className="w-full h-full overflow-hidden">
+                        <div className="w-full h-full overflow-hidden max-w-full">
                           {renderCard(record, index)}
                         </div>
                       </div>
@@ -1591,7 +1596,9 @@ export const StandardDataListPage = <T,>({
       
       {/* 分頁 */}
       {pagination && (
-        <div className="flex items-center justify-between">
+        <div className={`flex items-center w-full max-w-full overflow-hidden ${
+          isMobile ? 'flex-col gap-2 mx-auto' : 'justify-between'
+        }`}>
           <div className="text-sm text-muted-foreground">
             總共 {pagination.total} 項
           </div>
