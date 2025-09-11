@@ -112,9 +112,10 @@ export const StandardStatsCard: React.FC<StandardStatsCardProps> = ({
               `}
               onClick={stat.onClick}
             >
-              <div className={`p-3 h-full flex flex-col justify-between ${isMobile ? 'p-2' : 'p-3'}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className={`font-medium text-gray-700 leading-tight ${
+              <div className={`${isMobile ? 'p-2' : 'p-3'} h-full`}>
+                {/* 頂部：標題和圖標 */}
+                <div className="flex items-start justify-between">
+                  <h3 className={`font-medium text-gray-700 leading-none ${
                     isMobile ? 'text-xs' : 'text-sm'
                   }`}>
                     {stat.title}
@@ -122,7 +123,7 @@ export const StandardStatsCard: React.FC<StandardStatsCardProps> = ({
                   {stat.icon && (
                     <div className={`${colors.iconBg} ${colors.iconColor} rounded-full flex-shrink-0 ${
                       isMobile ? 'w-6 h-6' : 'w-8 h-8'
-                    } flex items-center justify-center`}>
+                    } flex items-center justify-center ml-2`}>
                       <div className={isMobile ? 'text-xs' : 'text-sm'}>
                         {stat.icon}
                       </div>
@@ -130,29 +131,31 @@ export const StandardStatsCard: React.FC<StandardStatsCardProps> = ({
                   )}
                 </div>
                 
-                <div className="flex-1 flex flex-col justify-center">
-                  <div className={`font-bold text-gray-900 leading-tight ${
-                    isMobile ? 'text-lg' : 'text-2xl'
-                  }`}>
-                    {stat.value}
-                  </div>
-                  {stat.subtitle && (
-                    <p className={`text-gray-500 leading-tight mt-1 ${
-                      isMobile ? 'text-xs' : 'text-sm'
-                    }`}>
-                      {stat.subtitle}
-                    </p>
-                  )}
+                {/* 主要數值 - 緊接著標題 */}
+                <div className={`font-bold text-gray-900 leading-none ${
+                  isMobile ? 'text-xl mt-2' : 'text-3xl mt-3'
+                }`}>
+                  {stat.value}
                 </div>
+                
+                {/* 副標題 */}
+                {stat.subtitle && (
+                  <p className={`text-gray-500 leading-none ${
+                    isMobile ? 'text-xs mt-1' : 'text-sm mt-1'
+                  }`}>
+                    {stat.subtitle}
+                  </p>
+                )}
 
+                {/* 趨勢資訊 */}
                 {stat.trend && (
-                  <div className={`flex items-center mt-2 ${
+                  <div className={`flex items-center ${
                     stat.trend.direction === 'up' 
                       ? 'text-green-600' 
                       : stat.trend.direction === 'down' 
                         ? 'text-red-600' 
                         : 'text-gray-600'
-                  } ${isMobile ? 'text-xs' : 'text-sm'}`}>
+                  } ${isMobile ? 'text-xs mt-1' : 'text-sm mt-2'}`}>
                     <span>{stat.trend.value}</span>
                   </div>
                 )}
