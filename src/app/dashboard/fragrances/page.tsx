@@ -698,8 +698,8 @@ export default function FragrancesPage() {
         // 行點擊
         onRowClick={(fragrance) => router.push(`/dashboard/fragrances/${fragrance.id}`)}
         
-        // 自訂卡片渲染
-        renderCard={renderFragranceCard}
+        // 使用統一卡片渲染，提高信息密度
+        // renderCard={renderFragranceCard}
         
         // 啟用原版相容模式
         legacyMode={true}

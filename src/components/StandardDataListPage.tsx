@@ -268,14 +268,14 @@ interface StatsCardsPropsWithMobile extends StatsCardsProps {
 
 const StatsCards: React.FC<StatsCardsPropsWithMobile> = ({ stats, isMobile = false }) => {
   return (
-    <div className={`mb-4 w-full max-w-full overflow-hidden ${
+    <div className={`w-full max-w-full overflow-hidden ${
       isMobile 
-        ? 'px-2 mx-auto' // 手機版：側邊距 + 置中
+        ? 'px-1 mx-auto mb-2' // 手機版：極小邊距 + 更緊湊底部間距
         : 'mb-6'
     }`}>
-      <div className={`grid gap-3 w-full ${
+      <div className={`grid w-full ${
         isMobile 
-          ? 'grid-cols-2 justify-items-center' // 手機版：2欄 + 內容置中
+          ? 'grid-cols-2 justify-items-center gap-1' // 手機版：極小間距 + 2欄 + 內容置中
           : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'
       }`}>
       {stats.map((stat, index) => (
@@ -285,7 +285,7 @@ const StatsCards: React.FC<StatsCardsPropsWithMobile> = ({ stats, isMobile = fal
             relative overflow-hidden transition-all w-full min-w-0
             ${stat.onClick ? 'cursor-pointer' : ''}
             ${isMobile 
-              ? 'shadow-sm hover:shadow-md min-h-[100px] max-w-full' // 手機版：緊湊尺寸
+              ? 'shadow-sm hover:shadow-md min-h-[80px] max-w-full' // 手機版：極緊湊尺寸
               : 'shadow-sm hover:shadow-lg hover:scale-[1.02]'
             }
           `}
@@ -293,7 +293,7 @@ const StatsCards: React.FC<StatsCardsPropsWithMobile> = ({ stats, isMobile = fal
         >
           <div className={`absolute inset-0 bg-gradient-to-br ${getColorClasses(stat.color)} opacity-10`} />
           <CardHeader className={`flex flex-row items-center justify-between space-y-0 relative z-10 ${
-            isMobile ? 'pb-1 pt-2 px-3' : 'pb-2 pt-4 px-6'
+            isMobile ? 'pb-0.5 pt-1.5 px-2' : 'pb-2 pt-4 px-6'
           }`}>
             <CardTitle className={`font-medium text-muted-foreground leading-tight ${
               isMobile ? 'text-xs' : 'text-sm'
@@ -309,7 +309,7 @@ const StatsCards: React.FC<StatsCardsPropsWithMobile> = ({ stats, isMobile = fal
             )}
           </CardHeader>
           <CardContent className={`relative z-10 ${
-            isMobile ? 'pt-0 pb-2 px-3' : 'pt-0 pb-4 px-6'
+            isMobile ? 'pt-0 pb-1.5 px-2' : 'pt-0 pb-4 px-6'
           }`}>
             <div className={`font-bold mb-1 leading-tight ${
               isMobile ? 'text-2xl' : 'text-2xl' // 手機版字體更大
@@ -431,7 +431,9 @@ const Toolbar = <T,>({
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   return (
-    <div className={`space-y-4 mb-6 w-full max-w-full overflow-hidden ${isMobile ? 'px-2 mx-auto' : ''}`}>
+    <div className={`w-full max-w-full overflow-hidden ${
+      isMobile ? 'px-1 mx-auto space-y-2 mb-3' : 'space-y-4 mb-6'
+    }`}>
       {/* 快速篩選標籤 */}
       {showQuickFilters && quickFilters && quickFilters.length > 0 && (
         <div className={`flex flex-wrap gap-2 w-full max-w-full overflow-hidden ${isMobile ? 'justify-center' : ''}`}>
@@ -1314,7 +1316,7 @@ export const StandardDataListPage = <T,>({
                 className={`
                   flex flex-wrap w-full overflow-hidden
                   ${isMobile 
-                    ? 'gap-2 p-2 justify-center mx-auto max-w-full' // 手機版：更緊湊間距 + 嚴格寬度控制
+                    ? 'gap-1 p-1 justify-center mx-auto max-w-full' // 手機版：極緊湊間距，最大信息密度
                     : 'gap-3 md:gap-4 p-4 justify-center sm:justify-start'
                   }
                 `}
@@ -1363,7 +1365,7 @@ export const StandardDataListPage = <T,>({
                         bg-gradient-to-br from-white to-gray-50/50
                         flex-shrink-0 min-w-0 max-w-full overflow-hidden
                         ${isMobile 
-                          ? 'w-full min-h-[100px]' // 手機版：更緊湊高度
+                          ? 'w-full min-h-[80px]' // 手機版：極緊湊高度，最大信息密度
                           : 'w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.75rem)] xl:w-[calc(25%-0.75rem)] min-h-[160px]'
                         }
                       `}
@@ -1382,15 +1384,15 @@ export const StandardDataListPage = <T,>({
                       
                       {/* 卡片內容 - 完全重新設計的佈局 */}
                       <CardContent className={`w-full h-full overflow-hidden ${
-                        isMobile ? 'p-2' : 'p-3'
+                        isMobile ? 'p-1.5' : 'p-3'
                       }`}>
                         <div className={`flex flex-col h-full justify-between ${
-                          isMobile ? 'gap-2' : 'gap-3'
+                          isMobile ? 'gap-1' : 'gap-3'
                         }`}>
                           {/* 頂部：主要資訊 */}
-                          <div className={`${isMobile ? 'space-y-1' : 'space-y-2'}`}>
+                          <div className={`${isMobile ? 'space-y-0.5' : 'space-y-2'}`}>
                             {/* 標題 */}
-                            <div className={`flex items-start ${isMobile ? 'gap-2' : 'gap-3'}`}>
+                            <div className={`flex items-start ${isMobile ? 'gap-1' : 'gap-3'}`}>
                               <div className="flex-1 min-w-0">
                                 <h3 
                                   className={`font-semibold text-gray-900 leading-tight overflow-hidden ${
