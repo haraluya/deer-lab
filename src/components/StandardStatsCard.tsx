@@ -90,13 +90,13 @@ export const StandardStatsCard: React.FC<StandardStatsCardProps> = ({
   return (
     <div className={`w-full ${
       isMobile 
-        ? 'px-2 mx-auto mb-3' 
-        : 'mb-6'
+        ? 'px-4 mx-auto mb-4' 
+        : 'px-6 mb-8'
     } ${className}`}>
-      <div className={`grid w-full ${
+      <div className={`grid w-full max-w-5xl mx-auto ${
         isMobile 
-          ? 'grid-cols-2 gap-3' 
-          : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'
+          ? 'grid-cols-2 gap-4' 
+          : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8'
       }`}>
         {stats.map((stat, index) => {
           const colors = getColorClasses(stat.color);
@@ -108,21 +108,21 @@ export const StandardStatsCard: React.FC<StandardStatsCardProps> = ({
                 relative overflow-hidden transition-all duration-200 rounded-lg p-0
                 ${colors.background} ${colors.border}
                 ${stat.onClick ? 'cursor-pointer hover:shadow-md' : 'shadow-sm'}
-                ${isMobile ? 'h-[100px]' : 'h-[120px]'}
+                ${isMobile ? 'h-[110px]' : 'h-[115px]'}
               `}
               onClick={stat.onClick}
             >
-              <div className={`${isMobile ? 'px-2 py-1' : 'px-3 py-2'} h-full`}>
+              <div className={`${isMobile ? 'px-3 py-2' : 'px-4 py-3'} h-full`}>
                 {/* 頂部：標題和圖標 */}
-                <div className="flex items-center justify-between">
-                  <h3 className={`font-medium text-gray-700 leading-tight ${
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className={`font-semibold text-gray-700 ${
                     isMobile ? 'text-xs' : 'text-sm'
                   }`}>
                     {stat.title}
                   </h3>
                   {stat.icon && (
-                    <div className={`${colors.iconBg} ${colors.iconColor} rounded-full flex-shrink-0 ${
-                      isMobile ? 'w-6 h-6' : 'w-8 h-8'
+                    <div className={`${colors.iconBg} ${colors.iconColor} rounded-lg ${
+                      isMobile ? 'w-7 h-7' : 'w-9 h-9'
                     } flex items-center justify-center`}>
                       <div className={isMobile ? 'text-xs' : 'text-sm'}>
                         {stat.icon}
@@ -131,16 +131,16 @@ export const StandardStatsCard: React.FC<StandardStatsCardProps> = ({
                   )}
                 </div>
                 
-                {/* 主要數值 - 緊接著標題 */}
-                <div className={`font-bold text-gray-900 leading-tight ${
-                  isMobile ? 'text-xl mt-1' : 'text-3xl mt-1'
+                {/* 主要數值 */}
+                <div className={`font-bold text-gray-900 mb-1 ${
+                  isMobile ? 'text-2xl' : 'text-3xl'
                 }`}>
                   {stat.value}
                 </div>
                 
                 {/* 副標題 */}
                 {stat.subtitle && (
-                  <p className={`text-gray-500 leading-tight ${
+                  <p className={`text-gray-600 ${
                     isMobile ? 'text-xs' : 'text-sm'
                   }`}>
                     {stat.subtitle}
