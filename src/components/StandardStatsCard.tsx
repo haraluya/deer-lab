@@ -108,21 +108,21 @@ export const StandardStatsCard: React.FC<StandardStatsCardProps> = ({
                 relative overflow-hidden transition-all duration-200 rounded-lg
                 ${colors.background} ${colors.border}
                 ${stat.onClick ? 'cursor-pointer hover:shadow-md' : 'shadow-sm'}
-                ${isMobile ? 'h-[90px] min-w-[120px]' : 'h-[110px] max-w-[240px]'}
+                ${isMobile ? 'h-[85px] min-w-[140px]' : 'h-[95px] min-w-[200px] max-w-[260px]'}
               `}
               onClick={stat.onClick}
             >
               <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${
-                isMobile ? 'pb-1 pt-2 px-3' : 'pb-1 pt-3 px-4'
+                isMobile ? 'pb-0.5 pt-1.5 px-2.5' : 'pb-1 pt-2 px-3'
               }`}>
-                <CardTitle className={`font-medium text-gray-700 leading-tight ${
-                  isMobile ? 'text-xs' : 'text-sm'
+                <CardTitle className={`font-medium text-gray-700 leading-tight truncate ${
+                  isMobile ? 'text-xs max-w-[80px]' : 'text-sm max-w-[140px]'
                 }`}>
                   {stat.title}
                 </CardTitle>
                 {stat.icon && (
                   <div className={`${colors.iconBg} ${colors.iconColor} rounded-full flex-shrink-0 ${
-                    isMobile ? 'w-6 h-6 p-1' : 'w-8 h-8 p-1.5'
+                    isMobile ? 'w-5 h-5 p-1' : 'w-7 h-7 p-1.5'
                   } flex items-center justify-center`}>
                     <div className={isMobile ? 'text-xs' : 'text-sm'}>
                       {stat.icon}
@@ -131,29 +131,29 @@ export const StandardStatsCard: React.FC<StandardStatsCardProps> = ({
                 )}
               </CardHeader>
               <CardContent className={`${
-                isMobile ? 'pt-0 pb-2 px-3' : 'pt-0 pb-3 px-4'
+                isMobile ? 'pt-0 pb-1.5 px-2.5' : 'pt-0 pb-2 px-3'
               }`}>
-                <div className={`font-bold text-gray-900 mb-1 leading-tight ${
-                  isMobile ? 'text-lg' : 'text-xl'
+                <div className={`font-bold text-gray-900 mb-0.5 leading-tight truncate ${
+                  isMobile ? 'text-base' : 'text-lg'
                 }`}>
                   {stat.value}
                 </div>
                 {stat.subtitle && (
-                  <p className={`text-gray-500 leading-tight ${
+                  <p className={`text-gray-500 leading-tight truncate ${
                     isMobile ? 'text-xs' : 'text-xs'
                   }`}>
                     {stat.subtitle}
                   </p>
                 )}
                 {stat.trend && (
-                  <div className={`flex items-center mt-1 ${
+                  <div className={`flex items-center mt-0.5 ${
                     stat.trend.direction === 'up' 
                       ? 'text-green-600' 
                       : stat.trend.direction === 'down' 
                         ? 'text-red-600' 
                         : 'text-gray-600'
                   } ${isMobile ? 'text-xs' : 'text-xs'}`}>
-                    <span>{stat.trend.value}</span>
+                    <span className="truncate">{stat.trend.value}</span>
                   </div>
                 )}
               </CardContent>
