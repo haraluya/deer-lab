@@ -312,49 +312,36 @@ export default function TimeReportsPage() {
       <StandardStatsCard stats={statsCards} />
 
       {/* 搜尋和篩選 */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="搜尋工單號碼、產品名稱或人員姓名..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="篩選狀態" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部狀態</SelectItem>
-                <SelectItem value="預報">預報</SelectItem>
-                <SelectItem value="進行">進行中</SelectItem>
-                <SelectItem value="完工">完工</SelectItem>
-                <SelectItem value="入庫">已入庫</SelectItem>
-              </SelectContent>
-            </Select>
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="flex-1">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="搜尋工單號碼、產品名稱或人員姓名..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-48">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="篩選狀態" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">全部狀態</SelectItem>
+            <SelectItem value="預報">預報</SelectItem>
+            <SelectItem value="進行">進行中</SelectItem>
+            <SelectItem value="完工">完工</SelectItem>
+            <SelectItem value="入庫">已入庫</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
       {/* 工單工時列表 */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            工單工時統計
-          </CardTitle>
-          <p className="text-sm text-gray-600">
-            共 {filteredSummaries.length} 個工單，{filteredSummaries.reduce((sum, order) => sum + order.timeEntries.length, 0)} 筆工時記錄
-          </p>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {isLoading ? (
             <div className="space-y-3">
               {[1, 2, 3].map(i => (

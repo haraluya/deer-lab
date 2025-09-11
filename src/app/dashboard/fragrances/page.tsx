@@ -373,7 +373,7 @@ export default function FragrancesPage() {
       },
       {
         title: '總價值',
-        value: `$${totalValue.toFixed(2)}`,
+        value: `$${Math.round(totalValue).toLocaleString()}`,
         subtitle: '庫存總價值',
         icon: <DollarSign className="h-4 w-4" />,
         color: 'green'
@@ -386,9 +386,9 @@ export default function FragrancesPage() {
         color: 'red'
       },
       {
-        title: '活躍香精',
+        title: '已啟用香精',
         value: activeCount,
-        subtitle: '正在使用中',
+        subtitle: '已啟用數量',
         icon: <Package className="h-4 w-4" />,
         color: 'purple'
       }

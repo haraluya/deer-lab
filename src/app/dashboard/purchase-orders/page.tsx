@@ -151,14 +151,11 @@ function PurchaseOrdersPageContent() {
     const received = purchaseOrders.filter(po => po.status === '已收貨').length
     const cancelled = purchaseOrders.filter(po => po.status === '已取消').length
 
-    // 計算本月已採購金額（根據採購單日期）
+    // 計算本月已採購金額（根據採購單建立日期，包含所有狀態）
     const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
     const monthlyPurchaseAmount = purchaseOrders
       .filter(po => {
-        // 已訂購或已收貨的訂單才算已採購
-        if (po.status !== '已訂購' && po.status !== '已收貨') return false;
-        
-        // 檢查採購單日期是否在本月
+        // 檢查採購單日期是否在本月（所有狀態都算，包括預報單）
         try {
           const orderMonth = new Date(po.createdAt).toISOString().slice(0, 7);
           return orderMonth === currentMonth;
@@ -191,9 +188,9 @@ function PurchaseOrdersPageContent() {
         color: 'blue'
       },
       {
-        title: '本月已採購',
+        title: '本月提交金額',
         value: `$${Math.round(monthlyPurchaseAmount).toLocaleString()}`,
-        subtitle: '本月採購金額',
+        subtitle: '本月所有採購單',
         icon: <DollarSign className="h-4 w-4" />,
         color: 'orange'
       }
