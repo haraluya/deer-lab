@@ -112,9 +112,9 @@ export const StandardStatsCard: React.FC<StandardStatsCardProps> = ({
               `}
               onClick={stat.onClick}
             >
-              <div className={`${isMobile ? 'px-3 py-2' : 'px-4 py-3'} h-full`}>
+              <div className={`${isMobile ? 'px-3 py-3' : 'px-4 py-4'} h-full flex flex-col justify-center`}>
                 {/* 頂部：標題和圖標 */}
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-3">
                   <h3 className={`font-semibold text-gray-700 ${
                     isMobile ? 'text-xs' : 'text-sm'
                   }`}>
@@ -132,7 +132,7 @@ export const StandardStatsCard: React.FC<StandardStatsCardProps> = ({
                 </div>
                 
                 {/* 主要數值 */}
-                <div className={`font-bold text-gray-900 mb-1 ${
+                <div className={`font-bold text-gray-900 mb-2 leading-none ${
                   isMobile ? 'text-2xl' : 'text-3xl'
                 }`}>
                   {stat.value}
@@ -140,7 +140,7 @@ export const StandardStatsCard: React.FC<StandardStatsCardProps> = ({
                 
                 {/* 副標題 */}
                 {stat.subtitle && (
-                  <p className={`text-gray-600 ${
+                  <p className={`text-gray-600 leading-tight ${
                     isMobile ? 'text-xs' : 'text-sm'
                   }`}>
                     {stat.subtitle}
@@ -149,7 +149,7 @@ export const StandardStatsCard: React.FC<StandardStatsCardProps> = ({
 
                 {/* 趨勢資訊 */}
                 {stat.trend && (
-                  <div className={`flex items-center ${
+                  <div className={`flex items-center mt-1 ${
                     stat.trend.direction === 'up' 
                       ? 'text-green-600' 
                       : stat.trend.direction === 'down' 
