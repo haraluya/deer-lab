@@ -122,27 +122,8 @@ function PersonnelPageContent() {
     }
   }, [getRoleColor]);
 
-  // 載入角色列表
-  const fetchRoles = useCallback(async () => {
-    try {
-      if (!db) {
-        throw new Error("Firebase 未初始化");
-      }
-      const rolesQuery = query(collection(db, 'roles'), orderBy('createdAt', 'asc'));
-      const rolesSnapshot = await getDocs(rolesQuery);
-      
-      const rolesList = rolesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Role[];
-      
-      setRoles(rolesList);
-    } catch (error) {
-      console.error("讀取角色資料失敗:", error);
-      // 不顯示錯誤訊息，角色資料是輔助功能
-    }
-  }, []);
 
+  // 重新載入使用者資料的函數（供其他操作使用）
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -201,11 +182,82 @@ function PersonnelPageContent() {
 
   useEffect(() => {
     const initializeData = async () => {
-      await fetchRoles();
-      await fetchUsers();
+      // 先載入角色
+      try {
+        if (!db) {
+          throw new Error("Firebase 未初始化");
+        }
+        const rolesQuery = query(collection(db, 'roles'), orderBy('createdAt', 'asc'));
+        const rolesSnapshot = await getDocs(rolesQuery);
+        
+        const rolesList = rolesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Role[];
+        
+        setRoles(rolesList);
+        
+        // 角色載入完成後載入用戶資料
+        const loadUsers = async () => {
+          setIsLoading(true);
+          try {
+            const usersCollectionRef = collection(db, 'users');
+            const usersSnapshot = await getDocs(usersCollectionRef);
+            const usersData = await Promise.all(
+              usersSnapshot.docs.map(async (userDoc) => {
+                const userData = userDoc.data();
+                const uid = userDoc.id;
+                let roleName = '未設定';
+                let roleId = '';
+                
+                // 優先使用直接設定的 roleName 欄位
+                if (userData.roleName && typeof userData.roleName === 'string') {
+                  roleName = userData.roleName;
+                } else {
+                  // 如果沒有直接的 roleName，嘗試從 roleRef 讀取
+                  const roleRef = userData.roleRef;
+                  if (roleRef && roleRef instanceof DocumentReference) {
+                    try {
+                      const roleDocSnap = await getDoc(roleRef);
+                      if (roleDocSnap.exists()) {
+                        roleName = roleDocSnap.data()?.displayName || roleDocSnap.data()?.name || '未知角色';
+                        roleId = roleRef.id;
+                      }
+                    } catch (roleError) {
+                      console.error(`無法讀取角色資料 for user ${uid}:`, roleError);
+                      roleName = '讀取失敗';
+                    }
+                  }
+                }
+                
+                // 如果有 roleId，從已載入的角色中查找對應資料
+                if (userData.roleId && rolesList.length > 0) {
+                  const role = rolesList.find(r => r.id === userData.roleId);
+                  if (role) {
+                    roleName = role.displayName;
+                    roleId = role.id;
+                  }
+                }
+                
+                return { ...userData, id: uid, uid, roleName, roleId } as UserWithRole;
+              })
+            );
+            setUsers(usersData);
+          } catch (error) {
+            console.error("讀取人員資料失敗:", error);
+            toast.error("讀取人員資料失敗，請檢查網路連線或聯絡管理員。");
+          } finally {
+            setIsLoading(false);
+          }
+        };
+        
+        await loadUsers();
+      } catch (error) {
+        console.error("初始化資料失敗:", error);
+      }
     };
     initializeData();
-  }, [fetchRoles, fetchUsers]);
+  }, []); // 空依賴陣列，只在組件掛載時執行一次
 
   // 統計數據
   const stats: StandardStats[] = [
