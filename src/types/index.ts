@@ -22,7 +22,6 @@ export type {
 
 // 僅匯出 business.ts 中不與 entities.ts 衝突的類型
 export type { 
-  LegacyTimeRecord,
   PersonnelTimeStats,
   InventoryRecord,
   InventoryOverview,

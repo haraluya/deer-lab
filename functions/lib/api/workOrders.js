@@ -184,8 +184,10 @@ exports.updateWorkOrder = (0, https_1.onCall)(async (request) => {
 });
 /**
  * Adds a time record to a work order.
+ * 統一使用 timeEntries 集合，廢除 workOrderTimeRecords
  */
 exports.addTimeRecord = (0, https_1.onCall)(async (request) => {
+    var _a;
     const { auth: contextAuth, data } = request;
     // await ensureIsAdminOrForeman(contextAuth?.uid);
     if (!contextAuth) {
@@ -202,6 +204,7 @@ exports.addTimeRecord = (0, https_1.onCall)(async (request) => {
         if (!workOrderSnap.exists) {
             throw new https_1.HttpsError("not-found", "找不到指定的工單。");
         }
+        const workOrderData = workOrderSnap.data();
         // 驗證人員存在
         const personnelRef = db.doc(`personnel/${timeRecord.personnelId}`);
         const personnelSnap = await personnelRef.get();
@@ -209,37 +212,37 @@ exports.addTimeRecord = (0, https_1.onCall)(async (request) => {
             throw new https_1.HttpsError("not-found", "找不到指定的人員。");
         }
         const personnelData = personnelSnap.data();
-        // 計算工時
+        // 計算工時（轉換為小時制）
         const startDateTime = new Date(`${timeRecord.workDate}T${timeRecord.startTime}`);
         const endDateTime = new Date(`${timeRecord.workDate}T${timeRecord.endTime}`);
         if (endDateTime <= startDateTime) {
             throw new https_1.HttpsError("invalid-argument", "結束時間必須晚於開始時間。");
         }
         const diffMs = endDateTime.getTime() - startDateTime.getTime();
-        const totalMinutes = Math.floor(diffMs / (1000 * 60));
-        const hours = Math.floor(totalMinutes / 60);
-        const minutes = totalMinutes % 60;
-        // 建立工時紀錄
-        const timeRecordData = {
+        const durationHours = diffMs / (1000 * 60 * 60); // 轉為小時制
+        // 建立統一的工時記錄（使用 timeEntries 格式）
+        const timeEntryData = {
             workOrderId: workOrderId,
+            workOrderCode: workOrderData.code,
+            workOrderNumber: workOrderData.code,
+            productName: ((_a = workOrderData.productSnapshot) === null || _a === void 0 ? void 0 : _a.name) || '',
             personnelId: timeRecord.personnelId,
             personnelName: personnelData.name,
             workDate: timeRecord.workDate,
+            startDate: timeRecord.workDate,
             startTime: timeRecord.startTime,
+            endDate: timeRecord.workDate,
             endTime: timeRecord.endTime,
-            hours,
-            minutes,
-            totalMinutes,
+            duration: durationHours,
+            notes: timeRecord.notes || '',
+            createdBy: contextAuth.uid,
             createdAt: firestore_1.FieldValue.serverTimestamp(),
+            updatedAt: firestore_1.FieldValue.serverTimestamp(),
         };
-        // 儲存到工時紀錄集合
-        const timeRecordRef = await db.collection('workOrderTimeRecords').add(timeRecordData);
-        // 更新工單的工時紀錄陣列
-        await workOrderRef.update({
-            timeRecords: firestore_1.FieldValue.arrayUnion(Object.assign({ id: timeRecordRef.id }, timeRecordData)),
-        });
-        firebase_functions_1.logger.info(`使用者 ${contextAuth.uid} 成功新增工時紀錄到工單 ${workOrderId}`);
-        return { success: true, timeRecordId: timeRecordRef.id };
+        // 儲存到統一的 timeEntries 集合
+        const timeEntryRef = await db.collection('timeEntries').add(timeEntryData);
+        firebase_functions_1.logger.info(`使用者 ${contextAuth.uid} 成功新增工時記錄到工單 ${workOrderId}，使用統一 timeEntries 集合`);
+        return { success: true, timeEntryId: timeEntryRef.id };
     }
     catch (error) {
         firebase_functions_1.logger.error(`新增工時紀錄時發生錯誤:`, error);
@@ -275,27 +278,18 @@ exports.deleteWorkOrder = (0, https_1.onCall)(async (request) => {
             if (workOrderData.status === '進行' || workOrderData.status === '完工') {
                 throw new https_1.HttpsError("failed-precondition", `無法刪除狀態為 "${workOrderData.status}" 的工單。`);
             }
-            // 3. 查詢並刪除相關的工時記錄
+            // 3. 查詢並刪除相關的工時記錄（統一使用 timeEntries）
             const timeEntriesQuery = await db.collection('timeEntries')
                 .where('workOrderId', '==', workOrderId)
                 .get();
             firebase_functions_1.logger.info(`找到 ${timeEntriesQuery.size} 筆與工單 ${workOrderId} 相關的工時記錄`);
-            // 刪除工時記錄
+            // 刪除所有工時記錄
             timeEntriesQuery.docs.forEach(doc => {
                 transaction.delete(doc.ref);
             });
-            // 4. 查詢並刪除舊版的工時記錄（如果存在）
-            const oldTimeRecordsQuery = await db.collection('workOrderTimeRecords')
-                .where('workOrderId', '==', workOrderId)
-                .get();
-            firebase_functions_1.logger.info(`找到 ${oldTimeRecordsQuery.size} 筆舊版工時記錄`);
-            // 刪除舊版工時記錄
-            oldTimeRecordsQuery.docs.forEach(doc => {
-                transaction.delete(doc.ref);
-            });
-            // 5. 刪除工單
+            // 4. 刪除工單
             transaction.delete(workOrderRef);
-            firebase_functions_1.logger.info(`已刪除工單 ${workOrderId} 及其相關的 ${timeEntriesQuery.size + oldTimeRecordsQuery.size} 筆工時記錄`);
+            firebase_functions_1.logger.info(`已刪除工單 ${workOrderId} 及其相關的 ${timeEntriesQuery.size} 筆工時記錄`);
         });
         firebase_functions_1.logger.info(`使用者 ${contextAuth.uid} 成功刪除工單 ${workOrderId} 及其相關工時記錄`);
         return {

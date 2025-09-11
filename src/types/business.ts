@@ -217,8 +217,7 @@ export interface WorkOrder {
   images?: string[];
   comments?: WorkOrderComment[];
   
-  // 工時記錄 (舊版本相容)
-  timeRecords?: LegacyTimeRecord[];
+  // 工時記錄統一使用 timeEntries 集合
   
   // 元數據
   createdBy: string;
@@ -236,38 +235,9 @@ export interface WorkOrderComment {
   images?: string[];
 }
 
-// 舊版工時記錄格式 (向後相容)
-export interface LegacyTimeRecord {
-  id: string;
-  personnelId: string;
-  personnelName: string;
-  workDate: string;
-  startTime: string;
-  endTime: string;
-  duration: number; // 分鐘
-  createdAt: Timestamp;
-}
-
 // ==================== 工時管理 ====================
 
-export interface TimeEntry {
-  id: string;
-  workOrderId: string;
-  workOrderCode?: string;
-  productName?: string;
-  personnelId: string;
-  personnelName: string;
-  workDate: string; // YYYY-MM-DD 格式
-  startDate: string; // YYYY-MM-DD 格式
-  startTime: string; // HH:MM 格式
-  endDate: string; // YYYY-MM-DD 格式
-  endTime: string; // HH:MM 格式
-  duration: number; // 小時數 (例如: 8.5)
-  notes?: string;
-  createdBy: string;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-}
+// TimeEntry 統一定義在 entities.ts 中
 
 export interface PersonnelTimeStats {
   totalHours: number;
@@ -275,7 +245,7 @@ export interface PersonnelTimeStats {
   workDays: number;
   avgHoursPerDay: number;
   completedWorkOrders: number;
-  monthlyEntries: TimeEntry[];
+  monthlyEntries: any[]; // 改用 any[] 避免循環依賴
 }
 
 // ==================== 人員管理 ====================

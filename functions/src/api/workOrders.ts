@@ -219,6 +219,7 @@ export const updateWorkOrder = onCall(async (request) => {
 
 /**
  * Adds a time record to a work order.
+ * 統一使用 timeEntries 集合，廢除 workOrderTimeRecords
  */
 export const addTimeRecord = onCall(async (request) => {
   const { auth: contextAuth, data } = request;
@@ -242,6 +243,8 @@ export const addTimeRecord = onCall(async (request) => {
       throw new HttpsError("not-found", "找不到指定的工單。");
     }
 
+    const workOrderData = workOrderSnap.data()!;
+
     // 驗證人員存在
     const personnelRef = db.doc(`personnel/${timeRecord.personnelId}`);
     const personnelSnap = await personnelRef.get();
@@ -252,7 +255,7 @@ export const addTimeRecord = onCall(async (request) => {
 
     const personnelData = personnelSnap.data()!;
 
-    // 計算工時
+    // 計算工時（轉換為小時制）
     const startDateTime = new Date(`${timeRecord.workDate}T${timeRecord.startTime}`);
     const endDateTime = new Date(`${timeRecord.workDate}T${timeRecord.endTime}`);
     
@@ -261,37 +264,33 @@ export const addTimeRecord = onCall(async (request) => {
     }
 
     const diffMs = endDateTime.getTime() - startDateTime.getTime();
-    const totalMinutes = Math.floor(diffMs / (1000 * 60));
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
+    const durationHours = diffMs / (1000 * 60 * 60); // 轉為小時制
 
-    // 建立工時紀錄
-    const timeRecordData = {
+    // 建立統一的工時記錄（使用 timeEntries 格式）
+    const timeEntryData = {
       workOrderId: workOrderId,
+      workOrderCode: workOrderData.code,
+      workOrderNumber: workOrderData.code,
+      productName: workOrderData.productSnapshot?.name || '',
       personnelId: timeRecord.personnelId,
       personnelName: personnelData.name,
       workDate: timeRecord.workDate,
+      startDate: timeRecord.workDate,
       startTime: timeRecord.startTime,
+      endDate: timeRecord.workDate,
       endTime: timeRecord.endTime,
-      hours,
-      minutes,
-      totalMinutes,
+      duration: durationHours,
+      notes: timeRecord.notes || '',
+      createdBy: contextAuth.uid,
       createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     };
 
-    // 儲存到工時紀錄集合
-    const timeRecordRef = await db.collection('workOrderTimeRecords').add(timeRecordData);
-
-    // 更新工單的工時紀錄陣列
-    await workOrderRef.update({
-      timeRecords: FieldValue.arrayUnion({
-        id: timeRecordRef.id,
-        ...timeRecordData,
-      }),
-    });
+    // 儲存到統一的 timeEntries 集合
+    const timeEntryRef = await db.collection('timeEntries').add(timeEntryData);
     
-    logger.info(`使用者 ${contextAuth.uid} 成功新增工時紀錄到工單 ${workOrderId}`);
-    return { success: true, timeRecordId: timeRecordRef.id };
+    logger.info(`使用者 ${contextAuth.uid} 成功新增工時記錄到工單 ${workOrderId}，使用統一 timeEntries 集合`);
+    return { success: true, timeEntryId: timeEntryRef.id };
 
   } catch (error) {
     logger.error(`新增工時紀錄時發生錯誤:`, error);
@@ -333,34 +332,22 @@ export const deleteWorkOrder = onCall(async (request) => {
         throw new HttpsError("failed-precondition", `無法刪除狀態為 "${workOrderData.status}" 的工單。`);
       }
 
-      // 3. 查詢並刪除相關的工時記錄
+      // 3. 查詢並刪除相關的工時記錄（統一使用 timeEntries）
       const timeEntriesQuery = await db.collection('timeEntries')
         .where('workOrderId', '==', workOrderId)
         .get();
 
       logger.info(`找到 ${timeEntriesQuery.size} 筆與工單 ${workOrderId} 相關的工時記錄`);
 
-      // 刪除工時記錄
+      // 刪除所有工時記錄
       timeEntriesQuery.docs.forEach(doc => {
         transaction.delete(doc.ref);
       });
 
-      // 4. 查詢並刪除舊版的工時記錄（如果存在）
-      const oldTimeRecordsQuery = await db.collection('workOrderTimeRecords')
-        .where('workOrderId', '==', workOrderId)
-        .get();
-
-      logger.info(`找到 ${oldTimeRecordsQuery.size} 筆舊版工時記錄`);
-
-      // 刪除舊版工時記錄
-      oldTimeRecordsQuery.docs.forEach(doc => {
-        transaction.delete(doc.ref);
-      });
-
-      // 5. 刪除工單
+      // 4. 刪除工單
       transaction.delete(workOrderRef);
       
-      logger.info(`已刪除工單 ${workOrderId} 及其相關的 ${timeEntriesQuery.size + oldTimeRecordsQuery.size} 筆工時記錄`);
+      logger.info(`已刪除工單 ${workOrderId} 及其相關的 ${timeEntriesQuery.size} 筆工時記錄`);
     });
 
     logger.info(`使用者 ${contextAuth.uid} 成功刪除工單 ${workOrderId} 及其相關工時記錄`);

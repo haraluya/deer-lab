@@ -275,8 +275,7 @@ export interface WorkOrder extends BaseEntity {
   images?: string[];
   comments?: WorkOrderComment[];
   
-  // 工時記錄 (舊版本相容)
-  timeRecords?: LegacyTimeRecord[];
+  // 工時記錄統一使用 timeEntries 集合，不再使用內嵌陣列
   
   // 元數據
   createdByName: string;
@@ -317,19 +316,7 @@ export interface TimeEntry {
   updatedAt: Timestamp;
 }
 
-/**
- * 舊版工時記錄格式 (向後相容)
- */
-export interface LegacyTimeRecord {
-  id: string;
-  personnelId: string;
-  personnelName: string;
-  workDate: string;
-  startTime: string;
-  endTime: string;
-  duration: number; // 分鐘
-  createdAt: Timestamp;
-}
+// 已移除 LegacyTimeRecord，統一使用 TimeEntry
 
 /**
  * 人員工時統計
