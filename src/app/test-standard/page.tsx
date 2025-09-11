@@ -349,7 +349,7 @@ const TestStandardPage = () => {
   };
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="w-full max-w-full overflow-hidden px-4 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">StandardDataListPage 測試頁面</h1>
         <p className="text-gray-600">展示標準化資料列表頁面的完整功能</p>
@@ -433,7 +433,7 @@ const TestStandardPage = () => {
         onRowClick={(record) => console.log('點擊行:', record)}
         onRowDoubleClick={(record) => alert(`雙擊商品: ${record.name}`)}
         
-        className="w-full"
+        className="w-full max-w-full overflow-hidden px-2 md:px-4 py-4 md:py-6"
       />
     </div>
   );

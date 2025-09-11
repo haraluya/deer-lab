@@ -268,16 +268,21 @@ interface StatsCardsPropsWithMobile extends StatsCardsProps {
 
 const StatsCards: React.FC<StatsCardsPropsWithMobile> = ({ stats, isMobile = false }) => {
   return (
-    <div className={`grid gap-3 mb-4 ${
+    <div className={`mb-4 w-full max-w-full overflow-hidden ${
       isMobile 
-        ? 'grid-cols-2 px-2' // 手機版：2欄 + 側邊距
-        : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6'
+        ? 'px-2' // 手機版：側邊距
+        : 'mb-6'
     }`}>
+      <div className={`grid gap-3 w-full ${
+        isMobile 
+          ? 'grid-cols-2' // 手機版：2欄，無額外邊距
+          : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'
+      }`}>
       {stats.map((stat, index) => (
         <Card 
           key={index} 
           className={`
-            relative overflow-hidden transition-all 
+            relative overflow-hidden transition-all w-full min-w-0
             ${stat.onClick ? 'cursor-pointer' : ''}
             ${isMobile 
               ? 'shadow-sm hover:shadow-md min-h-[100px] max-w-full' // 手機版：緊湊尺寸
@@ -332,6 +337,7 @@ const StatsCards: React.FC<StatsCardsPropsWithMobile> = ({ stats, isMobile = fal
           </CardContent>
         </Card>
       ))}
+      </div>
     </div>
   );
 };
@@ -421,11 +427,14 @@ const Toolbar = <T,>({
     return colorMap[color as keyof typeof colorMap] || colorMap.gray;
   };
 
+  // 檢測是否為手機版
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
   return (
-    <div className={`space-y-4 mb-6 ${typeof window !== 'undefined' && window.innerWidth < 768 ? 'px-2' : ''}`}>
+    <div className={`space-y-4 mb-6 w-full max-w-full overflow-hidden ${isMobile ? 'px-2' : ''}`}>
       {/* 快速篩選標籤 */}
       {showQuickFilters && quickFilters && quickFilters.length > 0 && (
-        <div className="flex flex-wrap gap-2 max-w-full overflow-hidden">
+        <div className="flex flex-wrap gap-2 w-full max-w-full overflow-hidden">
           {quickFilters.map((filter) => {
             const isActive = activeFilters?.[filter.key] === filter.value;
             return (
@@ -441,7 +450,9 @@ const Toolbar = <T,>({
                   }
                 }}
                 className={`
-                  h-7 px-3 text-xs font-medium transition-all duration-200
+                  h-7 transition-all duration-200 min-w-0 max-w-full
+                  ${isMobile ? 'px-2 text-xs' : 'px-3 text-xs'} 
+                  font-medium
                   ${isActive 
                     ? 'bg-gradient-to-r from-orange-500 to-blue-500 text-white shadow-md' 
                     : `${getQuickFilterColorClasses(filter.color)} border`
@@ -452,7 +463,7 @@ const Toolbar = <T,>({
                 {filter.count !== undefined && (
                   <Badge 
                     variant="secondary" 
-                    className={`ml-1.5 h-4 w-auto px-1.5 text-[10px] ${
+                    className={`${isMobile ? 'ml-1 h-3 px-1 text-[9px]' : 'ml-1.5 h-4 px-1.5 text-[10px]'} w-auto ${
                       isActive ? 'bg-white/20 text-white' : 'bg-white/60'
                     }`}
                   >
@@ -466,22 +477,22 @@ const Toolbar = <T,>({
       )}
       
       {/* 主工具列 */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col sm:flex-row gap-4 w-full max-w-full overflow-hidden">
         {/* 左側：搜尋 */}
         {searchable && (
-          <div className="relative flex-1 min-w-0">
+          <div className="relative flex-1 min-w-0 max-w-full">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder={searchPlaceholder}
               value={searchValue || ''}
               onChange={(e) => onSearchChange?.(e.target.value)}
-              className="pl-10 bg-white/50 backdrop-blur-sm border-gray-200 focus:border-orange-300 focus:ring-orange-200"
+              className="pl-10 bg-white/50 backdrop-blur-sm border-gray-200 focus:border-orange-300 focus:ring-orange-200 w-full"
             />
           </div>
         )}
         
         {/* 右側：操作按鈕 */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className={`flex items-center gap-2 ${isMobile ? 'flex-wrap' : 'flex-shrink-0'}`}>
           {/* 過濾器按鈕 */}
           {filters && filters.length > 0 && (
             <Button
