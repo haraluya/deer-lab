@@ -779,8 +779,8 @@ function PersonnelPageContent() {
                   <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-purple-100">
                     <label className="text-sm font-semibold text-purple-700 block mb-2">權限等級</label>
                     <div className="text-lg font-medium text-purple-900">
-                      {selectedDetailUser.roleName === '管理員' ? '最高權限' : 
-                       selectedDetailUser.roleName === '主管' ? '管理權限' : 
+                      {selectedDetailUser.roleName === '系統管理員' ? '最高權限' : 
+                       selectedDetailUser.roleName === '生產領班' ? '管理權限' : 
                        selectedDetailUser.roleName === '計時人員' ? '基本權限' : '未分配'}
                     </div>
                   </div>
