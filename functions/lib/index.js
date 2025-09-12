@@ -30,6 +30,23 @@ const nextApp = (0, next_1.default)({
     dir: process.cwd(),
 });
 const nextHandle = nextApp.getRequestHandler();
+// 全域準備狀態追蹤
+let isNextAppPrepared = false;
+let preparingPromise = null;
+// 確保 Next.js App 只準備一次的輔助函數
+async function ensureNextAppPrepared() {
+    if (isNextAppPrepared) {
+        return;
+    }
+    if (preparingPromise) {
+        return preparingPromise;
+    }
+    preparingPromise = nextApp.prepare().then(() => {
+        isNextAppPrepared = true;
+        preparingPromise = null;
+    });
+    return preparingPromise;
+}
 // 建立 nextServer 雲端函數 - 優化設定以降低費用
 exports.nextServer = (0, https_1.onRequest)({
     maxInstances: 3,
@@ -37,12 +54,17 @@ exports.nextServer = (0, https_1.onRequest)({
     timeoutSeconds: 60,
     concurrency: 10,
     cpu: 1,
-    preserveExternalChanges: false // 關閉原始碼備份
+    preserveExternalChanges: false,
+    labels: {
+        'backup': 'disabled',
+        'source-backup': 'false' // 🚫 明確指定不備份原始碼
+    }
 }, async (req, res) => {
     try {
         // 設定快取標頭以減少重複請求
         res.set('Cache-Control', 'public, max-age=300, s-maxage=600');
-        await nextApp.prepare();
+        // 確保 Next.js App 只準備一次，避免 EventEmitter 內存洩漏
+        await ensureNextAppPrepared();
         return nextHandle(req, res);
     }
     catch (error) {
