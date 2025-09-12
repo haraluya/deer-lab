@@ -20,6 +20,7 @@
     "codebase": "default",
     "predeploy": [],
     "postdeploy": [],
+    "preserveExternalChanges": false,
     "ignore": [
       "node_modules",
       ".git",

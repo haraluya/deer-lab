@@ -1,0 +1,15 @@
+{
+  "lifecycle": {
+    "rule": [
+      {
+        "action": {
+          "type": "Delete"
+        },
+        "condition": {
+          "age": 0,
+          "matchesPrefix": ["gcf-v2-sources/", "gcf-v2-uploads/"]
+        }
+      }
+    ]
+  }
+}
