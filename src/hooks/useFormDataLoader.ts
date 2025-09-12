@@ -180,7 +180,7 @@ export function useFormDataLoader(config: FormDataLoaderConfig, isOpen: boolean)
     };
 
     loadData();
-  }, [isOpen, JSON.stringify(config)]); // 使用 JSON.stringify 來比較配置物件
+  }, [isOpen, config]); // 移除 JSON.stringify，ESLint 能處理物件依賴
 
   return {
     suppliers,

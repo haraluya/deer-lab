@@ -167,14 +167,11 @@ exports.receivePurchaseOrderItems = (0, https_1.onCall)(async (request) => {
             }
         });
         firebase_functions_1.logger.info(`管理員 ${contextAuth.uid} 成功完成採購單 ${purchaseOrderId} 的入庫操作。`);
-        return { success: true };
+        return {};
     }
     catch (error) {
-        firebase_functions_1.logger.error(`處理採購單 ${purchaseOrderId} 入庫時發生嚴重錯誤:`, error);
-        if (error instanceof https_1.HttpsError) {
-            throw error;
-        }
-        throw new https_1.HttpsError("internal", "處理入庫時發生未知錯誤。");
+        firebase_functions_1.logger.error(`採購單 ${purchaseOrderId} 入庫操作失敗:`, error);
+        throw new https_1.HttpsError("internal", "入庫操作失敗");
     }
 });
 //# sourceMappingURL=purchaseOrders.js.map

@@ -422,8 +422,8 @@ exports.completeWorkOrder = (0, https_1.onCall)(async (request) => {
                 transaction.set(inventoryRecordRef, {
                     changeDate: firestore_1.FieldValue.serverTimestamp(),
                     changeReason: 'workorder',
-                    operatorId: contextAuth.uid,
-                    operatorName: ((_a = contextAuth.token) === null || _a === void 0 ? void 0 : _a.name) || '未知用戶',
+                    operatorId: context.auth.uid,
+                    operatorName: ((_a = context.auth.token) === null || _a === void 0 ? void 0 : _a.name) || '未知用戶',
                     remarks: `工單 ${workOrderData.workOrderNumber || workOrderId} 完工，實際生產數量：${actualQuantity}`,
                     relatedDocumentId: workOrderId,
                     relatedDocumentType: 'work_order',
@@ -437,14 +437,11 @@ exports.completeWorkOrder = (0, https_1.onCall)(async (request) => {
             }
         });
         firebase_functions_1.logger.info(`使用者 ${contextAuth.uid} 成功完成工單 ${workOrderId}`);
-        return { success: true };
+        return {};
     }
     catch (error) {
-        firebase_functions_1.logger.error(`完工工單時發生錯誤:`, error);
-        if (error instanceof https_1.HttpsError) {
-            throw error;
-        }
-        throw new https_1.HttpsError("internal", "完工工單時發生未知錯誤。");
+        firebase_functions_1.logger.error(`完成工單 ${workOrderId} 失敗:`, error);
+        throw new https_1.HttpsError("internal", "工單完工操作失敗");
     }
 });
 //# sourceMappingURL=workOrders.js.map

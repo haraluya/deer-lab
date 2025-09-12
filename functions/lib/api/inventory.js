@@ -126,7 +126,6 @@ exports.getInventoryOverview = (0, https_1.onCall)(async (request) => {
             }
         });
         return {
-            success: true,
             overview: {
                 totalMaterials,
                 totalFragrances,
@@ -139,8 +138,8 @@ exports.getInventoryOverview = (0, https_1.onCall)(async (request) => {
         };
     }
     catch (error) {
-        firebase_functions_1.logger.error(`獲取庫存總覽時發生錯誤:`, error);
-        throw new https_1.HttpsError("internal", "獲取庫存總覽時發生未知錯誤。");
+        firebase_functions_1.logger.error("獲取庫存總覽失敗:", error);
+        throw new https_1.HttpsError("internal", "獲取庫存總覽失敗");
     }
 });
 /**
@@ -265,13 +264,12 @@ exports.getLowStockItems = (0, https_1.onCall)(async (request) => {
         // 按短缺程度排序
         lowStockItems.sort((a, b) => b.shortage - a.shortage);
         return {
-            success: true,
             items: lowStockItems
         };
     }
     catch (error) {
-        firebase_functions_1.logger.error(`獲取低庫存項目時發生錯誤:`, error);
-        throw new https_1.HttpsError("internal", "獲取低庫存項目時發生未知錯誤。");
+        firebase_functions_1.logger.error("獲取低庫存項目失敗:", error);
+        throw new https_1.HttpsError("internal", "獲取低庫存項目失敗");
     }
 });
 exports.performStocktake = (0, https_1.onCall)(async (request) => {

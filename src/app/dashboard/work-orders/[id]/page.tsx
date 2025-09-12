@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
+import Image from 'next/image'
 import { doc, getDoc, updateDoc, collection, getDocs, addDoc, Timestamp, query, where, orderBy, deleteDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
@@ -504,7 +505,7 @@ export default function WorkOrderDetailPage() {
       console.error('載入工時記錄失敗:', err);
       error('載入工時記錄失敗', err as Error);
     }
-  }, [workOrderId]);
+  }, [workOrderId, workOrder?.code]);
 
   // 快速編輯工時記錄
   const handleQuickEditTimeEntry = (entry: any) => {
@@ -671,7 +672,7 @@ export default function WorkOrderDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [workOrderId, db, router]);
+  }, [workOrderId, router]);
 
   // 載入人員資料
   const fetchPersonnel = useCallback(async () => {
@@ -875,7 +876,7 @@ export default function WorkOrderDetailPage() {
     } finally {
       setIsReloading(false);
     }
-  }, [workOrder, db, workOrderId, fetchWorkOrder]);
+  }, [workOrder, workOrderId, fetchWorkOrder]);
 
   // 計算物料需求的輔助函數 - 完全重新計算，如同建立工單時一樣
   const calculateMaterialRequirements = async (productData: {
@@ -2726,9 +2727,11 @@ export default function WorkOrderDetailPage() {
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                     {uploadedImages.map((imageUrl, index) => (
                       <div key={index} className="relative group">
-                        <img
+                        <Image
                           src={imageUrl}
                           alt={`圖片 ${index + 1}`}
+                          width={96}
+                          height={80}
                           className="w-full h-20 sm:h-24 object-cover rounded-lg border cursor-pointer"
                           onClick={() => {
                             // 創建圖片預覽對話框
@@ -2810,9 +2813,11 @@ export default function WorkOrderDetailPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                       {comment.images.map((imageUrl, index) => (
                         <div key={index} className="relative group">
-                          <img
+                          <Image
                             src={imageUrl}
                             alt={`留言圖片 ${index + 1}`}
+                            width={96}
+                            height={80}
                             className="w-full h-20 sm:h-24 object-cover rounded-lg border cursor-pointer"
                             onClick={() => {
                               // 創建圖片預覽對話框

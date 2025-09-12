@@ -36,7 +36,8 @@ exports.nextServer = (0, https_1.onRequest)({
     memory: '512MiB',
     timeoutSeconds: 60,
     concurrency: 10,
-    cpu: 1 // 限制 CPU 使用
+    cpu: 1,
+    preserveExternalChanges: false // 關閉原始碼備份
 }, async (req, res) => {
     try {
         // 設定快取標頭以減少重複請求

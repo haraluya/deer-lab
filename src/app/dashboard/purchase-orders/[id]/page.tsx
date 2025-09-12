@@ -3,6 +3,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import Image from 'next/image';
 import { doc, getDoc, updateDoc, Timestamp, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -960,9 +961,11 @@ export default function PurchaseOrderDetailPage() {
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                     {uploadedImages.map((imageUrl, index) => (
                       <div key={index} className="relative group">
-                        <img
+                        <Image
                           src={imageUrl}
                           alt={`圖片 ${index + 1}`}
+                          width={96}
+                          height={80}
                           className="w-full h-20 sm:h-24 object-cover rounded-lg border cursor-pointer"
                           onClick={() => {
                             // 創建圖片預覽對話框
@@ -1044,9 +1047,11 @@ export default function PurchaseOrderDetailPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                       {comment.images.map((imageUrl, index) => (
                         <div key={index} className="relative group">
-                          <img
+                          <Image
                             src={imageUrl}
                             alt={`留言圖片 ${index + 1}`}
+                            width={96}
+                            height={80}
                             className="w-full h-20 sm:h-24 object-cover rounded-lg border cursor-pointer"
                             onClick={() => {
                               // 創建圖片預覽對話框

@@ -114,7 +114,7 @@ function PermissionsPageContent() {
       console.error('❌ 統一 API 和本地查詢都失敗:', error);
       toast.error('載入角色列表失敗，請檢查網路連線');
     }
-  }, []);
+  }, [apiClient]);
 
   // 載入用戶列表
   const fetchUsers = useCallback(async () => {

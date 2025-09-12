@@ -95,7 +95,7 @@ export function useCartOperations<T extends CartOperationItem>(
     } finally {
       setCartLoading(false);
     }
-  }, [addToCart, itemType, itemTypeName]);
+  }, [addToCart, itemTypeName]);
 
   // 批量加入購物車
   const addSelectedItems = useCallback(async () => {

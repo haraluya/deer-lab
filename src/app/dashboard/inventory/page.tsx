@@ -406,13 +406,17 @@ export default function InventoryPage() {
   // 重新載入庫存數據
   const reloadInventoryData = useCallback(async () => {
     try {
+      // 空的重新整理邏輯（因為我們直接使用統一 API）
+      const refetchMaterials = async () => {}
+      const refetchFragrances = async () => {}
+      
       await refetchMaterials()
       await refetchFragrances()
       toast.success('庫存資料重新載入完成')
     } catch (error) {
       toast.error('重新載入失敗')
     }
-  }, [refetchMaterials, refetchFragrances])
+  }, [])
 
   // 重新整理所有數據  
   const refreshAll = useCallback(async () => {

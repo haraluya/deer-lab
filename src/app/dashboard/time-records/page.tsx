@@ -1,7 +1,7 @@
 // src/app/dashboard/time-records/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '@/lib/firebase';
@@ -82,55 +82,7 @@ export default function PersonalTimeRecordsPage() {
   // 清理功能狀態
   const [isCleaningUp, setIsCleaningUp] = useState(false);
 
-  // 載入個人工時記錄
-  useEffect(() => {
-    console.log('useEffect 觸發，appUser 狀態:', { 
-      appUser: !!appUser, 
-      uid: appUser?.uid, 
-      name: appUser?.name 
-    });
-    
-    if (appUser && appUser.uid) {
-      loadPersonalTimeRecords();
-    } else {
-      console.warn('appUser 或 appUser.uid 未準備就緒');
-    }
-  }, [appUser]);
-
-  // 篩選邏輯
-  useEffect(() => {
-    let filtered = personalTimeEntries;
-    
-    if (searchTerm) {
-      filtered = filtered.filter(entry => 
-        entry.workOrderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        entry.notes?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    
-    if (monthFilter !== 'all') {
-      filtered = filtered.filter(entry => {
-        const entryMonth = new Date(entry.startDate).toISOString().slice(0, 7); // YYYY-MM
-        return entryMonth === monthFilter;
-      });
-    }
-    
-    setFilteredEntries(filtered);
-    // 重置到第一頁
-    setCurrentPage(1);
-  }, [personalTimeEntries, searchTerm, monthFilter]);
-  
-  // 分頁邏輯
-  const totalPages = Math.ceil(filteredEntries.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedEntries = filteredEntries.slice(startIndex, startIndex + itemsPerPage);
-  
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const loadPersonalTimeRecords = async () => {
+  const loadPersonalTimeRecords = useCallback(async () => {
     try {
       if (!appUser) {
         console.warn('用戶未初始化:', { appUser: !!appUser });
@@ -199,6 +151,54 @@ export default function PersonalTimeRecordsPage() {
     } finally {
       setIsLoading(false);
     }
+  }, [appUser]);
+  
+  // 載入個人工時記錄
+  useEffect(() => {
+    console.log('useEffect 觸發，appUser 狀態:', { 
+      appUser: !!appUser, 
+      uid: appUser?.uid, 
+      name: appUser?.name 
+    });
+    
+    if (appUser && appUser.uid) {
+      loadPersonalTimeRecords();
+    } else {
+      console.warn('appUser 或 appUser.uid 未準備就緒');
+    }
+  }, [appUser]);
+
+  // 篩選邏輯
+  useEffect(() => {
+    let filtered = personalTimeEntries;
+    
+    if (searchTerm) {
+      filtered = filtered.filter(entry => 
+        entry.workOrderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        entry.notes?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    if (monthFilter !== 'all') {
+      filtered = filtered.filter(entry => {
+        const entryMonth = new Date(entry.startDate).toISOString().slice(0, 7); // YYYY-MM
+        return entryMonth === monthFilter;
+      });
+    }
+    
+    setFilteredEntries(filtered);
+    // 重置到第一頁
+    setCurrentPage(1);
+  }, [personalTimeEntries, searchTerm, monthFilter]);
+  
+  // 分頁邏輯
+  const totalPages = Math.ceil(filteredEntries.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedEntries = filteredEntries.slice(startIndex, startIndex + itemsPerPage);
+  
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const calculateStats = (entries: TimeEntry[]) => {

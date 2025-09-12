@@ -498,8 +498,8 @@ export const completeWorkOrder = onCall(async (request) => {
         transaction.set(inventoryRecordRef, {
           changeDate: FieldValue.serverTimestamp(),
           changeReason: 'workorder',
-          operatorId: context.auth.uid,
-          operatorName: context.auth.token?.name || '未知用戶',
+          operatorId: contextAuth.uid,
+          operatorName: contextAuth.token?.name || '未知用戶',
           remarks: `工單 ${workOrderData.workOrderNumber || workOrderId} 完工，實際生產數量：${actualQuantity}`,
           relatedDocumentId: workOrderId,
           relatedDocumentType: 'work_order',
@@ -512,9 +512,11 @@ export const completeWorkOrder = onCall(async (request) => {
       }
     });
 
-    logger.info(`使用者 ${context.auth.uid} 成功完成工單 ${workOrderId}`);
+    logger.info(`使用者 ${contextAuth.uid} 成功完成工單 ${workOrderId}`);
     
     return {};
-
+  } catch (error) {
+    logger.error(`完成工單 ${workOrderId} 失敗:`, error);
+    throw new HttpsError("internal", "工單完工操作失敗");
   }
-);
+});

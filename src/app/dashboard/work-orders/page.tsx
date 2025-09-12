@@ -178,7 +178,7 @@ function WorkOrdersPageContent() {
 
   useEffect(() => {
     loadWorkOrders(true)
-  }, [])
+  }, [loadWorkOrders])
 
   // 載入更多資料
   const loadMore = () => {

@@ -55,7 +55,7 @@ export function LowStockDialog({ isOpen, onClose }: LowStockDialogProps) {
     if (isOpen) {
       loadLowStockItems()
     }
-  }, [isOpen])
+  }, [isOpen, loadLowStockItems])
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

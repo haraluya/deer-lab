@@ -242,7 +242,7 @@ export function MaterialCategoryDialog({ isOpen, onOpenChange }: MaterialCategor
     if (isOpen) {
       loadCategories()
     }
-  }, [isOpen])
+  }, [isOpen, loadCategories])
 
   const handleAdd = () => {
     setEditingCategory(null)
