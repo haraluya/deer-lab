@@ -56,12 +56,34 @@ jobs:
 
     - name: Copy .next to functions directory (excluding cache)
       run: |
-        # Copy .next directory but exclude the cache directory to reduce size
+        # Remove existing .next if it exists
+        rm -rf functions/.next
+        
+        # Copy complete .next directory but exclude cache to reduce deployment size
         mkdir -p functions/.next
-        cp -r .next/server functions/.next/
-        cp -r .next/static functions/.next/
-        cp .next/*.json functions/.next/ 2>/dev/null || true
-        echo "Copied .next directory excluding cache (saved ~566MB)"
+        
+        # Copy essential directories
+        cp -r .next/server functions/.next/ 2>/dev/null || true
+        cp -r .next/static functions/.next/ 2>/dev/null || true  
+        cp -r .next/types functions/.next/ 2>/dev/null || true
+        cp -r .next/standalone functions/.next/ 2>/dev/null || true
+        
+        # Copy all critical files (JSON configs, BUILD_ID, etc.)
+        find .next -maxdepth 1 -type f -name "*.json" -exec cp {} functions/.next/ \; 2>/dev/null || true
+        find .next -maxdepth 1 -type f -name "*.js" -exec cp {} functions/.next/ \; 2>/dev/null || true
+        cp .next/BUILD_ID functions/.next/ 2>/dev/null || true
+        cp .next/package.json functions/.next/ 2>/dev/null || true
+        cp .next/trace functions/.next/ 2>/dev/null || true
+        cp .next/export-marker.json functions/.next/ 2>/dev/null || true
+        
+        # Verify critical files exist
+        echo "🔍 Verifying essential files:"
+        test -f functions/.next/BUILD_ID && echo "✅ BUILD_ID found" || echo "❌ BUILD_ID missing"
+        test -f functions/.next/build-manifest.json && echo "✅ build-manifest.json found" || echo "❌ build-manifest.json missing"
+        test -d functions/.next/server && echo "✅ server directory found" || echo "❌ server directory missing"
+        test -d functions/.next/static && echo "✅ static directory found" || echo "❌ static directory missing"
+        
+        echo "✅ Next.js build copied (excluding cache, saved ~566MB)"
 
     - name: Build Cloud Functions
       run: |
