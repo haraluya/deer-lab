@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useApiForm } from '@/hooks/useApiClient';
 import { collection, getDocs, DocumentReference, DocumentData, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
@@ -67,7 +67,6 @@ interface ProductDialogProps {
 }
 
 export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productData }: ProductDialogProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [options, setOptions] = useState<SelectOptions>({ series: [], fragrances: [], materials: [] });
   const [selectedFragrance, setSelectedFragrance] = useState<any>(null);
   const [fragranceFormula, setFragranceFormula] = useState({ percentage: 0, pgRatio: 0, vgRatio: 0 });
@@ -77,6 +76,7 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
   const [generatedProductCode, setGeneratedProductCode] = useState<string>('');
   const [seriesInfo, setSeriesInfo] = useState<SeriesInfo[]>([]);
   const isEditMode = !!productData;
+  const apiClient = useApiForm();
   
   // 香精更換檢測
   const [originalFragranceId, setOriginalFragranceId] = useState<string | null>(null);
@@ -353,10 +353,6 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
       return;
     }
 
-    setIsSubmitting(true);
-    const toastId = toast.loading(isEditMode ? '正在更新產品...' : '正在新增產品...');
-    try {
-      const functions = getFunctions();
       
       // 組裝要傳送的資料
       const payload = { 
@@ -371,23 +367,16 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
         })
       };
 
-      if (isEditMode && productData) {
-        const updateProduct = httpsCallable(functions, 'updateProduct');
-        await updateProduct({ productId: productData.id, ...payload });
-        toast.success(`產品 ${values.name} 已更新。`, { id: toastId });
-      } else {
-        const createProduct = httpsCallable(functions, 'createProduct');
-        await createProduct(payload);
-        toast.success(`產品 ${values.name} 已建立。`, { id: toastId });
-      }
+      const result = await apiClient.callGeneric(
+        isEditMode ? 'updateProduct' : 'createProduct',
+        isEditMode 
+          ? { productId: productData.id, ...payload }
+          : payload
+      );
+      
+      if (!result.success) return;
       onProductUpdate();
       onOpenChange(false);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '發生未知錯誤。';
-      toast.error(errorMessage, { id: toastId });
-    } finally {
-      setIsSubmitting(false);
-    }
   }
 
   return (
@@ -752,10 +741,10 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
               </Button>
               <Button 
                 type="submit" 
-                disabled={isSubmitting}
+                disabled={apiClient.loading}
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
               >
-                {isSubmitting ? (
+                {apiClient.loading ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                     處理中...

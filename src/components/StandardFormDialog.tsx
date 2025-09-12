@@ -4,9 +4,9 @@ import React, { useState, useEffect, ReactNode } from 'react';
 import { useForm, UseFormReturn, FieldValues, Path } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ZodSchema } from 'zod';
-import { getFunctions, httpsCallable } from 'firebase/functions';
 import { toast } from 'sonner';
 import { useFormDataLoader, FormDataLoaderConfig } from '@/hooks/useFormDataLoader';
+import { useApiForm } from '@/hooks/useApiClient';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -342,9 +342,14 @@ export function StandardFormDialog<T extends FieldValues>({
   afterSubmit,
   formProps,
 }: StandardFormDialogProps<T>) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(false);
   const isEditMode = !!editData;
+
+  // 使用統一 API 客戶端 Hook
+  const apiClient = useApiForm({
+    showSuccessToast: false, // 由表單自行管理成功提示
+    showErrorToast: true,    // 保持錯誤提示
+  });
 
   // 使用新的統一資料載入 hook
   const formDataLoader = useFormDataLoader(dataLoaderConfig || {}, isOpen);
@@ -406,7 +411,6 @@ export function StandardFormDialog<T extends FieldValues>({
 
   // 提交處理
   const onSubmit = async (values: T) => {
-    setIsSubmitting(true);
     const toastId = toast.loading(
       isEditMode ? `正在更新${title}...` : `正在新增${title}...`
     );
@@ -422,24 +426,30 @@ export function StandardFormDialog<T extends FieldValues>({
       if (customSubmit) {
         await customSubmit(processedValues, isEditMode);
       } else {
-        // 預設 Firebase Functions 提交
-        const functions = getFunctions();
+        // 使用統一 API 客戶端進行提交
         const functionName = isEditMode ? updateFunctionName : createFunctionName;
         
         if (!functionName) {
           throw new Error('未指定 Firebase Function 名稱');
         }
 
-        const callable = httpsCallable(functions, functionName);
         const payload = isEditMode && editData 
           ? { ...(editData as any), ...processedValues }
           : processedValues;
           
-        const result = await callable(payload);
+        const result = await apiClient.callGeneric(functionName, payload, {
+          showLoadingToast: false, // 使用表單的載入提示
+          showSuccessToast: false, // 使用表單的成功提示
+          showErrorToast: false,   // 使用表單的錯誤處理
+        });
+        
+        if (!result.success) {
+          throw new Error(result.error?.message || '操作失敗');
+        }
         
         // 提交後處理
         if (afterSubmit) {
-          afterSubmit(result, isEditMode);
+          afterSubmit(result.rawResponse, isEditMode);
         }
       }
 
@@ -454,8 +464,6 @@ export function StandardFormDialog<T extends FieldValues>({
       console.error('提交失敗:', error);
       const errorMessage = error instanceof Error ? error.message : '操作失敗';
       toast.error(errorMessage, { id: toastId });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -540,10 +548,10 @@ export function StandardFormDialog<T extends FieldValues>({
                 </Button>
                 <Button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={apiClient.loading}
                   className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
                 >
-                  {isSubmitting ? (
+                  {apiClient.loading ? (
                     <div className="flex items-center gap-2">
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       處理中...

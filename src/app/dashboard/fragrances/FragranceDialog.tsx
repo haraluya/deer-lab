@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useApiForm } from '@/hooks/useApiClient';
 import { collection, getDocs, DocumentReference, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
@@ -35,9 +35,10 @@ const formSchema = z.object({
   remarks: z.string().optional(),
 }).refine((data) => {
   const total = (data.percentage || 0) + (data.pgRatio || 0) + (data.vgRatio || 0);
-  return total <= 100;
+  // 允許小數精度誤差，總和在99.99%到100.01%之間都是合法的
+  return total >= 99.99 && total <= 100.01;
 }, {
-  message: "香精、PG、VG比例總和不能超過100%",
+  message: "香精、PG、VG比例總和必須等於100%",
   path: ["percentage"],
 });
 
@@ -78,11 +79,11 @@ export function FragranceDialog({
   onFragranceUpdate,
   fragranceData,
 }: FragranceDialogProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [fragranceTypes, setFragranceTypes] = useState<string[]>([]);
   const [fragranceStatuses, setFragranceStatuses] = useState<string[]>([]);
   const isEditMode = !!fragranceData;
+  const apiClient = useApiForm();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -183,12 +184,7 @@ export function FragranceDialog({
   };
 
   async function onSubmit(values: FormData) {
-    setIsSubmitting(true);
-    const toastId = toast.loading(isEditMode ? '正在更新香精...' : '正在新增香精...');
-    try {
-      const functions = getFunctions();
-      
-      let finalValues;
+    let finalValues;
       
       // 儲存實際計算出的PG和VG數值，而不是用運算的
       // 這樣可以避免數字處理問題
@@ -198,25 +194,18 @@ export function FragranceDialog({
         pgRatio: values.pgRatio || 0,
         vgRatio: values.vgRatio || 0,
         unit: 'KG', // 固定單位為KG
+        category: '香精', // 統一設定為香精分類
       };
       
       if (isEditMode) {
-        const updateFragrance = httpsCallable(functions, 'updateFragrance');
-        await updateFragrance({ fragranceId: fragranceData.id, ...finalValues });
-        toast.success(`香精 ${values.name} 的資料已更新。`, { id: toastId });
+        const result = await apiClient.call('updateFragrance', { id: fragranceData.id, ...finalValues });
+        if (!result.success) return;
       } else {
-        const createFragrance = httpsCallable(functions, 'createFragrance');
-        await createFragrance(finalValues);
-        toast.success(`香精 ${values.name} 已成功建立。`, { id: toastId });
+        const result = await apiClient.call('createFragrance', finalValues);
+        if (!result.success) return;
       }
       onFragranceUpdate();
       onOpenChange(false);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '發生未知錯誤。';
-      toast.error(errorMessage, { id: toastId });
-    } finally {
-      setIsSubmitting(false);
-    }
   }
 
   return (
@@ -573,10 +562,10 @@ export function FragranceDialog({
               </Button>
               <Button 
                 type="submit" 
-                disabled={isSubmitting}
+                disabled={apiClient.loading}
                 className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 w-full sm:w-auto"
               >
-                {isSubmitting ? (
+                {apiClient.loading ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                     處理中...

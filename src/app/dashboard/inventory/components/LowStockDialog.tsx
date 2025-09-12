@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { getFunctions, httpsCallable } from "firebase/functions"
+import { useApiSilent } from "@/hooks/useApiClient"
 import { toast } from "sonner"
 import { AlertTriangle, Package, FlaskConical, Loader2, RefreshCw } from "lucide-react"
 
@@ -18,9 +18,9 @@ interface LowStockItem {
   name: string
   currentStock: number
   minStock: number
-  unit: string
+  unit?: string
   shortage: number
-  costPerUnit: number
+  costPerUnit?: number
 }
 
 interface LowStockDialogProps {
@@ -31,18 +31,17 @@ interface LowStockDialogProps {
 export function LowStockDialog({ isOpen, onClose }: LowStockDialogProps) {
   const [items, setItems] = useState<LowStockItem[]>([])
   const [loading, setLoading] = useState(true)
+  const apiClient = useApiSilent()
 
   const loadLowStockItems = async () => {
     setLoading(true)
     try {
-      const functions = getFunctions()
-      const getLowStockItems = httpsCallable(functions, 'getLowStockItems')
+      const result = await apiClient.callGeneric('getLowStockItems')
       
-      const result = await getLowStockItems({})
-      const data = result.data as any
-      
-      if (data.success) {
-        setItems(data.items)
+      if (result.success && result.data) {
+        setItems(result.data.items || [])
+      } else {
+        toast.error('載入低庫存項目失敗')
       }
     } catch (error) {
       console.error('載入低庫存項目失敗:', error)
@@ -121,7 +120,7 @@ export function LowStockDialog({ isOpen, onClose }: LowStockDialogProps) {
                 </TableHeader>
                 <TableBody>
                   {items.map((item) => {
-                    const reorderCost = item.shortage * item.costPerUnit
+                    const reorderCost = item.shortage * (item.costPerUnit || 0)
                     
                     return (
                       <TableRow key={`${item.type}-${item.id}`} className="hover:bg-gray-50">
@@ -152,22 +151,22 @@ export function LowStockDialog({ isOpen, onClose }: LowStockDialogProps) {
                         
                         <TableCell className="text-right">
                           <span className="text-red-600 font-medium">
-                            {item.currentStock} {item.unit}
+                            {item.currentStock} {item.unit || ''}
                           </span>
                         </TableCell>
                         
                         <TableCell className="text-right text-gray-600">
-                          {item.minStock} {item.unit}
+                          {item.minStock} {item.unit || ''}
                         </TableCell>
                         
                         <TableCell className="text-right">
                           <Badge variant="destructive" className="font-medium">
-                            {item.shortage} {item.unit}
+                            {item.shortage} {item.unit || ''}
                           </Badge>
                         </TableCell>
                         
                         <TableCell className="text-right text-sm text-gray-600">
-                          NT$ {item.costPerUnit.toLocaleString()}
+                          NT$ {(item.costPerUnit || 0).toLocaleString()}
                         </TableCell>
                         
                         <TableCell className="text-right font-medium text-red-600">
@@ -186,7 +185,7 @@ export function LowStockDialog({ isOpen, onClose }: LowStockDialogProps) {
                     共 {items.length} 項低庫存項目
                   </span>
                   <span className="font-medium text-red-600">
-                    總補貨成本: NT$ {items.reduce((sum, item) => sum + (item.shortage * item.costPerUnit), 0).toLocaleString()}
+                    總補貨成本: NT$ {items.reduce((sum, item) => sum + (item.shortage * (item.costPerUnit || 0)), 0).toLocaleString()}
                   </span>
                 </div>
               </div>

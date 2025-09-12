@@ -47,7 +47,7 @@ export const createPersonnel = onCall(async (request) => {
     const roleDoc = await roleRef.get();
     
     if (!roleDoc.exists) {
-      throw new HttpsError("not-found", "指定的角色不存在。");
+      throw ApiErrorCode.DATA_NOT_FOUND('指定的角色不存在');
     }
     
     const roleData = roleDoc.data();

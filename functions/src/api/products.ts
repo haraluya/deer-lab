@@ -1,8 +1,23 @@
 // functions/src/api/products.ts
+/**
+ * 🎯 鹿鹿小作坊 - 產品管理 API (已標準化)
+ * 
+ * 升級時間：2025-09-12
+ * 升級內容：套用統一 API 標準化架構
+ * - 統一回應格式
+ * - 統一錯誤處理
+ * - 統一權限驗證
+ * - 結構化日誌
+ * - 保留複雜業務邏輯（香精狀態管理）
+ */
+
 import { logger } from "firebase-functions";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import { ensureCanManageProducts } from "../utils/auth";
+import { createApiHandler, CrudApiHandlers } from "../utils/apiWrapper";
+import { BusinessError, ApiErrorCode, ErrorHandler } from "../utils/errorHandler";
+import { Permission, UserRole } from "../middleware/auth";
+import { StandardResponses } from "../types/api";
 
 const db = getFirestore();
 
@@ -84,180 +99,305 @@ async function updateFragranceStatuses(params: {
   });
 }
 
-export const createProduct = onCall(async (request) => {
-  const { auth: contextAuth, data } = request;
-  // await ensureCanManageProducts(contextAuth?.uid);
-  const { name, seriesId, fragranceId, nicotineMg, targetProduction, specificMaterialIds, status } = data;
-  if (!name || !seriesId || !fragranceId) { throw new HttpsError("invalid-argument", "請求缺少產品名稱、系列或香精。"); }
-  const seriesRef = db.doc(`productSeries/${seriesId}`);
-  const seriesDoc = await seriesRef.get();
-  if (!seriesDoc.exists) { throw new HttpsError("not-found", "指定的產品系列不存在"); }
-  const seriesData = seriesDoc.data();
-  const seriesCode = seriesData?.code;
-  const productType = seriesData?.productType;
-  // 生成產品編號（4位數字，確保不重複）
-  const generateProductNumber = async (seriesId: string): Promise<string> => {
-    const maxAttempts = 100;
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      const randomNumber = Math.floor(1000 + Math.random() * 9000); // 1000-9999
-      const productNumber = String(randomNumber);
-      
-      // 檢查該系列中是否已存在此編號
-      const existingProduct = await db.collection('products')
-        .where('seriesRef', '==', seriesRef)
-        .where('productNumber', '==', productNumber)
-        .limit(1)
-        .get();
-      
-      if (existingProduct.empty) {
-        return productNumber;
-      }
-    }
-    throw new HttpsError("internal", "無法生成唯一的產品編號，請重試。");
-  };
+/**
+ * 建立產品請求介面
+ */
+interface CreateProductRequest {
+  name: string;
+  seriesId: string;
+  fragranceId: string;
+  nicotineMg?: number;
+  targetProduction?: number;
+  specificMaterialIds?: string[];
+  status?: string;
+}
 
-  const productNumber = await generateProductNumber(seriesId);
-  
-  // 將產品類型名稱轉換為代碼
-  const productTypeCodeMap: { [key: string]: string } = {
-    '罐裝油(BOT)': 'BOT',
-    '一代棉芯煙彈(OMP)': 'OMP',
-    '一代陶瓷芯煙彈(OTP)': 'OTP',
-    '五代陶瓷芯煙彈(FTP)': 'FTP',
-    '其他(ETC)': 'ETC',
-  };
-  
-  const productTypeCode = productTypeCodeMap[productType] || 'ETC';
-  const productCode = `${productTypeCode}-${seriesCode}-${productNumber}`;
-  const fragranceRef = db.doc(`fragrances/${fragranceId}`);
-  const materialRefs = (specificMaterialIds || []).map((id: string) => db.doc(`materials/${id}`));
-  
-  // 建立產品
-  const productDocRef = await db.collection("products").add({ 
-    name, 
-    code: productCode, 
-    productNumber,
-    seriesRef, 
-    currentFragranceRef: fragranceRef, 
-    nicotineMg: Number(nicotineMg) || 0, 
-    targetProduction: Number(targetProduction) || 1, 
-    specificMaterials: materialRefs, 
-    status: status || '啟用',
-    createdAt: FieldValue.serverTimestamp(), 
-  });
+/**
+ * 產品建立回應介面
+ */
+interface CreateProductResponse extends StandardResponses.CrudResponse {
+  code: string;
+  productNumber: string;
+}
 
-  // 觸發香精狀態實時更新 - 新產品使用香精，設為啟用
-  try {
-    await updateFragranceStatuses({
-      newFragranceId: fragranceId,
-      action: 'add',
-      productId: productDocRef.id
-    });
-    logger.info(`建立產品 ${productCode} 後，已觸發香精 ${fragranceId} 狀態更新`);
-  } catch (statusUpdateError) {
-    logger.warn("香精狀態更新警告 (產品建立已完成):", statusUpdateError);
-    // 不拋出錯誤，因為主要操作已經成功
-  }
-
-  return { success: true, code: productCode, productId: productDocRef.id };
-});
-
-export const updateProduct = onCall(async (request) => {
-  const { auth: contextAuth, data } = request;
-  // await ensureCanManageProducts(contextAuth?.uid);
-  const { productId, name, seriesId, fragranceId, nicotineMg, specificMaterialIds, status } = data;
-  if (!productId) { throw new HttpsError("invalid-argument", "缺少 productId"); }
-  
-  const productRef = db.doc(`products/${productId}`);
-  
-  // 準備更新數據
-  const updateData: any = {
-    name,
-    nicotineMg: Number(nicotineMg) || 0,
-    status: status || '啟用',
-    updatedAt: FieldValue.serverTimestamp(),
-  };
-
-  // 如果提供了系列ID，更新系列引用
-  if (seriesId) {
-    const seriesRef = db.doc(`productSeries/${seriesId}`);
-    const seriesDoc = await seriesRef.get();
-    if (!seriesDoc.exists) {
-      throw new HttpsError("not-found", "指定的產品系列不存在");
-    }
-    updateData.seriesRef = seriesRef;
-  }
-
-  // 如果提供了香精ID，更新香精引用
-  if (fragranceId) {
-    const fragranceRef = db.doc(`fragrances/${fragranceId}`);
-    updateData.currentFragranceRef = fragranceRef;
-  }
-
-  // 如果提供了專屬材料ID，更新材料引用
-  if (specificMaterialIds) {
-    const materialRefs = specificMaterialIds.map((id: string) => db.doc(`materials/${id}`));
-    updateData.specificMaterials = materialRefs;
-  }
-
-  await productRef.update(updateData);
-  return { success: true };
-});
-
-export const deleteProduct = onCall(async (request) => {
-  const { auth: contextAuth, data } = request;
-  // await ensureCanManageProducts(contextAuth?.uid);
-  const { productId } = data;
-  if (!productId) { throw new HttpsError("invalid-argument", "缺少 productId"); }
-  
-  let fragranceId: string | null = null;
-  let productData: any = null;
-
-  try {
-    // 先獲取產品資料以便後續香精狀態更新
-    const productRef = db.doc(`products/${productId}`);
-    const productDoc = await productRef.get();
+/**
+ * 建立新產品
+ */
+export const createProduct = CrudApiHandlers.createCreateHandler<CreateProductRequest, CreateProductResponse>(
+  'Product',
+  async (data, context, requestId) => {
+    // 1. 驗證必填欄位
+    ErrorHandler.validateRequired(data, ['name', 'seriesId', 'fragranceId']);
     
-    if (productDoc.exists) {
-      productData = productDoc.data();
-      const fragranceRef = productData?.currentFragranceRef;
+    const { name, seriesId, fragranceId, nicotineMg, targetProduction, specificMaterialIds, status } = data;
+    
+    try {
+      // 2. 檢查產品系列是否存在
+      const seriesRef = db.doc(`productSeries/${seriesId}`);
+      const seriesDoc = await seriesRef.get();
+      
+      ErrorHandler.assertExists(seriesDoc.exists, '產品系列', seriesId);
+      
+      const seriesData = seriesDoc.data()!;
+      const seriesCode = seriesData.code;
+      const productType = seriesData.productType;
+      
+      // 3. 生成唯一產品編號（4位數字）
+      const generateProductNumber = async (): Promise<string> => {
+        const maxAttempts = 100;
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          const randomNumber = Math.floor(1000 + Math.random() * 9000); // 1000-9999
+          const productNumber = String(randomNumber);
+          
+          // 檢查該系列中是否已存在此編號
+          const existingProduct = await db.collection('products')
+            .where('seriesRef', '==', seriesRef)
+            .where('productNumber', '==', productNumber)
+            .limit(1)
+            .get();
+          
+          if (existingProduct.empty) {
+            return productNumber;
+          }
+        }
+        throw new BusinessError(
+          ApiErrorCode.OPERATION_FAILED,
+          '無法生成唯一的產品編號，請重試'
+        );
+      };
+      
+      const productNumber = await generateProductNumber();
+      
+      // 4. 將產品類型名稱轉換為代碼
+      const productTypeCodeMap: { [key: string]: string } = {
+        '罐裝油(BOT)': 'BOT',
+        '一代棉芯煙彈(OMP)': 'OMP',
+        '一代陶瓷芯煙彈(OTP)': 'OTP',
+        '五代陶瓷芯煙彈(FTP)': 'FTP',
+        '其他(ETC)': 'ETC',
+      };
+      
+      const productTypeCode = productTypeCodeMap[productType] || 'ETC';
+      const productCode = `${productTypeCode}-${seriesCode}-${productNumber}`;
+      
+      // 5. 準備引用
+      const fragranceRef = db.doc(`fragrances/${fragranceId}`);
+      const materialRefs = (specificMaterialIds || []).map((id: string) => db.doc(`materials/${id}`));
+      
+      // 6. 建立產品
+      const productDocRef = await db.collection('products').add({
+        name: name.trim(),
+        code: productCode,
+        productNumber,
+        seriesRef,
+        currentFragranceRef: fragranceRef,
+        nicotineMg: Number(nicotineMg) || 0,
+        targetProduction: Number(targetProduction) || 1,
+        specificMaterials: materialRefs,
+        status: status || '啟用',
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      
+      // 7. 觸發香精狀態實時更新
+      try {
+        await updateFragranceStatuses({
+          newFragranceId: fragranceId,
+          action: 'add',
+          productId: productDocRef.id
+        });
+        logger.info(`[${requestId}] 建立產品 ${productCode} 後，已觸發香精 ${fragranceId} 狀態更新`);
+      } catch (statusUpdateError) {
+        logger.warn(`[${requestId}] 香精狀態更新警告:`, statusUpdateError);
+        // 不拋出錯誤，因為主要操作已經成功
+      }
+      
+      // 8. 返回標準化回應
+      return {
+        id: productDocRef.id,
+        code: productCode,
+        productNumber,
+        message: `產品「${name}」(編號: ${productCode}) 已成功建立`,
+        operation: 'created' as const,
+        resource: {
+          type: 'product',
+          name,
+          code: productCode,
+        }
+      };
+      
+    } catch (error) {
+      throw ErrorHandler.handle(error, `建立產品: ${name}`);
+    }
+  }
+);
+
+/**
+ * 更新產品請求介面
+ */
+interface UpdateProductRequest {
+  productId: string;
+  name?: string;
+  seriesId?: string;
+  fragranceId?: string;
+  nicotineMg?: number;
+  specificMaterialIds?: string[];
+  status?: string;
+}
+
+/**
+ * 更新產品資料
+ */
+export const updateProduct = CrudApiHandlers.createUpdateHandler<UpdateProductRequest, StandardResponses.CrudResponse>(
+  'Product',
+  async (data, context, requestId) => {
+    // 1. 驗證必填欄位
+    ErrorHandler.validateRequired(data, ['productId']);
+    
+    const { productId, name, seriesId, fragranceId, nicotineMg, specificMaterialIds, status } = data;
+    
+    try {
+      // 2. 檢查產品是否存在
+      const productRef = db.doc(`products/${productId}`);
+      const productDoc = await productRef.get();
+      
+      ErrorHandler.assertExists(productDoc.exists, '產品', productId);
+      
+      const currentProduct = productDoc.data()!;
+      
+      // 3. 準備更新資料
+      const updateData: any = {
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+      
+      if (name !== undefined) {
+        updateData.name = name.trim();
+      }
+      
+      if (nicotineMg !== undefined) {
+        updateData.nicotineMg = Number(nicotineMg) || 0;
+      }
+      
+      if (status !== undefined) {
+        updateData.status = status || '啟用';
+      }
+      
+      // 4. 如果提供了系列ID，更新系列引用
+      if (seriesId) {
+        const seriesRef = db.doc(`productSeries/${seriesId}`);
+        const seriesDoc = await seriesRef.get();
+        
+        ErrorHandler.assertExists(seriesDoc.exists, '產品系列', seriesId);
+        
+        updateData.seriesRef = seriesRef;
+      }
+      
+      // 5. 如果提供了香精 ID，更新香精引用
+      if (fragranceId) {
+        const fragranceRef = db.doc(`fragrances/${fragranceId}`);
+        updateData.currentFragranceRef = fragranceRef;
+      }
+      
+      // 6. 如果提供了專屬材料ID，更新材料引用
+      if (specificMaterialIds) {
+        const materialRefs = specificMaterialIds.map((id: string) => db.doc(`materials/${id}`));
+        updateData.specificMaterials = materialRefs;
+      }
+      
+      // 7. 更新資料庫
+      await productRef.update(updateData);
+      
+      // 8. 返回標準化回應
+      return {
+        id: productId,
+        message: `產品「${updateData.name || currentProduct.name}」的資料已成功更新`,
+        operation: 'updated' as const,
+        resource: {
+          type: 'product',
+          name: updateData.name || currentProduct.name,
+          code: currentProduct.code,
+        }
+      };
+      
+    } catch (error) {
+      throw ErrorHandler.handle(error, `更新產品: ${productId}`);
+    }
+  }
+);
+
+/**
+ * 刪除產品請求介面
+ */
+interface DeleteProductRequest {
+  productId: string;
+}
+
+/**
+ * 刪除產品
+ */
+export const deleteProduct = CrudApiHandlers.createDeleteHandler<DeleteProductRequest, StandardResponses.CrudResponse>(
+  'Product',
+  async (data, context, requestId) => {
+    // 1. 驗證必填欄位
+    ErrorHandler.validateRequired(data, ['productId']);
+    
+    const { productId } = data;
+    
+    let fragranceId: string | null = null;
+    let productData: any = null;
+    
+    try {
+      // 2. 獲取產品資料以便後續香精狀態更新
+      const productRef = db.doc(`products/${productId}`);
+      const productDoc = await productRef.get();
+      
+      ErrorHandler.assertExists(productDoc.exists, '產品', productId);
+      
+      productData = productDoc.data()!;
+      const productName = productData.name;
+      const productCode = productData.code;
+      
+      // 3. 獲取香精參考
+      const fragranceRef = productData.currentFragranceRef;
       if (fragranceRef) {
         fragranceId = fragranceRef.id;
       }
-    }
-
-    // 刪除產品
-    await productRef.delete();
-
-    // 觸發香精狀態實時更新 - 檢查是否需要將香精設為備用
-    if (fragranceId) {
-      try {
-        await updateFragranceStatuses({
-          oldFragranceId: fragranceId,
-          action: 'remove',
-          productId: productId
-        });
-        logger.info(`刪除產品 ${productId} 後，已觸發香精 ${fragranceId} 狀態檢查`);
-      } catch (statusUpdateError) {
-        logger.warn("香精狀態更新警告 (產品刪除已完成):", statusUpdateError);
-        // 不拋出錯誤，因為主要操作已經成功
+      
+      // 4. 刪除產品
+      await productRef.delete();
+      
+      // 5. 觸發香精狀態實時更新 - 檢查是否需要將香精設為備用
+      if (fragranceId) {
+        try {
+          await updateFragranceStatuses({
+            oldFragranceId: fragranceId,
+            action: 'remove',
+            productId: productId
+          });
+          logger.info(`[${requestId}] 刪除產品 ${productId} 後，已觸發香精 ${fragranceId} 狀態檢查`);
+        } catch (statusUpdateError) {
+          logger.warn(`[${requestId}] 香精狀態更新警告:`, statusUpdateError);
+          // 不拋出錯誤，因為主要操作已經成功
+        }
       }
-    }
-
-    return { 
-      success: true, 
-      deletedProduct: {
+      
+      // 6. 返回標準化回應
+      return {
         id: productId,
-        name: productData?.name,
-        fragranceId
-      }
-    };
-  } catch (error) {
-    logger.error(`刪除產品 ${productId} 時發生錯誤:`, error);
-    if (error instanceof HttpsError) { throw error; }
-    throw new HttpsError("internal", "刪除產品時發生未知錯誤");
+        message: `產品「${productName}」(編號: ${productCode}) 已成功刪除`,
+        operation: 'deleted' as const,
+        resource: {
+          type: 'product',
+          name: productName,
+          code: productCode,
+        }
+      };
+      
+    } catch (error) {
+      throw ErrorHandler.handle(error, `刪除產品: ${productId}`);
+    }
   }
-});
+);
 
 /**
  * 實時更新香精狀態 - 核心功能

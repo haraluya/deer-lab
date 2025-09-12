@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useApiForm } from '@/hooks/useApiClient';
 import { AdminOnly } from '@/components/PermissionGate';
 import { usePermission } from '@/hooks/usePermission';
 import { RoleEditDialog } from '@/components/RoleEditDialog';
@@ -64,6 +65,7 @@ function PermissionsPageContent() {
   const [assigningUser, setAssigningUser] = useState<UserWithRole | null>(null);
   
   const { isAdmin } = usePermission();
+  const apiClient = useApiForm();
 
   // 載入角色列表
   const fetchRoles = useCallback(async () => {
@@ -97,21 +99,19 @@ function PermissionsPageContent() {
       console.warn('⚠️  本地 Firestore 查詢失敗，嘗試 Functions:', localError);
     }
 
-    // 如果本地查詢失敗，才嘗試 Functions
+    // 如果本地查詢失敗，才嘗試統一 API 客戶端
     try {
-      const functions = getFunctions();
-      const getRolesFunction = httpsCallable(functions, 'getRoles');
-      const result = await getRolesFunction();
+      const result = await apiClient.callGeneric('getRoles');
       
-      const data = result.data as any;
-      if (data.status === 'success') {
-        setRoles(data.roles || []);
-        toast.success(`載入 ${data.roles?.length || 0} 個角色（Cloud Functions）`);
+      if (result.success && result.data) {
+        const roles = result.data.roles || [];
+        setRoles(roles);
+        toast.success(`載入 ${roles.length} 個角色（統一 API）`);
       } else {
         toast.error('載入角色列表失敗');
       }
     } catch (error) {
-      console.error('❌ Functions 和本地查詢都失敗:', error);
+      console.error('❌ 統一 API 和本地查詢都失敗:', error);
       toast.error('載入角色列表失敗，請檢查網路連線');
     }
   }, []);
@@ -175,16 +175,15 @@ function PermissionsPageContent() {
   // 初始化預設角色
   const initializeRoles = async () => {
     try {
-      const functions = getFunctions();
-      const initFunction = httpsCallable(functions, 'initializeDefaultRoles');
-      const result = await initFunction();
+      const result = await apiClient.callGeneric('initializeDefaultRoles');
       
-      const data = result.data as any;
-      if (data.status === 'success') {
-        toast.success(`成功初始化 ${data.roles?.length || 0} 個預設角色`);
-        await fetchRoles();
-      } else if (data.status === 'skipped') {
-        toast.info('系統已有角色，跳過初始化');
+      if (result.success && result.data) {
+        if (result.data.status === 'success') {
+          toast.success(`成功初始化 ${result.data.roles?.length || 0} 個預設角色`);
+          await fetchRoles();
+        } else if (result.data.status === 'skipped') {
+          toast.info('系統已有角色，跳過初始化');
+        }
       }
     } catch (error) {
       console.error('初始化角色錯誤:', error);
@@ -468,7 +467,7 @@ function PermissionsPageContent() {
         {/* 操作按鈕 */}
         <div className="flex gap-2">
           {roles.length === 0 && (
-            <Button onClick={initializeRoles} className="bg-gradient-to-r from-blue-500 to-blue-600">
+            <Button onClick={initializeRoles} disabled={apiClient.loading} className="bg-gradient-to-r from-blue-500 to-blue-600">
               <Plus className="mr-2 h-4 w-4" />
               初始化預設角色
             </Button>

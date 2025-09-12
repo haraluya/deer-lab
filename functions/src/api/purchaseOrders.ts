@@ -198,12 +198,8 @@ export const receivePurchaseOrderItems = onCall(async (request) => {
       }
     });
 
-    logger.info(`管理員 ${contextAuth.uid} 成功完成採購單 ${purchaseOrderId} 的入庫操作。`);
-    return { success: true };
-
-  } catch (error) {
-    logger.error(`處理採購單 ${purchaseOrderId} 入庫時發生嚴重錯誤:`, error);
-    if (error instanceof HttpsError) { throw error; }
-    throw new HttpsError("internal", "處理入庫時發生未知錯誤。");
+    logger.info(`管理員 ${context.auth.uid} 成功完成採購單 ${purchaseOrderId} 的入庫操作。`);
+    
+    return {};
   }
-});
+);

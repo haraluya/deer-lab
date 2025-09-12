@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { collection, getDocs, Timestamp, query, where, orderBy, limit, startAfter } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useApiForm } from '@/hooks/useApiClient';
 import { CartItem } from '@/types';
 import { useGlobalCart } from '@/hooks/useGlobalCart';
 
@@ -333,6 +334,7 @@ function PurchaseOrdersPageContent() {
     clearCart: globalClearCart,
     isSyncing 
   } = useGlobalCart();
+  const apiClient = useApiForm();
   const [selectedCartItems, setSelectedCartItems] = useState<Set<string>>(new Set());
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
@@ -683,12 +685,8 @@ function PurchaseOrdersPageContent() {
   // 建立採購單
   const createPurchaseOrder = useCallback(async () => {
     setIsCreatingOrder(true);
-    const toastId = toast.loading("正在建立採購單...");
 
     try {
-      const functions = getFunctions();
-      const createPurchaseOrdersFunction = httpsCallable(functions, 'createPurchaseOrders');
-
       // 決定要建立採購單的項目
       let itemsToProcess: CartItem[];
       if (selectedCartItems.size === 0) {
@@ -702,7 +700,7 @@ function PurchaseOrdersPageContent() {
       }
 
       if (itemsToProcess.length === 0) {
-        toast.error("沒有項目可以建立採購單", { id: toastId });
+        toast.error("沒有項目可以建立採購單");
         return;
       }
 
@@ -746,27 +744,27 @@ function PurchaseOrdersPageContent() {
         suppliers: Object.values(supplierGroups)
       };
 
-      await createPurchaseOrdersFunction(payload);
+      const result = await apiClient.callGeneric('createPurchaseOrders', payload);
       
-      toast.success(`成功建立 ${Object.keys(supplierGroups).length} 張採購單`, { id: toastId });
-      
-      // 從全域採購車中移除已使用的項目
-      for (const item of itemsToProcess) {
-        await globalRemoveFromCart(item.id);
+      if (result.success) {
+        toast.success(`成功建立 ${Object.keys(supplierGroups).length} 張採購單`);
+        
+        // 從全域採購車中移除已使用的項目
+        for (const item of itemsToProcess) {
+          await globalRemoveFromCart(item.id);
+        }
+        setSelectedCartItems(new Set());
+        setIsConfirmDialogOpen(false);
+        
+        // 重新載入採購單列表
+        loadPurchaseOrders();
       }
-      setSelectedCartItems(new Set());
-      setIsConfirmDialogOpen(false);
-      
-      // 重新載入採購單列表
-      loadPurchaseOrders();
-      
     } catch (error) {
       console.error("建立採購單失敗:", error);
-      toast.error("建立採購單失敗", { id: toastId });
     } finally {
       setIsCreatingOrder(false);
     }
-  }, [selectedCartItems, cartItems, materials, fragrances, loadPurchaseOrders, globalRemoveFromCart]);
+  }, [selectedCartItems, cartItems, materials, fragrances, loadPurchaseOrders, globalRemoveFromCart, apiClient]);
 
 
 

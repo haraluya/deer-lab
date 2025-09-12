@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { collection, getDocs, doc, getDoc, DocumentReference, query, orderBy } from 'firebase/firestore';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useApiForm } from '@/hooks/useApiClient';
 import { db } from '@/lib/firebase';
 import { AppUser } from '@/context/AuthContext';
 
@@ -54,6 +54,7 @@ function PersonnelPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   
   const { isAdmin, userRole, userPermissions } = usePermission();
+  const apiClient = useApiForm();
   
   const [isPersonnelDialogOpen, setIsPersonnelDialogOpen] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
@@ -498,22 +499,19 @@ function PersonnelPageContent() {
     if (!selectedUser) return;
 
     const newStatus = selectedUser.status === 'active' ? 'inactive' : 'active';
-    const toastId = toast.loading("正在更新狀態...");
 
     try {
-      const functions = getFunctions();
-      const setUserStatus = httpsCallable(functions, 'setUserStatus');
-      await setUserStatus({ uid: selectedUser.uid, status: newStatus });
-
-      toast.success("員工狀態已成功更新。", { id: toastId });
-      fetchUsers(); // 重新整理列表
+      const result = await apiClient.callGeneric('setUserStatus', { 
+        uid: selectedUser.uid, 
+        status: newStatus 
+      });
+      
+      if (result.success) {
+        toast.success("員工狀態已成功更新。");
+        fetchUsers(); // 重新整理列表
+      }
     } catch (error) {
       console.error("變更狀態失敗:", error);
-      let errorMessage = "變更狀態時發生錯誤。";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      toast.error(errorMessage, { id: toastId });
     } finally {
       setIsConfirmDialogOpen(false);
       setSelectedUser(null);
@@ -523,22 +521,17 @@ function PersonnelPageContent() {
   const handleConfirmDelete = async () => {
     if (!selectedUser) return;
 
-    const toastId = toast.loading("正在刪除員工...");
-
     try {
-      const functions = getFunctions();
-      const deletePersonnel = httpsCallable(functions, 'deletePersonnel');
-      await deletePersonnel({ personnelId: selectedUser.uid });
-
-      toast.success("員工已成功刪除。", { id: toastId });
-      fetchUsers(); // 重新整理列表
+      const result = await apiClient.callGeneric('deletePersonnel', { 
+        personnelId: selectedUser.uid 
+      });
+      
+      if (result.success) {
+        toast.success("員工已成功刪除。");
+        fetchUsers(); // 重新整理列表
+      }
     } catch (error) {
       console.error("刪除員工失敗:", error);
-      let errorMessage = "刪除員工時發生錯誤。";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      toast.error(errorMessage, { id: toastId });
     } finally {
       setIsDeleteDialogOpen(false);
       setSelectedUser(null);

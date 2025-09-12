@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { getFunctions, httpsCallable } from "firebase/functions"
+import { useApiForm } from "@/hooks/useApiClient"
 import { toast } from "sonner"
 import { Loader2, Package, FlaskConical, AlertTriangle } from "lucide-react"
 
@@ -36,7 +36,7 @@ interface QuickUpdateDialogProps {
 export function QuickUpdateDialog({ isOpen, onClose, item, onSuccess }: QuickUpdateDialogProps) {
   const [newStock, setNewStock] = useState(item.currentStock.toString())
   const [remarks, setRemarks] = useState('')
-  const [isUpdating, setIsUpdating] = useState(false)
+  const apiClient = useApiForm()
 
   const handleSubmit = async () => {
     const stockValue = parseFloat(newStock)
@@ -50,29 +50,17 @@ export function QuickUpdateDialog({ isOpen, onClose, item, onSuccess }: QuickUpd
       toast.error('新庫存數量與當前相同，無需更新')
       return
     }
-
-    setIsUpdating(true)
     
-    try {
-      const functions = getFunctions()
-      const quickUpdateInventory = httpsCallable(functions, 'quickUpdateInventory')
-      
-      await quickUpdateInventory({
-        itemId: item.id,
-        itemType: item.type,
-        newStock: stockValue,
-        remarks: remarks.trim() || `快速更新${item.type === 'material' ? '物料' : '香精'}庫存`
-      })
-      
-      toast.success(`${item.name} 庫存已更新為 ${stockValue} ${item.unit}`)
+    const result = await apiClient.callGeneric('quickUpdateInventory', {
+      itemId: item.id,
+      itemType: item.type,
+      newStock: stockValue,
+      remarks: remarks.trim() || `快速更新${item.type === 'material' ? '物料' : '香精'}庫存`
+    })
+    
+    if (result.success) {
       onSuccess()
       onClose()
-    } catch (error) {
-      console.error('快速更新庫存失敗:', error)
-      const errorMessage = error instanceof Error ? error.message : '更新失敗'
-      toast.error(`更新失敗: ${errorMessage}`)
-    } finally {
-      setIsUpdating(false)
     }
   }
 
@@ -193,11 +181,11 @@ export function QuickUpdateDialog({ isOpen, onClose, item, onSuccess }: QuickUpd
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isUpdating}>
+          <Button variant="outline" onClick={onClose} disabled={apiClient.loading}>
             取消
           </Button>
-          <Button onClick={handleSubmit} disabled={isUpdating}>
-            {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button onClick={handleSubmit} disabled={apiClient.loading}>
+            {apiClient.loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             確認更新
           </Button>
         </DialogFooter>

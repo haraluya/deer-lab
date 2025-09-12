@@ -5,7 +5,7 @@ import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useApiForm } from '@/hooks/useApiClient';
 import { Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,8 @@ interface ReceiveDialogProps {
 }
 
 export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }: ReceiveDialogProps) {
+  const apiClient = useApiForm();
+  
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -53,11 +55,8 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
 
   const onSubmit = async (data: FormData) => {
     form.clearErrors();
-    const toastId = toast.loading("正在處理入庫...");
+    
     try {
-      const functions = getFunctions();
-      const receivePurchaseOrderItems = httpsCallable(functions, 'receivePurchaseOrderItems');
-      
       const payload = {
         purchaseOrderId: purchaseOrder.id,
         items: data.items.map(item => ({
@@ -71,24 +70,20 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
       console.log("採購單狀態:", purchaseOrder.status);
       console.log("發送 payload:", JSON.stringify(payload, null, 2));
       
-      const result = await receivePurchaseOrderItems(payload);
-      console.log("Cloud Function 回應:", JSON.stringify(result, null, 2));
+      const result = await apiClient.callGeneric('receivePurchaseOrderItems', payload);
+      console.log("統一 API 回應:", JSON.stringify(result, null, 2));
       
-      if (result.data) {
+      if (result.success) {
         console.log("入庫成功，更新結果:", result.data);
+        toast.success("收貨入庫成功，庫存已更新。");
+        onSuccess();
+        onOpenChange(false);
       }
-      
-      toast.success("收貨入庫成功，庫存已更新。", { id: toastId });
-      onSuccess();
-      onOpenChange(false);
     } catch (error) {
       console.error("=== 入庫操作失敗 ===");
       console.error("錯誤類型:", error?.constructor?.name);
       console.error("錯誤訊息:", error instanceof Error ? error.message : error);
       console.error("完整錯誤物件:", error);
-      
-      const errorMessage = error instanceof Error ? error.message : "入庫操作失敗";
-      toast.error(errorMessage, { id: toastId });
     }
   };
 

@@ -152,7 +152,6 @@ export const getInventoryOverview = onCall(async (request) => {
     });
 
     return {
-      success: true,
       overview: {
         totalMaterials,
         totalFragrances,
@@ -163,11 +162,8 @@ export const getInventoryOverview = onCall(async (request) => {
         totalLowStock: lowStockMaterials + lowStockFragrances
       }
     };
-  } catch (error) {
-    logger.error(`獲取庫存總覽時發生錯誤:`, error);
-    throw new HttpsError("internal", "獲取庫存總覽時發生未知錯誤。");
   }
-});
+);
 
 /**
  * 快速更新庫存
@@ -308,14 +304,10 @@ export const getLowStockItems = onCall(async (request) => {
     lowStockItems.sort((a, b) => b.shortage - a.shortage);
 
     return {
-      success: true,
       items: lowStockItems
     };
-  } catch (error) {
-    logger.error(`獲取低庫存項目時發生錯誤:`, error);
-    throw new HttpsError("internal", "獲取低庫存項目時發生未知錯誤。");
   }
-});
+);
 
 export const performStocktake = onCall(async (request) => {
   const { auth: contextAuth, data } = request;

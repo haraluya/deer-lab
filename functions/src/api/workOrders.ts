@@ -498,8 +498,8 @@ export const completeWorkOrder = onCall(async (request) => {
         transaction.set(inventoryRecordRef, {
           changeDate: FieldValue.serverTimestamp(),
           changeReason: 'workorder',
-          operatorId: contextAuth.uid,
-          operatorName: contextAuth.token?.name || '未知用戶',
+          operatorId: context.auth.uid,
+          operatorName: context.auth.token?.name || '未知用戶',
           remarks: `工單 ${workOrderData.workOrderNumber || workOrderId} 完工，實際生產數量：${actualQuantity}`,
           relatedDocumentId: workOrderId,
           relatedDocumentType: 'work_order',
@@ -512,12 +512,9 @@ export const completeWorkOrder = onCall(async (request) => {
       }
     });
 
-    logger.info(`使用者 ${contextAuth.uid} 成功完成工單 ${workOrderId}`);
-    return { success: true };
+    logger.info(`使用者 ${context.auth.uid} 成功完成工單 ${workOrderId}`);
+    
+    return {};
 
-  } catch (error) {
-    logger.error(`完工工單時發生錯誤:`, error);
-    if (error instanceof HttpsError) { throw error; }
-    throw new HttpsError("internal", "完工工單時發生未知錯誤。");
   }
-});
+);

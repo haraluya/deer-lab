@@ -6,6 +6,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { doc, getDoc, updateDoc, Timestamp, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useApiForm } from '@/hooks/useApiClient';
 import { toast } from 'sonner';
 import { uploadMultipleImages } from '@/lib/imageUpload';
 import { ArrowLeft, Loader2, CheckCircle, Truck, ShoppingCart, Building, User, Calendar, Package, Plus, MessageSquare, Upload, X, Trash2 } from 'lucide-react';
@@ -64,6 +65,7 @@ export default function PurchaseOrderDetailPage() {
   const router = useRouter();
   const params = useParams();
   const { id } = params;
+  const apiClient = useApiForm();
 
   const [po, setPo] = useState<PurchaseOrderDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -406,16 +408,19 @@ export default function PurchaseOrderDetailPage() {
   const handleUpdateStatus = async (newStatus: PurchaseOrderDetails['status']) => {
     if (!po) return;
     setIsUpdating(true);
-    const toastId = toast.loading(`正在將狀態更新為 "${newStatus}"...`);
+    
     try {
-      const functions = getFunctions();
-      const updatePurchaseOrderStatus = httpsCallable(functions, 'updatePurchaseOrderStatus');
-      await updatePurchaseOrderStatus({ purchaseOrderId: po.id, newStatus });
-      toast.success("狀態更新成功。", { id: toastId });
-      loadData(po.id); // 重新載入資料以顯示最新狀態
+      const result = await apiClient.callGeneric('updatePurchaseOrderStatus', { 
+        purchaseOrderId: po.id, 
+        newStatus 
+      });
+      
+      if (result.success) {
+        toast.success("狀態更新成功。");
+        loadData(po.id); // 重新載入資料以顯示最新狀態
+      }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "狀態更新失敗";
-      toast.error(errorMessage, { id: toastId });
+      console.error('狀態更新失敗:', error);
     } finally {
       setIsUpdating(false);
     }

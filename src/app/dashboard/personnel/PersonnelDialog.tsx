@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { getFunctions, httpsCallable } from "firebase/functions"
+import { useApiForm } from "@/hooks/useApiClient"
 import { collection, getDocs, DocumentReference } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 
@@ -74,7 +74,7 @@ export function PersonnelDialog({
 }: PersonnelDialogProps) {
 
   const { appUser, isLoading } = useAuth()
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const apiClient = useApiForm()
   const [roles, setRoles] = useState<Role[]>([])
   const [isLoadingRoles, setIsLoadingRoles] = useState(false)
   const [showPasswordFields, setShowPasswordFields] = useState(false)
@@ -166,97 +166,55 @@ export function PersonnelDialog({
       return
     }
 
-    setIsSubmitting(true)
-    const toastId = toast.loading(isEditMode ? "正在更新人員資料..." : "正在建立新人員...")
-
-    try {
-      const functions = getFunctions()
+    console.log('🔧 準備調用統一 API 客戶端...')
+    console.log('📋 提交資料:', data)
+    console.log('🎭 模式:', isEditMode ? '編輯' : '新增')
+    
+    if (isEditMode && personnelData) {
+      console.log('📝 調用 updatePersonnel...')
       
-      console.log('🔧 準備調用 Firebase Functions...')
-      console.log('📋 提交資料:', data)
-      console.log('🎭 模式:', isEditMode ? '編輯' : '新增')
+      // 準備更新資料，確保欄位名稱正確
+      const updateData = {
+        personnelId: personnelData.id, // 確保傳遞人員 ID
+        name: data.name,
+        employeeId: data.employeeId,
+        phone: data.phone,
+        roleId: data.role, // 將 role 映射為 roleId
+        password: data.password || "", // 如果沒有密碼則傳空字串
+        status: data.status,
+      };
       
-      if (isEditMode && personnelData) {
-        console.log('📝 調用 updatePersonnel...')
-        const updatePersonnel = httpsCallable(functions, 'updatePersonnel')
-        
-        // 準備更新資料，確保欄位名稱正確
-        const updateData = {
-          personnelId: personnelData.id, // 確保傳遞人員 ID
-          name: data.name,
-          employeeId: data.employeeId,
-          phone: data.phone,
-          roleId: data.role, // 將 role 映射為 roleId
-          password: data.password || "", // 如果沒有密碼則傳空字串
-          status: data.status,
-        };
-        
-        console.log('📤 更新資料:', updateData);
-        const result = await updatePersonnel(updateData)
-        console.log('✅ updatePersonnel 成功:', result.data)
-        toast.success("人員資料更新成功", { id: toastId })
-      } else {
-        console.log('📝 調用 createPersonnel...')
-        const createPersonnel = httpsCallable(functions, 'createPersonnel')
-        
-        // 準備建立資料，確保欄位名稱正確
-        const createData = {
-          name: data.name,
-          employeeId: data.employeeId,
-          phone: data.phone,
-          roleId: data.role, // 將 role 映射為 roleId
-          password: data.password,
-          status: data.status,
-        };
-        
-        console.log('📤 建立資料:', createData);
-        const result = await createPersonnel(createData)
-        console.log('✅ createPersonnel 成功:', result.data)
-        toast.success("人員建立成功", { id: toastId })
+      console.log('📤 更新資料:', updateData);
+      const result = await apiClient.callGeneric('updatePersonnel', updateData);
+      console.log('✅ updatePersonnel 成功:', result);
+      
+      if (result.success) {
+        toast.success("人員資料更新成功");
       }
+    } else {
+      console.log('📝 調用 createPersonnel...')
       
-      onPersonnelUpdate()
-      onOpenChange(false)
-    } catch (error: any) {
-      console.error("操作失敗:", error)
+      // 準備建立資料，確保欄位名稱正確
+      const createData = {
+        name: data.name,
+        employeeId: data.employeeId,
+        phone: data.phone,
+        roleId: data.role, // 將 role 映射為 roleId
+        password: data.password,
+        status: data.status,
+      };
       
-      let errorMessage = "操作失敗，請稍後再試。"
-      if (error?.code === 'functions/unavailable') {
-        errorMessage = "服務暫時不可用，請稍後再試。"
-      } else if (error?.code === 'functions/permission-denied') {
-        errorMessage = "權限不足，無法執行此操作。"
-      } else if (error?.code === 'functions/unauthenticated') {
-        errorMessage = "請重新登入後再試。"
-      } else if (error?.code === 'functions/invalid-argument') {
-        errorMessage = "輸入資料有誤，請檢查後再試。"
-      } else if (error?.code === 'functions/not-found') {
-        errorMessage = "找不到指定的資料。"
-      } else if (error?.code === 'functions/already-exists') {
-        errorMessage = "資料已存在，請使用其他資料。"
-      } else if (error?.code === 'functions/resource-exhausted') {
-        errorMessage = "系統資源不足，請稍後再試。"
-      } else if (error?.code === 'functions/failed-precondition') {
-        errorMessage = "操作條件不滿足，請檢查資料後再試。"
-      } else if (error?.code === 'functions/aborted') {
-        errorMessage = "操作被中止，請稍後再試。"
-      } else if (error?.code === 'functions/out-of-range') {
-        errorMessage = "輸入資料超出範圍，請檢查後再試。"
-      } else if (error?.code === 'functions/unimplemented') {
-        errorMessage = "此功能尚未實作。"
-      } else if (error?.code === 'functions/internal') {
-        errorMessage = "系統內部錯誤，請稍後再試。"
-      } else if (error?.code === 'functions/data-loss') {
-        errorMessage = "資料遺失，請重新輸入。"
-      } else if (error?.code === 'functions/unknown') {
-        errorMessage = "發生未知錯誤，請稍後再試。"
-      } else if (error?.message) {
-        errorMessage = error.message
+      console.log('📤 建立資料:', createData);
+      const result = await apiClient.callGeneric('createPersonnel', createData);
+      console.log('✅ createPersonnel 成功:', result);
+      
+      if (result.success) {
+        toast.success("人員建立成功");
       }
-      
-      toast.error(errorMessage, { id: toastId })
-    } finally {
-      setIsSubmitting(false)
     }
+      
+    onPersonnelUpdate();
+    onOpenChange(false);
   }
 
   // 如果正在載入，顯示載入狀態
@@ -465,10 +423,10 @@ export function PersonnelDialog({
               </Button>
                              <Button 
                  type="submit" 
-                 disabled={isSubmitting}
+                 disabled={apiClient.loading}
                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
                >
-                 {isSubmitting ? "處理中..." : (isEditMode ? "更新" : "新增")}
+                 {apiClient.loading ? "處理中..." : (isEditMode ? "更新" : "新增")}
                </Button>
             </div>
 
