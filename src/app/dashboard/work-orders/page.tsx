@@ -14,7 +14,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { StandardDataListPage, StandardColumn, StandardAction, QuickFilter } from '@/components/StandardDataListPage'
 import { StandardStats } from '@/components/StandardStatsCard'
 import { useDataSearch } from '@/hooks/useDataSearch'
-import { debugWorkOrders } from '@/utils/debugWorkOrders'
 import { Plus, Factory, Filter, Search, TrendingUp, Clock, CheckCircle, Package, AlertCircle, Shield, Eye, ExternalLink } from "lucide-react"
 
 const ITEMS_PER_PAGE = 20;
@@ -110,48 +109,28 @@ function WorkOrdersPageContent() {
     filteredCount
   } = useDataSearch(workOrders, searchConfig);
 
-  const loadWorkOrders = useCallback(async (reset = false) => {
-    if (reset) {
-      setLoading(true)
-      setWorkOrders([])
-      setLastDoc(null)
-      setHasMore(true)
-    } else {
-      setLoadingMore(true)
-    }
-    
-    console.log('🔧 開始載入工單資料...', { reset, hasLastDoc: !!lastDoc });
+  // 分離初始載入和分頁載入函數，避免循環依賴
+  const loadInitialWorkOrders = useCallback(async () => {
+    setLoading(true)
+    setWorkOrders([])
+    setLastDoc(null)
+    setHasMore(true)
     
     try {
       if (!db) {
-        console.error('❌ Firebase 未初始化');
         throw new Error("Firebase 未初始化")
       }
-      console.log('✅ Firebase 已初始化');
       
-      let workOrdersQuery = query(
+      const workOrdersQuery = query(
         collection(db, "workOrders"),
         orderBy("createdAt", "desc"),
         limit(ITEMS_PER_PAGE)
       );
       
-      // 如果不是重置載入且有上一頁的最後文檔，則從該文檔之後開始
-      if (!reset && lastDoc) {
-        workOrdersQuery = query(
-          collection(db, "workOrders"),
-          orderBy("createdAt", "desc"),
-          startAfter(lastDoc),
-          limit(ITEMS_PER_PAGE)
-        );
-      }
-      
-      console.log('📋 執行查詢...');
       const querySnapshot = await getDocs(workOrdersQuery)
-      console.log(`📊 查詢結果: ${querySnapshot.size} 筆資料`);
       
       const workOrdersList = querySnapshot.docs.map(doc => {
         const data = doc.data()
-        console.log(`📄 工單資料:`, { id: doc.id, code: data.code, status: data.status });
         return {
           id: doc.id,
           code: data.code || "",
@@ -163,51 +142,76 @@ function WorkOrdersPageContent() {
         }
       }) as WorkOrderColumn[]
       
-      // 更新狀態
-      if (reset) {
-        setWorkOrders(workOrdersList)
-        console.log(`✅ 設置工單資料: ${workOrdersList.length} 筆`);
-      } else {
-        setWorkOrders(prev => {
-          const newList = [...prev, ...workOrdersList];
-          console.log(`✅ 追加工單資料: 總共 ${newList.length} 筆`);
-          return newList;
-        });
-      }
+      setWorkOrders(workOrdersList)
       
       // 更新分頁狀態
       const lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1]
       setLastDoc(lastVisible || null)
       setHasMore(querySnapshot.docs.length === ITEMS_PER_PAGE)
-      console.log(`📋 分頁狀態: hasMore=${querySnapshot.docs.length === ITEMS_PER_PAGE}`);
       
     } catch (err) {
-      console.error('❌ 載入工單失敗:', err);
       error("讀取工單資料失敗", err as Error)
       toast.error("讀取工單資料失敗")
     } finally {
       setLoading(false)
-      setLoadingMore(false)
-      console.log('🏁 載入完成');
     }
-  }, [lastDoc])
+  }, [])
+
+  // 載入更多工單
+  const loadMoreWorkOrders = useCallback(async () => {
+    if (!lastDoc || !hasMore || loadingMore) return
+    
+    setLoadingMore(true)
+    
+    try {
+      if (!db) {
+        throw new Error("Firebase 未初始化")
+      }
+      
+      const workOrdersQuery = query(
+        collection(db, "workOrders"),
+        orderBy("createdAt", "desc"),
+        startAfter(lastDoc),
+        limit(ITEMS_PER_PAGE)
+      );
+      
+      const querySnapshot = await getDocs(workOrdersQuery)
+      
+      const workOrdersList = querySnapshot.docs.map(doc => {
+        const data = doc.data()
+        return {
+          id: doc.id,
+          code: data.code || "",
+          productName: data.productSnapshot?.name || "未知產品",
+          seriesName: data.productSnapshot?.seriesName || "未指定",
+          targetQuantity: data.targetQuantity || 0,
+          status: data.status || "預報",
+          createdAt: data.createdAt?.toDate?.()?.toLocaleDateString() || "未知日期"
+        }
+      }) as WorkOrderColumn[]
+      
+      setWorkOrders(prev => [...prev, ...workOrdersList])
+      
+      // 更新分頁狀態
+      const lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1]
+      setLastDoc(lastVisible || null)
+      setHasMore(querySnapshot.docs.length === ITEMS_PER_PAGE)
+      
+    } catch (err) {
+      error("載入更多工單失敗", err as Error)
+      toast.error("載入更多工單失敗")
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [lastDoc, hasMore, loadingMore])
 
   useEffect(() => {
-    loadWorkOrders(true)
-    
-    // 調試工具 - 在開發環境中使用
-    if (process.env.NODE_ENV === 'development') {
-      setTimeout(() => {
-        debugWorkOrders()
-      }, 2000) // 2秒後執行調試
-    }
-  }, [loadWorkOrders])
+    loadInitialWorkOrders()
+  }, [loadInitialWorkOrders])
 
   // 載入更多資料
   const loadMore = () => {
-    if (!loadingMore && hasMore) {
-      loadWorkOrders(false)
-    }
+    loadMoreWorkOrders()
   }
 
   const handleCreateWorkOrder = () => {
