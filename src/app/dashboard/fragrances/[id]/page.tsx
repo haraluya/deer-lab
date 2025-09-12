@@ -302,7 +302,7 @@ export default function FragranceDetailPage() {
          code: data.code,
          name: data.name,
          fragranceType: data.fragranceType || data.status,
-         fragranceStatus: data.fragranceStatus || data.status || 'active',
+         fragranceStatus: data.fragranceStatus || data.status || '啟用',
          supplierRef: data.supplierRef,
          supplierName,
          costPerUnit: data.costPerUnit,

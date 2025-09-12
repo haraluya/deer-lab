@@ -37,9 +37,9 @@ async function updateFragranceStatuses(params) {
                     .where('currentFragranceRef', '==', newFragranceRef)
                     .get();
                 // 更新為啟用狀態，除非手動設為棄用
-                if ((newFragranceData === null || newFragranceData === void 0 ? void 0 : newFragranceData.status) !== 'deprecated') {
+                if ((newFragranceData === null || newFragranceData === void 0 ? void 0 : newFragranceData.fragranceStatus) !== '棄用') {
                     transaction.update(newFragranceRef, {
-                        status: 'active',
+                        fragranceStatus: '啟用',
                         usageCount: newFragranceProducts.size,
                         lastUsedAt: firestore_1.FieldValue.serverTimestamp(),
                         updatedAt: firestore_1.FieldValue.serverTimestamp()
@@ -61,9 +61,9 @@ async function updateFragranceStatuses(params) {
                 // 檢查剩餘的產品數量（排除當前產品）
                 const remainingProducts = oldFragranceProducts.docs.filter(doc => doc.id !== productId);
                 // 如果沒有其他產品使用此香精，且非棄用狀態，則設為備用
-                if (remainingProducts.length === 0 && (oldFragranceData === null || oldFragranceData === void 0 ? void 0 : oldFragranceData.status) !== 'deprecated') {
+                if (remainingProducts.length === 0 && (oldFragranceData === null || oldFragranceData === void 0 ? void 0 : oldFragranceData.fragranceStatus) !== '棄用') {
                     transaction.update(oldFragranceRef, {
-                        status: 'standby',
+                        fragranceStatus: '備用',
                         usageCount: 0,
                         updatedAt: firestore_1.FieldValue.serverTimestamp()
                     });
@@ -216,9 +216,30 @@ exports.updateProduct = apiWrapper_1.CrudApiHandlers.createUpdateHandler('Produc
             const materialRefs = specificMaterialIds.map((id) => db.doc(`materials/${id}`));
             updateData.specificMaterials = materialRefs;
         }
-        // 7. 更新資料庫
+        // 7. 檢查是否需要更新香精狀態
+        let oldFragranceId;
+        if (fragranceId && currentProduct.currentFragranceRef) {
+            oldFragranceId = currentProduct.currentFragranceRef.id;
+        }
+        // 8. 更新資料庫
         await productRef.update(updateData);
-        // 8. 返回標準化回應
+        // 9. 觸發香精狀態更新（如果香精有變更）
+        if (fragranceId) {
+            try {
+                await updateFragranceStatuses({
+                    newFragranceId: fragranceId,
+                    oldFragranceId: oldFragranceId !== fragranceId ? oldFragranceId : undefined,
+                    action: 'update',
+                    productId
+                });
+                firebase_functions_1.logger.info(`[${requestId}] 更新產品 ${productId} 後，已觸發香精狀態更新`);
+            }
+            catch (statusUpdateError) {
+                firebase_functions_1.logger.warn(`[${requestId}] 香精狀態更新警告:`, statusUpdateError);
+                // 不拋出錯誤，因為主要操作已經成功
+            }
+        }
+        // 10. 返回標準化回應
         return {
             id: productId,
             message: `產品「${updateData.name || currentProduct.name}」的資料已成功更新`,

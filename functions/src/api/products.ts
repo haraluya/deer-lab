@@ -49,9 +49,9 @@ async function updateFragranceStatuses(params: {
           .get();
 
         // 更新為啟用狀態，除非手動設為棄用
-        if (newFragranceData?.status !== 'deprecated') {
+        if (newFragranceData?.fragranceStatus !== '棄用') {
           transaction.update(newFragranceRef, {
-            status: 'active',
+            fragranceStatus: '啟用',
             usageCount: newFragranceProducts.size,
             lastUsedAt: FieldValue.serverTimestamp(),
             updatedAt: FieldValue.serverTimestamp()
@@ -79,9 +79,9 @@ async function updateFragranceStatuses(params: {
         const remainingProducts = oldFragranceProducts.docs.filter(doc => doc.id !== productId);
         
         // 如果沒有其他產品使用此香精，且非棄用狀態，則設為備用
-        if (remainingProducts.length === 0 && oldFragranceData?.status !== 'deprecated') {
+        if (remainingProducts.length === 0 && oldFragranceData?.fragranceStatus !== '棄用') {
           transaction.update(oldFragranceRef, {
-            status: 'standby',
+            fragranceStatus: '備用',
             usageCount: 0,
             updatedAt: FieldValue.serverTimestamp()
           });
@@ -304,10 +304,32 @@ export const updateProduct = CrudApiHandlers.createUpdateHandler<UpdateProductRe
         updateData.specificMaterials = materialRefs;
       }
       
-      // 7. 更新資料庫
+      // 7. 檢查是否需要更新香精狀態
+      let oldFragranceId: string | undefined;
+      if (fragranceId && currentProduct.currentFragranceRef) {
+        oldFragranceId = currentProduct.currentFragranceRef.id;
+      }
+      
+      // 8. 更新資料庫
       await productRef.update(updateData);
       
-      // 8. 返回標準化回應
+      // 9. 觸發香精狀態更新（如果香精有變更）
+      if (fragranceId) {
+        try {
+          await updateFragranceStatuses({
+            newFragranceId: fragranceId,
+            oldFragranceId: oldFragranceId !== fragranceId ? oldFragranceId : undefined,
+            action: 'update',
+            productId
+          });
+          logger.info(`[${requestId}] 更新產品 ${productId} 後，已觸發香精狀態更新`);
+        } catch (statusUpdateError) {
+          logger.warn(`[${requestId}] 香精狀態更新警告:`, statusUpdateError);
+          // 不拋出錯誤，因為主要操作已經成功
+        }
+      }
+      
+      // 10. 返回標準化回應
       return {
         id: productId,
         message: `產品「${updateData.name || currentProduct.name}」的資料已成功更新`,

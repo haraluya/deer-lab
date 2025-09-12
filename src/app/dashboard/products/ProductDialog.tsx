@@ -122,6 +122,7 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
           // 除錯：顯示香精資料
           console.log('🔍 香精資料預覽:', fragrancesSnapshot.docs.slice(0, 3).map(doc => ({
             id: doc.id,
+            fragranceStatus: doc.data().fragranceStatus,
             status: doc.data().status,
             code: doc.data().code,
             name: doc.data().name

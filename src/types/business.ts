@@ -39,7 +39,7 @@ export interface Fragrance {
   supplierName?: string;
   isActive: boolean;
   // 新增香精狀態管理欄位
-  status: 'active' | 'standby' | 'deprecated';  // 啟用/備用/棄用
+  status: '啟用' | '備用' | '棄用';  // 啟用/備用/棄用
   usedInProducts?: string[];                    // 使用此香精的產品ID列表
   usageCount?: number;                          // 使用產品數量統計
   lastUsedAt?: Timestamp;                       // 最後使用時間

@@ -59,7 +59,7 @@ export interface Material extends InventoryItem {
 export interface Fragrance extends InventoryItem {
   // 香精特有屬性
   series?: string;
-  status: 'active' | 'standby' | 'deprecated';
+  status: '啟用' | '備用' | '棄用';
   usedInProducts?: string[];
   usageCount?: number;
   lastUsedAt?: Timestamp;
