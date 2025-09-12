@@ -101,6 +101,9 @@ function PersonnelPageContent() {
       case '#059669': return 'green';
       case '#7c3aed': return 'purple';
       case '#ea580c': return 'orange';
+      case '#db2777': return 'pink';
+      case '#0891b2': return 'cyan';
+      case '#6b7280': return 'gray';
       default: return 'gray';
     }
   }, []);
@@ -118,6 +121,12 @@ function PersonnelPageContent() {
         return 'bg-purple-50 text-purple-700 border-purple-200';
       case 'orange':
         return 'bg-orange-50 text-orange-700 border-orange-200';
+      case 'pink':
+        return 'bg-pink-50 text-pink-700 border-pink-200';
+      case 'cyan':
+        return 'bg-cyan-50 text-cyan-700 border-cyan-200';
+      case 'gray':
+        return 'bg-gray-50 text-gray-700 border-gray-200';
       default:
         return 'bg-gray-50 text-gray-700 border-gray-200';
     }

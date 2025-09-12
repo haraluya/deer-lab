@@ -69,7 +69,7 @@ const colorOptions = [
   { name: '紅色', value: '#dc2626', bgClass: 'bg-red-600' },
   { name: '藍色', value: '#2563eb', bgClass: 'bg-blue-600' },
   { name: '綠色', value: '#059669', bgClass: 'bg-green-600' },
-  { name: '紫色', value: '#9333ea', bgClass: 'bg-purple-600' },
+  { name: '紫色', value: '#7c3aed', bgClass: 'bg-purple-600' },
   { name: '橘色', value: '#ea580c', bgClass: 'bg-orange-600' },
   { name: '粉色', value: '#db2777', bgClass: 'bg-pink-600' },
   { name: '青色', value: '#0891b2', bgClass: 'bg-cyan-600' },
