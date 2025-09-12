@@ -199,16 +199,16 @@ function renderFormField<T extends FieldValues>(
       ];
     }
     
-    // 主分類相關欄位
-    if (fieldName === 'category' || fieldName.includes('Category')) {
+    // 主分類相關欄位 - 使用精確匹配
+    if (fieldName === 'category') {
       return formDataLoader.materialCategories.map((category: string) => ({ 
         value: category, 
         label: category 
       }));
     }
     
-    // 細分分類相關欄位
-    if (fieldName === 'subCategory' || fieldName.includes('SubCategory')) {
+    // 細分分類相關欄位 - 使用精確匹配
+    if (fieldName === 'subCategory') {
       return formDataLoader.materialSubCategories.map((subCategory: string) => ({ 
         value: subCategory, 
         label: subCategory 

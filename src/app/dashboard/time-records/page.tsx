@@ -3,9 +3,9 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
-import { db, functions } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
+import { useApiClient } from '@/hooks/useApiClient';
 import { toast } from 'sonner';
 import { 
   Clock, User, Calendar, Factory, TrendingUp, 
@@ -60,6 +60,7 @@ interface MonthlyStats {
 
 export default function PersonalTimeRecordsPage() {
   const { appUser } = useAuth();
+  const apiClient = useApiClient();
   const [personalTimeEntries, setPersonalTimeEntries] = useState<TimeEntry[]>([]);
   const [filteredEntries, setFilteredEntries] = useState<TimeEntry[]>([]);
   const [stats, setStats] = useState<PersonalTimeStats>({
@@ -97,31 +98,46 @@ export default function PersonalTimeRecordsPage() {
         employeeId: appUser.employeeId 
       });
 
-      // 使用新的 Firebase Function 獲取只包含已完工和已入庫工單的工時記錄
-      if (!functions) {
-        throw new Error('Firebase Functions 未初始化');
-      }
-      const getPersonalValidTimeRecords = httpsCallable(functions, 'getPersonalValidTimeRecords');
-      
-      const result = await getPersonalValidTimeRecords({ 
-        personnelId: appUser.uid 
+      // 使用統一API客戶端獲取只包含已完工和已入庫工單的工時記錄
+      const result = await apiClient.call('getPersonalValidTimeRecords', { 
+        userId: appUser.uid 
       });
       
-      const data = result.data as {
-        success: boolean;
-        timeEntries: TimeEntry[];
-        totalFound: number;
-        validCount: number;
-        invalidCount: number;
-      };
-
-      if (!data.success) {
+      if (!result.success) {
         throw new Error('獲取個人工時記錄失敗');
       }
+      
+      // 根據實際API回傳結構處理資料
+      // 舊的Firebase Function可能回傳不同結構，這裡做相容處理
+      let timeEntries: TimeEntry[] = [];
+      let totalFound = 0;
+      let validCount = 0;
+      let invalidCount = 0;
 
-      console.log(`API 結果: 總共 ${data.totalFound} 筆，有效 ${data.validCount} 筆，無效 ${data.invalidCount} 筆`);
+      if (result.data) {
+        // 檢查是否為新的API格式 (GetPersonalRecordsResponse)
+        if ('records' in result.data && 'summary' in result.data) {
+          // 新格式：將records轉換為TimeEntry格式
+          const apiData = result.data as any;
+          timeEntries = apiData.records || [];
+          totalFound = apiData.summary?.totalRecords || timeEntries.length;
+          validCount = timeEntries.length;
+          invalidCount = 0;
+        } else if ('timeEntries' in result.data) {
+          // 舊格式：直接使用
+          const apiData = result.data as any;
+          timeEntries = apiData.timeEntries || [];
+          totalFound = apiData.totalFound || timeEntries.length;
+          validCount = apiData.validCount || timeEntries.length;
+          invalidCount = apiData.invalidCount || 0;
+        } else {
+          // 未知格式，嘗試直接解析
+          console.warn('未知的API回傳格式:', result.data);
+          timeEntries = [];
+        }
+      }
 
-      const timeEntries = data.timeEntries;
+      console.log(`API 結果: 總共 ${totalFound} 筆，有效 ${validCount} 筆，無效 ${invalidCount} 筆`);
 
       // 在客戶端排序（按創建時間降序）
       const sortedTimeEntries = timeEntries.sort((a, b) => {
@@ -137,8 +153,8 @@ export default function PersonalTimeRecordsPage() {
       calculateMonthlyStats(timeEntries);
 
       if (timeEntries.length === 0) {
-        if (data.totalFound > 0) {
-          toast.info(`找到 ${data.totalFound} 筆工時記錄，但都不是來自已完工或已入庫的工單，因此不顯示`);
+        if (totalFound > 0) {
+          toast.info(`找到 ${totalFound} 筆工時記錄，但都不是來自已完工或已入庫的工單，因此不顯示`);
         }
         console.info('沒有有效的工時記錄（只顯示已完工和已入庫工單的工時）');
       } else {
@@ -151,7 +167,7 @@ export default function PersonalTimeRecordsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [appUser]);
+  }, [appUser, apiClient]);
   
   // 載入個人工時記錄
   useEffect(() => {
@@ -166,7 +182,7 @@ export default function PersonalTimeRecordsPage() {
     } else {
       console.warn('appUser 或 appUser.uid 未準備就緒');
     }
-  }, [appUser]);
+  }, [appUser, loadPersonalTimeRecords]);
 
   // 篩選邏輯
   useEffect(() => {
@@ -322,25 +338,32 @@ export default function PersonalTimeRecordsPage() {
       setIsCleaningUp(true);
       toast.info('開始清理無效工時記錄...');
       
-      if (!functions) {
-        throw new Error('Firebase Functions 未初始化');
-      }
-      const cleanupInvalidTimeRecords = httpsCallable(functions, 'cleanupInvalidTimeRecords');
-      const result = await cleanupInvalidTimeRecords();
+      const result = await apiClient.call('cleanupInvalidTimeRecords', {});
       
-      const data = result.data as {
-        success: boolean;
-        message: string;
-        deletedCount: number;
-        checkedCount: number;
-      };
-      
-      if (data.success) {
-        toast.success(data.message);
-        console.log(`清理完成：檢查了 ${data.checkedCount} 筆記錄，刪除了 ${data.deletedCount} 筆無效記錄`);
+      if (result.success && result.data) {
+        // 根據API介面定義處理資料
+        const data = result.data as any; // CleanupResponse格式
+        
+        let message = '清理完成';
+        let deletedCount = 0;
+        let checkedCount = 0;
+        
+        if ('deletedCount' in data) {
+          deletedCount = data.deletedCount;
+        }
+        if ('summary' in data) {
+          checkedCount = data.summary.totalRecordsChecked || 0;
+          message = `清理完成：檢查了 ${checkedCount} 筆記錄，刪除了 ${deletedCount} 筆無效記錄`;
+        } else if ('message' in data) {
+          message = data.message;
+          checkedCount = data.checkedCount || 0;
+        }
+        
+        toast.success(message);
+        console.log(`清理完成：檢查了 ${checkedCount} 筆記錄，刪除了 ${deletedCount} 筆無效記錄`);
         
         // 重新載入工時記錄
-        if (data.deletedCount > 0) {
+        if (deletedCount > 0) {
           await loadPersonalTimeRecords();
         }
       } else {

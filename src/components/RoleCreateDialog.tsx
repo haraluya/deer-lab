@@ -4,8 +4,8 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getFirestore, collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useApiForm } from '@/hooks/useApiClient';
 
 import {
   Dialog,
@@ -104,6 +104,7 @@ const roleTemplates = [
 export function RoleCreateDialog({ open, onOpenChange, onSuccess }: RoleCreateDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [permissionGroups] = useState(PERMISSION_GROUPS);
+  const apiClient = useApiForm();
 
   const form = useForm<RoleCreateFormValues>({
     resolver: zodResolver(roleCreateFormSchema),
@@ -203,32 +204,29 @@ export function RoleCreateDialog({ open, onOpenChange, onSuccess }: RoleCreateDi
       onOpenChange(false);
       
     } catch (localError) {
-      console.warn('本地創建失敗，嘗試使用 Cloud Functions:', localError);
+      console.warn('本地創建失敗，嘗試使用統一API客戶端:', localError);
       
-      // 如果本地創建失敗，嘗試 Cloud Functions
+      // 如果本地創建失敗，嘗試統一API客戶端
       try {
-        const functions = getFunctions();
-        const createRoleFunction = httpsCallable(functions, 'createRole');
-        
-        const result = await createRoleFunction({
+        // 根據 RolesApi.CreateRequest 調整參數
+        const result = await apiClient.call('createRole', {
           name: data.name,
-          displayName: data.displayName,
-          description: data.description,
+          description: `${data.displayName} - ${data.description}`,
           permissions: data.permissions,
-          color: data.color,
+          level: 1, // 預設層級
+          isActive: true
         });
 
-        const response = result.data as any;
-        if (response.status === 'success') {
+        if (result.success) {
           toast.success(`角色 ${data.displayName} 創建成功`);
           form.reset();
           onSuccess?.();
           onOpenChange(false);
         } else {
-          throw new Error(response.message || '創建角色失敗');
+          throw new Error('創建角色失敗');
         }
-      } catch (functionsError) {
-        console.error('Cloud Functions 創建失敗:', functionsError);
+      } catch (apiError) {
+        console.error('統一API客戶端創建失敗:', apiError);
         toast.error('創建角色失敗，請稍後再試');
       }
     } finally {

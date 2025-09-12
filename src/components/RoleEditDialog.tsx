@@ -4,8 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { getFirestore, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { useApiClient } from '@/hooks/useApiClient';
 
 import {
   Dialog,
@@ -77,8 +76,8 @@ const colorOptions = [
 ];
 
 export function RoleEditDialog({ role, open, onOpenChange, onSuccess }: RoleEditDialogProps) {
-  const [isLoading, setIsLoading] = useState(false);
   const [permissionGroups] = useState(PERMISSION_GROUPS);
+  const apiClient = useApiClient();
 
   const form = useForm<RoleFormValues>({
     resolver: zodResolver(roleFormSchema),
@@ -157,57 +156,18 @@ export function RoleEditDialog({ role, open, onOpenChange, onSuccess }: RoleEdit
   const onSubmit = async (data: RoleFormValues) => {
     if (!role) return;
 
-    setIsLoading(true);
+    const result = await apiClient.call('updateRole', {
+      id: role.id,
+      name: data.name,
+      description: `${data.displayName}${data.description ? ' - ' + data.description : ''}`,
+      permissions: data.permissions,
+      level: 1, // 預設級別
+    });
 
-    try {
-      // 優先使用本地 Firestore 更新（更可靠）
-      const db = getFirestore();
-      const roleRef = doc(db, 'roles', role.id);
-      
-      await updateDoc(roleRef, {
-        name: data.name,
-        displayName: data.displayName,
-        description: data.description,
-        permissions: data.permissions,
-        color: data.color,
-        updatedAt: serverTimestamp(),
-      });
-
+    if (result.success) {
       toast.success(`角色 ${data.displayName} 更新成功`);
       onSuccess?.();
       onOpenChange(false);
-      
-    } catch (localError) {
-      console.warn('本地更新失敗，嘗試使用 Cloud Functions:', localError);
-      
-      // 如果本地更新失敗，嘗試 Cloud Functions
-      try {
-        const functions = getFunctions();
-        const updateRoleFunction = httpsCallable(functions, 'updateRole');
-        
-        const result = await updateRoleFunction({
-          roleId: role.id,
-          name: data.name,
-          displayName: data.displayName,
-          description: data.description,
-          permissions: data.permissions,
-          color: data.color,
-        });
-
-        const response = result.data as any;
-        if (response.status === 'success') {
-          toast.success(`角色 ${data.displayName} 更新成功`);
-          onSuccess?.();
-          onOpenChange(false);
-        } else {
-          throw new Error(response.message || '更新角色失敗');
-        }
-      } catch (functionsError) {
-        console.error('Cloud Functions 更新失敗:', functionsError);
-        toast.error('更新角色失敗，請稍後再試');
-      }
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -417,22 +377,22 @@ export function RoleEditDialog({ role, open, onOpenChange, onSuccess }: RoleEdit
                 type="button" 
                 variant="outline" 
                 onClick={() => onOpenChange(false)}
-                disabled={isLoading}
+                disabled={apiClient.loading}
               >
                 <X className="mr-2 h-4 w-4" />
                 取消
               </Button>
               <Button 
                 type="submit" 
-                disabled={isLoading}
+                disabled={apiClient.loading}
                 className="bg-gradient-to-r from-blue-500 to-blue-600"
               >
-                {isLoading ? (
+                {apiClient.loading ? (
                   <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                 ) : (
                   <Save className="mr-2 h-4 w-4" />
                 )}
-                {isLoading ? '更新中...' : '儲存變更'}
+                {apiClient.loading ? '更新中...' : '儲存變更'}
               </Button>
             </DialogFooter>
           </form>

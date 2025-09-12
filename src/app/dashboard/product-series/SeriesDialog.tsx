@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useApiClient } from '@/hooks/useApiClient';
 import { collection, getDocs, DocumentReference, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
@@ -57,8 +57,8 @@ const PRODUCT_TYPES = [
 ];
 
 export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData }: SeriesDialogProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [materialOptions, setMaterialOptions] = useState<OptionType[]>([]);
+  const apiClient = useApiClient();
   const isEditMode = !!seriesData;
 
   const form = useForm<FormData>({
@@ -118,30 +118,41 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
   }, [isOpen, seriesData, form]);
 
   async function onSubmit(values: FormData) {
-    setIsSubmitting(true);
-    const toastId = toast.loading(isEditMode ? '正在更新系列...' : '正在新增系列...');
-    try {
-      const functions = getFunctions();
-      if (isEditMode) {
-        const updateProductSeries = httpsCallable(functions, 'updateProductSeries');
-        await updateProductSeries({ seriesId: seriesData.id, ...values });
-        toast.success(`系列 ${values.name} 已更新。`, { id: toastId });
-      } else {
-        const createProductSeries = httpsCallable(functions, 'createProductSeries');
-        await createProductSeries(values);
-        toast.success(`系列 ${values.name} 已建立。`, { id: toastId });
+    if (isEditMode && seriesData) {
+      const result = await apiClient.call('updateProductSeries', {
+        id: seriesData.id,
+        name: values.name,
+        typeCode: values.code,
+        description: `${values.name} 系列`,
+        defaultMaterials: values.commonMaterialIds?.map(materialId => ({
+          materialId,
+          quantity: 1
+        })),
+        isActive: true
+      });
+
+      if (result.success) {
+        toast.success(`系列 ${values.name} 已更新。`);
+        onSeriesUpdate();
+        onOpenChange(false);
       }
-      onSeriesUpdate();
-      onOpenChange(false);
-    } catch (error) {
-      console.error('操作失敗:', error);
-      let errorMessage = isEditMode ? '更新系列失敗。' : '新增系列失敗。';
-      if (error instanceof Error) {
-        errorMessage = error.message;
+    } else {
+      const result = await apiClient.call('createProductSeries', {
+        name: values.name,
+        typeCode: values.code,
+        description: `${values.name} 系列`,
+        defaultMaterials: values.commonMaterialIds?.map(materialId => ({
+          materialId,
+          quantity: 1
+        })),
+        isActive: true
+      });
+
+      if (result.success) {
+        toast.success(`系列 ${values.name} 已建立。`);
+        onSeriesUpdate();
+        onOpenChange(false);
       }
-      toast.error(errorMessage, { id: toastId });
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
@@ -264,16 +275,16 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
+                disabled={apiClient.loading}
               >
                 取消
               </Button>
               <Button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={apiClient.loading}
                 className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-lg hover:shadow-xl transition-all duration-200"
               >
-                {isSubmitting ? (
+                {apiClient.loading ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                     {isEditMode ? '更新中...' : '建立中...'}

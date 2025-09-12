@@ -3,10 +3,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
-import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 import { MaterialData } from '@/types/entities';
 import { usePermission } from '@/hooks/usePermission';
+import { useApiClient } from '@/hooks/useApiClient';
 import { useCartOperations } from '@/hooks/useCartOperations';
 import { useDataSearch } from '@/hooks/useDataSearch';
 import { StandardDataListPage, StandardColumn, StandardAction, QuickFilter } from '@/components/StandardDataListPage';
@@ -35,6 +35,7 @@ export default function MaterialsPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [stocktakeMode, setStocktakeMode] = useState(false);
   const [stocktakeUpdates, setStocktakeUpdates] = useState<Record<string, number>>({});
+  const apiClient = useApiClient();
   
   // 對話框狀態
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -90,66 +91,34 @@ export default function MaterialsPage() {
     filteredCount
   } = useDataSearch(materials, searchConfig);
 
-  // 獲取供應商和分類資料
+  // 獲取供應商資料
   const fetchRelatedData = useCallback(async () => {
     const suppliersMap = new Map<string, string>();
-    const categoriesMap = new Map<string, string>();
-    const subCategoriesMap = new Map<string, string>();
     
     try {
       if (!db) {
         console.error("Firebase db 未初始化");
-        return { suppliersMap, categoriesMap, subCategoriesMap };
+        return { suppliersMap };
       }
       
       // 獲取供應商
       try {
         const suppliersSnapshot = await getDocs(collection(db, "suppliers"));
-        console.log(`載入供應商資料：${suppliersSnapshot.size} 筆`);
         suppliersSnapshot.forEach((doc) => {
           const supplierData = doc.data();
           if (supplierData.name) {
             suppliersMap.set(doc.id, supplierData.name);
           }
         });
-        console.log("供應商對照表:", Array.from(suppliersMap.entries()));
       } catch (error) {
-        console.log("供應商集合不存在或載入失敗:", error);
-      }
-      
-      // 獲取主分類
-      try {
-        const categoriesSnapshot = await getDocs(collection(db, "materialCategories"));
-        console.log(`載入主分類資料：${categoriesSnapshot.size} 筆`);
-        categoriesSnapshot.forEach((doc) => {
-          const categoryData = doc.data();
-          if (categoryData.name) {
-            categoriesMap.set(doc.id, categoryData.name);
-          }
-        });
-      } catch (error) {
-        console.log("主分類集合不存在，跳過");
-      }
-      
-      // 獲取細分類
-      try {
-        const subCategoriesSnapshot = await getDocs(collection(db, "materialSubCategories"));
-        console.log(`載入細分類資料：${subCategoriesSnapshot.size} 筆`);
-        subCategoriesSnapshot.forEach((doc) => {
-          const subCategoryData = doc.data();
-          if (subCategoryData.name) {
-            subCategoriesMap.set(doc.id, subCategoryData.name);
-          }
-        });
-      } catch (error) {
-        console.log("細分類集合不存在，跳過");
+        // 供應商集合載入失敗，繼續執行
       }
       
     } catch (error) {
       console.error("獲取關聯資料失敗:", error);
     }
     
-    return { suppliersMap, categoriesMap, subCategoriesMap };
+    return { suppliersMap };
   }, []);
 
   // 獲取原料資料
@@ -162,7 +131,7 @@ export default function MaterialsPage() {
         return;
       }
       
-      const { suppliersMap, categoriesMap, subCategoriesMap } = await fetchRelatedData();
+      const { suppliersMap } = await fetchRelatedData();
       const querySnapshot = await getDocs(collection(db, "materials"));
       
       const materialsData: MaterialWithSupplier[] = querySnapshot.docs.map((doc) => {
@@ -186,53 +155,16 @@ export default function MaterialsPage() {
           supplierName = data.supplier.name;
         }
         
-        console.log(`[供應商除錯] 原料: ${data.name}`);
-        console.log(`  - supplierName: "${data.supplierName}"`);
-        console.log(`  - supplierId: "${data.supplierId}"`);
-        console.log(`  - supplierRef: `, data.supplierRef);
-        console.log(`  - supplierRef.id: `, data.supplierRef?.id);
-        console.log(`  - supplier: `, data.supplier);
-        console.log(`  - 最終供應商: "${supplierName}"`);
         
-        // 獲取分類名稱 - 統一處理各種可能的分類格式
-        let categoryName = '';
-        let subCategoryName = '';
-        
-        // 1. 優先使用 mainCategoryId 和 subCategoryId
-        if (data.mainCategoryId) {
-          categoryName = categoriesMap.get(data.mainCategoryId) || '';
-        }
-        if (data.subCategoryId) {
-          subCategoryName = subCategoriesMap.get(data.subCategoryId) || '';
-        }
-        
-        // 2. 如果沒有 ID，檢查 category 字段
-        if (!categoryName && data.category) {
-          if (typeof data.category === 'string') {
-            if (data.category.includes('/')) {
-              // 分類格式: "主分類/細分類"
-              const categoryParts = data.category.split('/');
-              categoryName = categoryParts[0]?.trim() || '';
-              subCategoryName = categoryParts[1]?.trim() || '';
-            } else {
-              // 單一分類
-              categoryName = data.category.trim();
-            }
-          }
-        }
-        
-        // 3. 如果還是沒有，檢查是否有獨立的 subCategory 字段
-        if (!subCategoryName && data.subCategory) {
-          subCategoryName = data.subCategory;
-        }
-        
-        console.log(`[分類除錯] 原料: ${data.name}, 主分類: ${categoryName}, 細分類: ${subCategoryName}`);
+        // 簡化分類處理 - 直接使用標準欄位
+        const categoryName = data.category || '未分類';
+        const subCategoryName = data.subCategory || '';
         
         return {
           ...data,
           supplierName: supplierName,
-          categoryName: categoryName || '未分類',
-          subCategoryName: subCategoryName || '',
+          categoryName: categoryName,
+          subCategoryName: subCategoryName,
           type: 'material' as const,
           isLowStock: data.currentStock < data.minStock
         };
@@ -469,11 +401,11 @@ export default function MaterialsPage() {
       onClick: async (materials) => {
         const toastId = toast.loading("正在刪除物料...");
         try {
-          const functions = getFunctions();
-          const deleteMaterial = httpsCallable(functions, 'deleteMaterial');
-          
           for (const material of materials) {
-            await deleteMaterial({ materialId: material.id });
+            const result = await apiClient.call('deleteMaterial', { id: material.id }, { showErrorToast: false });
+            if (!result.success) {
+              throw new Error(`刪除物料 ${material.name} 失敗`);
+            }
           }
           
           toast.success(`已成功刪除 ${materials.length} 項物料`, { id: toastId });
@@ -528,8 +460,6 @@ export default function MaterialsPage() {
 
   // 快速篩選標籤
   const quickFilters: QuickFilter[] = useMemo(() => {
-    console.log('🔧 [快選標籤除錯] 開始產生快選標籤，原料總數:', materials.length);
-    
     // 收集所有主分類和細分類
     const mainCategories = new Map<string, number>();
     const subCategories = new Map<string, number>();
@@ -548,13 +478,6 @@ export default function MaterialsPage() {
         subCategories.set(subCat, (subCategories.get(subCat) || 0) + 1);
       }
     });
-    
-    console.log('🔧 [快選標籤除錯] 主分類:', Array.from(mainCategories.entries()));
-    console.log('🔧 [快選標籤除錯] 細分類:', Array.from(subCategories.entries()));
-    
-    // 定義顏色
-    const colors: Array<'blue' | 'green' | 'purple' | 'orange' | 'yellow' | 'red'> = ['blue', 'green', 'purple', 'orange', 'yellow', 'red'];
-    let colorIndex = 0;
     
     // 產生主分類標籤 - 統一使用藍色
     const mainCategoryTags = Array.from(mainCategories.entries()).map(([categoryName, count]) => ({
@@ -584,7 +507,7 @@ export default function MaterialsPage() {
       color: 'gray' as const
     }));
     
-    const finalQuickFilters = [
+    return [
       // 狀態篩選
       {
         key: 'isLowStock',
@@ -600,9 +523,6 @@ export default function MaterialsPage() {
       // 供應商標籤
       ...supplierTags
     ];
-    
-    console.log('🔧 [快選標籤除錯] 最終快選標籤:', finalQuickFilters);
-    return finalQuickFilters;
   }, [materials]);
 
   // 操作處理函式
@@ -638,21 +558,21 @@ export default function MaterialsPage() {
     }
 
     try {
-      const functions = getFunctions();
-      const batchUpdateInventory = httpsCallable(functions, 'batchUpdateInventory');
-      
-      await batchUpdateInventory({
+      const result = await apiClient.call('quickUpdateInventory', {
         updates: Object.entries(stocktakeUpdates).map(([id, quantity]) => ({
-          id,
-          quantity,
-          type: 'material'
+          itemId: id,
+          newStock: quantity,
+          type: 'material' as const,
+          reason: '盤點調整'
         }))
       });
 
-      toast.success(`已更新 ${Object.keys(stocktakeUpdates).length} 項原料庫存`);
-      setStocktakeUpdates({});
-      setStocktakeMode(false);
-      fetchMaterials();
+      if (result.success) {
+        toast.success(`已更新 ${Object.keys(stocktakeUpdates).length} 項原料庫存`);
+        setStocktakeUpdates({});
+        setStocktakeMode(false);
+        fetchMaterials();
+      }
     } catch (error) {
       console.error("盤點儲存失敗:", error);
       toast.error("盤點儲存失敗");
@@ -801,8 +721,6 @@ export default function MaterialsPage() {
         isOpen={isImportExportOpen}
         onOpenChange={setIsImportExportOpen}
         onImport={async (data: any[], options?: { updateMode?: boolean }, onProgress?: (current: number, total: number) => void) => {
-          const functions = getFunctions();
-          
           try {
             console.log('原料匯入資料:', data);
             fetchMaterials();

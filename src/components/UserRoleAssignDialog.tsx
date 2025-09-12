@@ -4,17 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { 
-  getFirestore, 
-  collection, 
-  getDocs, 
-  doc, 
-  updateDoc, 
-  serverTimestamp,
-  orderBy,
-  query 
-} from 'firebase/firestore';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useApiClient } from '@/hooks/useApiClient';
 
 import {
   Dialog,
@@ -111,9 +101,9 @@ const getRoleColor = (color: string) => {
 
 export function UserRoleAssignDialog({ user, open, onOpenChange, onSuccess }: UserRoleAssignDialogProps) {
   const [roles, setRoles] = useState<Role[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [isLoadingRoles, setIsLoadingRoles] = useState(true);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const apiClient = useApiClient();
 
   const form = useForm<UserRoleAssignFormValues>({
     resolver: zodResolver(userRoleAssignSchema),
@@ -130,22 +120,20 @@ export function UserRoleAssignDialog({ user, open, onOpenChange, onSuccess }: Us
     setIsLoadingRoles(true);
     
     try {
-      // 優先使用本地 Firestore 查詢
-      const db = getFirestore();
-      const rolesQuery = query(collection(db, 'roles'), orderBy('createdAt', 'asc'));
-      const rolesSnapshot = await getDocs(rolesQuery);
-      
-      const rolesList = rolesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Role[];
-      
-      setRoles(rolesList);
-      console.log(`✅ 載入 ${rolesList.length} 個角色`);
-      
-    } catch (error) {
-      console.error('載入角色失敗:', error);
-      toast.error('載入角色列表失敗');
+      const result = await apiClient.call('getRoles', undefined, { showErrorToast: false });
+      if (result.success && result.data && result.data.roles) {
+        // 轉換API返回的格式為本地Role格式
+        const roles = result.data.roles.map(role => ({
+          ...role,
+          displayName: role.name, // API中沒有displayName，用name代替
+          isDefault: false, // API中沒有isDefault，設為false
+          color: '#6b7280' // API中沒有color，設為默認灰色
+        }));
+        setRoles(roles as Role[]);
+        console.log(`✅ 載入 ${roles.length} 個角色`);
+      } else {
+        toast.error('載入角色列表失敗');
+      }
     } finally {
       setIsLoadingRoles(false);
     }
@@ -179,58 +167,22 @@ export function UserRoleAssignDialog({ user, open, onOpenChange, onSuccess }: Us
   const onSubmit = async (data: UserRoleAssignFormValues) => {
     if (!user) return;
 
-    setIsLoading(true);
+    const selectedRoleData = roles.find(r => r.id === data.roleId);
+    if (!selectedRoleData) {
+      toast.error('選中的角色不存在');
+      return;
+    }
 
-    try {
-      // 取得選中的角色資訊
-      const selectedRoleData = roles.find(r => r.id === data.roleId);
-      if (!selectedRoleData) {
-        throw new Error('選中的角色不存在');
-      }
+    const result = await apiClient.call('assignUserRole', {
+      uid: user.uid,
+      roleId: data.roleId,
+      reason: `管理員分配角色：${selectedRoleData.displayName}`,
+    });
 
-      // 優先使用本地 Firestore 更新
-      const db = getFirestore();
-      const userRef = doc(db, 'users', user.id);
-      const roleRef = doc(db, 'roles', data.roleId);
-      
-      await updateDoc(userRef, {
-        roleRef: roleRef,
-        roleName: selectedRoleData.displayName,
-        permissions: selectedRoleData.permissions,
-        updatedAt: serverTimestamp(),
-      });
-
+    if (result.success) {
       toast.success(`成功為 ${user.name} 分配角色：${selectedRoleData.displayName}`);
       onSuccess?.();
       onOpenChange(false);
-      
-    } catch (localError) {
-      console.warn('本地更新失敗，嘗試使用 Cloud Functions:', localError);
-      
-      // 如果本地更新失敗，嘗試 Cloud Functions
-      try {
-        const functions = getFunctions();
-        const assignRoleFunction = httpsCallable(functions, 'assignUserRole');
-        
-        const result = await assignRoleFunction({
-          userId: user.id,
-          roleId: data.roleId,
-        });
-
-        const response = result.data as any;
-        if (response.status === 'success') {
-          toast.success(response.message);
-          onSuccess?.();
-          onOpenChange(false);
-        } else {
-          throw new Error(response.message || '分配角色失敗');
-        }
-      } catch (functionsError) {
-        console.error('Cloud Functions 分配失敗:', functionsError);
-        toast.error('分配角色失敗，請稍後再試');
-      }
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -388,22 +340,22 @@ export function UserRoleAssignDialog({ user, open, onOpenChange, onSuccess }: Us
                 type="button" 
                 variant="outline" 
                 onClick={() => onOpenChange(false)}
-                disabled={isLoading}
+                disabled={apiClient.loading}
               >
                 <X className="mr-2 h-4 w-4" />
                 取消
               </Button>
               <Button 
                 type="submit" 
-                disabled={isLoading || !watchedRoleId}
+                disabled={apiClient.loading || !watchedRoleId}
                 className="bg-gradient-to-r from-blue-500 to-blue-600"
               >
-                {isLoading ? (
+                {apiClient.loading ? (
                   <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                 ) : (
                   <Save className="mr-2 h-4 w-4" />
                 )}
-                {isLoading ? '分配中...' : '確認分配'}
+                {apiClient.loading ? '分配中...' : '確認分配'}
               </Button>
             </DialogFooter>
           </form>

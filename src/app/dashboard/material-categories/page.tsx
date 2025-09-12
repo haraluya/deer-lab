@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StandardDataListPage, StandardColumn, StandardAction, QuickFilter } from '@/components/StandardDataListPage';
 import { StandardStats } from '@/components/StandardStatsCard';
-import { MaterialCategoryDialog } from '../materials/MaterialCategoryDialog';
+import { CategoryFormDialog } from './CategoryFormDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useRouter } from 'next/navigation';
 
@@ -480,10 +480,12 @@ export default function MaterialCategoriesPage() {
         className="space-y-6"
       />
 
-      {/* 物料分類對話框 */}
-      <MaterialCategoryDialog
+      {/* 新增/編輯分類對話框 */}
+      <CategoryFormDialog
         isOpen={isCategoryDialogOpen}
         onOpenChange={setIsCategoryDialogOpen}
+        category={selectedCategory}
+        onSave={loadCategories}
       />
 
       {/* 確認刪除對話框 */}

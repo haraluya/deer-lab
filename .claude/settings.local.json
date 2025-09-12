@@ -25,7 +25,8 @@
       "WebSearch",
       "Read(//e/PrtSrc/Screenshots/2025-09/**)",
       "Bash(gsutil lifecycle:*)",
-      "Bash(gcloud storage buckets update:*)"
+      "Bash(gcloud storage buckets update:*)",
+      "Bash(firebase firestore:export:*)"
     ],
     "deny": [],
     "ask": []

@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useApiClient } from '@/hooks/useApiClient';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
@@ -78,8 +78,8 @@ export function SupplierDialog({
   onSupplierUpdate,
   supplierData,
 }: SupplierDialogProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [personnelList, setPersonnelList] = useState<PersonnelData[]>([]);
+  const apiClient = useApiClient();
   const isEditMode = !!supplierData;
 
   const form = useForm<FormData>({
@@ -158,38 +158,37 @@ export function SupplierDialog({
   }, [isOpen, supplierData, form]);
 
   async function onSubmit(values: FormData) {
-    setIsSubmitting(true);
-    const toastId = toast.loading(isEditMode ? '正在更新供應商...' : '正在新增供應商...');
+    console.log('提交的資料:', values); // 調試日誌
+    
+    if (isEditMode && supplierData) {
+      const result = await apiClient.call('updateSupplier', {
+        id: supplierData.id,
+        name: values.name,
+        contactPerson: values.contactWindow,
+        phone: values.contactMethod,
+        notes: values.notes,
+        isActive: true
+      });
 
-    try {
-      const functions = getFunctions();
-      console.log('提交的資料:', values); // 調試日誌
-      
-      if (isEditMode) {
-        // Call updateSupplier Cloud Function
-        const updateSupplier = httpsCallable(functions, 'updateSupplier');
-        const result = await updateSupplier({ supplierId: supplierData.id, ...values });
-        console.log('更新結果:', result); // 調試日誌
-        toast.success(`供應商 ${values.name} 的資料已成功更新。`, { id: toastId });
-      } else {
-        // Call createSupplier Cloud Function
-        const createSupplier = httpsCallable(functions, 'createSupplier');
-        const result = await createSupplier(values);
-        console.log('建立結果:', result); // 調試日誌
-        toast.success(`供應商 ${values.name} 已成功建立。`, { id: toastId });
+      if (result.success) {
+        toast.success(`供應商 ${values.name} 的資料已成功更新。`);
+        onSupplierUpdate();
+        onOpenChange(false);
       }
-      
-      onSupplierUpdate(); // Trigger parent component's refresh callback
-      onOpenChange(false); // Close the dialog
-    } catch (error) {
-      console.error('Error submitting supplier form:', error);
-      let errorMessage = isEditMode ? '更新供應商資料時發生錯誤。' : '新增供應商時發生錯誤。';
-      if (error instanceof Error) {
-        errorMessage = error.message;
+    } else {
+      const result = await apiClient.call('createSupplier', {
+        name: values.name,
+        contactPerson: values.contactWindow,
+        phone: values.contactMethod,
+        notes: values.notes,
+        isActive: true
+      });
+
+      if (result.success) {
+        toast.success(`供應商 ${values.name} 已成功建立。`);
+        onSupplierUpdate();
+        onOpenChange(false);
       }
-      toast.error(errorMessage, { id: toastId });
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
@@ -446,10 +445,10 @@ export function SupplierDialog({
               <Button 
                 form="supplier-form"
                 type="submit" 
-                disabled={isSubmitting}
+                disabled={apiClient.loading}
                 className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl px-6"
               >
-                {isSubmitting ? (
+                {apiClient.loading ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                     處理中...

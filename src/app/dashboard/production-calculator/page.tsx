@@ -5,8 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, getDocs, doc, getDoc, DocumentData, DocumentReference } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useApiForm } from '@/hooks/useApiClient';
 import { toast } from 'sonner';
 import { Calculator, Factory, Loader2, ChevronsRight, Package, Droplets, Plus } from 'lucide-react';
 
@@ -48,6 +47,7 @@ interface FragranceDoc {
 
 function ProductionCalculatorPageContent() {
   const router = useRouter();
+  const apiClient = useApiForm();
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [targetQuantity, setTargetQuantity] = useState<number>(1000);
@@ -170,17 +170,17 @@ function ProductionCalculatorPageContent() {
 
     setIsSubmitting(true);
     try {
-      const functions = getFunctions();
-      const createWorkOrder = httpsCallable(functions, 'createWorkOrder');
-      
-      await createWorkOrder({
+      const result = await apiClient.call('createWorkOrder', {
         productId: selectedProductId,
-        targetQuantity: targetQuantity,
-        billOfMaterials: billOfMaterials
+        quantity: targetQuantity,
+        priority: 'normal' as const,
+        notes: `BOM 項目: ${billOfMaterials.map(item => item.name).join(', ')}`
       });
-
-      toast.success('工單建立成功！');
-      router.push('/dashboard/work-orders');
+      
+      if (result.success) {
+        toast.success('工單建立成功！');
+        router.push('/dashboard/work-orders');
+      }
     } catch (error) {
       console.error('建立工單失敗:', error);
       toast.error('建立工單失敗，請重試。');

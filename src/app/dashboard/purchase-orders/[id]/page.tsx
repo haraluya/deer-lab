@@ -6,7 +6,6 @@ import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { doc, getDoc, updateDoc, Timestamp, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useApiForm } from '@/hooks/useApiClient';
 import { toast } from 'sonner';
 import { uploadMultipleImages } from '@/lib/imageUpload';

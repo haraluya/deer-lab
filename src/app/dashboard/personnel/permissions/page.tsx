@@ -2,7 +2,6 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useApiForm } from '@/hooks/useApiClient';
 import { AdminOnly } from '@/components/PermissionGate';
 import { usePermission } from '@/hooks/usePermission';

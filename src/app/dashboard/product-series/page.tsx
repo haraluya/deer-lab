@@ -3,8 +3,8 @@
 import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { collection, getDocs, DocumentReference } from 'firebase/firestore';
-import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
+import { useApiForm } from '@/hooks/useApiClient';
 import { useDataSearch } from '@/hooks/useDataSearch';
 
 import { SeriesDialog, SeriesData } from './SeriesDialog';
@@ -25,6 +25,7 @@ interface SeriesWithMaterials extends SeriesData {
 function ProductSeriesPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const apiClient = useApiForm();
   const [series, setSeries] = useState<SeriesWithMaterials[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -289,11 +290,11 @@ function ProductSeriesPageContent() {
     if (!selectedSeries) return;
     const toastId = toast.loading("正在刪除系列...");
     try {
-      const functions = getFunctions();
-      const deleteProductSeries = httpsCallable(functions, 'deleteProductSeries');
-      await deleteProductSeries({ seriesId: selectedSeries.id });
-      toast.success(`系列 ${selectedSeries.name} 已成功刪除。`, { id: toastId });
-      loadData();
+      const result = await apiClient.call('deleteProductSeries', { id: selectedSeries.id });
+      if (result.success) {
+        toast.success(`系列 ${selectedSeries.name} 已成功刪除。`, { id: toastId });
+        loadData();
+      }
     } catch (error) {
       console.error("刪除系列失敗:", error);
       let errorMessage = "刪除系列時發生錯誤。";
