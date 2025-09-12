@@ -16,7 +16,9 @@ yarn-error.log*
 cache/
 server/
 static/
-types/
+# Note: Only ignore Next.js types, not our source types
+/.next/types/
+/types/
 public/
 trace
 *.rsc
