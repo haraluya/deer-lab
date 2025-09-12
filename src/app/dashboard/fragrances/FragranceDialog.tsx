@@ -23,22 +23,24 @@ import { FlaskConical, Tag, Package, Droplets } from 'lucide-react';
 const formSchema = z.object({
   code: z.string().min(1, { message: '香精代號為必填欄位' }),
   name: z.string().min(2, { message: '香精名稱至少需要 2 個字元' }),
-  fragranceType: z.string({ required_error: '必須選擇香精種類' }),
+  fragranceType: z.string().min(1, { message: '必須選擇香精種類' }),
   fragranceStatus: z.string().default('standby'), // 預設為備用，不再是必填
   supplierId: z.string().optional(),
-  currentStock: z.coerce.number().min(0, { message: '現有庫存不能為負數' }).optional(),
-  safetyStockLevel: z.coerce.number().min(0).optional(),
-  costPerUnit: z.coerce.number().min(0).optional(),
-  percentage: z.coerce.number().min(0).max(100, { message: '香精比例不能超過100%' }),
-  pgRatio: z.coerce.number().min(0).max(100, { message: 'PG比例不能超過100%' }),
-  vgRatio: z.coerce.number().min(0).max(100, { message: 'VG比例不能超過100%' }),
+  currentStock: z.coerce.number().min(0, { message: '現有庫存不能為負數' }).default(0),
+  safetyStockLevel: z.coerce.number().min(0).default(0),
+  costPerUnit: z.coerce.number().min(0).default(0),
+  percentage: z.coerce.number().min(0).max(100, { message: '香精比例不能超過100%' }).default(0),
+  pgRatio: z.coerce.number().min(0).max(100, { message: 'PG比例不能超過100%' }).default(0),
+  vgRatio: z.coerce.number().min(0).max(100, { message: 'VG比例不能超過100%' }).default(0),
   remarks: z.string().optional(),
 }).refine((data) => {
   const total = (data.percentage || 0) + (data.pgRatio || 0) + (data.vgRatio || 0);
+  // 如果所有比例都為0，則跳過驗證（允許新增時不設定比例）
+  if (total === 0) return true;
   // 允許小數精度誤差，總和在99.99%到100.01%之間都是合法的
   return total >= 99.99 && total <= 100.01;
 }, {
-  message: "香精、PG、VG比例總和必須等於100%",
+  message: "香精、PG、VG比例總和必須等於100%（或全部為0）",
   path: ["percentage"],
 });
 
@@ -198,7 +200,7 @@ export function FragranceDialog({
       };
       
       if (isEditMode) {
-        const result = await apiClient.call('updateFragrance', { id: fragranceData.id, ...finalValues });
+        const result = await apiClient.call('updateFragrance', { fragranceId: fragranceData.id, ...finalValues });
         if (!result.success) return;
       } else {
         const result = await apiClient.call('createFragrance', finalValues);

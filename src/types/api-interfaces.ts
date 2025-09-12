@@ -122,7 +122,7 @@ export namespace FragrancesApi {
   }
 
   export interface UpdateRequest extends Partial<CreateRequest> {
-    id: string;
+    fragranceId: string;
   }
 
   export interface UpdateByCodeRequest extends Partial<CreateRequest> {
