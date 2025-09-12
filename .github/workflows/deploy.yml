@@ -4,6 +4,16 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
+    inputs:
+      deploy_target:
+        description: '選擇部署目標'
+        required: true
+        default: 'hosting'
+        type: choice
+        options:
+        - hosting
+        - functions
+        - full
 
 jobs:
   build_and_deploy:
@@ -58,8 +68,26 @@ jobs:
         cd functions
         npm run build
       
-    - name: Deploy to Firebase
-      if: github.ref == 'refs/heads/main'
+    - name: Deploy to Firebase - Auto (Push)
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        npm install -g firebase-tools
+        firebase deploy --only hosting --project deer-lab --token "${{ secrets.FIREBASE_TOKEN }}" --non-interactive
+        
+    - name: Deploy to Firebase - Manual (Hosting)
+      if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'hosting'
+      run: |
+        npm install -g firebase-tools
+        firebase deploy --only hosting --project deer-lab --token "${{ secrets.FIREBASE_TOKEN }}" --non-interactive
+        
+    - name: Deploy to Firebase - Manual (Functions)
+      if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'functions'
       run: |
         npm install -g firebase-tools
         firebase deploy --only functions:nextServer --project deer-lab --token "${{ secrets.FIREBASE_TOKEN }}" --non-interactive
+        
+    - name: Deploy to Firebase - Manual (Full)
+      if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'full'
+      run: |
+        npm install -g firebase-tools
+        firebase deploy --project deer-lab --token "${{ secrets.FIREBASE_TOKEN }}" --non-interactive

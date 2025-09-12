@@ -42,7 +42,11 @@ export const nextServer = onRequest({
   timeoutSeconds: 60,     // 設定超時時間
   concurrency: 10,        // 提高併發處理能力
   cpu: 1,                 // 限制 CPU 使用
-  preserveExternalChanges: false  // 關閉原始碼備份
+  preserveExternalChanges: false,  // 🚫 強制關閉原始碼備份
+  labels: {
+    'backup': 'disabled',           // 🚫 標記備份已停用
+    'source-backup': 'false'        // 🚫 明確指定不備份原始碼
+  }
 }, async (req, res) => {
   try {
     // 設定快取標頭以減少重複請求
