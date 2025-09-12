@@ -1,103 +1,44 @@
-# Google Cloud Functions ignore file
-# This file specifies files that should NOT be uploaded to Google Cloud
-
-# Node.js dependencies
+# 排除開發和建構工具檔案
 node_modules/
-npm-debug.log
-yarn-error.log
+src/
+*.ts
+*.map
+.env*
+.git/
+.gitignore
+firebase.json
+.firebaserc
+package-lock.json
 
-# Build artifacts and caches (but keep .next for nextServer function)
-lib/
-out/
-build/
-dist/
-
-# Next.js cache and unnecessary files (these can be huge and not needed for functions)
-.next/cache/
+# 排除 Next.js 快取和非必要檔案
+.next/cache/**
 .next/trace
-.next/server/app/**/*.rsc
-.next/server/**/*.meta
-.next/static/chunks/**/*.map
 .next/static/**/*.map
 .next/server/**/*.map
 
-# Large static assets that aren't needed for SSR
-.next/static/media/
-.next/static/chunks/webpack-*
-.next/static/chunks/pages/_app-*.js.map
-.next/static/chunks/pages/_document-*.js.map
+# 排除測試和文件
+test/
+tests/
+__tests__/
+coverage/
+docs/
+*.md
+README*
 
-# Source files (only compiled JS should be deployed)
-src/
-*.ts
-!lib/**/*.js
-
-# Development files
-*.map
+# 排除系統檔案
+.DS_Store
+Thumbs.db
 *.log
-logs/
 
-# Environment files
-.env*
-!.env.production
-
-# Firebase files
-.firebase/
-firebase-debug*.log
-.firebaserc
-
-# Git and version control
-.git/
-.gitignore
-README.md
-CHANGELOG.md
-
-# IDE and editor files
+# 排除編輯器配置
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Testing files
-coverage/
-.nyc_output/
-jest/
-test/
-tests/
-__tests__/
-*.test.js
-*.spec.js
-
-# Documentation
-docs/
-documentation/
-
-# Temporary files
-tmp/
-temp/
-*.tmp
-
-# Package manager files
-.npm/
-.yarn/
-yarn.lock
-package-lock.json
-
-# Linting and formatting
-.eslintrc*
-.prettierrc*
-.editorconfig
-
-# TypeScript config
-tsconfig.json
-tslint.json
+# 保留必要的執行檔案
+!lib/
+!.next/server/
+!.next/static/
+!.next/*.json
+!.next/package.json

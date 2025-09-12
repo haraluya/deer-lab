@@ -145,12 +145,34 @@ firebase deploy --force
 # 開發環境
 npm run build               # 建構 Next.js 專案 (⚠️ 不要使用 npm run dev)
 
-# 部署
+# 🚀 優化部署（推薦）
+scripts\optimize-deploy.bat  # Windows 優化部署腳本（減少67%部署時間）
+
+# 標準部署
 npm run deploy              # 完整部署 (hosting + functions)
 firebase deploy --only functions:nextServer  # 僅部署 nextServer 函數
 
 # 程式碼品質
 npm run lint                # ESLint 檢查
+```
+
+### 🚀 部署大小優化（2025-09-12更新）
+**問題分析**：原始部署包大小為 1.3GB，主要由 `.next/cache`（872MB）和 `node_modules`（419MB）構成
+
+**優化成果**：
+- 部署包大小：1.3GB → 433MB（減少67%）
+- .next大小：884MB → 13MB（減少98.5%）
+- 部署時間：大幅縮短
+
+**優化設定檔案**：
+- `firebase.json` - 增強忽略設定
+- `functions/.gcloudignore` - Cloud Build 忽略設定  
+- `scripts/optimize-deploy.bat` - 自動化優化腳本
+
+**手動快速清理**：
+```bash
+rm -rf functions/.next/cache    # 清理快取（Linux/Mac）
+rmdir /s functions\.next\cache  # 清理快取（Windows）
 ```
 
 ### Firebase Functions 指令

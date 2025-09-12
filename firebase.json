@@ -25,9 +25,11 @@
       ".git",
       "firebase-debug.log",
       "firebase-debug.*.log",
-      ".next/cache",
+      ".next/cache/**",
       ".next/trace",
       ".next/static/chunks/**/*.map",
+      ".next/build-manifest.json.gz",
+      ".next/react-loadable-manifest.json.gz", 
       "src",
       "*.ts",
       "*.map",
@@ -38,7 +40,9 @@
       "docs",
       "*.md",
       ".env*",
-      "package-lock.json"
+      "package-lock.json",
+      "**/.DS_Store",
+      "**/Thumbs.db"
     ]
   },
   "storage": {
