@@ -422,8 +422,8 @@ exports.completeWorkOrder = (0, https_1.onCall)(async (request) => {
                 transaction.set(inventoryRecordRef, {
                     changeDate: firestore_1.FieldValue.serverTimestamp(),
                     changeReason: 'workorder',
-                    operatorId: context.auth.uid,
-                    operatorName: ((_a = context.auth.token) === null || _a === void 0 ? void 0 : _a.name) || '未知用戶',
+                    operatorId: contextAuth.uid,
+                    operatorName: ((_a = contextAuth.token) === null || _a === void 0 ? void 0 : _a.name) || '未知用戶',
                     remarks: `工單 ${workOrderData.workOrderNumber || workOrderId} 完工，實際生產數量：${actualQuantity}`,
                     relatedDocumentId: workOrderId,
                     relatedDocumentType: 'work_order',

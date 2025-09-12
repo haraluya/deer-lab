@@ -112,7 +112,7 @@ exports.createProduct = apiWrapper_1.CrudApiHandlers.createCreateHandler('Produc
                     return productNumber;
                 }
             }
-            throw new errorHandler_1.BusinessError(errorHandler_1.ApiErrorCode.OPERATION_FAILED, '無法生成唯一的產品編號，請重試');
+            throw new errorHandler_1.BusinessError(errorHandler_1.ApiErrorCode.INTERNAL_ERROR, '無法生成唯一的產品編號，請重試');
         };
         const productNumber = await generateProductNumber();
         // 4. 將產品類型名稱轉換為代碼

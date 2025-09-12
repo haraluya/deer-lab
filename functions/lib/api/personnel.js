@@ -38,7 +38,7 @@ exports.createPersonnel = (0, https_1.onCall)(async (request) => {
         const roleRef = db.collection("roles").doc(roleId);
         const roleDoc = await roleRef.get();
         if (!roleDoc.exists) {
-            throw ApiErrorCode.DATA_NOT_FOUND('指定的角色不存在');
+            throw new https_1.HttpsError("not-found", "指定的角色不存在");
         }
         const roleData = roleDoc.data();
         const roleName = (roleData === null || roleData === void 0 ? void 0 : roleData.displayName) || (roleData === null || roleData === void 0 ? void 0 : roleData.name) || '未知角色';

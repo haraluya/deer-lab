@@ -161,7 +161,7 @@ export const createProduct = CrudApiHandlers.createCreateHandler<CreateProductRe
           }
         }
         throw new BusinessError(
-          ApiErrorCode.OPERATION_FAILED,
+          ApiErrorCode.INTERNAL_ERROR,
           '無法生成唯一的產品編號，請重試'
         );
       };

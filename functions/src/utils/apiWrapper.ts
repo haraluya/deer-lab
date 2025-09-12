@@ -7,7 +7,7 @@
  */
 
 import { logger } from "firebase-functions";
-import { onCall, CallableContext, CallableRequest, HttpsError } from "firebase-functions/v2/https";
+import { onCall, CallableRequest, HttpsError } from "firebase-functions/v2/https";
 import { 
   ApiResponse, 
   createSuccessResponse, 
@@ -31,7 +31,7 @@ export interface ApiHandlerConfig {
   /** 是否記錄詳細日誌 */
   enableDetailedLogging?: boolean;
   /** 自定義權限檢查函數 */
-  customAuthCheck?: (uid: string, context: CallableContext) => Promise<void>;
+  customAuthCheck?: (uid: string, context: CallableRequest) => Promise<void>;
   /** API 版本 */
   version?: string;
 }
@@ -41,7 +41,7 @@ export interface ApiHandlerConfig {
  */
 export type ApiHandler<TInput = any, TOutput = any> = (
   data: TInput,
-  context: CallableContext,
+  context: CallableRequest,
   requestId: string
 ) => Promise<TOutput>;
 
@@ -178,7 +178,7 @@ export function createApiHandler<TInput = any, TOutput = any>(
  */
 export function createSimpleApiHandler<TInput = any, TOutput = any>(
   functionName: string,
-  handler: (data: TInput, context: CallableContext) => Promise<TOutput>
+  handler: (data: TInput, context: CallableRequest) => Promise<TOutput>
 ) {
   return createApiHandler(
     {
@@ -300,6 +300,31 @@ export namespace CrudApiHandlers {
       }
     );
   }
+}
+
+/**
+ * 傳統的 apiWrapper 函數 (向後兼容)
+ */
+export function apiWrapper<TInput = any, TOutput = any>(config: {
+  functionName: string;
+  requireAuth?: boolean;
+  requiredRole?: 'admin' | 'foreman' | 'worker';
+  enableDetailedLogging?: boolean;
+}) {
+  return (handler: (data: TInput, context: CallableRequest) => Promise<TOutput>) => {
+    return createApiHandler(
+      {
+        functionName: config.functionName,
+        requireAuth: config.requireAuth || false,
+        requiredRole: config.requiredRole,
+        enableDetailedLogging: config.enableDetailedLogging || false,
+        version: '1.0.0'
+      },
+      async (data, context, requestId) => {
+        return await handler(data, context);
+      }
+    );
+  };
 }
 
 /**

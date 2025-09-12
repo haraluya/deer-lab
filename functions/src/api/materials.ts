@@ -809,7 +809,7 @@ export const importMaterials = createApiHandler<ImportMaterialsRequest, BatchOpe
         
         if (isUpdate) {
           const existingDoc = existingCodesMap.get(finalCode)!;
-          batch.update(db.collection('materials').doc(existingDoc.id), materialDataToSave);
+          batch.update(db.collection('materials').doc(existingDoc.id), materialDataToSave as any);
         } else {
           materialDataToSave.createdAt = FieldValue.serverTimestamp();
           const newDocRef = db.collection('materials').doc();

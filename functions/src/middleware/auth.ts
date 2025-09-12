@@ -8,7 +8,7 @@
 
 import { logger } from "firebase-functions";
 import { getFirestore } from "firebase-admin/firestore";
-import { CallableContext } from "firebase-functions/v2/https";
+import { CallableRequest } from "firebase-functions/v2/https";
 import { BusinessError, ApiErrorCode } from "../utils/errorHandler";
 
 const db = getFirestore();
@@ -250,7 +250,7 @@ export class AuthDecorators {
       const originalMethod = descriptor.value;
       
       descriptor.value = async function (...args: any[]) {
-        const context = args.find(arg => arg && arg.auth) as CallableContext;
+        const context = args.find(arg => arg && arg.auth) as CallableRequest;
         
         if (!context?.auth?.uid) {
           throw new BusinessError(
@@ -277,7 +277,7 @@ export class AuthDecorators {
       const originalMethod = descriptor.value;
       
       descriptor.value = async function (...args: any[]) {
-        const context = args.find(arg => arg && arg.auth) as CallableContext;
+        const context = args.find(arg => arg && arg.auth) as CallableRequest;
         
         if (!context?.auth?.uid) {
           throw new BusinessError(
@@ -310,7 +310,7 @@ export class AuthDecorators {
       const originalMethod = descriptor.value;
       
       descriptor.value = async function (...args: any[]) {
-        const context = args.find(arg => arg && arg.auth) as CallableContext;
+        const context = args.find(arg => arg && arg.auth) as CallableRequest;
         
         if (!context?.auth?.uid) {
           throw new BusinessError(
@@ -343,7 +343,7 @@ export class AuthDecorators {
       const originalMethod = descriptor.value;
       
       descriptor.value = async function (...args: any[]) {
-        const context = args.find(arg => arg && arg.auth) as CallableContext;
+        const context = args.find(arg => arg && arg.auth) as CallableRequest;
         
         if (!context?.auth?.uid) {
           throw new BusinessError(
@@ -456,6 +456,13 @@ export namespace LegacyAuthChecks {
       );
     }
   }
+}
+
+/**
+ * 向後相容：requireAuth 函數（舊版）
+ */
+export function requireAuth() {
+  return AuthDecorators.requireAuth();
 }
 
 /**

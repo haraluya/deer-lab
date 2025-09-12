@@ -220,23 +220,23 @@ exports.updateFragranceByCode = apiWrapper_1.CrudApiHandlers.createUpdateHandler
             updateData.fragranceStatus = fragranceStatus;
         }
         // 7. 處理數值欄位 - 只有提供時才更新
-        if (currentStock !== undefined && currentStock !== null && currentStock !== '') {
+        if (currentStock !== undefined && currentStock !== null && String(currentStock) !== '') {
             updateData.currentStock = Number(currentStock) || 0;
             updateData.lastStockUpdate = firestore_1.FieldValue.serverTimestamp();
         }
-        if (safetyStockLevel !== undefined && safetyStockLevel !== null && safetyStockLevel !== '') {
+        if (safetyStockLevel !== undefined && safetyStockLevel !== null && String(safetyStockLevel) !== '') {
             updateData.safetyStockLevel = Number(safetyStockLevel) || 0;
         }
-        if (costPerUnit !== undefined && costPerUnit !== null && costPerUnit !== '') {
+        if (costPerUnit !== undefined && costPerUnit !== null && String(costPerUnit) !== '') {
             updateData.costPerUnit = Number(costPerUnit) || 0;
         }
-        if (percentage !== undefined && percentage !== null && percentage !== '') {
+        if (percentage !== undefined && percentage !== null && String(percentage) !== '') {
             updateData.percentage = Number(percentage) || 0;
         }
-        if (pgRatio !== undefined && pgRatio !== null && pgRatio !== '') {
+        if (pgRatio !== undefined && pgRatio !== null && String(pgRatio) !== '') {
             updateData.pgRatio = Number(pgRatio) || 0;
         }
-        if (vgRatio !== undefined && vgRatio !== null && vgRatio !== '') {
+        if (vgRatio !== undefined && vgRatio !== null && String(vgRatio) !== '') {
             updateData.vgRatio = Number(vgRatio) || 0;
         }
         if (unit !== undefined && unit !== null && unit !== '') {
