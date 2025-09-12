@@ -95,7 +95,7 @@ export const StandardStatsCard: React.FC<StandardStatsCardProps> = ({
     } ${className}`}>
       <div className={`grid w-full max-w-5xl mx-auto ${
         isMobile 
-          ? 'grid-cols-2 gap-4' 
+          ? 'grid-cols-2 gap-2' 
           : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8'
       }`}>
         {stats.map((stat, index) => {
@@ -108,13 +108,13 @@ export const StandardStatsCard: React.FC<StandardStatsCardProps> = ({
                 relative overflow-hidden transition-all duration-200 rounded-lg p-0
                 ${colors.background} ${colors.border}
                 ${stat.onClick ? 'cursor-pointer hover:shadow-md' : 'shadow-sm'}
-                ${isMobile ? 'h-[110px]' : 'h-[115px]'}
+                ${isMobile ? 'h-[95px]' : 'h-[115px]'}
               `}
               onClick={stat.onClick}
             >
-              <div className={`${isMobile ? 'px-3 py-3' : 'px-4 py-4'} h-full flex flex-col justify-center`}>
+              <div className={`${isMobile ? 'px-2 py-2' : 'px-4 py-4'} h-full flex flex-col justify-center`}>
                 {/* 頂部：標題和圖標 */}
-                <div className="flex items-center justify-between mb-3">
+                <div className={`flex items-center justify-between ${isMobile ? 'mb-1.5' : 'mb-3'}`}>
                   <h3 className={`font-semibold text-gray-700 ${
                     isMobile ? 'text-xs' : 'text-sm'
                   }`}>
@@ -132,7 +132,7 @@ export const StandardStatsCard: React.FC<StandardStatsCardProps> = ({
                 </div>
                 
                 {/* 主要數值 */}
-                <div className={`font-bold text-gray-900 mb-2 leading-none ${
+                <div className={`font-bold text-gray-900 ${isMobile ? 'mb-1' : 'mb-2'} leading-none ${
                   isMobile ? 'text-2xl' : 'text-3xl'
                 }`}>
                   {stat.value}

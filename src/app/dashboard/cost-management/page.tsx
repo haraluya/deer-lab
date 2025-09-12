@@ -208,7 +208,7 @@ function CostManagementPageContent() {
   ];
 
   return (
-    <div className="container mx-auto py-10 px-3 max-w-full cost-management-page">
+    <div className="container mx-auto py-8 px-2 max-w-full cost-management-page">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">

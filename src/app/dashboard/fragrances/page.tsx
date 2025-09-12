@@ -361,7 +361,9 @@ export default function FragrancesPage() {
     const totalValue = fragrances.reduce((sum, f) => 
       sum + ((f.currentStock || 0) * (f.costPerUnit || 0)), 0
     );
-    const activeCount = fragrances.filter(f => f.fragranceStatus === 'active').length;
+    const activeCount = fragrances.filter(f => 
+      f.fragranceStatus === 'active' || f.fragranceStatus === '啟用'
+    ).length;
 
     return [
       {
@@ -410,9 +412,11 @@ export default function FragrancesPage() {
       },
       {
         key: 'fragranceStatus',
-        label: '活躍香精',
+        label: '已啟用香精',
         value: 'active',
-        count: fragrances.filter(f => f.fragranceStatus === 'active').length,
+        count: fragrances.filter(f => 
+          f.fragranceStatus === 'active' || f.fragranceStatus === '啟用'
+        ).length,
         color: 'green'
       },
       ...fragranceTypes.slice(0, 3).map(type => ({

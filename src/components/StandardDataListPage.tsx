@@ -346,7 +346,7 @@ const Toolbar = <T,>({
 
   return (
     <div className={`w-full max-w-full overflow-hidden ${
-      isMobile ? 'px-3 mx-auto space-y-3 mb-4' : 'space-y-4 mb-6'
+      isMobile ? 'px-2 mx-auto space-y-2 mb-3' : 'space-y-4 mb-6'
     }`}>
       {/* 快速篩選標籤 */}
       {showQuickFilters && quickFilters && quickFilters.length > 0 && (
@@ -1231,7 +1231,7 @@ export const StandardDataListPage = <T,>({
                 className={`
                   flex flex-wrap w-full overflow-hidden
                   ${isMobile 
-                    ? 'gap-2 p-3 justify-center mx-auto max-w-full' // 手機版：專業間距，完美居中
+                    ? 'gap-1.5 p-2 justify-center mx-auto max-w-full' // 手機版：緊湊間距，完美居中
                     : 'gap-3 md:gap-4 p-4 justify-center sm:justify-start'
                   }
                 `}
@@ -1299,10 +1299,10 @@ export const StandardDataListPage = <T,>({
                       
                       {/* 卡片內容 - 完全重新設計的佈局 */}
                       <CardContent className={`w-full h-full overflow-hidden ${
-                        isMobile ? 'p-1.5' : 'p-3'
+                        isMobile ? 'p-1' : 'p-3'
                       }`}>
                         <div className={`flex flex-col h-full justify-between ${
-                          isMobile ? 'gap-1' : 'gap-3'
+                          isMobile ? 'gap-0.5' : 'gap-3'
                         }`}>
                           {/* 頂部：主要資訊 */}
                           <div className={`${isMobile ? 'space-y-0.5' : 'space-y-2'}`}>
