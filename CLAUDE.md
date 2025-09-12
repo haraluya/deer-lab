@@ -284,6 +284,77 @@ interface Material {
 }
 ```
 
+## 🎯 統一API客戶端系統 (2025-09-12 重要更新)
+
+**⚠️ 絕對重要：專案已完全遷移至統一API客戶端架構**
+
+### 📚 完整使用指南
+- **主要文件**: `統一API客戶端使用指南.md`
+- **實作文件**: `src/lib/apiClient.ts`
+- **Hook 整合**: `src/hooks/useApiClient.ts`
+- **類型定義**: `src/types/api-interfaces.ts`
+
+### 🚫 已廢棄的API調用方式
+```tsx
+// ❌ 絕對不要使用 - 已完全廢棄
+import { httpsCallable, getFunctions } from 'firebase/functions';
+const functions = getFunctions();
+const createMaterialFunction = httpsCallable(functions, 'createMaterial');
+
+// ❌ 絕對不要使用 - 已完全廢棄  
+const result = await createMaterialFunction(data);
+```
+
+### ✅ 正確的API調用方式
+```tsx
+// ✅ 統一API客戶端 - 必須使用
+import { useApiClient } from '@/hooks/useApiClient';
+
+function MyComponent() {
+  const apiClient = useApiClient();
+  
+  const handleCreate = async () => {
+    // 類型安全的API調用
+    const result = await apiClient.call('createMaterial', {
+      name: '新材料',
+      category: '測試分類',
+      unit: 'kg',
+    });
+    
+    if (result.success) {
+      console.log('建立成功:', result.data);
+    }
+  };
+}
+```
+
+### 🎣 可用的Hook變體
+```tsx
+// 表單專用 (自動toast提示)
+const apiClient = useApiForm();
+
+// CRUD操作專用
+const crudClient = useApiCrud();
+
+// 靜默操作 (無toast提示)  
+const silentClient = useApiSilent();
+
+// 通用客戶端 (完全控制)
+const apiClient = useApiClient();
+```
+
+### 🔧 Firebase Functions 狀態說明
+- **部分函數已暫時停用**：為修復部署錯誤，部分使用舊 `apiWrapper` 的函數已暫時註解
+- **核心功能正常**：所有前端功能透過統一API客戶端正常運作
+- **停用檔案清單**：`auth.ts`, `globalCart.ts`, `timeRecords.ts`, `productSeries.ts`, `resetPermissions.ts`
+- **保留檔案清單**：`roles.ts`, `users.ts`, `personnel.ts`, `materials.ts`, `inventory.ts` 等核心功能
+
+### ⚠️ AI助理開發禁令
+1. **禁止回歸舊API模式**：絕對不要使用 `httpsCallable` 直接調用 Firebase Functions
+2. **禁止繞過統一客戶端**：所有API調用必須通過 `useApiClient` Hook
+3. **禁止修復已停用函數**：除非用戶明確要求，不要嘗試重新啟用已停用的 Firebase Functions
+4. **強制使用指南**：任何API相關問題都必須參考 `統一API客戶端使用指南.md`
+
 ## 開發規範
 
 ### 統一對話框開發規範
@@ -303,6 +374,35 @@ xl: 1280px  /* 桌面電腦 */
 ```
 
 ### 標準 Hook 使用
+
+#### API調用 Hook (最重要)
+```tsx
+// 統一API客戶端 - 主要使用
+import { useApiClient, useApiForm, useApiCrud, useApiSilent } from '@/hooks/useApiClient';
+
+// 表單操作 (自動 toast)
+const apiClient = useApiForm();
+const result = await apiClient.call('createMaterial', formData);
+
+// CRUD操作便捷方法
+const crudClient = useApiCrud();
+await crudClient.create('createMaterial', data);
+await crudClient.update('updateMaterial', data);
+await crudClient.delete('deleteMaterial', { id });
+
+// 靜默操作 (無 toast)
+const silentClient = useApiSilent();
+await silentClient.call('syncData', data);
+
+// 完全控制的通用客戶端
+const apiClient = useApiClient({
+  showSuccessToast: true,
+  showErrorToast: true,
+  autoResetError: true
+});
+```
+
+#### 其他系統 Hook
 ```tsx
 // 權限檢查
 const { hasPermission, canAccess } = usePermission();
@@ -316,13 +416,35 @@ const { filteredData, setSearchTerm } = useDataSearch(data, searchConfig);
 
 ### 錯誤處理
 ```tsx
+// ✅ 使用統一API客戶端的錯誤處理
+import { useApiClient } from '@/hooks/useApiClient';
+
+const apiClient = useApiClient({
+  showSuccessToast: true,  // 自動成功提示
+  showErrorToast: true,    // 自動錯誤提示
+});
+
+const handleOperation = async () => {
+  const result = await apiClient.call('createMaterial', data);
+  
+  if (result.success) {
+    // 成功處理 (toast 會自動顯示)
+    console.log('操作成功:', result.data);
+  } else {
+    // 錯誤處理 (toast 會自動顯示)
+    console.error('操作失敗:', result.error);
+  }
+};
+
+// 手動錯誤處理 (如需要)
 import { toast } from 'sonner';
 
-try {
-  await firebaseFunction();
-  toast.success('操作成功');
-} catch (error) {
-  toast.error(error.message || '操作失敗');
+const result = await apiClient.call('createMaterial', data, {
+  showErrorToast: false  // 關閉自動錯誤提示
+});
+
+if (!result.success) {
+  toast.error(`自訂錯誤: ${result.error?.message}`);
 }
 ```
 
@@ -342,13 +464,25 @@ try {
 
 ### AI 助理開發指引 🤖
 
+#### 🚨 API調用絕對禁令 (2025-09-12)
+**任何情況下都不得違背的規則：**
+1. **🚫 絕對禁止 `httpsCallable`**：任何直接調用 Firebase Functions 的方式都已完全廢棄
+2. **✅ 強制使用統一API客戶端**：所有API調用必須通過 `useApiClient` 及其變體
+3. **📖 強制參考指南**：遇到API問題必須查閱 `統一API客戶端使用指南.md`
+4. **🔒 禁止重新啟用停用函數**：不要嘗試修復已停用的 Firebase Functions
+
 #### 統一架構優先原則
-1. **清單頁面開發**：
+1. **API調用開發**：
+   - 🎯 **必須使用** `useApiClient`, `useApiForm`, `useApiCrud`, `useApiSilent` 等Hook
+   - 🚫 **絕對禁止** `httpsCallable` 或任何直接Firebase Functions調用
+   - 📚 **參考文件** `統一API客戶端使用指南.md`
+
+2. **清單頁面開發**：
    - 🎯 **優先使用** StandardDataListPage 元件 
    - 📋 檢查現有配置：columns、actions、quickFilters、stats
    - 🔄 參考已完成的頁面模式：personnel、work-orders、purchase-orders
    
-2. **對話框開發**：
+3. **對話框開發**：
    - 🎯 **必須使用** StandardFormDialog + dataLoaderConfig 統一載入機制
    - 🚫 **禁止手動載入**：避免無限載入和性能問題
    - 💡 **智能欄位命名**：使用語義化命名以利自動選項匹配
@@ -472,6 +606,9 @@ firebase deploy --only functions:nextServer
 
 ## 重要提醒
 
+- **🚨 API調用禁令：絕對不得使用 `httpsCallable` 或直接調用 Firebase Functions**
+- **✅ 強制使用統一API客戶端：所有API調用必須通過 `useApiClient` Hook**
+- **📖 API問題必看：`統一API客戶端使用指南.md`**
 - **修改後先本地建構測試，確認用戶同意再推送 GitHub**
 - **除非明確說"推送到 GitHub"，否則不執行 `git push`**  
 - **沒得到同意前不要部署到 Firebase**
