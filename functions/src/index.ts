@@ -19,7 +19,8 @@ export const nextServer = onRequest({
   memory: '512MiB',       // 限制記憶體使用
   timeoutSeconds: 60,     // 設定超時時間
   concurrency: 10,        // 提高併發處理能力
-  cpu: 1                  // 限制 CPU 使用
+  cpu: 1,                 // 限制 CPU 使用
+  preserveExternalChanges: false  // 關閉原始碼備份
 }, async (req, res) => {
   try {
     // 設定快取標頭以減少重複請求

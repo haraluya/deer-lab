@@ -322,13 +322,13 @@ function PersonnelPageContent() {
         </div>
       ),
       mobileRender: (value, record) => (
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-base flex-shrink-0">
             {record.name.charAt(0).toUpperCase()}
           </div>
-          <div>
-            <h3 className="font-semibold text-gray-900">{record.name}</h3>
-            <p className="text-sm text-gray-500">工號: {record.employeeId}</p>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">{record.name}</h3>
+            <p className="text-xs sm:text-sm text-gray-500 truncate">工號: {record.employeeId}</p>
           </div>
         </div>
       )
@@ -644,7 +644,7 @@ function PersonnelPageContent() {
       {/* 詳細資料對話框 */}
       {selectedDetailUser && (
         <Dialog open={isDetailViewOpen} onOpenChange={setIsDetailViewOpen}>
-          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
+          <DialogContent className="bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
             <DialogHeader className="pb-6 border-b border-gradient-to-r from-blue-200 to-indigo-200">
               <DialogTitle className="flex items-center gap-4 text-3xl font-bold">
                 {/* 大頭照區域 */}
