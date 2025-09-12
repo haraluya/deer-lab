@@ -1019,7 +1019,7 @@ export const StandardDataListPage = <T,>({
 
   // 主要渲染邏輯
   return (
-    <div className={`${isMobile ? 'space-y-3 max-w-full overflow-hidden mx-auto px-1' : 'space-y-6'} ${className || ''}`} style={{ height }}>
+    <div className={`${isMobile ? 'space-y-3 max-w-full overflow-hidden mx-auto' : 'space-y-6'} ${className || ''}`} style={{ height }}>
       {/* 統計卡片 */}
       {showStats && stats && <StandardStatsCard stats={stats} isMobile={isMobile} />}
       
@@ -1231,7 +1231,7 @@ export const StandardDataListPage = <T,>({
                 className={`
                   flex flex-wrap w-full overflow-hidden
                   ${isMobile 
-                    ? 'gap-1.5 p-1 justify-center mx-auto max-w-full' // 手機版：緊湊邊距，完美居中
+                    ? 'gap-1 px-0 py-0 justify-center mx-auto max-w-full' // 手機版：零邊距，卡片完全貼近容器
                     : 'gap-3 md:gap-4 p-4 justify-center sm:justify-start'
                   }
                 `}
@@ -1280,7 +1280,7 @@ export const StandardDataListPage = <T,>({
                         bg-gradient-to-br from-white to-gray-50/50
                         flex-shrink-0 min-w-0 max-w-full overflow-hidden
                         ${isMobile 
-                          ? 'w-full min-h-[80px]' // 手機版：極緊湊高度，最大信息密度
+                          ? 'w-full min-h-[95px]' // 手機版：適度增加高度以容納所有內容
                           : 'w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.75rem)] xl:w-[calc(25%-0.75rem)] min-h-[160px]'
                         }
                       `}
@@ -1299,15 +1299,15 @@ export const StandardDataListPage = <T,>({
                       
                       {/* 卡片內容 - 完全重新設計的佈局 */}
                       <CardContent className={`w-full h-full overflow-hidden ${
-                        isMobile ? 'p-1.5' : 'p-3'
+                        isMobile ? 'px-0.5 py-0.5' : 'p-3'
                       }`}>
                         <div className={`flex flex-col h-full justify-between ${
-                          isMobile ? 'gap-1' : 'gap-3'
+                          isMobile ? 'gap-0.5' : 'gap-3'
                         }`}>
                           {/* 頂部：主要資訊 */}
-                          <div className={`${isMobile ? 'space-y-0.5' : 'space-y-2'}`}>
+                          <div className={`${isMobile ? 'space-y-1' : 'space-y-2'}`}>
                             {/* 標題 */}
-                            <div className={`flex items-start ${isMobile ? 'gap-1' : 'gap-3'}`}>
+                            <div className={`flex items-start ${isMobile ? 'gap-2' : 'gap-3'}`}>
                               <div className="flex-1 min-w-0">
                                 <h3 
                                   className={`font-semibold text-gray-900 leading-tight overflow-hidden ${
@@ -1326,29 +1326,23 @@ export const StandardDataListPage = <T,>({
                                   }
                                 </h3>
                                 {columns[1] && (
-                                  <p 
-                                    className={`text-gray-600 overflow-hidden ${
+                                  <div 
+                                    className={`text-gray-600 overflow-visible ${
                                       isMobile ? 'text-sm mt-0.5' : 'text-xs mt-1'
                                     }`}
-                                    style={{
-                                      display: '-webkit-box',
-                                      WebkitLineClamp: 1,
-                                      WebkitBoxOrient: 'vertical',
-                                      maxHeight: '1.2rem'
-                                    }}
                                   >
                                     {columns[1].render 
                                       ? columns[1].render((record as any)[columns[1].key], record, index)
                                       : String((record as any)[columns[1].key] || '')
                                     }
-                                  </p>
+                                  </div>
                                 )}
                               </div>
                               {selectable && <div className="w-6"></div>}
                             </div>
                             
                             {/* 關鍵資訊 - 緊湊的標籤式佈局 */}
-                            <div className={`flex flex-wrap ${isMobile ? 'gap-1' : 'gap-1'}`}>
+                            <div className={`flex flex-wrap ${isMobile ? 'gap-0.5' : 'gap-1'}`}>
                               {columns
                                 .slice(2)
                                 .filter(column => !column.hideOnMobile)
@@ -1365,12 +1359,13 @@ export const StandardDataListPage = <T,>({
                                   return (
                                     <div 
                                       key={column.key}
-                                      className={`inline-flex items-center gap-1 bg-gray-50 rounded min-w-0 ${
-                                        isMobile ? 'px-2 py-1 text-xs' : 'px-2 py-1 text-xs'
+                                      className={`inline-flex items-center gap-0.5 bg-gray-50 rounded-sm ${
+                                        isMobile ? 'px-1 py-0.5 text-xs' : 'px-2 py-1 text-xs'
                                       }`}
+                                      style={{ minWidth: 'fit-content', maxWidth: '100%' }}
                                     >
-                                      <span className="text-gray-500 truncate">{column.title}:</span>
-                                      <span className="font-medium text-gray-900 truncate max-w-20">
+                                      <span className="text-gray-500 whitespace-nowrap">{column.title}:</span>
+                                      <span className="font-medium text-gray-900 whitespace-nowrap">
                                         {renderedValue}
                                       </span>
                                     </div>
