@@ -182,7 +182,7 @@ export default function PersonalTimeRecordsPage() {
     } else {
       console.warn('appUser 或 appUser.uid 未準備就緒');
     }
-  }, [appUser, loadPersonalTimeRecords]);
+  }, [appUser?.uid]); // 只依賴 appUser.uid，避免循環依賴
 
   // 篩選邏輯
   useEffect(() => {
