@@ -585,6 +585,8 @@ export default function WorkOrderDetailPage() {
         debug('產品快照', data.productSnapshot);
         
         // 載入物料和香精的當前庫存資訊
+        console.log('📦 載入物料和香精資料 (優化後)');
+        
         const materialsSnapshot = await getDocs(collection(db, "materials"));
         const fragrancesSnapshot = await getDocs(collection(db, "fragrances"));
         
@@ -596,6 +598,11 @@ export default function WorkOrderDetailPage() {
           id: doc.id,
           ...doc.data()
         })) as Fragrance[];
+        
+        console.log('✅ 資料載入完成:', {
+          materialsCount: materialsList.length,
+          fragrancesCount: fragrancesList.length
+        });
         
         // 分別處理物料和香精資料
         const allMaterials: (Material | Fragrance)[] = [...materialsList, ...fragrancesList];
@@ -613,24 +620,38 @@ export default function WorkOrderDetailPage() {
           },
           billOfMaterials: (data.billOfMaterials || []).map((item: BillOfMaterialsItem) => {
             // 查找對應的物料或香精，獲取當前庫存
-            let material = null;
+            let material: Material | Fragrance | null = null;
             
+            // 查找對應的物料或香精，獲取當前庫存
+            // 🚨 重要：只使用 ID 和 code 匹配，絕對不使用 name 匹配！
             // 如果是香精類別，優先從香精集合中查找
             if (item.category === 'fragrance') {
               material = fragrancesList.find((f: Fragrance) => 
                 f.id === item.id || 
-                f.code === item.code || 
-                f.name === item.name
-              );
+                f.code === item.code
+              ) || null;
+              
+              if (material) {
+                console.log(`✅ 香精精確匹配: ${item.code} -> ${material.name} (庫存: ${material.currentStock})`);
+              } else {
+                console.warn(`❌ 香精匹配失敗: ID=${item.id}, Code=${item.code}`);
+              }
             }
             
             // 如果沒找到或不是香精，從物料集合中查找
             if (!material) {
               material = materialsList.find((m: Material) => 
                 m.id === item.id || 
-                m.code === item.code || 
-                m.name === item.name
-              );
+                m.code === item.code
+              ) || null;
+              
+              if (material) {
+                console.log(`✅ 物料精確匹配: ${item.code} -> ${material.name} (庫存: ${material.currentStock})`);
+              } else {
+                console.warn(`❌ 物料匹配失敗: ID=${item.id}, Code=${item.code}`);
+                // 除錯：顯示所有物料的 code 來診斷問題
+                console.log('所有物料編號:', materialsList.map(m => ({ id: m.id, code: m.code, name: m.name })));
+              }
             }
             
             // 處理舊的資料結構，確保向後相容

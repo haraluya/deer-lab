@@ -5,7 +5,6 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, getDocs, Timestamp, query, where, orderBy, limit, startAfter } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useApiForm } from '@/hooks/useApiClient';
 import { CartItem } from '@/types';
 import { useGlobalCart } from '@/hooks/useGlobalCart';

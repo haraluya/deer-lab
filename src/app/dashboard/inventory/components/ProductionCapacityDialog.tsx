@@ -334,10 +334,9 @@ export function ProductionCapacityDialog({ isOpen, onClose }: ProductionCapacity
           if (product.fragranceName && product.fragranceName !== '未指定') {
             const fragranceQuantity = plan.targetQuantity * (fragranceRatios.fragrance / 100)
             
+            // 🚨 修復：只使用精確的代號匹配，移除危險的名稱匹配
             const fragranceMaterial = fragrances.find(f => 
-              f.code === product.fragranceCode || 
-              f.name === product.fragranceName ||
-              f.name.includes(product.fragranceName) ||
+              f.code === product.fragranceCode ||
               (product.fragranceCode && f.code.includes(product.fragranceCode))
             )
             
@@ -448,6 +447,7 @@ export function ProductionCapacityDialog({ isOpen, onClose }: ProductionCapacity
           // 專屬材料
           if (product.specificMaterialNames && product.specificMaterialNames.length > 0) {
             product.specificMaterialNames.forEach(materialName => {
+              // ⚠️ 警告：使用名稱匹配可能不準確！建議改為儲存材料代號
               const material = materials.find(m => m.name === materialName)
               if (material) {
                 let requiredQuantity = plan.targetQuantity
@@ -478,6 +478,7 @@ export function ProductionCapacityDialog({ isOpen, onClose }: ProductionCapacity
           // 通用材料
           if (product.commonMaterialNames && product.commonMaterialNames.length > 0) {
             product.commonMaterialNames.forEach(materialName => {
+              // ⚠️ 警告：使用名稱匹配可能不準確！建議改為儲存材料代號
               const material = materials.find(m => m.name === materialName)
               if (material) {
                 let requiredQuantity = plan.targetQuantity

@@ -306,18 +306,7 @@ export default function CreateWorkOrderPage() {
         fragranceMaterial = fragrances.find(f => f.code === selectedProduct.fragranceCode)
       }
       
-      // 第二優先：精確匹配香精名稱
-      if (!fragranceMaterial && selectedProduct.fragranceName) {
-        fragranceMaterial = fragrances.find(f => f.name === selectedProduct.fragranceName)
-      }
-      
-      // 第三優先：模糊匹配名稱
-      if (!fragranceMaterial && selectedProduct.fragranceName) {
-        fragranceMaterial = fragrances.find(f => 
-          f.name.includes(selectedProduct.fragranceName) ||
-          selectedProduct.fragranceName.includes(f.name)
-        )
-      }
+      // 🚨 移除名稱匹配！名稱可能重複，只能使用精確的代號匹配
       
       // 第四優先：模糊匹配代號
       if (!fragranceMaterial && selectedProduct.fragranceCode && selectedProduct.fragranceCode !== '未指定') {
@@ -423,6 +412,7 @@ export default function CreateWorkOrderPage() {
     console.log('專屬材料名稱:', selectedProduct.specificMaterialNames)
     if (selectedProduct.specificMaterialNames && selectedProduct.specificMaterialNames.length > 0) {
       selectedProduct.specificMaterialNames.forEach(materialName => {
+        // ⚠️ 警告：使用名稱匹配可能不準確，建議改為儲存材料代號
         const material = materials.find(m => m.name === materialName)
         console.log('專屬材料匹配:', {
           materialName,
@@ -471,6 +461,7 @@ export default function CreateWorkOrderPage() {
     console.log('通用材料名稱:', selectedProduct.commonMaterialNames)
     if (selectedProduct.commonMaterialNames && selectedProduct.commonMaterialNames.length > 0) {
       selectedProduct.commonMaterialNames.forEach(materialName => {
+        // ⚠️ 警告：使用名稱匹配可能不準確，建議改為儲存材料代號
         const material = materials.find(m => m.name === materialName)
         if (material) {
           // 根據物料類型計算需求量

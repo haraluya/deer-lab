@@ -3,11 +3,11 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
-import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 import { FragranceData } from './FragranceDialog';
 import { usePermission } from '@/hooks/usePermission';
 import { useCartOperations } from '@/hooks/useCartOperations';
+import { useApiClient } from '@/hooks/useApiClient';
 import { StandardDataListPage, StandardColumn, StandardAction, StandardFilter, QuickFilter } from '@/components/StandardDataListPage';
 import { StandardStats } from '@/components/StandardStatsCard';
 import { Droplets, DollarSign, AlertTriangle, Building, Eye, Edit, Trash2, ShoppingCart, Plus, Calculator, Package, MoreHorizontal } from 'lucide-react';
@@ -46,6 +46,9 @@ export default function FragrancesPage() {
 
   // 購物車操作
   const { addSingleItem: addToPurchaseCart } = useCartOperations(fragrances, { itemType: 'fragrance' });
+
+  // API 客戶端
+  const apiClient = useApiClient();
 
   // 獲取供應商資料
   const fetchSuppliers = useCallback(async () => {
@@ -335,11 +338,11 @@ export default function FragrancesPage() {
       onClick: async (fragrances) => {
         const toastId = toast.loading("正在刪除香精...");
         try {
-          const functions = getFunctions();
-          const deleteFragrance = httpsCallable(functions, 'deleteFragrance');
-          
           for (const fragrance of fragrances) {
-            await deleteFragrance({ fragranceId: fragrance.id });
+            const result = await apiClient.call('deleteFragrance', { id: fragrance.id });
+            if (!result.success) {
+              throw new Error(result.error?.message || '刪除失敗');
+            }
           }
           
           toast.success(`已成功刪除 ${fragrances.length} 項香精`, { id: toastId });
@@ -755,8 +758,6 @@ export default function FragrancesPage() {
         isOpen={isImportExportOpen}
         onOpenChange={setIsImportExportOpen}
         onImport={async (data: any[], options?: { updateMode?: boolean }, onProgress?: (current: number, total: number) => void) => {
-          const functions = getFunctions();
-          
           try {
             console.log('香精匯入資料:', data);
             fetchFragrances();

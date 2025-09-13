@@ -666,6 +666,8 @@ firebase deploy --only functions:nextServer
 - **📖 API問題必看：`統一API客戶端使用指南.md`**
 - **修改後先本地建構測試，確認用戶同意再推送 GitHub**
 - **除非明確說"推送到 GitHub"，否則不執行 `git push`**  
+- **🚫 本地測試優先原則：所有修改都先本地測試，絕對不要主動線上部署**
+- **⚠️ 部署控制：除非用戶明確要求「線上部署」或「需要線上部署」，否則不執行任何 Firebase 部署指令**
 - **沒得到同意前不要部署到 Firebase**
 - **只執行 `npm run build`，不要執行 `npm run dev`**
 - **每次修改都要檢查本 CLAUDE.md 檔案是否需要更新**

@@ -132,31 +132,46 @@
 - [x] 批量計算功能正常
 - [x] 結果顯示格式正確
 
+#### 6. 🚨 工單詳情頁面（緊急修復）
+- [x] **檔案**: `src/app/dashboard/work-orders/[id]/page.tsx`
+- [x] **目標**: 優化香精匹配邏輯和除錯資訊
+- [x] **重點**: 修復香精庫存顯示為 0 的問題
+- [x] **問題**: billOfMaterials 中香精匹配邏輯有除錯資訊過多的問題
+- [x] **解決方案**: 簡化除錯日誌，保留關鍵匹配邏輯
+
+**測試點**:
+- [x] 工單詳情載入正常
+- [x] 香精庫存數據顯示正確（不再顯示 0）
+- [x] 物料庫存數據顯示正確
+- [x] BOM 計算和匹配邏輯正確
+- [x] 完工確認功能正常
+- [x] 庫存檢查邏輯正確
+
 ---
 
 ### 🟡 階段三：對話框組件統一（重要執行）
 
-#### 6. 角色建立對話框
+#### 7. 角色建立對話框
 - [x] **檔案**: `src/components/RoleCreateDialog.tsx`
 - [x] **目標**: 使用 `StandardFormDialog` + `useApiClient`
 - [x] **重點**: 統一對話框的標準實現
 
-#### 7. 角色編輯對話框
+#### 8. 角色編輯對話框
 - [x] **檔案**: `src/components/RoleEditDialog.tsx`
 - [x] **目標**: 使用 `StandardFormDialog` + `useApiClient`
 - [x] **重點**: 與建立對話框保持一致性
 
-#### 8. 用戶角色分配對話框
+#### 9. 用戶角色分配對話框
 - [x] **檔案**: `src/components/UserRoleAssignDialog.tsx`
 - [x] **目標**: 使用 `StandardFormDialog` + `dataLoaderConfig`
 - [x] **重點**: 智能載入使用者和角色資料
 
-#### 9. 產品系列對話框
+#### 10. 產品系列對話框
 - [x] **檔案**: `src/app/dashboard/product-series/SeriesDialog.tsx`
 - [x] **目標**: 使用 `StandardFormDialog` + `dataLoaderConfig`
 - [x] **重點**: 配合產品系列頁面的統一架構
 
-#### 10. 供應商對話框
+#### 11. 供應商對話框
 - [x] **檔案**: `src/app/dashboard/suppliers/SupplierDialog.tsx`
 - [x] **目標**: 使用 `StandardFormDialog` + `dataLoaderConfig`
 - [x] **重點**: 供應商資料的統一處理
@@ -173,63 +188,63 @@
 
 ### 🟠 階段四：頁面級元件遷移（重要執行）
 
-#### 11. 原料管理頁面
+#### 12. 原料管理頁面
 - [x] **檔案**: `src/app/dashboard/materials/page.tsx`
 - [x] **目標**: 遷移刪除功能和批量更新功能至 `useApiClient`
 - [x] **重點**: 保留StandardDataListPage架構，只遷移API調用
 
-#### 12. 產品管理頁面
+#### 13. 產品管理頁面
 - [x] **檔案**: `src/app/dashboard/products/page.tsx`
 - [x] **目標**: 遷移產品CRUD操作至 `useApiClient`
 - [x] **重點**: 保留現有功能和UI，只統一API調用方式
 
-#### 13. 香精管理頁面
-- [ ] **檔案**: `src/app/dashboard/fragrances/page.tsx`
-- [ ] **目標**: 遷移刪除功能至 `useApiClient`
-- [ ] **重點**: 保留StandardDataListPage架構，只遷移API調用
+#### 14. 香精管理頁面
+- [x] **檔案**: `src/app/dashboard/fragrances/page.tsx`
+- [x] **目標**: 遷移刪除功能至 `useApiClient`
+- [x] **重點**: 保留StandardDataListPage架構，只遷移API調用
 
-#### 14. 採購訂單頁面
-- [ ] **檔案**: `src/app/dashboard/purchase-orders/page.tsx`
-- [ ] **目標**: 移除未使用的imports
-- [ ] **重點**: 清理代碼，無功能性變更
+#### 15. 採購訂單頁面
+- [x] **檔案**: `src/app/dashboard/purchase-orders/page.tsx`
+- [x] **目標**: 移除未使用的imports
+- [x] **重點**: 清理代碼，無功能性變更
 
 **頁面級遷移測試點**:
-- [ ] 列表載入功能正常
-- [ ] 刪除操作功能正常
-- [ ] 批量操作功能正常
-- [ ] 搜尋篩選功能保持正常
-- [ ] 響應式佈局無變化
+- [x] 列表載入功能正常
+- [x] 刪除操作功能正常
+- [x] 批量操作功能正常
+- [x] 搜尋篩選功能保持正常
+- [x] 響應式佈局無變化
 
 ---
 
 ### 🟢 階段五：特殊功能組件遷移（選擇性執行）
 
-#### 15. 香精計算器對話框
+#### 16. 香精計算器對話框
 - [ ] **檔案**: `src/app/dashboard/products/FragranceCalculatorDialog.tsx`
 - [ ] **目標**: 保留特殊邏輯但使用統一API
 - [ ] **重點**: 複雜計算功能需要特別注意
 
-#### 16. 香精變更對話框  
+#### 17. 香精變更對話框  
 - [ ] **檔案**: `src/app/dashboard/products/FragranceChangeDialog.tsx`
 - [ ] **目標**: 保留變更邏輯但使用統一API
 - [ ] **重點**: 歷史記錄功能要保留
 
-#### 17. 庫存調整表單
+#### 18. 庫存調整表單
 - [ ] **檔案**: `src/components/InventoryAdjustmentForm.tsx`
 - [ ] **目標**: 使用 `useApiClient`
 - [ ] **重點**: 庫存計算邏輯要正確
 
-#### 18. 產品詳情頁面
+#### 19. 產品詳情頁面
 - [ ] **檔案**: `src/app/dashboard/products/[id]/page.tsx`
 - [ ] **目標**: 遷移香精歷史查詢功能
 - [ ] **重點**: 保留詳情頁面的完整功能
 
-#### 19. 香精變更歷史頁面
+#### 20. 香精變更歷史頁面
 - [ ] **檔案**: `src/app/dashboard/products/fragrance-history/page.tsx`
 - [ ] **目標**: 遷移歷史記錄查詢功能
 - [ ] **重點**: 保留歷史記錄的完整功能
 
-#### 20. 時間記錄清理工具
+#### 21. 時間記錄清理工具
 - [ ] **檔案**: `src/app/cleanup-time-records/page.tsx`
 - [ ] **目標**: 遷移清理功能至統一API
 - [ ] **重點**: 管理工具功能，確保清理邏輯正確
@@ -245,7 +260,7 @@
 
 ### 🔄 階段六：Functions清理（最終執行）
 
-#### 21. 已停用Functions完全移除
+#### 22. 已停用Functions完全移除
 - [ ] 確認前端完全不依賴已停用的Functions
 - [ ] 完全移除停用的Functions檔案：
   - [ ] `functions/src/api/auth.ts` 
