@@ -878,7 +878,8 @@ function PurchaseOrdersPageContent() {
           console.warn(`⚠️ 找不到物料 ${item.name} (${item.code}) 的最新數據`);
         }
       } else if (item.type === 'fragrance') {
-        const latestFragrance = fragrances.find(f => f.code === item.code);
+        // 🔧 修復：統一使用文檔ID匹配，確保使用產品資訊正確
+        const latestFragrance = fragrances.find(f => f.id === item.id);
         
         console.log(`🔍 查找香精資料匹配:`, {
           購物車項目: {
@@ -958,7 +959,8 @@ function PurchaseOrdersPageContent() {
           price = latestMaterial.costPerUnit;
         }
       } else if (item.type === 'fragrance') {
-        const latestFragrance = fragrances.find(f => f.code === item.code);
+        // 🔧 修復：統一使用文檔ID匹配
+        const latestFragrance = fragrances.find(f => f.id === item.id);
         if (latestFragrance && latestFragrance.costPerUnit) {
           price = latestFragrance.costPerUnit;
         }
