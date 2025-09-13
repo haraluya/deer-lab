@@ -70,6 +70,7 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
       console.log("採購單狀態:", purchaseOrder.status);
       console.log("發送 payload:", JSON.stringify(payload, null, 2));
       
+      // 暫時保持callGeneric，payload結構需要進一步分析對應API介面
       const result = await apiClient.callGeneric('receivePurchaseOrderItems', payload);
       console.log("統一 API 回應:", JSON.stringify(result, null, 2));
       

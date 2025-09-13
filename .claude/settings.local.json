@@ -26,7 +26,8 @@
       "Read(//e/PrtSrc/Screenshots/2025-09/**)",
       "Bash(gsutil lifecycle:*)",
       "Bash(gcloud storage buckets update:*)",
-      "Bash(firebase firestore:export:*)"
+      "Bash(firebase firestore:export:*)",
+      "Bash(firebase functions:list:*)"
     ],
     "deny": [],
     "ask": []

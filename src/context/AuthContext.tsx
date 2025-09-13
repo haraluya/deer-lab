@@ -67,8 +67,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         debug('用戶文檔存在');
         const userData = userDoc.data() as AppUser;
         
-        // 確保 uid 正確設置
-        userData.uid = firebaseUser.uid;
+        // 🎯 統一ID驗證：確保 uid 與 employeeId 和文檔ID 一致
+        if (userData.uid !== firebaseUser.uid) {
+          warn('用戶ID不一致，已自動修正', {
+            firestoreUid: userData.uid,
+            firebaseUid: firebaseUser.uid,
+            employeeId: userData.employeeId
+          } as any);
+          userData.uid = firebaseUser.uid;
+        }
         
         debug('用戶資料', userData);
         

@@ -51,11 +51,13 @@ export function QuickUpdateDialog({ isOpen, onClose, item, onSuccess }: QuickUpd
       return
     }
     
-    const result = await apiClient.callGeneric('quickUpdateInventory', {
-      itemId: item.id,
-      itemType: item.type,
-      newStock: stockValue,
-      remarks: remarks.trim() || `快速更新${item.type === 'material' ? '物料' : '香精'}庫存`
+    const result = await apiClient.call('quickUpdateInventory', {
+      updates: [{
+        type: item.type,
+        itemId: item.id,
+        newStock: stockValue,
+        reason: remarks.trim() || `快速更新${item.type === 'material' ? '物料' : '香精'}庫存`
+      }]
     })
     
     if (result.success) {

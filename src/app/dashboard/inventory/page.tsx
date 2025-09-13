@@ -386,10 +386,21 @@ export default function InventoryPage() {
     try {
       setOverviewLoading(true)
       
-      const result = await apiClient.callGeneric('getInventoryOverview')
+      const result = await apiClient.call('getInventoryOverview')
       
-      if (result.success) {
-        setOverview(result.data.overview)
+      if (result.success && result.data) {
+        // 轉換API回應格式為本地介面格式
+        const apiData = result.data;
+        const localOverview: InventoryOverview = {
+          totalMaterials: apiData.materials.totalItems,
+          totalFragrances: apiData.fragrances.totalItems,
+          totalMaterialCost: apiData.materials.totalValue,
+          totalFragranceCost: apiData.fragrances.totalValue,
+          lowStockMaterials: apiData.materials.lowStockCount,
+          lowStockFragrances: apiData.fragrances.lowStockCount,
+          totalLowStock: apiData.materials.lowStockCount + apiData.fragrances.lowStockCount
+        };
+        setOverview(localOverview)
         toast.success('庫存統計載入完成')
       } else {
         console.error('載入庫存總覽失敗:', result.error)

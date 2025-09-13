@@ -82,3 +82,5 @@ export * from "./api/inventory";
 export * from "./api/workOrders";
 export * from "./api/roles";
 export * from "./api/personnel";
+export * from "./api/timeRecords";
+export * from "./api/timeRecords-v2";

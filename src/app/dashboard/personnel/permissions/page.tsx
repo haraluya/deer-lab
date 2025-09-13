@@ -100,12 +100,24 @@ function PermissionsPageContent() {
 
     // 如果本地查詢失敗，才嘗試統一 API 客戶端
     try {
-      const result = await apiClient.callGeneric('getRoles');
+      const result = await apiClient.call('getRoles');
       
       if (result.success && result.data) {
-        const roles = result.data.roles || [];
-        setRoles(roles);
-        toast.success(`載入 ${roles.length} 個角色（統一 API）`);
+        const apiRoles = result.data.roles || [];
+        // 轉換API格式為本地格式
+        const convertedRoles: Role[] = apiRoles.map((apiRole: any) => ({
+          id: apiRole.id,
+          name: apiRole.name,
+          displayName: apiRole.name, // 使用name作為displayName
+          description: apiRole.description || '',
+          permissions: apiRole.permissions,
+          isDefault: false, // 預設為非預設角色
+          color: 'blue', // 預設顏色
+          createdAt: null,
+          updatedAt: null,
+        }));
+        setRoles(convertedRoles);
+        toast.success(`載入 ${convertedRoles.length} 個角色（統一 API）`);
       } else {
         toast.error('載入角色列表失敗');
       }
@@ -174,7 +186,7 @@ function PermissionsPageContent() {
   // 初始化預設角色
   const initializeRoles = async () => {
     try {
-      const result = await apiClient.callGeneric('initializeDefaultRoles');
+      const result = await apiClient.call('initializeDefaultRoles');
       
       if (result.success && result.data) {
         if (result.data.status === 'success') {

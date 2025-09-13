@@ -410,9 +410,19 @@ export default function PurchaseOrderDetailPage() {
     setIsUpdating(true);
     
     try {
-      const result = await apiClient.callGeneric('updatePurchaseOrderStatus', { 
-        purchaseOrderId: po.id, 
-        newStatus 
+      // 轉換中文狀態為API期望的英文狀態
+      const statusMap: Record<string, string> = {
+        '預報單': 'pending',
+        '已訂購': 'ordered',
+        '已收貨': 'received',
+        '已取消': 'cancelled'
+      };
+      
+      const apiStatus = statusMap[newStatus] || newStatus;
+      
+      const result = await apiClient.call('updatePurchaseOrderStatus', { 
+        id: po.id, 
+        status: apiStatus as 'pending' | 'ordered' | 'shipped' | 'received' | 'cancelled'
       });
       
       if (result.success) {

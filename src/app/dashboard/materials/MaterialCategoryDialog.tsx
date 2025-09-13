@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, query, where, writeBatch } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { generateUniqueCategoryId, generateUniqueSubCategoryId } from "@/lib/utils"
@@ -91,7 +91,7 @@ export function MaterialCategoryDialog({ isOpen, onOpenChange }: MaterialCategor
     },
   })
 
-  const loadCategories = async () => {
+  const loadCategories = useCallback(async () => {
     setIsLoading(true)
     try {
       if (!db) {
@@ -172,7 +172,7 @@ export function MaterialCategoryDialog({ isOpen, onOpenChange }: MaterialCategor
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   const loadCategoryMaterials = async (category: Category) => {
     setIsLoadingMaterials(true)

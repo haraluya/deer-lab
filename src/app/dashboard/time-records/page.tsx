@@ -92,49 +92,79 @@ export default function PersonalTimeRecordsPage() {
       }
       setIsLoading(true);
 
-      console.log('開始載入個人有效工時記錄（只包含已完工和已入庫工單），當前用戶:', { 
-        uid: appUser.uid, 
-        name: appUser.name, 
-        employeeId: appUser.employeeId 
+      console.log('🚀 開始載入個人工時記錄 V2 - 統一映射機制，當前用戶:', {
+        uid: appUser.uid,
+        name: appUser.name,
+        employeeId: appUser.employeeId
       });
 
-      // 使用統一API客戶端獲取只包含已完工和已入庫工單的工時記錄
-      const result = await apiClient.call('getPersonalValidTimeRecords', { 
-        userId: appUser.uid 
+      // 🎯 使用標準 call 方法調用 V2 API - 類型安全的方式
+      const result = await apiClient.call('getPersonalTimeRecordsV2', {
+        employeeId: appUser.employeeId,  // 使用 employeeId (如 "052")
+        userId: appUser.uid              // 保留 userId 作為備用
       });
-      
+
+      console.log('📊 V2 API 調用完成，詳細結果:', {
+        success: result.success,
+        hasData: !!result.data,
+        dataType: typeof result.data,
+        recordCount: result.data?.records?.length || 0,
+        summary: result.data?.summary,
+        error: result.error
+      });
+
       if (!result.success) {
+        console.error('API 調用失敗:', result.error);
         throw new Error('獲取個人工時記錄失敗');
       }
       
-      // 根據實際API回傳結構處理資料
-      // 舊的Firebase Function可能回傳不同結構，這裡做相容處理
+      // 🎯 V2 API 標準化資料處理
       let timeEntries: TimeEntry[] = [];
       let totalFound = 0;
       let validCount = 0;
       let invalidCount = 0;
 
+      console.log('🔍 V2 API 回傳資料分析:', {
+        hasData: !!result.data,
+        dataType: typeof result.data,
+        dataKeys: result.data ? Object.keys(result.data) : [],
+        firstLevelStructure: result.data
+      });
+
       if (result.data) {
-        // 檢查是否為新的API格式 (GetPersonalRecordsResponse)
+        // V2 API 標準格式：{ records: [...], summary: {...} }
         if ('records' in result.data && 'summary' in result.data) {
-          // 新格式：將records轉換為TimeEntry格式
           const apiData = result.data as any;
           timeEntries = apiData.records || [];
           totalFound = apiData.summary?.totalRecords || timeEntries.length;
           validCount = timeEntries.length;
           invalidCount = 0;
+
+          console.log('✅ V2 API 標準格式處理成功:', {
+            recordsCount: timeEntries.length,
+            summary: apiData.summary,
+            hasDebug: !!apiData.debug,
+            sampleRecord: timeEntries[0] || null
+          });
         } else if ('timeEntries' in result.data) {
-          // 舊格式：直接使用
+          // 舊格式相容
           const apiData = result.data as any;
           timeEntries = apiData.timeEntries || [];
           totalFound = apiData.totalFound || timeEntries.length;
           validCount = apiData.validCount || timeEntries.length;
           invalidCount = apiData.invalidCount || 0;
+          console.log('⚠️ 使用舊格式相容模式:', timeEntries.length);
         } else {
-          // 未知格式，嘗試直接解析
-          console.warn('未知的API回傳格式:', result.data);
+          // 格式不匹配
+          console.error('❌ API 回傳格式不符合預期:', {
+            expectedKeys: ['records', 'summary'],
+            actualKeys: Object.keys(result.data),
+            rawData: result.data
+          });
           timeEntries = [];
         }
+      } else {
+        console.warn('⚠️ result.data 為空或未定義');
       }
 
       console.log(`API 結果: 總共 ${totalFound} 筆，有效 ${validCount} 筆，無效 ${invalidCount} 筆`);

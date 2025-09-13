@@ -83,7 +83,7 @@ export function useGlobalCart() {
     if (!isLoading && cartItems.length === 0) {
       migrateFromLocalStorage();
     }
-  }, [isLoading, cartItems.length]);
+  }, [isLoading, cartItems.length, apiClient]);
 
   // 添加項目到購物車 - 樂觀更新以提升速度
   const addToCart = useCallback(async (item: Omit<CartItem, 'id' | 'addedBy' | 'addedAt' | 'updatedAt'>) => {
@@ -153,7 +153,7 @@ export function useGlobalCart() {
     } finally {
       setIsSyncing(false);
     }
-  }, [cartItems]);
+  }, [cartItems, apiClient]);
 
   // 更新購物車項目 - 樂觀更新以改善使用者體驗
   const updateCartItem = useCallback(async (itemId: string, updates: Partial<CartItem>) => {
@@ -189,7 +189,7 @@ export function useGlobalCart() {
     } finally {
       setIsSyncing(false);
     }
-  }, []);
+  }, [apiClient]);
 
   // 從購物車移除項目 - 樂觀更新
   const removeFromCart = useCallback(async (itemId: string) => {
@@ -217,7 +217,7 @@ export function useGlobalCart() {
     } finally {
       setIsSyncing(false);
     }
-  }, []);
+  }, [apiClient]);
 
   // 清空購物車
   const clearCart = useCallback(async () => {
@@ -238,7 +238,7 @@ export function useGlobalCart() {
     } finally {
       setIsSyncing(false);
     }
-  }, []);
+  }, [apiClient]);
 
   // 獲取供應商分組的購物車項目
   const getCartBySupplier = useCallback(() => {

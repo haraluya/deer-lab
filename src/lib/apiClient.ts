@@ -242,14 +242,42 @@ export class ApiClient {
       return {
         success: response.success,
         data: response.fragranceId ? { id: response.fragranceId } : response,
-        error: !response.success ? { 
-          code: 'LEGACY_ERROR', 
-          message: response.message || '操作失敗' 
+        error: !response.success ? {
+          code: 'LEGACY_ERROR',
+          message: response.message || '操作失敗'
         } : undefined,
         meta: {
           timestamp: Date.now(),
           requestId: `legacy_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
           version: 'legacy'
+        }
+      };
+    }
+
+    // 🎯 適配 timeRecords 原始格式: { records: [...], summary: {...} }
+    if (response.records && Array.isArray(response.records) && response.summary) {
+      return {
+        success: true,
+        data: response,
+        error: undefined,
+        meta: {
+          timestamp: Date.now(),
+          requestId: `timeRecords_adapted_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+          version: 'timeRecords-legacy'
+        }
+      };
+    }
+
+    // 🎯 適配任何包含 records 陣列的格式
+    if (response.records && Array.isArray(response.records)) {
+      return {
+        success: true,
+        data: response,
+        error: undefined,
+        meta: {
+          timestamp: Date.now(),
+          requestId: `records_adapted_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+          version: 'records-legacy'
         }
       };
     }
@@ -314,21 +342,50 @@ export class ApiClient {
    * 處理例外錯誤
    */
   private handleExceptionError(
-    error: any, 
-    options: ApiCallOptions, 
+    error: any,
+    options: ApiCallOptions,
     toastId?: string | number
   ): ApiCallResult {
     if (toastId !== undefined) {
       toast.dismiss(toastId);
     }
 
+    // 特殊處理 Firebase Functions 錯誤
+    let errorCode = error.code || 'EXCEPTION_ERROR';
+    let errorMessage = error.message || '系統發生錯誤';
+
+    // 檢查是否為 Firebase Functions 錯誤
+    if (error.code === 'functions/not-found') {
+      errorCode = 'API_NOT_FOUND';
+      errorMessage = '請求的API功能暫時不可用，請稍後再試';
+    } else if (error.code === 'functions/permission-denied') {
+      errorCode = 'PERMISSION_DENIED';
+      errorMessage = '您沒有權限執行此操作';
+    } else if (error.code === 'functions/unauthenticated') {
+      errorCode = 'UNAUTHENTICATED';
+      errorMessage = '請先登入後再試';
+    } else if (error.code === 'functions/deadline-exceeded' || error.message?.includes('timeout')) {
+      errorCode = 'TIMEOUT';
+      errorMessage = '請求超時，請稍後再試';
+    } else if (error.code === 'functions/unavailable') {
+      errorCode = 'SERVICE_UNAVAILABLE';
+      errorMessage = '服務暫時不可用，請稍後再試';
+    } else if (error.code === 'functions/internal') {
+      errorCode = 'INTERNAL_ERROR';
+      errorMessage = '伺服器發生內部錯誤，請稍後再試';
+    }
+
     const errorInfo = {
-      code: error.code || 'EXCEPTION_ERROR',
-      message: error.message || '系統發生錯誤',
+      code: errorCode,
+      message: errorMessage,
       details: error
     };
 
-    console.error('API 調用異常:', error);
+    console.error('API 調用異常:', {
+      originalError: error,
+      processedError: errorInfo,
+      functionName: error.functionName || 'unknown'
+    });
 
     if (options.customErrorHandler) {
       options.customErrorHandler(errorInfo);

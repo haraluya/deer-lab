@@ -175,17 +175,17 @@ export function PersonnelDialog({
       
       // 準備更新資料，確保欄位名稱正確
       const updateData = {
-        personnelId: personnelData.id, // 確保傳遞人員 ID
+        id: personnelData.id, // API介面需要 id 欄位
         name: data.name,
         employeeId: data.employeeId,
         phone: data.phone,
-        roleId: data.role, // 將 role 映射為 roleId
+        role: data.role, // 保持role欄位名稱
         password: data.password || "", // 如果沒有密碼則傳空字串
-        status: data.status,
+        isActive: data.status === 'active', // 轉換為boolean
       };
       
       console.log('📤 更新資料:', updateData);
-      const result = await apiClient.callGeneric('updatePersonnel', updateData);
+      const result = await apiClient.call('updatePersonnel', updateData);
       console.log('✅ updatePersonnel 成功:', result);
       
       if (result.success) {
@@ -199,13 +199,13 @@ export function PersonnelDialog({
         name: data.name,
         employeeId: data.employeeId,
         phone: data.phone,
-        roleId: data.role, // 將 role 映射為 roleId
+        role: data.role, // 保持role欄位名稱
         password: data.password,
-        status: data.status,
+        isActive: data.status === 'active', // 轉換為boolean
       };
       
       console.log('📤 建立資料:', createData);
-      const result = await apiClient.callGeneric('createPersonnel', createData);
+      const result = await apiClient.call('createPersonnel', createData);
       console.log('✅ createPersonnel 成功:', result);
       
       if (result.success) {

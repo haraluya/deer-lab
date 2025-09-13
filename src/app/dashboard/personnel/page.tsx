@@ -501,9 +501,9 @@ function PersonnelPageContent() {
     const newStatus = selectedUser.status === 'active' ? 'inactive' : 'active';
 
     try {
-      const result = await apiClient.callGeneric('setUserStatus', { 
+      const result = await apiClient.call('setUserStatus', { 
         uid: selectedUser.uid, 
-        status: newStatus 
+        isActive: newStatus === 'active'
       });
       
       if (result.success) {
@@ -522,8 +522,8 @@ function PersonnelPageContent() {
     if (!selectedUser) return;
 
     try {
-      const result = await apiClient.callGeneric('deletePersonnel', { 
-        personnelId: selectedUser.uid 
+      const result = await apiClient.call('deletePersonnel', { 
+        id: selectedUser.uid 
       });
       
       if (result.success) {

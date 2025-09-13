@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useApiSilent } from "@/hooks/useApiClient"
 import { toast } from "sonner"
 import { AlertTriangle, Package, FlaskConical, Loader2, RefreshCw } from "lucide-react"
@@ -33,10 +33,10 @@ export function LowStockDialog({ isOpen, onClose }: LowStockDialogProps) {
   const [loading, setLoading] = useState(true)
   const apiClient = useApiSilent()
 
-  const loadLowStockItems = async () => {
+  const loadLowStockItems = useCallback(async () => {
     setLoading(true)
     try {
-      const result = await apiClient.callGeneric('getLowStockItems')
+      const result = await apiClient.call('getLowStockItems')
       
       if (result.success && result.data) {
         setItems(result.data.items || [])
@@ -49,7 +49,7 @@ export function LowStockDialog({ isOpen, onClose }: LowStockDialogProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [apiClient])
 
   useEffect(() => {
     if (isOpen) {

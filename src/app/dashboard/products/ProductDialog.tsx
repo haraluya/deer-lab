@@ -368,10 +368,11 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
         })
       };
 
+      // 暫時保持callGeneric，因為產品資料結構較複雜需要進一步分析
       const result = await apiClient.callGeneric(
         isEditMode ? 'updateProduct' : 'createProduct',
         isEditMode 
-          ? { productId: productData.id, ...payload }
+          ? { id: productData.id, ...payload }
           : payload
       );
       

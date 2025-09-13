@@ -92,4 +92,6 @@ __exportStar(require("./api/inventory"), exports);
 __exportStar(require("./api/workOrders"), exports);
 __exportStar(require("./api/roles"), exports);
 __exportStar(require("./api/personnel"), exports);
+__exportStar(require("./api/timeRecords"), exports);
+__exportStar(require("./api/timeRecords-v2"), exports);
 //# sourceMappingURL=index.js.map

@@ -225,9 +225,12 @@ export default function FragrancesPage() {
       priority: 4,
       render: (value) => {
         const colorMap: Record<string, string> = {
+          '啟用': 'bg-green-50 text-green-700 border-green-200',
+          '備用': 'bg-yellow-50 text-yellow-700 border-yellow-200',
+          '棄用': 'bg-pink-50 text-pink-700 border-pink-200',
           'active': 'bg-green-50 text-green-700 border-green-200',
           'standby': 'bg-yellow-50 text-yellow-700 border-yellow-200',
-          'discontinued': 'bg-red-50 text-red-700 border-red-200'
+          'discontinued': 'bg-pink-50 text-pink-700 border-pink-200'
         };
         return value ? (
           <Badge variant="outline" className={colorMap[value] || 'bg-gray-50 text-gray-700'}>
@@ -243,6 +246,18 @@ export default function FragrancesPage() {
       render: (value) => (
         <span className="text-sm">{value}</span>
       )
+    },
+    {
+      key: 'percentage',
+      title: '香精比例',
+      sortable: true,
+      align: 'right',
+      priority: 3,
+      render: (value) => value ? (
+        <div className="font-semibold text-purple-600">
+          {value}%
+        </div>
+      ) : '-'
     },
     {
       key: 'currentStock',
@@ -404,39 +419,54 @@ export default function FragrancesPage() {
   const quickFilters: QuickFilter[] = useMemo(() => {
     const fragranceTypes = Array.from(new Set(fragrances.map(f => f.fragranceType).filter(Boolean))) as string[];
     const fragranceStatuses = Array.from(new Set(fragrances.map(f => f.fragranceStatus).filter(Boolean))) as string[];
-    
+
+    // 為香精種類分配顏色 (避開啟用狀態顏色)
+    const typeColorMap: Record<string, 'blue' | 'purple' | 'orange'> = {};
+    const availableTypeColors: ('blue' | 'purple' | 'orange')[] = ['blue', 'purple', 'orange'];
+    fragranceTypes.forEach((type, index) => {
+      typeColorMap[type] = availableTypeColors[index % availableTypeColors.length];
+    });
+
     return [
+      // 1. 低庫存 (紅色)
       {
         key: 'lowStock',
         label: '低庫存',
         value: true,
         count: fragrances.filter(f => f.safetyStockLevel && f.currentStock < f.safetyStockLevel).length,
-        color: 'red'
+        color: 'red' as const
       },
-      {
-        key: 'fragranceStatus',
-        label: '已啟用香精',
-        value: '啟用',
-        count: fragrances.filter(f => 
-          f.fragranceStatus === '啟用'
-        ).length,
-        color: 'green'
-      },
+      // 2. 香精種類 (藍色系列)
       ...fragranceTypes.slice(0, 3).map(type => ({
         key: 'fragranceType',
         label: type,
         value: type,
         count: fragrances.filter(f => f.fragranceType === type).length,
-        color: 'blue' as const
+        color: typeColorMap[type]
       })),
-      ...fragranceStatuses.filter(status => status !== '啟用').slice(0, 2).map(status => ({
+      // 3. 啟用狀態 (依照對應顏色)
+      {
+        key: 'fragranceStatus',
+        label: '啟用',
+        value: '啟用',
+        count: fragrances.filter(f => f.fragranceStatus === '啟用').length,
+        color: 'green' as const // 啟用 - 綠色
+      },
+      {
+        key: 'fragranceStatus',
+        label: '備用',
+        value: '備用',
+        count: fragrances.filter(f => f.fragranceStatus === '備用').length,
+        color: 'yellow' as const // 備用 - 黃色
+      },
+      ...fragranceStatuses.filter(status => !['啟用', '備用'].includes(status)).slice(0, 2).map(status => ({
         key: 'fragranceStatus',
         label: status,
         value: status,
         count: fragrances.filter(f => f.fragranceStatus === status).length,
-        color: 'purple' as const
+        color: status === '棄用' ? ('red' as const) : ('gray' as const) // 棄用 - 紅色，其他 - 灰色
       }))
-    ];
+    ].filter(filter => filter.count > 0); // 只顯示有數據的標籤
   }, [fragrances]);
 
   // 過濾器
@@ -643,9 +673,10 @@ export default function FragrancesPage() {
                   <span className="text-gray-500">狀態</span>
                 </div>
                 <Badge variant="outline" className={
-                  fragrance.fragranceStatus === 'active' ? 'bg-green-50 text-green-700 border-green-200' :
-                  fragrance.fragranceStatus === 'standby' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                  'bg-red-50 text-red-700 border-red-200'
+                  fragrance.fragranceStatus === '啟用' || fragrance.fragranceStatus === 'active' ? 'bg-green-50 text-green-700 border-green-200' :
+                  fragrance.fragranceStatus === '備用' || fragrance.fragranceStatus === 'standby' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                  fragrance.fragranceStatus === '棄用' || fragrance.fragranceStatus === 'discontinued' ? 'bg-pink-50 text-pink-700 border-pink-200' :
+                  'bg-gray-50 text-gray-700 border-gray-200'
                 }>
                   {fragrance.fragranceStatus}
                 </Badge>

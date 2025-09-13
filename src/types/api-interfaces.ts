@@ -629,6 +629,45 @@ export namespace TimeRecordsApi {
       uniqueWorkOrders: number;
     };
   }
+
+  // V2 API 類型定義
+  export interface GetPersonalRecordsV2Request {
+    employeeId?: string;
+    userId?: string;
+    startDate?: string;
+    endDate?: string;
+  }
+
+  export interface GetPersonalRecordsV2Response {
+    records: {
+      id: string;
+      workOrderId: string;
+      workOrderNumber: string;
+      personnelId: string;
+      personnelName: string;
+      startDate: string;
+      startTime: string;
+      endDate: string;
+      endTime: string;
+      duration: number;
+      overtimeHours?: number;
+      notes?: string;
+      status?: 'draft' | 'confirmed' | 'locked';
+      createdAt: any;
+      updatedAt?: any;
+    }[];
+    summary: {
+      totalRecords: number;
+      totalHours: number;
+      uniqueWorkOrders: number;
+    };
+    debug?: {
+      searchedPersonnelId: string;
+      totalTimeEntries: number;
+      availablePersonnelIds: string[];
+      sampleRecords: any[];
+    };
+  }
 }
 
 // =============================================================================
@@ -1005,6 +1044,10 @@ export interface ApiEndpoints {
   'getPersonalValidTimeRecords': {
     request: TimeRecordsApi.GetPersonalRecordsRequest;
     response: TimeRecordsApi.GetPersonalRecordsResponse;
+  };
+  'getPersonalTimeRecordsV2': {
+    request: TimeRecordsApi.GetPersonalRecordsV2Request;
+    response: TimeRecordsApi.GetPersonalRecordsV2Response;
   };
 
   // 全域購物車

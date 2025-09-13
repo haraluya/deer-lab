@@ -195,14 +195,15 @@ export function TimeTrackingDialog({ isOpen, onOpenChange, workOrderId, workOrde
       const usersSnapshot = await getDocs(collection(db!, "users"))
       console.log("人員資料快照:", usersSnapshot.size, "筆資料")
       
-      // 將 users 資料轉換為 Personnel 格式，id 使用 Firebase Auth UID
+      // 🎯 統一ID系統：employeeId = Firebase Auth UID = 文檔ID
       const personnelList: Personnel[] = usersSnapshot.docs
         .map(doc => {
           const userData = doc.data()
+          // 統一使用文檔ID (employeeId)，無需複雜映射邏輯
           return {
-            id: userData.uid || doc.id, // 優先使用 Firebase Auth UID
+            id: doc.id, // 文檔ID = employeeId = Firebase Auth UID
             name: userData.name || '',
-            employeeId: userData.employeeId || '',
+            employeeId: userData.employeeId || doc.id,
             phone: userData.phone || '',
             email: userData.email || '',
             position: userData.position || '員工',

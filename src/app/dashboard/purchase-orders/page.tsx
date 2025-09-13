@@ -743,6 +743,7 @@ function PurchaseOrdersPageContent() {
         suppliers: Object.values(supplierGroups)
       };
 
+      // 暫時保持callGeneric，payload結構較複雜需要進一步分析
       const result = await apiClient.callGeneric('createPurchaseOrders', payload);
       
       if (result.success) {

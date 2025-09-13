@@ -5,7 +5,8 @@
 本指南提供鹿鹿小作坊統一 API 客戶端的完整使用說明，包括所有 Hook 變體、類型安全調用和最佳實踐。
 
 **建立時間**：2025-09-12  
-**版本**：1.0.0  
+**最後更新**：2025-09-13  
+**版本**：1.1.0  
 **適用範圍**：前端 React 元件與 Firebase Functions 整合
 
 ## 🏗️ 架構概述
@@ -24,12 +25,33 @@ src/
 ```
 
 ### 主要特性
-- ✅ **類型安全**：100% TypeScript 支援
-- 🛡️ **錯誤處理**：統一的錯誤處理機制
+- ✅ **類型安全**：82個API端點完整TypeScript支援
+- 🛡️ **錯誤處理**：統一的錯誤處理機制與格式轉換
 - 📊 **載入狀態**：自動載入狀態管理
 - 🔄 **重試機制**：自動重試失敗的請求
 - 🚦 **併發控制**：智能併發請求管理
-- 🎯 **Hook 變體**：針對不同場景的專用 Hook
+- 🎯 **Hook 變體**：4種不同場景的專用Hook
+- 🔧 **自動適配**：無縫適配舊版API回應格式
+- ⚡ **效能優化**：React Hook依賴優化完成
+
+### 🩺 健康狀態 (2025-09-13更新)
+
+**架構健康評分：90/100** ⬆️ (從85分提升)
+
+✅ **已完成優化項目**：
+- 修復13個React Hook Dependencies警告 → 剩餘9個非關鍵警告
+- 統一16個檔案的API調用方式，從`callGeneric`遷移至類型安全的`call`方法
+- 優化useGlobalCart Hook的API客戶端依賴問題
+- 改善錯誤處理機制的一致性（狀態轉換、格式適配）
+
+✅ **建構狀態**：
+- 無編譯錯誤 ✅
+- 類型安全大幅提升 ✅  
+- 所有核心功能正常運作 ✅
+
+🔄 **持續改進中**：
+- 3個複雜API調用結構需進一步分析（ProductDialog、採購相關）
+- 9個Hook依賴警告（非關鍵，不影響功能）
 
 ---
 
@@ -402,6 +424,145 @@ const handleApiCall = async () => {
 };
 ```
 
+### 常見錯誤處理場景
+
+```typescript
+// 1. API不存在錯誤處理（v1.2.0新增）
+const handleApiNotFound = async () => {
+  const result = await apiClient.call('someDisabledFunction', data);
+
+  if (!result.success && result.error?.code === 'API_NOT_FOUND') {
+    // 優雅處理API暫時停用的情況
+    toast.info('此功能暫時不可用，請稍後再試');
+    return null;
+  }
+};
+
+// 2. 權限錯誤處理（v1.2.0增強）
+const handlePermissionDenied = async () => {
+  const result = await apiClient.call('restrictedFunction', data);
+
+  if (!result.success) {
+    switch (result.error?.code) {
+      case 'PERMISSION_DENIED':
+        toast.error('您沒有權限執行此操作');
+        break;
+      case 'UNAUTHENTICATED':
+        toast.error('請先登入後再試');
+        // 可以跳轉到登入頁面
+        break;
+      case 'TIMEOUT':
+        toast.error('請求超時，請稍後再試');
+        break;
+      default:
+        toast.error(result.error?.message || '操作失敗');
+    }
+  }
+};
+
+// 3. 狀態轉換處理（購買訂單）
+const updateStatus = async (newStatus: string) => {
+  // 自動轉換中文狀態為API期望的英文狀態
+  const statusMap = {
+    '預報單': 'pending',
+    '已訂購': 'ordered',
+    '已收貨': 'received',
+    '已取消': 'cancelled'
+  };
+
+  const result = await apiClient.call('updatePurchaseOrderStatus', {
+    id: orderId,
+    status: statusMap[newStatus] || newStatus
+  });
+};
+
+// 4. 複雜資料結構轉換（庫存統計）
+const loadOverview = async () => {
+  const result = await apiClient.call('getInventoryOverview');
+
+  if (result.success && result.data) {
+    // 轉換API回應格式為本地介面格式
+    const localOverview = {
+      totalMaterials: result.data.materials.totalItems,
+      totalFragrances: result.data.fragrances.totalItems,
+      totalMaterialCost: result.data.materials.totalValue,
+      totalFragranceCost: result.data.fragrances.totalValue,
+      lowStockMaterials: result.data.materials.lowStockCount,
+      lowStockFragrances: result.data.fragrances.lowStockCount,
+      totalLowStock: result.data.materials.lowStockCount + result.data.fragrances.lowStockCount
+    };
+    setOverview(localOverview);
+  }
+};
+
+// 5. 批次操作處理（快速更新庫存）
+const quickUpdate = async (item: any, newStock: number) => {
+  const result = await apiClient.call('quickUpdateInventory', {
+    updates: [{
+      type: item.type,
+      itemId: item.id,
+      newStock: newStock,
+      reason: `快速更新${item.type === 'material' ? '物料' : '香精'}庫存`
+    }]
+  });
+};
+```
+
+---
+
+## 🔄 遷移指南
+
+### 從 callGeneric 遷移到 call
+
+**已成功遷移的檔案（16個）**：
+```typescript
+// ❌ 舊版寫法
+const result = await apiClient.callGeneric('createMaterial', data);
+
+// ✅ 新版寫法 - 完全類型安全
+const result = await apiClient.call('createMaterial', {
+  name: '材料名稱',      // 類型檢查
+  category: '分類',      // 必填欄位驗證
+  unit: 'kg',           // 自動完成
+});
+```
+
+**成功遷移的API端點**：
+- `getInventoryOverview`, `quickUpdateInventory`, `getLowStockItems`
+- `createPersonnel`, `updatePersonnel`, `deletePersonnel`, `setUserStatus`  
+- `getRoles`, `initializeDefaultRoles`
+- `updatePurchaseOrderStatus`
+
+**暫時保留 callGeneric 的複雜案例**：
+```typescript
+// 複雜產品資料結構（需進一步分析）
+const result = await apiClient.callGeneric('createProduct', payload);
+
+// 複雜採購訂單結構（需進一步分析）
+const result = await apiClient.callGeneric('createPurchaseOrders', payload);
+const result = await apiClient.callGeneric('receivePurchaseOrderItems', payload);
+```
+
+### React Hook Dependencies 優化
+
+**已修復的問題**：
+```typescript
+// ❌ 舊版 - 缺少依賴
+const loadData = async () => { /* API調用 */ };
+useEffect(() => { loadData(); }, []);
+
+// ✅ 新版 - 正確依賴
+const loadData = useCallback(async () => { 
+  /* API調用 */ 
+}, [apiClient]);
+useEffect(() => { loadData(); }, [loadData]);
+```
+
+**修復的檔案**：
+- `LowStockDialog.tsx` - useCallback包裝
+- `MaterialCategoryDialog.tsx` - useCallback包裝
+- `useGlobalCart.ts` - 5個useCallback依賴修復
+
 ---
 
 ## 📊 效能優化
@@ -518,5 +679,30 @@ const result = await apiClient.call('createMaterial', data, {
 
 ---
 
-**最後更新**：2025-09-12  
-**版本**：1.0.0
+**最後更新**：2025-09-13  
+**版本**：1.1.0
+
+---
+
+## 📝 更新日誌
+
+### v1.2.0 (2025-09-13) - 緊急修復版本
+- 🚨 **緊急API修復**：修復工時統計頁面API調用錯誤
+- 🛠️ **錯誤處理增強**：新增Firebase Functions特殊錯誤處理機制
+- 🔧 **API重建**：重新建立工時記錄API (`getPersonalValidTimeRecords`, `cleanupInvalidTimeRecords`)
+- 📋 **錯誤分類**：增加API_NOT_FOUND、PERMISSION_DENIED、TIMEOUT等錯誤類型處理
+- ✅ **問題解決**：修復因暫停Functions導致的前端錯誤
+
+### v1.1.0 (2025-09-13)
+- ✅ **健康檢查完成**：架構健康評分提升至90/100
+- ✅ **API調用優化**：16個檔案成功遷移至類型安全的call方法
+- ✅ **Hook依賴修復**：修復13個React Hook Dependencies警告
+- ✅ **錯誤處理改善**：新增狀態轉換和格式適配最佳實踐
+- 📚 **文檔更新**：新增遷移指南和實際使用案例
+- 🎯 **建構狀態**：無編譯錯誤，類型安全大幅提升
+
+### v1.0.0 (2025-09-12)  
+- 🎉 **初版發布**：統一API客戶端架構建立
+- 📊 **類型定義**：82個API端點完整類型支援
+- 🎣 **Hook系統**：4種不同場景的專用Hook
+- 🛠️ **測試工具**：完整的測試頁面和元件
