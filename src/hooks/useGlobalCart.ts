@@ -1,5 +1,5 @@
 // src/hooks/useGlobalCart.ts
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { onSnapshot, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useApiClient } from '@/hooks/useApiClient';
@@ -12,6 +12,14 @@ export function useGlobalCart() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const apiClient = useApiClient();
+
+  // 使用 ref 來避免 useEffect 依賴問題
+  const cartItemsRef = useRef<CartItem[]>([]);
+
+  // 更新 ref 當 cartItems 變化時
+  useEffect(() => {
+    cartItemsRef.current = cartItems;
+  }, [cartItems]);
 
   // 監聽 Firestore 購物車變化
   useEffect(() => {
@@ -80,10 +88,10 @@ export function useGlobalCart() {
       }
     };
 
-    if (!isLoading && cartItems.length === 0) {
+    if (!isLoading && cartItemsRef.current.length === 0) {
       migrateFromLocalStorage();
     }
-  }, [isLoading, cartItems.length, apiClient]);
+  }, [isLoading, apiClient]);
 
   // 添加項目到購物車 - 樂觀更新以提升速度
   const addToCart = useCallback(async (item: Omit<CartItem, 'id' | 'addedBy' | 'addedAt' | 'updatedAt'>) => {
@@ -97,31 +105,31 @@ export function useGlobalCart() {
       updatedAt: new Date()
     };
 
-    // 檢查是否已存在相同項目
-    const existingItemIndex = cartItems.findIndex(
-      (i) => i.type === item.type && i.code === item.code && i.supplierId === item.supplierId
-    );
+    // 使用函數式更新來檢查和更新狀態
+    setCartItems(prevItems => {
+      // 檢查是否已存在相同項目
+      const existingItemIndex = prevItems.findIndex(
+        (i) => i.type === item.type && i.code === item.code && i.supplierId === item.supplierId
+      );
 
-    if (existingItemIndex >= 0) {
-      // 樂觀更新：增加數量
-      setCartItems(prevItems => {
-        const updatedItems = [...prevItems];
+      let updatedItems;
+      if (existingItemIndex >= 0) {
+        // 增加現有項目的數量
+        updatedItems = [...prevItems];
         updatedItems[existingItemIndex] = {
           ...updatedItems[existingItemIndex],
           quantity: updatedItems[existingItemIndex].quantity + item.quantity,
           updatedAt: new Date()
         };
-        setCartItemCount(updatedItems.length);
-        return updatedItems;
-      });
-    } else {
-      // 樂觀更新：添加新項目
-      setCartItems(prevItems => {
-        const updatedItems = [...prevItems, optimisticItem];
-        setCartItemCount(updatedItems.length);
-        return updatedItems;
-      });
-    }
+      } else {
+        // 添加新項目
+        updatedItems = [...prevItems, optimisticItem];
+      }
+
+      // 更新計數
+      setCartItemCount(updatedItems.length);
+      return updatedItems;
+    });
 
     // 立即顯示成功提示，不等待網路請求
     toast.success('已加入購物車');
@@ -130,7 +138,7 @@ export function useGlobalCart() {
     try {
       setIsSyncing(true);
       
-      const result = await apiClient.call('addToGlobalCart', {
+      const result = await apiClient.call('testAddToGlobalCart', {
         type: item.type,
         itemId: item.code, // 使用 code 作為 itemId
         quantity: item.quantity,
@@ -147,13 +155,13 @@ export function useGlobalCart() {
       }
     } catch (error) {
       console.error('背景同步失敗:', error);
-      // 不顯示錯誤訊息，避免影響用戶體驗
-      // Firestore 監聽會自動同步回正確狀態
+      // 暫時顯示錯誤訊息以便調試
+      toast.error(`購物車同步失敗: ${error instanceof Error ? error.message : '未知錯誤'}`);
       return false;
     } finally {
       setIsSyncing(false);
     }
-  }, [cartItems, apiClient]);
+  }, [apiClient]);
 
   // 更新購物車項目 - 樂觀更新以改善使用者體驗
   const updateCartItem = useCallback(async (itemId: string, updates: Partial<CartItem>) => {
