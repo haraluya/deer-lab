@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, updateDoc, DocumentReference, collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useApiClient } from '@/hooks/useApiClient';
 import { ArrowLeft, Loader2, Package, Building, User, Calendar, Tag, DollarSign, ShoppingCart, Edit, Droplets, Calculator, History, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -54,6 +54,7 @@ interface Product {
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const apiClient = useApiClient();
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -97,15 +98,12 @@ export default function ProductDetailPage() {
     setIsLoadingHistory(true);
     
     try {
-      const functions = getFunctions();
-      const getProductFragranceHistory = httpsCallable(functions, 'getProductFragranceHistory');
+      const result = await apiClient.call('getProductFragranceHistory', { productId });
+      console.log('香精歷程載入結果:', result);
       
-      const result = await getProductFragranceHistory({ productId });
-      console.log('香精歷程載入結果:', result.data);
-      
-      // 檢查 Firebase Function 是否成功返回
-      if (result.data && (result.data as any).success) {
-        setFragranceHistory((result.data as any).data || []);
+      // 檢查 API 是否成功返回
+      if (result.success && result.data) {
+        setFragranceHistory(result.data.data || []);
       } else {
         // Function 成功執行但沒有資料，設置空陣列（這是正常情況，不顯示任何通知）
         setFragranceHistory([]);
@@ -118,12 +116,11 @@ export default function ProductDetailPage() {
       
       // 只在真正的網路錯誤或函數錯誤時才顯示錯誤訊息
       // 排除常見的正常情況（如函數不存在、無權限等）
-      if (error && typeof error === 'object' && 'code' in error) {
-        const firebaseError = error as any;
-        const errorCode = firebaseError.code;
+      if (error && typeof error === 'object' && 'message' in error) {
+        const errorMessage = (error as any).message;
         
         // 只在真正的系統錯誤時顯示錯誤訊息，其他情況靜默處理
-        if (errorCode === 'unavailable' || errorCode === 'deadline-exceeded' || errorCode === 'internal') {
+        if (errorMessage.includes('unavailable') || errorMessage.includes('timeout') || errorMessage.includes('internal')) {
           toast.error("香精歷程載入失敗，請稍後再試");
         }
         // 其他錯誤（如 functions/not-found, permission-denied 等）靜默處理

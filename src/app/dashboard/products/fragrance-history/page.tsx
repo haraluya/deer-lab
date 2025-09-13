@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useApiClient } from '@/hooks/useApiClient';
 import { ArrowLeft, Search, Calendar, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Droplets, Package, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -31,6 +31,7 @@ interface FragranceHistoryPageState {
 
 function FragranceHistoryPageContent() {
   const router = useRouter();
+  const apiClient = useApiClient();
   const [state, setState] = useState<FragranceHistoryPageState>({
     data: [],
     loading: true,
@@ -52,22 +53,22 @@ function FragranceHistoryPageContent() {
     setState(prev => ({ ...prev, loading: true, error: null }));
     
     try {
-      const functions = getFunctions();
-      const getFragranceChangeHistory = httpsCallable(functions, 'getFragranceChangeHistory');
-      
-      const result = await getFragranceChangeHistory({
-        page: state.currentPage,
-        pageSize: state.pageSize,
-        searchTerm: state.searchTerm.trim(),
-      }) as { data: FragranceChangeHistoryResult };
+      const result = await apiClient.call('getFragranceChangeHistory', {
+        limit: state.pageSize,
+        ...(state.searchTerm.trim() && { productId: state.searchTerm.trim() })
+      });
 
-      setState(prev => ({
-        ...prev,
-        data: result.data.data || [],
-        total: result.data.total || 0,
-        totalPages: result.data.totalPages || 0,
-        loading: false,
-      }));
+      if (result.success && result.data) {
+        setState(prev => ({
+          ...prev,
+          data: result.data.data || [],
+          total: result.data.total || 0,
+          totalPages: result.data.totalPages || 0,
+          loading: false,
+        }));
+      } else {
+        throw new Error(result.error?.message || '載入資料失敗');
+      }
     } catch (error) {
       console.error("載入香精更換歷史失敗:", error);
       const errorMessage = error instanceof Error ? error.message : "載入資料時發生錯誤";
@@ -78,7 +79,7 @@ function FragranceHistoryPageContent() {
       }));
       toast.error(errorMessage);
     }
-  }, [state.currentPage, state.pageSize, state.searchTerm]);
+  }, [state.currentPage, state.pageSize, state.searchTerm, apiClient]);
 
   useEffect(() => {
     loadData();

@@ -5,9 +5,9 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { getFunctions, httpsCallable } from 'firebase/functions';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useApiClient } from '@/hooks/useApiClient';
 import { toast } from 'sonner';
 import { Search } from 'lucide-react';
 
@@ -42,6 +42,9 @@ export function FragranceChangeDialog({ isOpen, onOpenChange, onUpdate, productD
   const [allFragrances, setAllFragrances] = useState<OptionType[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSelectOpen, setIsSelectOpen] = useState(false);
+
+  // API 客戶端
+  const apiClient = useApiClient();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -97,14 +100,17 @@ export function FragranceChangeDialog({ isOpen, onOpenChange, onUpdate, productD
     setIsSubmitting(true);
     const toastId = toast.loading('正在更換香精...');
     try {
-      const functions = getFunctions();
-      const changeProductFragrance = httpsCallable(functions, 'changeProductFragrance');
-      
-      await changeProductFragrance({
+      const result = await apiClient.call('changeProductFragrance', {
         productId: productData.id,
+        oldFragranceId: productData.currentFragranceRef?.id || '',
         newFragranceId: values.newFragranceId,
+        ratio: productData.fragranceFormula?.percentage || 5, // 預設香精比例
         reason: values.reason,
       });
+
+      if (!result.success) {
+        throw new Error(result.error?.message || '更換香精失敗');
+      }
 
       toast.success(`產品 ${productData.name} 的香精已成功更換。`, { id: toastId });
       onUpdate();

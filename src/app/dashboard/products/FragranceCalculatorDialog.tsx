@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useApiClient } from '@/hooks/useApiClient';
 import { toast } from 'sonner';
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -55,6 +55,9 @@ export function FragranceCalculatorDialog({
 
   // 本地產品選擇狀態
   const [localSelectedProducts, setLocalSelectedProducts] = useState<Set<string>>(new Set());
+
+  // API 客戶端
+  const apiClient = useApiClient();
 
   // 當對話框開啟時載入資料並初始化本地選擇狀態
   useEffect(() => {
@@ -255,16 +258,16 @@ export function FragranceCalculatorDialog({
     }
 
     try {
-      // 使用新的 Firebase Function 依代碼加入採購車
-      const functions = getFunctions();
-      const addToCartByCode = httpsCallable(functions, 'addToGlobalCartByCode');
-      
+      // 使用統一 API 客戶端依代碼加入採購車
       for (const item of totalRequirements) {
-        await addToCartByCode({
+        const result = await apiClient.call('addToGlobalCartByCode', {
           code: item.code,
-          type: 'fragrance',
           quantity: item.totalRequired // 保留小數點精確度
         });
+        
+        if (!result.success) {
+          throw new Error(result.error?.message || '加入購物車失敗');
+        }
       }
 
       toast.success(`已將 ${totalRequirements.length} 項香精加入採購車`);

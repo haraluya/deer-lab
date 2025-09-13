@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Package, FlaskConical, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useApiClient } from '@/hooks/useApiClient';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 
@@ -33,6 +33,7 @@ export function InventoryAdjustmentForm({
   onCancel
 }: InventoryAdjustmentFormProps) {
   const { appUser } = useAuth();
+  const apiClient = useApiClient();
   const [adjustmentType, setAdjustmentType] = useState<'increase' | 'decrease'>('increase');
   const [quantity, setQuantity] = useState<string>('');
   const [remarks, setRemarks] = useState<string>('');
@@ -62,20 +63,22 @@ export function InventoryAdjustmentForm({
         return;
       }
 
-      // 使用 Firebase Functions 進行庫存調整
-      const functions = getFunctions();
-      const adjustInventory = httpsCallable(functions, 'adjustInventory');
-      
+      // 使用統一 API 客戶端進行庫存調整
       const adjustmentData = {
+        type: itemType,
         itemId,
-        itemType,
-        quantityChange,
-        remarks: remarks || '手動庫存調整'
+        quantity: quantityNum,
+        adjustmentType: adjustmentType === 'increase' ? 'add' as const : 'subtract' as const,
+        reason: remarks || '手動庫存調整'
       };
       
       console.log('呼叫 adjustInventory 函數，資料:', adjustmentData);
       
-      await adjustInventory(adjustmentData);
+      const result = await apiClient.call('adjustInventory', adjustmentData);
+      
+      if (!result.success) {
+        throw new Error(result.error?.message || '庫存調整失敗');
+      }
 
       toast.success('庫存調整成功');
       onAdjustmentComplete(newStock, remarks);

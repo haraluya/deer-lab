@@ -220,41 +220,41 @@
 ### 🟢 階段五：特殊功能組件遷移（選擇性執行）
 
 #### 16. 香精計算器對話框
-- [ ] **檔案**: `src/app/dashboard/products/FragranceCalculatorDialog.tsx`
-- [ ] **目標**: 保留特殊邏輯但使用統一API
-- [ ] **重點**: 複雜計算功能需要特別注意
+- [x] **檔案**: `src/app/dashboard/products/FragranceCalculatorDialog.tsx`
+- [x] **目標**: 保留特殊邏輯但使用統一API
+- [x] **重點**: 複雜計算功能需要特別注意
 
 #### 17. 香精變更對話框  
-- [ ] **檔案**: `src/app/dashboard/products/FragranceChangeDialog.tsx`
-- [ ] **目標**: 保留變更邏輯但使用統一API
-- [ ] **重點**: 歷史記錄功能要保留
+- [x] **檔案**: `src/app/dashboard/products/FragranceChangeDialog.tsx`
+- [x] **目標**: 保留變更邏輯但使用統一API
+- [x] **重點**: 歷史記錄功能要保留
 
 #### 18. 庫存調整表單
-- [ ] **檔案**: `src/components/InventoryAdjustmentForm.tsx`
-- [ ] **目標**: 使用 `useApiClient`
-- [ ] **重點**: 庫存計算邏輯要正確
+- [x] **檔案**: `src/components/InventoryAdjustmentForm.tsx`
+- [x] **目標**: 使用 `useApiClient`
+- [x] **重點**: 庫存計算邏輯要正確
 
 #### 19. 產品詳情頁面
-- [ ] **檔案**: `src/app/dashboard/products/[id]/page.tsx`
-- [ ] **目標**: 遷移香精歷史查詢功能
-- [ ] **重點**: 保留詳情頁面的完整功能
+- [x] **檔案**: `src/app/dashboard/products/[id]/page.tsx`
+- [x] **目標**: 遷移香精歷史查詢功能
+- [x] **重點**: 保留詳情頁面的完整功能
 
 #### 20. 香精變更歷史頁面
-- [ ] **檔案**: `src/app/dashboard/products/fragrance-history/page.tsx`
-- [ ] **目標**: 遷移歷史記錄查詢功能
-- [ ] **重點**: 保留歷史記錄的完整功能
+- [x] **檔案**: `src/app/dashboard/products/fragrance-history/page.tsx`
+- [x] **目標**: 遷移歷史記錄查詢功能
+- [x] **重點**: 保留歷史記錄的完整功能
 
 #### 21. 時間記錄清理工具
-- [ ] **檔案**: `src/app/cleanup-time-records/page.tsx`
-- [ ] **目標**: 遷移清理功能至統一API
-- [ ] **重點**: 管理工具功能，確保清理邏輯正確
+- [x] **檔案**: `src/app/cleanup-time-records/page.tsx`
+- [x] **目標**: 遷移清理功能至統一API
+- [x] **重點**: 管理工具功能，確保清理邏輯正確
 
 **特殊功能測試點**:
-- [ ] 計算邏輯正確性
-- [ ] 歷史記錄保存和查詢
-- [ ] 數據同步正確
-- [ ] 複雜表單驗證
-- [ ] 管理工具功能正常
+- [x] 計算邏輯正確性
+- [x] 歷史記錄保存和查詢
+- [x] 數據同步正確
+- [x] 複雜表單驗證
+- [x] 管理工具功能正常
 
 ---
 

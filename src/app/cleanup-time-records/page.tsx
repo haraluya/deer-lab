@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '@/lib/firebase';
+import { useApiClient } from '@/hooks/useApiClient';
 import { useAuth } from '@/context/AuthContext';
 import { usePermission } from '@/hooks/usePermission';
 import { toast } from 'sonner';
@@ -13,11 +12,12 @@ import { AlertTriangle, Trash2, CheckCircle } from 'lucide-react';
 export default function CleanupTimeRecordsPage() {
   const { appUser } = useAuth();
   const { isAdmin, isForeman } = usePermission();
+  const apiClient = useApiClient();
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
 
   const executeCleanup = async () => {
-    if (!appUser || !functions) {
+    if (!appUser) {
       toast.error('請先登入');
       return;
     }
@@ -32,12 +32,15 @@ export default function CleanupTimeRecordsPage() {
       setIsLoading(true);
       console.log('開始執行清理無效工時記錄...');
 
-      // 呼叫清理函數
-      const cleanupFunction = httpsCallable(functions, 'cleanupInvalidTimeRecords');
-      const response = await cleanupFunction({});
+      // 呼叫統一API客戶端進行清理
+      const result = await apiClient.call('cleanupInvalidTimeRecords', {});
 
-      console.log('清理結果:', response.data);
-      setResult(response.data);
+      if (!result.success) {
+        throw new Error(result.error?.message || '清理操作失敗');
+      }
+
+      console.log('清理結果:', result.data);
+      setResult(result.data);
       toast.success('清理操作完成！');
 
     } catch (error: any) {
