@@ -1,8 +1,8 @@
 // src/hooks/useGlobalCart.ts
 import { useState, useEffect, useCallback } from 'react';
 import { onSnapshot, doc } from 'firebase/firestore';
-import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
+import { useApiClient } from '@/hooks/useApiClient';
 import { toast } from 'sonner';
 import { CartItem } from '@/types/entities'; // 使用統一的類型定義
 
@@ -11,6 +11,7 @@ export function useGlobalCart() {
   const [cartItemCount, setCartItemCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const apiClient = useApiClient();
 
   // 監聽 Firestore 購物車變化
   useEffect(() => {
@@ -61,12 +62,10 @@ export function useGlobalCart() {
           
           if (localItems.length > 0) {
             setIsSyncing(true);
-            const functions = getFunctions();
-            const syncCart = httpsCallable(functions, 'syncGlobalCart');
             
-            const result = await syncCart({ items: localItems });
+            const result = await apiClient.call('syncGlobalCart', { items: localItems });
             
-            if (result.data) {
+            if (result.success) {
               localStorage.setItem('cartMigrated', 'true');
               localStorage.removeItem('purchaseCart');
               toast.success(`已將 ${localItems.length} 個項目遷移到雲端購物車`);
@@ -130,12 +129,15 @@ export function useGlobalCart() {
     // 背景同步到 Firebase
     try {
       setIsSyncing(true);
-      const functions = getFunctions();
-      const addItem = httpsCallable(functions, 'addToGlobalCart');
       
-      const result = await addItem({ item });
+      const result = await apiClient.call('addToGlobalCart', {
+        type: item.type,
+        itemId: item.code, // 使用 code 作為 itemId
+        quantity: item.quantity,
+        supplierId: item.supplierId
+      });
       
-      if (result.data) {
+      if (result.success) {
         // 成功，但不再顯示提示（已經顯示過了）
         return true;
       } else {
@@ -168,12 +170,10 @@ export function useGlobalCart() {
 
     try {
       setIsSyncing(true);
-      const functions = getFunctions();
-      const updateItem = httpsCallable(functions, 'updateGlobalCartItem');
       
-      const result = await updateItem({ itemId, updates });
+      const result = await apiClient.call('updateGlobalCartItem', { itemId, ...updates });
       
-      if (result.data) {
+      if (result.success) {
         // 成功時不顯示訊息，避免過多提示
         return true;
       } else {
@@ -202,12 +202,10 @@ export function useGlobalCart() {
 
     try {
       setIsSyncing(true);
-      const functions = getFunctions();
-      const removeItem = httpsCallable(functions, 'removeFromGlobalCart');
       
-      const result = await removeItem({ itemId });
+      const result = await apiClient.call('removeFromGlobalCart', { itemId });
       
-      if (result.data) {
+      if (result.success) {
         toast.success('已從購物車移除');
         return true;
       }
@@ -225,12 +223,10 @@ export function useGlobalCart() {
   const clearCart = useCallback(async () => {
     try {
       setIsSyncing(true);
-      const functions = getFunctions();
-      const clear = httpsCallable(functions, 'clearGlobalCart');
       
-      const result = await clear();
+      const result = await apiClient.call('clearGlobalCart', {});
       
-      if (result.data) {
+      if (result.success) {
         toast.success('購物車已清空');
         return true;
       }

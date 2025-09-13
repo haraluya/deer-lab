@@ -86,15 +86,10 @@ __exportStar(require("./api/users"), exports);
 __exportStar(require("./api/suppliers"), exports);
 __exportStar(require("./api/materials"), exports);
 __exportStar(require("./api/fragrances"), exports);
-__exportStar(require("./api/productSeries"), exports);
 __exportStar(require("./api/products"), exports);
 __exportStar(require("./api/purchaseOrders"), exports);
 __exportStar(require("./api/inventory"), exports);
 __exportStar(require("./api/workOrders"), exports);
 __exportStar(require("./api/roles"), exports);
 __exportStar(require("./api/personnel"), exports);
-__exportStar(require("./api/auth"), exports);
-__exportStar(require("./api/globalCart"), exports);
-__exportStar(require("./api/resetPermissions"), exports);
-__exportStar(require("./api/timeRecords"), exports);
 //# sourceMappingURL=index.js.map

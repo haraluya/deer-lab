@@ -261,19 +261,20 @@
 ### 🔄 階段六：Functions清理（最終執行）
 
 #### 22. 已停用Functions完全移除
-- [ ] 確認前端完全不依賴已停用的Functions
-- [ ] 完全移除停用的Functions檔案：
-  - [ ] `functions/src/api/auth.ts` 
-  - [ ] `functions/src/api/globalCart.ts`
-  - [ ] `functions/src/api/timeRecords.ts`
-  - [ ] `functions/src/api/resetPermissions.ts`
-- [ ] 清理 `functions/src/index.ts` 的export語句
+- [x] 確認前端完全不依賴已停用的Functions
+- [x] 完全移除停用的Functions檔案：
+  - [x] `functions/src/api/auth.ts` 
+  - [x] `functions/src/api/globalCart.ts`
+  - [x] `functions/src/api/timeRecords.ts`
+  - [x] `functions/src/api/resetPermissions.ts`
+  - [x] `functions/src/api/productSeries.ts`
+- [x] 清理 `functions/src/index.ts` 的export語句
 
 **Functions清理測試點**:
-- [ ] 前端所有功能正常
-- [ ] 部署無錯誤
-- [ ] 無殘留的import錯誤
-- [ ] Firebase Functions控制台無錯誤
+- [x] 前端所有功能正常
+- [x] 部署無錯誤
+- [x] 無殘留的import錯誤
+- [x] Firebase Functions控制台無錯誤
 
 ---
 
