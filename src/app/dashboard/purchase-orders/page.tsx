@@ -407,13 +407,13 @@ function PurchaseOrdersPageContent() {
     }
   }, []);
 
-  // 載入物料、香精和供應商資料
+  // 載入物料、香精和供應商資料 - 全部即時計算用途/使用產品
   const loadItems = useCallback(async () => {
     try {
       if (!db) {
         throw new Error("Firebase 未初始化")
       }
-      
+
       // 載入供應商
       const suppliersSnapshot = await getDocs(collection(db, 'suppliers'));
       const suppliersList = suppliersSnapshot.docs.map(doc => ({
@@ -421,9 +421,20 @@ function PurchaseOrdersPageContent() {
         name: doc.data().name
       }));
       setSuppliers(suppliersList);
-      
+
       const suppliersMap = new Map<string, string>();
       suppliersSnapshot.forEach(doc => suppliersMap.set(doc.id, doc.data().name));
+
+      // 載入分類資料 - 即時計算原料分類
+      const categoriesSnapshot = await getDocs(collection(db, 'materialCategories'));
+      const categoriesMap = new Map<string, {name: string, subCategories?: any}>();
+      categoriesSnapshot.forEach(doc => {
+        const data = doc.data();
+        categoriesMap.set(doc.id, {
+          name: data.name,
+          subCategories: data.subCategories || {}
+        });
+      });
 
       // 載入產品系列資料
       const productSeriesSnapshot = await getDocs(collection(db, 'productSeries'));
@@ -436,31 +447,62 @@ function PurchaseOrdersPageContent() {
       // 載入產品資料，用於找出香精的使用產品
       const productsSnapshot = await getDocs(collection(db, 'products'));
       const productsMap = new Map<string, string[]>(); // fragranceId -> productDisplayNames[]
-      
+
       productsSnapshot.docs.forEach(doc => {
         const productData = doc.data();
         const productName = productData.name;
         // 從 productSeries 集合中獲取系列名稱
         const seriesName = seriesMap.get(productData.seriesRef?.id);
-        
+
         // 組合顯示名稱：如果有系列名稱，則顯示為「系列名稱 - 產品名稱」
-        // 專門針對香精採購車顯示，確保包含產品系列資訊
         const displayName = seriesName ? `${seriesName} - ${productName}` : productName;
-        
+
         // 檢查產品的香精參考
         if (productData.currentFragranceRef?.id) {
           const fragranceId = productData.currentFragranceRef.id;
+
+          console.log(`🔗 產品 "${displayName}" 使用香精:`, {
+            產品ID: doc.id,
+            產品名稱: displayName,
+            引用的香精ID: fragranceId,
+            currentFragranceRef: productData.currentFragranceRef
+          });
+
           if (!productsMap.has(fragranceId)) {
             productsMap.set(fragranceId, []);
           }
           productsMap.get(fragranceId)?.push(displayName);
+        } else {
+          console.log(`❌ 產品 "${displayName}" 沒有香精引用:`, {
+            產品ID: doc.id,
+            currentFragranceRef: productData.currentFragranceRef
+          });
         }
       });
-      
-      // 載入物料
+
+      // 載入物料 - 即時計算分類資訊
       const materialsSnapshot = await getDocs(collection(db, 'materials'));
       const materialsList = materialsSnapshot.docs.map(doc => {
         const data = doc.data();
+
+        // 即時計算分類名稱
+        let categoryName = '';
+        let subCategoryName = '';
+
+        if (data.categoryRef?.id) {
+          const categoryData = categoriesMap.get(data.categoryRef.id);
+          if (categoryData) {
+            categoryName = categoryData.name;
+            // 獲取細分分類名稱
+            if (data.subCategoryRef?.id && categoryData.subCategories) {
+              const subCategory = categoryData.subCategories[data.subCategoryRef.id];
+              if (subCategory) {
+                subCategoryName = subCategory.name || subCategory;
+              }
+            }
+          }
+        }
+
         return {
           id: doc.id,
           name: data.name,
@@ -471,24 +513,41 @@ function PurchaseOrdersPageContent() {
           unit: data.unit || '',
           costPerUnit: data.costPerUnit || 0,
           currentStock: data.currentStock || 0,
-          category: data.category || '',
-          subcategory: data.subCategory || '', // 修正欄位名稱
+          // 即時計算的分類資訊
+          category: categoryName,
+          subcategory: subCategoryName,
         };
       });
 
-      // 載入香精
+      // 載入香精 - 即時計算使用產品
       const fragrancesSnapshot = await getDocs(collection(db, 'fragrances'));
       const fragrancesList = fragrancesSnapshot.docs.map(doc => {
         const data = doc.data();
-        
+
+        const calculatedProducts = productsMap.get(doc.id) || [];
+
+        // 特別關注魔爪（富詳）香精的調試
+        if (data.name?.includes('魔爪') || data.code === 'I-0089') {
+          console.log(`🔍 重點關注 - 魔爪（富詳）香精:`, {
+            文檔ID: doc.id,
+            香精名稱: data.name,
+            香精代碼: data.code,
+            在productsMap中的key: doc.id,
+            productsMap是否有這個key: productsMap.has(doc.id),
+            即時計算的使用產品: calculatedProducts,
+            productsMap完整內容: Object.fromEntries(productsMap)
+          });
+        }
+
         console.log(`📋 載入香精資料:`, {
           id: doc.id,
           name: data.name,
           code: data.code,
           costPerUnit: data.costPerUnit,
-          原始costPerUnit類型: typeof data.costPerUnit
+          原始costPerUnit類型: typeof data.costPerUnit,
+          即時計算使用產品: calculatedProducts
         });
-        
+
         return {
           id: doc.id,
           name: data.name,
@@ -501,17 +560,20 @@ function PurchaseOrdersPageContent() {
           currentStock: data.currentStock || 0,
           category: data.category || '',
           series: data.series || '',
+          // 即時計算的使用產品
           usedInProducts: productsMap.get(doc.id) || [],
         };
       });
 
       setMaterials(materialsList);
       setFragrances(fragrancesList);
-      
+
       // 調試資訊
+      console.log('🔄 即時計算結果:');
       console.log('產品對香精的對應關係:', productsMap);
-      console.log('載入的物料列表:', materialsList.slice(0, 2));
-      console.log('載入的香精列表:', fragrancesList.slice(0, 2));
+      console.log('分類對照表:', categoriesMap);
+      console.log('載入的物料列表 (含即時分類):', materialsList.slice(0, 2));
+      console.log('載入的香精列表 (含即時使用產品):', fragrancesList.slice(0, 2));
 
     } catch (error) {
       console.error("載入物料和香精資料失敗:", error);
