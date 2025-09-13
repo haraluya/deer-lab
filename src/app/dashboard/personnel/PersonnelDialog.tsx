@@ -26,6 +26,19 @@ interface Role {
   description?: string;
 }
 
+// 角色名稱翻譯函數
+const getRoleDisplayName = (roleName: string): string => {
+  const roleTranslations: Record<string, string> = {
+    'admin': '系統管理員',
+    'foreman': '生產領班',
+    'timekeeper': '計時人員',
+    '系統管理員': '系統管理員',
+    '生產領班': '生產領班',
+    '計時人員': '計時人員'
+  };
+  return roleTranslations[roleName] || roleName;
+};
+
 // 表單驗證 Schema
 const formSchema = z.object({
   name: z.string().min(2, { message: "姓名至少需要 2 個字元" }),
@@ -320,7 +333,7 @@ export function PersonnelDialog({
                         <SelectContent>
                           {roles.map((role) => (
                             <SelectItem key={role.id} value={role.id}>
-                              {role.name}
+                              {getRoleDisplayName(role.name)}
                             </SelectItem>
                           ))}
                         </SelectContent>

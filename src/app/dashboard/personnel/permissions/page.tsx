@@ -404,9 +404,9 @@ function PermissionsPageContent() {
       await Promise.all([fetchRoles(), fetchUsers()]);
       setIsLoading(false);
     };
-    
+
     loadData();
-  }, [fetchRoles, fetchUsers]);
+  }, []); // 移除依賴項，只在組件掛載時執行一次
 
   // 角色顏色對應
   const getRoleColor = (color?: string) => {

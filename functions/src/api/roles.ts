@@ -34,9 +34,30 @@ export const initializeDefaultRoles = onCall(async (request) => {
 
     // 創建預設角色
     const defaultRoles = [
-      { name: "系統管理員", permissions: ["all"] },
-      { name: "生產領班", permissions: ["production"] },
-      { name: "計時人員", permissions: ["time"] }
+      {
+        name: "admin",
+        displayName: "系統管理員",
+        description: "擁有系統全部權限，可管理所有功能和用戶",
+        permissions: ["all"],
+        color: "#dc2626",
+        isDefault: true
+      },
+      {
+        name: "foreman",
+        displayName: "生產領班",
+        description: "負責生產管理，可管理工單、物料、產品，無成員管理權限",
+        permissions: ["production"],
+        color: "#2563eb",
+        isDefault: true
+      },
+      {
+        name: "timekeeper",
+        displayName: "計時人員",
+        description: "主要負責工時記錄，可查看生產資料但無法編輯",
+        permissions: ["time"],
+        color: "#059669",
+        isDefault: true
+      }
     ];
 
     const batch = db.batch();
