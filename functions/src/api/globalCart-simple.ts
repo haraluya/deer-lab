@@ -57,12 +57,27 @@ export const testAddToGlobalCart = onCall(async (request) => {
           throw new Error(`不支援的項目類型: ${type}`);
       }
 
-      const doc = await db.collection(collection).doc(itemId).get();
+      // 先嘗試用 itemId 作為文檔 ID 查詢
+      let doc = await db.collection(collection).doc(itemId).get();
+
       if (doc.exists) {
         itemDetails = { id: doc.id, ...doc.data() };
-        console.log('獲取到的項目詳情:', itemDetails);
+        console.log('通過文檔 ID 獲取到的項目詳情:', itemDetails);
       } else {
-        console.warn(`找不到 ${type} ID: ${itemId}`);
+        // 如果找不到，則用 code 欄位查詢
+        console.log(`文檔 ID ${itemId} 不存在，嘗試用 code 欄位查詢`);
+        const querySnapshot = await db.collection(collection)
+          .where('code', '==', itemId)
+          .limit(1)
+          .get();
+
+        if (!querySnapshot.empty) {
+          const docData = querySnapshot.docs[0];
+          itemDetails = { id: docData.id, ...docData.data() };
+          console.log('通過 code 欄位獲取到的項目詳情:', itemDetails);
+        } else {
+          console.warn(`找不到 ${type} code: ${itemId}`);
+        }
       }
 
       // 獲取供應商名稱
