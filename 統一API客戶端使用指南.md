@@ -686,6 +686,13 @@ const result = await apiClient.call('createMaterial', data, {
 
 ## 📝 更新日誌
 
+### v1.3.0 (2025-09-13) - 購物車功能修復版本
+- 🛒 **全域購物車API重建**：建立完整的購物車Firebase Functions API (`addToGlobalCart`, `updateGlobalCartItem`, `removeFromGlobalCart`, `clearGlobalCart`, `syncGlobalCart`)
+- 🔧 **API調用統一化**：修復採購訂單和產品管理頁面的`callGeneric`舊調用方式，改為統一API客戶端`call`方法
+- 🔗 **購物車轉採購單功能**：驗證並確保購物車項目正確轉換為採購訂單的完整流程
+- 📦 **統一架構應用**：使用`createApiHandler`標準化包裝所有購物車相關API函數
+- ✅ **編譯成功驗證**：Firebase Functions和前端專案均編譯成功，API功能完整可用
+
 ### v1.2.0 (2025-09-13) - 緊急修復版本
 - 🚨 **緊急API修復**：修復工時統計頁面API調用錯誤
 - 🛠️ **錯誤處理增強**：新增Firebase Functions特殊錯誤處理機制

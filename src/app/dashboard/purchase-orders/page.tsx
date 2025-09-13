@@ -743,8 +743,8 @@ function PurchaseOrdersPageContent() {
         suppliers: Object.values(supplierGroups)
       };
 
-      // 暫時保持callGeneric，payload結構較複雜需要進一步分析
-      const result = await apiClient.callGeneric('createPurchaseOrders', payload);
+      // 使用統一 API 客戶端
+      const result = await apiClient.call('createPurchaseOrders', payload);
       
       if (result.success) {
         toast.success(`成功建立 ${Object.keys(supplierGroups).length} 張採購單`);
