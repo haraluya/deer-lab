@@ -57,7 +57,7 @@ export async function resolveUnifiedUserIdentity(
     // 嘗試直接使用候選 ID 作為文檔 ID 查詢
     const userDoc = await db.collection('users').doc(candidateId).get();
 
-    if (userDoc.exists()) {
+    if (userDoc.exists) {
       userData = userDoc.data();
       docId = userDoc.id;
 
@@ -206,7 +206,7 @@ export interface IdMappingDiagnostic {
 export async function diagnoseIdMapping(firebaseUid: string): Promise<IdMappingDiagnostic> {
   const userDoc = await db.collection('users').doc(firebaseUid).get();
 
-  if (!userDoc.exists()) {
+  if (!userDoc.exists) {
     throw new HttpsError("not-found", "用戶不存在");
   }
 
