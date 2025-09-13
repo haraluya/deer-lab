@@ -235,10 +235,16 @@ export function PersonnelDialog({
     return (
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-2xl" aria-describedby="loading-dialog-description">
+          <DialogHeader>
+            <DialogTitle>載入中</DialogTitle>
+            <DialogDescription id="loading-dialog-description">
+              正在載入人員資料，請稍候...
+            </DialogDescription>
+          </DialogHeader>
           <div className="flex items-center justify-center py-8">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p id="loading-dialog-description" className="text-gray-600">正在載入資料...</p>
+              <p className="text-gray-600">正在載入資料...</p>
             </div>
           </div>
         </DialogContent>
