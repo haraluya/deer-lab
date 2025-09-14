@@ -150,8 +150,22 @@ exports.quickUpdateInventory = (0, https_1.onCall)(async (request) => {
     if (!contextAuth) {
         throw new https_1.HttpsError("internal", "驗證檢查後 contextAuth 不應為空。");
     }
+    // 詳細除錯資訊
+    firebase_functions_1.logger.info("🔧 quickUpdateInventory 收到的請求資料:", {
+        data: data,
+        dataType: typeof data,
+        hasUpdates: !!(data === null || data === void 0 ? void 0 : data.updates),
+        updatesType: typeof (data === null || data === void 0 ? void 0 : data.updates),
+        updatesLength: Array.isArray(data === null || data === void 0 ? void 0 : data.updates) ? data.updates.length : 'not array'
+    });
     const { updates } = data;
     if (!updates || !Array.isArray(updates) || updates.length === 0) {
+        firebase_functions_1.logger.error("❌ 更新項目陣列驗證失敗:", {
+            updates: updates,
+            updatesType: typeof updates,
+            isArray: Array.isArray(updates),
+            length: updates === null || updates === void 0 ? void 0 : updates.length
+        });
         throw new https_1.HttpsError("invalid-argument", "缺少更新項目陣列。");
     }
     const successful = [];
@@ -164,11 +178,33 @@ exports.quickUpdateInventory = (0, https_1.onCall)(async (request) => {
             for (const update of updates) {
                 try {
                     const { type, itemId, newStock, reason } = update;
+                    // 詳細除錯每個更新項目
+                    firebase_functions_1.logger.info("🔧 正在處理單個更新項目:", {
+                        update: update,
+                        type: type,
+                        itemId: itemId,
+                        newStock: newStock,
+                        newStockType: typeof newStock,
+                        reason: reason
+                    });
                     // 驗證單一更新項目參數
                     if (!itemId || !type || typeof newStock !== 'number' || newStock < 0) {
+                        const error = "缺少必要的更新參數或參數格式錯誤";
+                        firebase_functions_1.logger.error("❌ 單個更新項目驗證失敗:", {
+                            update: update,
+                            itemId: itemId,
+                            type: type,
+                            newStock: newStock,
+                            newStockType: typeof newStock,
+                            itemIdCheck: !!itemId,
+                            typeCheck: !!type,
+                            newStockTypeCheck: typeof newStock === 'number',
+                            newStockValueCheck: newStock >= 0,
+                            error: error
+                        });
                         failed.push({
                             item: update,
-                            error: "缺少必要的更新參數或參數格式錯誤"
+                            error: error
                         });
                         continue;
                     }
