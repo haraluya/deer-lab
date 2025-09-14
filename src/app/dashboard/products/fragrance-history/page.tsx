@@ -116,23 +116,44 @@ function FragranceHistoryPageContent() {
   // 格式化日期
   const formatDate = (timestamp: any) => {
     if (!timestamp) return '未知';
-    
-    let date: Date;
-    if (timestamp.toDate) {
-      date = timestamp.toDate();
-    } else if (timestamp instanceof Date) {
-      date = timestamp;
-    } else {
-      date = new Date(timestamp);
+
+    try {
+      let date: Date;
+
+      // 處理 Firestore Timestamp
+      if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+        date = timestamp.toDate();
+      }
+      // 處理 Firebase Timestamp 物件
+      else if (timestamp._seconds) {
+        date = new Date(timestamp._seconds * 1000 + (timestamp._nanoseconds || 0) / 1000000);
+      }
+      // 處理 Date 物件
+      else if (timestamp instanceof Date) {
+        date = timestamp;
+      }
+      // 處理字串或數字時間戳
+      else {
+        date = new Date(timestamp);
+      }
+
+      // 檢查日期是否有效
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date:', timestamp);
+        return '日期格式錯誤';
+      }
+
+      return date.toLocaleString('zh-TW', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch (error) {
+      console.error('Date formatting error:', error, timestamp);
+      return '日期處理錯誤';
     }
-    
-    return date.toLocaleString('zh-TW', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
   };
 
   // 權限保護
