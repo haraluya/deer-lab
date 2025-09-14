@@ -686,7 +686,15 @@ const result = await apiClient.call('createMaterial', data, {
 
 ## 📝 更新日誌
 
-### v1.3.2 (2025-09-14) - 產品香精歷史API修復版本（完成）
+### v1.3.3 (2025-09-14) - 更換香精API修復版本（完成）
+- 🔧 **API參數修正**：修復 `changeProductFragrance` API 前後端參數不匹配問題
+- 🎯 **類型定義更新**：更新 `ChangeProductFragranceRequest` 類型定義，與後端實現保持一致
+- 📋 **前端調用優化**：移除不必要的 `oldFragranceId` 和 `ratio` 參數，精簡API調用
+- ✅ **修復成果**：解決更換香精功能異常，確保前後端API完全匹配
+- 🚀 **部署持續優化**：維持部署檔案大小優化（14.4MB，相比原始373.89MB減少96.1%）
+- 📚 **架構一致性**：確保統一API客戶端類型安全和參數正確性
+
+### v1.3.2 (2025-09-14) - 產品香精歷史API修復版本
 - 🔧 **API適配器修正**：修復統一API客戶端適配器過度包裝問題，正確處理 `{ success: true, data: [...], count: number }` 格式
 - 🎯 **產品詳情頁面修復**：完全修復產品詳情頁面香精歷史載入失敗問題，移除臨時處理邏輯
 - 📋 **程式碼優化**：簡化前端處理邏輯，從 `result.data.data || result.data` 改為直接使用 `result.data`
