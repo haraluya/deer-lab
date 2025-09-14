@@ -243,6 +243,11 @@ interface UpdateProductRequest {
   nicotineMg?: number;
   specificMaterialIds?: string[];
   status?: string;
+  fragranceChangeInfo?: {
+    oldFragranceId: string;
+    newFragranceId: string;
+    changeReason: string;
+  };
 }
 
 /**
@@ -253,8 +258,8 @@ export const updateProduct = CrudApiHandlers.createUpdateHandler<UpdateProductRe
   async (data, context, requestId) => {
     // 1. 驗證必填欄位
     ErrorHandler.validateRequired(data, ['productId']);
-    
-    const { productId, name, seriesId, fragranceId, nicotineMg, specificMaterialIds, status } = data;
+
+    const { productId, name, seriesId, fragranceId, nicotineMg, specificMaterialIds, status, fragranceChangeInfo } = data;
     
     try {
       // 2. 檢查產品是否存在
@@ -312,8 +317,53 @@ export const updateProduct = CrudApiHandlers.createUpdateHandler<UpdateProductRe
       
       // 8. 更新資料庫
       await productRef.update(updateData);
-      
-      // 9. 觸發香精狀態更新（如果香精有變更）
+
+      // 9. 如果有香精更換，創建歷史記錄
+      if (fragranceChangeInfo && fragranceChangeInfo.oldFragranceId !== fragranceChangeInfo.newFragranceId) {
+        try {
+          // 獲取當前用戶資訊
+          const userId = context.auth?.uid || 'system';
+
+          // 獲取舊香精和新香精的參考
+          const oldFragranceRef = db.doc(`fragrances/${fragranceChangeInfo.oldFragranceId}`);
+          const newFragranceRef = db.doc(`fragrances/${fragranceChangeInfo.newFragranceId}`);
+
+          // 獲取香精詳細資訊
+          const [oldFragranceDoc, newFragranceDoc] = await Promise.all([
+            oldFragranceRef.get(),
+            newFragranceRef.get()
+          ]);
+
+          const oldFragranceData = oldFragranceDoc.exists ? oldFragranceDoc.data() : null;
+          const newFragranceData = newFragranceDoc.exists ? newFragranceDoc.data() : null;
+
+          // 創建香精更換歷史記錄
+          const historyRef = db.collection('fragranceChangeHistory').doc();
+          await historyRef.set({
+            productId: productId,
+            productName: updateData.name || currentProduct.name,
+            productCode: currentProduct.code,
+            oldFragranceId: fragranceChangeInfo.oldFragranceId,
+            oldFragranceName: oldFragranceData?.name || '未知香精',
+            oldFragranceCode: oldFragranceData?.code || 'N/A',
+            newFragranceId: fragranceChangeInfo.newFragranceId,
+            newFragranceName: newFragranceData?.name || '未知香精',
+            newFragranceCode: newFragranceData?.code || 'N/A',
+            changeReason: fragranceChangeInfo.changeReason,
+            changeDate: FieldValue.serverTimestamp(),
+            changedBy: userId,
+            changedByEmail: context.auth?.token?.email || 'system',
+            createdAt: FieldValue.serverTimestamp()
+          });
+
+          logger.info(`[${requestId}] 已創建香精更換歷史記錄 for product ${productId}`);
+        } catch (historyError) {
+          logger.error(`[${requestId}] 創建香精更換歷史記錄失敗:`, historyError);
+          // 不拋出錯誤，因為主要操作已經成功
+        }
+      }
+
+      // 10. 觸發香精狀態更新（如果香精有變更）
       if (fragranceId) {
         try {
           await updateFragranceStatuses({
@@ -329,7 +379,7 @@ export const updateProduct = CrudApiHandlers.createUpdateHandler<UpdateProductRe
         }
       }
       
-      // 10. 返回標準化回應
+      // 11. 返回標準化回應
       return {
         id: productId,
         message: `產品「${updateData.name || currentProduct.name}」的資料已成功更新`,

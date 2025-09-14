@@ -177,9 +177,10 @@ exports.createProduct = apiWrapper_1.CrudApiHandlers.createCreateHandler('Produc
  * 更新產品資料
  */
 exports.updateProduct = apiWrapper_1.CrudApiHandlers.createUpdateHandler('Product', async (data, context, requestId) => {
+    var _a, _b, _c;
     // 1. 驗證必填欄位
     errorHandler_1.ErrorHandler.validateRequired(data, ['productId']);
-    const { productId, name, seriesId, fragranceId, nicotineMg, specificMaterialIds, status } = data;
+    const { productId, name, seriesId, fragranceId, nicotineMg, specificMaterialIds, status, fragranceChangeInfo } = data;
     try {
         // 2. 檢查產品是否存在
         const productRef = db.doc(`products/${productId}`);
@@ -223,7 +224,47 @@ exports.updateProduct = apiWrapper_1.CrudApiHandlers.createUpdateHandler('Produc
         }
         // 8. 更新資料庫
         await productRef.update(updateData);
-        // 9. 觸發香精狀態更新（如果香精有變更）
+        // 9. 如果有香精更換，創建歷史記錄
+        if (fragranceChangeInfo && fragranceChangeInfo.oldFragranceId !== fragranceChangeInfo.newFragranceId) {
+            try {
+                // 獲取當前用戶資訊
+                const userId = ((_a = context.auth) === null || _a === void 0 ? void 0 : _a.uid) || 'system';
+                // 獲取舊香精和新香精的參考
+                const oldFragranceRef = db.doc(`fragrances/${fragranceChangeInfo.oldFragranceId}`);
+                const newFragranceRef = db.doc(`fragrances/${fragranceChangeInfo.newFragranceId}`);
+                // 獲取香精詳細資訊
+                const [oldFragranceDoc, newFragranceDoc] = await Promise.all([
+                    oldFragranceRef.get(),
+                    newFragranceRef.get()
+                ]);
+                const oldFragranceData = oldFragranceDoc.exists ? oldFragranceDoc.data() : null;
+                const newFragranceData = newFragranceDoc.exists ? newFragranceDoc.data() : null;
+                // 創建香精更換歷史記錄
+                const historyRef = db.collection('fragranceChangeHistory').doc();
+                await historyRef.set({
+                    productId: productId,
+                    productName: updateData.name || currentProduct.name,
+                    productCode: currentProduct.code,
+                    oldFragranceId: fragranceChangeInfo.oldFragranceId,
+                    oldFragranceName: (oldFragranceData === null || oldFragranceData === void 0 ? void 0 : oldFragranceData.name) || '未知香精',
+                    oldFragranceCode: (oldFragranceData === null || oldFragranceData === void 0 ? void 0 : oldFragranceData.code) || 'N/A',
+                    newFragranceId: fragranceChangeInfo.newFragranceId,
+                    newFragranceName: (newFragranceData === null || newFragranceData === void 0 ? void 0 : newFragranceData.name) || '未知香精',
+                    newFragranceCode: (newFragranceData === null || newFragranceData === void 0 ? void 0 : newFragranceData.code) || 'N/A',
+                    changeReason: fragranceChangeInfo.changeReason,
+                    changeDate: firestore_1.FieldValue.serverTimestamp(),
+                    changedBy: userId,
+                    changedByEmail: ((_c = (_b = context.auth) === null || _b === void 0 ? void 0 : _b.token) === null || _c === void 0 ? void 0 : _c.email) || 'system',
+                    createdAt: firestore_1.FieldValue.serverTimestamp()
+                });
+                firebase_functions_1.logger.info(`[${requestId}] 已創建香精更換歷史記錄 for product ${productId}`);
+            }
+            catch (historyError) {
+                firebase_functions_1.logger.error(`[${requestId}] 創建香精更換歷史記錄失敗:`, historyError);
+                // 不拋出錯誤，因為主要操作已經成功
+            }
+        }
+        // 10. 觸發香精狀態更新（如果香精有變更）
         if (fragranceId) {
             try {
                 await updateFragranceStatuses({
@@ -239,7 +280,7 @@ exports.updateProduct = apiWrapper_1.CrudApiHandlers.createUpdateHandler('Produc
                 // 不拋出錯誤，因為主要操作已經成功
             }
         }
-        // 10. 返回標準化回應
+        // 11. 返回標準化回應
         return {
             id: productId,
             message: `產品「${updateData.name || currentProduct.name}」的資料已成功更新`,
