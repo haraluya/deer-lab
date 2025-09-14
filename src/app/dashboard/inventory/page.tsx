@@ -391,14 +391,18 @@ export default function InventoryPage() {
       if (result.success && result.data) {
         // 轉換API回應格式為本地介面格式
         const apiData = result.data;
+        console.log('📊 API 返回的數據結構:', apiData);
+
+        // 修正：使用正確的API回應結構
+        const overview = (apiData as any).overview || apiData;
         const localOverview: InventoryOverview = {
-          totalMaterials: apiData.materials.totalItems,
-          totalFragrances: apiData.fragrances.totalItems,
-          totalMaterialCost: apiData.materials.totalValue,
-          totalFragranceCost: apiData.fragrances.totalValue,
-          lowStockMaterials: apiData.materials.lowStockCount,
-          lowStockFragrances: apiData.fragrances.lowStockCount,
-          totalLowStock: apiData.materials.lowStockCount + apiData.fragrances.lowStockCount
+          totalMaterials: overview.totalMaterials || 0,
+          totalFragrances: overview.totalFragrances || 0,
+          totalMaterialCost: overview.totalMaterialCost || 0,
+          totalFragranceCost: overview.totalFragranceCost || 0,
+          lowStockMaterials: overview.lowStockMaterials || 0,
+          lowStockFragrances: overview.lowStockFragrances || 0,
+          totalLowStock: overview.totalLowStock || (overview.lowStockMaterials + overview.lowStockFragrances) || 0
         };
         setOverview(localOverview)
         toast.success('庫存統計載入完成')

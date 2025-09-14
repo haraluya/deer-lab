@@ -40,7 +40,7 @@ export function QuickUpdateDialog({ isOpen, onClose, item, onSuccess }: QuickUpd
 
   const handleSubmit = async () => {
     const stockValue = parseFloat(newStock)
-    
+
     if (isNaN(stockValue) || stockValue < 0) {
       toast.error('請輸入有效的庫存數量')
       return
@@ -50,14 +50,20 @@ export function QuickUpdateDialog({ isOpen, onClose, item, onSuccess }: QuickUpd
       toast.error('新庫存數量與當前相同，無需更新')
       return
     }
-    
+
+    // 調試：檢查參數
+    const updateData = {
+      type: item.type,
+      itemId: item.id,
+      newStock: stockValue,
+      reason: remarks.trim() || `快速更新${item.type === 'material' ? '物料' : '香精'}庫存`
+    };
+
+    console.log('🔧 準備發送的更新參數:', updateData);
+    console.log('🔧 item object:', item);
+
     const result = await apiClient.call('quickUpdateInventory', {
-      updates: [{
-        type: item.type,
-        itemId: item.id,
-        newStock: stockValue,
-        reason: remarks.trim() || `快速更新${item.type === 'material' ? '物料' : '香精'}庫存`
-      }]
+      updates: [updateData]
     })
     
     if (result.success) {
