@@ -605,6 +605,50 @@ export default function WorkOrderDetailPage() {
           materialsCount: materialsList.length,
           fragrancesCount: fragrancesList.length
         });
+
+        // 🔍 深度調試：檢查是否有重複的香精記錄
+        const fragrancesByCode = new Map();
+        const fragrancesByName = new Map();
+        fragrancesList.forEach(fragrance => {
+          const code = fragrance.code;
+          const name = fragrance.name;
+
+          if (!fragrancesByCode.has(code)) {
+            fragrancesByCode.set(code, []);
+          }
+          fragrancesByCode.get(code).push(fragrance);
+
+          if (!fragrancesByName.has(name)) {
+            fragrancesByName.set(name, []);
+          }
+          fragrancesByName.get(name).push(fragrance);
+        });
+
+        // 檢查重複的 Code
+        fragrancesByCode.forEach((fragrances: Fragrance[], code) => {
+          if (fragrances.length > 1) {
+            console.warn(`⚠️ 發現重複香精編號 ${code}:`, fragrances.map((f: Fragrance) => ({
+              id: f.id,
+              name: f.name,
+              currentStock: f.currentStock,
+              createdAt: f.createdAt,
+              updatedAt: f.updatedAt
+            })));
+          }
+        });
+
+        // 檢查重複的 Name
+        fragrancesByName.forEach((fragrances: Fragrance[], name) => {
+          if (fragrances.length > 1) {
+            console.warn(`⚠️ 發現重複香精名稱 ${name}:`, fragrances.map((f: Fragrance) => ({
+              id: f.id,
+              code: f.code,
+              currentStock: f.currentStock,
+              createdAt: f.createdAt,
+              updatedAt: f.updatedAt
+            })));
+          }
+        });
         
         // 分別處理物料和香精資料
         const allMaterials: (Material | Fragrance)[] = [...materialsList, ...fragrancesList];
@@ -643,33 +687,15 @@ export default function WorkOrderDetailPage() {
 
               if (material) {
                 console.log(`✅ 香精精確匹配: ${item.code} -> ${material.name} (庫存: ${material.currentStock})`);
-
-                // 🚨 修復：如果匹配的香精庫存為0，嘗試找到有庫存的相同香精
-                if ((material.currentStock || 0) === 0) {
-                  console.warn(`⚠️ 匹配的香精庫存為0，嘗試找其他相同香精:`);
-
-                  // 通過 code 尋找有庫存的香精
-                  const alternativeByCode = fragrancesList.find(f =>
-                    f.code === item.code &&
-                    f.id !== material!.id &&
-                    (f.currentStock || 0) > 0
-                  );
-
-                  // 通過 name 尋找有庫存的香精
-                  const alternativeByName = fragrancesList.find(f =>
-                    f.name === item.name &&
-                    f.id !== material!.id &&
-                    (f.currentStock || 0) > 0
-                  );
-
-                  if (alternativeByCode) {
-                    console.log(`🔧 找到相同Code的替代香精: ${alternativeByCode.code} -> ${alternativeByCode.name} (庫存: ${alternativeByCode.currentStock})`);
-                    material = alternativeByCode;
-                  } else if (alternativeByName) {
-                    console.log(`🔧 找到相同Name的替代香精: ${alternativeByName.name} (庫存: ${alternativeByName.currentStock})`);
-                    material = alternativeByName;
-                  }
-                }
+                console.log(`🔍 核心調試 - 匹配到的香精完整資料:`, {
+                  id: material.id,
+                  code: material.code,
+                  name: material.name,
+                  currentStock: material.currentStock,
+                  lastStockUpdate: (material as any).lastStockUpdate,
+                  updatedAt: (material as any).updatedAt,
+                  createdAt: (material as any).createdAt
+                });
               } else {
                 console.warn(`❌ 香精匹配失敗: BOM中 ID=${item.id}, Code=${item.code} 找不到對應的香精`);
                 // 嘗試通過名稱匹配
