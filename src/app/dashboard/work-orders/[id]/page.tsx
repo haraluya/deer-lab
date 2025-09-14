@@ -643,6 +643,33 @@ export default function WorkOrderDetailPage() {
 
               if (material) {
                 console.log(`✅ 香精精確匹配: ${item.code} -> ${material.name} (庫存: ${material.currentStock})`);
+
+                // 🚨 修復：如果匹配的香精庫存為0，嘗試找到有庫存的相同香精
+                if ((material.currentStock || 0) === 0) {
+                  console.warn(`⚠️ 匹配的香精庫存為0，嘗試找其他相同香精:`);
+
+                  // 通過 code 尋找有庫存的香精
+                  const alternativeByCode = fragrancesList.find(f =>
+                    f.code === item.code &&
+                    f.id !== material!.id &&
+                    (f.currentStock || 0) > 0
+                  );
+
+                  // 通過 name 尋找有庫存的香精
+                  const alternativeByName = fragrancesList.find(f =>
+                    f.name === item.name &&
+                    f.id !== material!.id &&
+                    (f.currentStock || 0) > 0
+                  );
+
+                  if (alternativeByCode) {
+                    console.log(`🔧 找到相同Code的替代香精: ${alternativeByCode.code} -> ${alternativeByCode.name} (庫存: ${alternativeByCode.currentStock})`);
+                    material = alternativeByCode;
+                  } else if (alternativeByName) {
+                    console.log(`🔧 找到相同Name的替代香精: ${alternativeByName.name} (庫存: ${alternativeByName.currentStock})`);
+                    material = alternativeByName;
+                  }
+                }
               } else {
                 console.warn(`❌ 香精匹配失敗: BOM中 ID=${item.id}, Code=${item.code} 找不到對應的香精`);
                 // 嘗試通過名稱匹配
