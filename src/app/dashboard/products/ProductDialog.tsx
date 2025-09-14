@@ -354,9 +354,17 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
       return;
     }
 
-      
+    // 調試：檢查香精更換檢測
+    console.log('香精更換檢測:', {
+      isEditMode,
+      isFragranceChanged,
+      originalFragranceId,
+      currentFragranceId: values.fragranceId,
+      hasChangeReason: !!values.fragranceChangeReason?.trim()
+    });
+
       // 組裝要傳送的資料
-      const payload = { 
+      const payload = {
         ...values,
         // 如果有香精更換且在編輯模式，添加更換原因資訊
         ...(isFragranceChanged && isEditMode && {
@@ -367,6 +375,9 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
           }
         })
       };
+
+      // 調試：檢查最終的 payload
+      console.log('提交的 payload:', payload);
 
       // 使用統一 API 客戶端
       const result = await apiClient.call(

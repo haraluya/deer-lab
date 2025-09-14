@@ -181,6 +181,12 @@ exports.updateProduct = apiWrapper_1.CrudApiHandlers.createUpdateHandler('Produc
     // 1. 驗證必填欄位
     errorHandler_1.ErrorHandler.validateRequired(data, ['productId']);
     const { productId, name, seriesId, fragranceId, nicotineMg, specificMaterialIds, status, fragranceChangeInfo } = data;
+    // 調試：檢查接收到的數據
+    firebase_functions_1.logger.info(`[${requestId}] updateProduct 接收到的數據:`, {
+        productId,
+        hasFragranceChangeInfo: !!fragranceChangeInfo,
+        fragranceChangeInfo
+    });
     try {
         // 2. 檢查產品是否存在
         const productRef = db.doc(`products/${productId}`);
