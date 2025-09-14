@@ -252,9 +252,7 @@ export namespace ProductsApi {
 
   export interface ChangeProductFragranceRequest {
     productId: string;
-    oldFragranceId: string;
     newFragranceId: string;
-    ratio: number;
     reason: string;
   }
 

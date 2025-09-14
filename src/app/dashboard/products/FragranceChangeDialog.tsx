@@ -102,9 +102,7 @@ export function FragranceChangeDialog({ isOpen, onOpenChange, onUpdate, productD
     try {
       const result = await apiClient.call('changeProductFragrance', {
         productId: productData.id,
-        oldFragranceId: productData.currentFragranceRef?.id || '',
         newFragranceId: values.newFragranceId,
-        ratio: productData.fragranceFormula?.percentage || 5, // 預設香精比例
         reason: values.reason,
       });
 
