@@ -288,6 +288,23 @@ export class ApiClient {
       };
     }
 
+    // 🎯 適配產品香精歷史API格式: { success: true, data: [...], count: number }
+    if (response.success && Array.isArray(response.data) && typeof response.count === 'number') {
+      return {
+        success: true,
+        data: {
+          data: response.data,
+          count: response.count
+        },
+        error: undefined,
+        meta: {
+          timestamp: Date.now(),
+          requestId: `productFragranceHistory_adapted_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+          version: 'product-fragrance-history-legacy'
+        }
+      };
+    }
+
     // 🎯 適配任何包含 records 陣列的格式
     if (response.records && Array.isArray(response.records)) {
       return {

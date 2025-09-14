@@ -103,7 +103,10 @@ export default function ProductDetailPage() {
       
       // 檢查 API 是否成功返回
       if (result.success && result.data) {
-        setFragranceHistory(result.data.data || []);
+        // 處理適配後的資料格式
+        const historyData = result.data.data || result.data || [];
+        setFragranceHistory(Array.isArray(historyData) ? historyData : []);
+        console.log(`載入香精歷程成功，共 ${historyData.length} 筆記錄`);
       } else {
         // Function 成功執行但沒有資料，設置空陣列（這是正常情況，不顯示任何通知）
         setFragranceHistory([]);
