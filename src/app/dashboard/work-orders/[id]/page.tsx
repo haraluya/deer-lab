@@ -256,8 +256,9 @@ export default function WorkOrderDetailPage() {
       
       for (const item of materialsToUpdate) {
         const usedQuantity = item.usedQuantity || 0;
-        
-        if (item.category === 'fragrance') {
+
+        // 🚨 修復：檢查 type 或 category 來判斷是否為香精
+        if (item.type === 'fragrance' || item.category === 'fragrance') {
           // 檢查香精庫存
           const fragranceRef = doc(db, "fragrances", item.id);
           const fragranceDoc = await getDoc(fragranceRef);
@@ -311,8 +312,9 @@ export default function WorkOrderDetailPage() {
       
       for (const item of materialsToUpdate) {
         const usedQuantity = item.usedQuantity || 0;
-        
-        if (item.category === 'fragrance') {
+
+        // 🚨 修復：檢查 type 或 category 來判斷是否為香精
+        if (item.type === 'fragrance' || item.category === 'fragrance') {
           // 更新香精庫存
           const fragranceRef = doc(db, "fragrances", item.id);
           try {
@@ -624,10 +626,10 @@ export default function WorkOrderDetailPage() {
             
             // 查找對應的物料或香精，獲取當前庫存
             // 🚨 重要：只使用 ID 和 code 匹配，絕對不使用 name 匹配！
-            // 如果是香精類別，優先從香精集合中查找
-            if (item.category === 'fragrance') {
-              material = fragrancesList.find((f: Fragrance) => 
-                f.id === item.id || 
+            // 🚨 修復：檢查 type 或 category 來判斷是否為香精
+            if (item.type === 'fragrance' || item.category === 'fragrance') {
+              material = fragrancesList.find((f: Fragrance) =>
+                f.id === item.id ||
                 f.code === item.code
               ) || null;
               
@@ -857,11 +859,11 @@ export default function WorkOrderDetailPage() {
       const finalBOM = updatedBOM.map(item => {
         let material = null;
         
-        // 如果是香精類別，優先從香精集合中查找
-        if (item.category === 'fragrance') {
-          material = fragrancesList.find((f: Fragrance) => 
-            f.id === item.id || 
-            f.code === item.code || 
+        // 🚨 修復：檢查 type 或 category 來判斷是否為香精
+        if (item.type === 'fragrance' || item.category === 'fragrance') {
+          material = fragrancesList.find((f: Fragrance) =>
+            f.id === item.id ||
+            f.code === item.code ||
             f.name === item.name
           );
         }
