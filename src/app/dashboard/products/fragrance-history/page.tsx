@@ -54,8 +54,9 @@ function FragranceHistoryPageContent() {
     
     try {
       const result = await apiClient.call('getFragranceChangeHistory', {
-        limit: state.pageSize,
-        ...(state.searchTerm.trim() && { productId: state.searchTerm.trim() })
+        page: state.currentPage,
+        pageSize: state.pageSize,
+        searchTerm: state.searchTerm.trim()
       });
 
       if (result.success && result.data) {

@@ -33,6 +33,14 @@ export default function FragrancesPage() {
   const [searchValue, setSearchValue] = useState('');
   const [activeFilters, setActiveFilters] = useState<Record<string, any>>({});
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
+
+  // 分頁狀態
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(20);
+
+  // 排序狀態
+  const [sortBy, setSortBy] = useState<string>('');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   
   // 對話框狀態
   const [isDialogOpen, setIsDialogOpen] = useState(false);

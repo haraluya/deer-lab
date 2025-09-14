@@ -105,8 +105,17 @@ export interface StandardDataListPageProps<T = any> {
   loading?: boolean;
   error?: string | Error;
   columns: StandardColumn<T>[];
-  
-  
+
+  // 內建分頁配置
+  enablePagination?: boolean;
+  defaultPageSize?: number;
+  pageSizeOptions?: number[];
+
+  // 內建排序配置
+  enableSorting?: boolean;
+  defaultSortBy?: string;
+  defaultSortDirection?: 'asc' | 'desc';
+
   // 操作相關
   actions?: StandardAction<T>[];
   bulkActions?: StandardAction<T[]>[];
@@ -528,15 +537,42 @@ const Toolbar = <T,>({
       
       {/* 批量操作列 */}
       {selectedCount > 0 && bulkActions && bulkActions.length > 0 && (
-        <div className="flex items-center gap-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-          <span className="text-sm font-medium text-orange-700">
-            已選擇 {selectedCount} 項
-          </span>
+        <div className="flex items-center justify-between gap-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
           <div className="flex items-center gap-2">
-            {bulkActions.map((action) => (
+            <span className="text-sm font-medium text-orange-700">
+              已選擇 {selectedCount} 項
+            </span>
+            {/* 非刪除按鈕：靠左對齊，綠色背景 */}
+            {bulkActions.filter(action => action.variant !== 'destructive').map((action) => (
               <Button
                 key={action.key}
-                variant={action.variant || "outline"}
+                variant="default"
+                size="sm"
+                onClick={() => onBulkAction?.(action, [])}
+                className={`bg-green-600 hover:bg-green-700 text-white ${action.className || ''}`}
+              >
+                {action.icon && <span className="mr-2">{typeof action.icon === 'function' ? action.icon([]) : action.icon}</span>}
+                {typeof action.title === 'function' ? action.title([]) : action.title}
+              </Button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            {/* TODO: 修復 onSelectionChange 類型問題 */}
+            {/* {onSelectionChange && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onSelectionChange([])}
+                className="text-orange-600 hover:text-orange-700 h-6 px-2 text-xs"
+              >
+                取消選取
+              </Button>
+            )} */}
+            {/* 刪除按鈕：最右邊 */}
+            {bulkActions.filter(action => action.variant === 'destructive').map((action) => (
+              <Button
+                key={action.key}
+                variant="destructive"
                 size="sm"
                 onClick={() => onBulkAction?.(action, [])}
                 className={action.className}
@@ -628,6 +664,15 @@ export const StandardDataListPage = <T,>({
   loading = false,
   error,
   columns,
+
+  // 內建分頁和排序
+  enablePagination = true,
+  defaultPageSize = 20,
+  pageSizeOptions = [10, 20, 50, 100],
+  enableSorting = true,
+  defaultSortBy,
+  defaultSortDirection = 'asc',
+
   actions,
   bulkActions,
   onRowClick,
@@ -664,9 +709,9 @@ export const StandardDataListPage = <T,>({
   onAdd,
   pagination,
   sortable = true,
-  sortBy,
-  sortDirection,
-  onSort,
+  sortBy: externalSortBy,
+  sortDirection: externalSortDirection,
+  onSort: externalOnSort,
   renderCard,
   renderGridItem,
   renderEmptyState,
@@ -689,6 +734,30 @@ export const StandardDataListPage = <T,>({
   // 所有 Hooks 必須在最頂部
   const [isMobile, setIsMobile] = useState(false);
   const [currentViewMode, setCurrentViewMode] = useState<'table' | 'card' | 'grid'>(defaultViewMode);
+
+  // 內建分頁狀態
+  const [internalCurrentPage, setInternalCurrentPage] = useState(1);
+  const [internalPageSize, setInternalPageSize] = useState(defaultPageSize);
+
+  // 內建排序狀態
+  const [internalSortBy, setInternalSortBy] = useState<string>(defaultSortBy || '');
+  const [internalSortDirection, setInternalSortDirection] = useState<'asc' | 'desc'>(defaultSortDirection);
+
+  // 使用外部或內建的排序和分頁狀態
+  const currentSortBy = externalSortBy ?? internalSortBy;
+  const currentSortDirection = externalSortDirection ?? internalSortDirection;
+  const handleSortChange = externalOnSort ?? ((key: string, direction: 'asc' | 'desc') => {
+    setInternalSortBy(key);
+    setInternalSortDirection(direction);
+    setInternalCurrentPage(1); // 排序後回到第一頁
+  });
+
+  // 當搜尋值或過濾器變更時重置到第一頁
+  useEffect(() => {
+    if (enablePagination) {
+      setInternalCurrentPage(1);
+    }
+  }, [searchValue, activeFilters, enablePagination]);
   
   // 樣式組態邏輯
   const getTableHeaderStyle = () => {
@@ -789,25 +858,98 @@ export const StandardDataListPage = <T,>({
   // 處理全選
   const handleSelectAll = (checked: boolean) => {
     if (!selectable || !onSelectionChange) return;
-    
+
     if (checked) {
-      const allKeys = data.map((record, index) => getRowKey(record, index, rowKey));
+      const allKeys = displayData.map((record, index) => getRowKey(record, index, rowKey));
       onSelectionChange(allKeys as string[] | number[]);
     } else {
       onSelectionChange([]);
     }
   };
   
+  // 數據處理：排序、過濾、分頁
+  const processedData = useMemo(() => {
+    let result = [...data];
+
+    // 1. 搜尋過濾 (如果有外部搜尋邏輯就跳過)
+    if (searchable && searchValue && !onSearchChange) {
+      const searchTerm = searchValue.toLowerCase();
+      result = result.filter(record => {
+        return columns.some(column => {
+          if (column.searchable) {
+            const value = String((record as any)[column.key] || '').toLowerCase();
+            return value.includes(searchTerm);
+          }
+          return false;
+        });
+      });
+    }
+
+    // 2. 篩選器過濾 (如果有外部過濾邏輯就跳過)
+    if (activeFilters && !onFilterChange) {
+      Object.entries(activeFilters).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          if (Array.isArray(value) && value.length === 0) return;
+          result = result.filter(record => {
+            const recordValue = (record as any)[key];
+            if (Array.isArray(value)) {
+              return value.includes(recordValue);
+            }
+            return recordValue === value;
+          });
+        }
+      });
+    }
+
+    // 3. 排序
+    if (enableSorting && currentSortBy) {
+      result.sort((a, b) => {
+        const aValue = (a as any)[currentSortBy];
+        const bValue = (b as any)[currentSortBy];
+
+        if (aValue === bValue) return 0;
+
+        let comparison = 0;
+        if (aValue == null) comparison = -1;
+        else if (bValue == null) comparison = 1;
+        else if (typeof aValue === 'string' && typeof bValue === 'string') {
+          comparison = aValue.localeCompare(bValue);
+        } else if (typeof aValue === 'number' && typeof bValue === 'number') {
+          comparison = aValue - bValue;
+        } else {
+          comparison = String(aValue).localeCompare(String(bValue));
+        }
+
+        return currentSortDirection === 'desc' ? -comparison : comparison;
+      });
+    }
+
+    return result;
+  }, [data, searchValue, activeFilters, currentSortBy, currentSortDirection, enableSorting, columns, searchable, onSearchChange, onFilterChange]);
+
+  // 4. 分頁處理
+  const paginatedData = useMemo(() => {
+    if (!enablePagination) return processedData;
+
+    const startIndex = (internalCurrentPage - 1) * internalPageSize;
+    const endIndex = startIndex + internalPageSize;
+    return processedData.slice(startIndex, endIndex);
+  }, [processedData, enablePagination, internalCurrentPage, internalPageSize]);
+
+  // 最終顯示的數據
+  const displayData = paginatedData;
+  const totalItems = processedData.length;
+
   // 處理排序
   const handleSort = (columnKey: string) => {
-    if (!sortable || !onSort) return;
-    
+    if (!enableSorting) return;
+
     let direction: 'asc' | 'desc' = 'asc';
-    if (sortBy === columnKey && sortDirection === 'asc') {
+    if (currentSortBy === columnKey && currentSortDirection === 'asc') {
       direction = 'desc';
     }
-    
-    onSort(columnKey, direction);
+
+    handleSortChange(columnKey, direction);
   };
   
   // 處理批量操作
@@ -816,11 +958,11 @@ export const StandardDataListPage = <T,>({
       const key = getRowKey(record, index, rowKey);
       return (selectedRows as any)?.includes(key);
     });
-    
+
     if (action.confirmMessage) {
       if (!confirm(action.confirmMessage)) return;
     }
-    
+
     action.onClick(selectedData, 0);
   };
   
@@ -901,6 +1043,80 @@ export const StandardDataListPage = <T,>({
     );
   }
   
+  // 內建分頁組件
+  const InternalPagination = () => {
+    if (!enablePagination || totalItems <= internalPageSize) return null;
+
+    const totalPages = Math.ceil(totalItems / internalPageSize);
+
+    return (
+      <div className={`flex items-center w-full max-w-full overflow-hidden ${
+        isMobile ? 'flex-col gap-2 mx-auto' : 'justify-between'
+      }`}>
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-muted-foreground">
+            {totalItems < data.length ? (
+              <>顯示第 {(internalCurrentPage - 1) * internalPageSize + 1}-{Math.min(internalCurrentPage * internalPageSize, totalItems)} 項，篩選後共 {totalItems} 項（總共 {data.length} 項）</>
+            ) : (
+              <>顯示第 {(internalCurrentPage - 1) * internalPageSize + 1}-{Math.min(internalCurrentPage * internalPageSize, totalItems)} 項，共 {totalItems} 項</>
+            )}
+          </div>
+          {pageSizeOptions && pageSizeOptions.length > 1 && (
+            <select
+              value={internalPageSize}
+              onChange={(e) => {
+                setInternalPageSize(Number(e.target.value));
+                setInternalCurrentPage(1);
+              }}
+              className="text-sm border border-gray-200 rounded px-2 py-1"
+            >
+              {pageSizeOptions.map(size => (
+                <option key={size} value={size}>{size} 項/頁</option>
+              ))}
+            </select>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={internalCurrentPage <= 1}
+            onClick={() => setInternalCurrentPage(1)}
+          >
+            首頁
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={internalCurrentPage <= 1}
+            onClick={() => setInternalCurrentPage(internalCurrentPage - 1)}
+          >
+            上一頁
+          </Button>
+          <span className="text-sm px-2">
+            {internalCurrentPage} / {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={internalCurrentPage >= totalPages}
+            onClick={() => setInternalCurrentPage(internalCurrentPage + 1)}
+          >
+            下一頁
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={internalCurrentPage >= totalPages}
+            onClick={() => setInternalCurrentPage(totalPages)}
+          >
+            末頁
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   // 渲染空狀態
   if (!data || data.length === 0) {
     return (
@@ -1079,9 +1295,15 @@ export const StandardDataListPage = <T,>({
                     {selectable && (
                       <TableHead className="w-12">
                         <Checkbox
-                          checked={selectedRows.length === data.length}
+                          checked={selectedRows.length > 0 && displayData.every((record, index) =>
+                            // @ts-ignore
+                            selectedRows.includes(getRowKey(record, index, rowKey))
+                          )}
                           onCheckedChange={(checked) => handleSelectAll(!!checked)}
-                          {...(selectedRows.length > 0 && selectedRows.length < data.length ? { "data-indeterminate": true } : {})}
+                          {...(selectedRows.length > 0 && !displayData.every((record, index) =>
+                            // @ts-ignore
+                            selectedRows.includes(getRowKey(record, index, rowKey))
+                          ) ? { "data-indeterminate": true } : {})}
                         />
                       </TableHead>
                     )}
@@ -1095,7 +1317,7 @@ export const StandardDataListPage = <T,>({
                       >
                         <div className={`flex items-center ${column.align === 'center' ? 'justify-center' : column.align === 'right' ? 'justify-end' : 'justify-start'}`}>
                           <span>{column.title}</span>
-                          {column.sortable && sortable && (
+                          {column.sortable && enableSorting && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1104,8 +1326,8 @@ export const StandardDataListPage = <T,>({
                             >
                               <ChevronDown
                                 className={`h-3 w-3 transition-transform ${
-                                  sortBy === column.key
-                                    ? sortDirection === 'desc'
+                                  currentSortBy === column.key
+                                    ? currentSortDirection === 'desc'
                                       ? 'rotate-180'
                                       : ''
                                     : 'opacity-50'
@@ -1129,7 +1351,7 @@ export const StandardDataListPage = <T,>({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.map((record, index) => {
+                  {displayData.map((record, index) => {
                     const recordKey = getRowKey(record, index, rowKey);
                     const isSelected = (selectedRows as any)?.includes(recordKey);
                     
@@ -1241,7 +1463,7 @@ export const StandardDataListPage = <T,>({
                   '--card-max-width': isMobile ? '100%' : '400px'
                 } as React.CSSProperties}
               >
-                {data.map((record, index) => {
+                {displayData.map((record, index) => {
                   const recordKey = getRowKey(record, index, rowKey);
                   const isSelected = (selectedRows as any)?.includes(recordKey);
                   
@@ -1475,7 +1697,7 @@ export const StandardDataListPage = <T,>({
           {currentViewMode === 'grid' && (
             <div className="p-6">
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-                {data.map((record, index) => {
+                {displayData.map((record, index) => {
                   const recordKey = getRowKey(record, index, rowKey);
                   const isSelected = (selectedRows as any)?.includes(recordKey);
                   
@@ -1516,8 +1738,8 @@ export const StandardDataListPage = <T,>({
         </CardContent>
       </Card>
       
-      {/* 分頁 */}
-      {pagination && (
+      {/* 分頁：優先使用外部分頁，否則使用內建分頁 */}
+      {pagination ? (
         <div className={`flex items-center w-full max-w-full overflow-hidden ${
           isMobile ? 'flex-col gap-2 mx-auto' : 'justify-between'
         }`}>
@@ -1546,6 +1768,8 @@ export const StandardDataListPage = <T,>({
             </Button>
           </div>
         </div>
+      ) : (
+        <InternalPagination />
       )}
     </div>
   );

@@ -268,6 +268,26 @@ export class ApiClient {
       };
     }
 
+    // 🎯 適配香精歷史API舊格式: { success: true, data: [...], pagination: {...} }
+    if (response.success && response.pagination && typeof response.success === 'boolean') {
+      return {
+        success: true,
+        data: {
+          data: response.data,
+          total: response.pagination.total,
+          totalPages: response.pagination.totalPages,
+          page: response.pagination.page,
+          pageSize: response.pagination.pageSize
+        },
+        error: undefined,
+        meta: {
+          timestamp: Date.now(),
+          requestId: `fragranceHistory_adapted_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+          version: 'fragrance-history-legacy'
+        }
+      };
+    }
+
     // 🎯 適配任何包含 records 陣列的格式
     if (response.records && Array.isArray(response.records)) {
       return {

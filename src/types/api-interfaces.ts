@@ -261,6 +261,12 @@ export namespace ProductsApi {
   export interface GetFragranceChangeHistoryRequest {
     productId?: string;
     fragranceId?: string;
+    page?: number;
+    pageSize?: number;
+    searchTerm?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    // 保持向後相容
     limit?: number;
   }
 

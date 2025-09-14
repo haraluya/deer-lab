@@ -702,121 +702,116 @@ export const changeProductFragrance = onCall(async (request) => {
 });
 
 /**
- * 查詢香精更換歷史記錄 - 支援分頁和搜尋
+ * 查詢香精更換歷史記錄 - 支援分頁和搜尋 (已標準化)
  */
-export const getFragranceChangeHistory = onCall(async (request) => {
-  const { auth: contextAuth, data } = request;
-  // 權限檢查可以在這裡加入
-  
-  const { 
-    page = 1, 
-    pageSize = 10, 
-    searchTerm = '', 
-    productId = '', 
-    fragranceId = '', 
-    dateFrom = '', 
-    dateTo = '' 
+export const getFragranceChangeHistory = createApiHandler({
+  functionName: 'getFragranceChangeHistory',
+  requireAuth: true,
+  enableDetailedLogging: true,
+  version: '1.0.0'
+}, async (data, context, requestId) => {
+  const {
+    page = 1,
+    pageSize = 10,
+    searchTerm = '',
+    productId = '',
+    fragranceId = '',
+    dateFrom = '',
+    dateTo = ''
   } = data || {};
 
-  try {
-    let allDocs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
-    
-    if (fragranceId) {
-      // 分別查詢作為舊香精和新香精的記錄
-      const oldFragranceQuery = db.collection('fragranceChangeHistory')
-        .where('oldFragranceId', '==', fragranceId);
-      const newFragranceQuery = db.collection('fragranceChangeHistory')
-        .where('newFragranceId', '==', fragranceId);
-      
-      const [oldResults, newResults] = await Promise.all([
-        oldFragranceQuery.get(),
-        newFragranceQuery.get()
-      ]);
-      
-      // 合併結果，避免重複
-      const docIds = new Set<string>();
-      [...oldResults.docs, ...newResults.docs].forEach(doc => {
-        if (!docIds.has(doc.id)) {
-          docIds.add(doc.id);
-          allDocs.push(doc);
-        }
-      });
-    } else {
-      // 正常查詢流程
-      let query: FirebaseFirestore.Query = db.collection('fragranceChangeHistory');
-      
-      // 應用篩選條件
-      if (productId) {
-        query = query.where('productId', '==', productId);
-      }
+  let allDocs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
 
-      // 日期範圍篩選（這需要複合索引）
-      if (dateFrom && dateTo) {
-        const fromDate = new Date(dateFrom);
-        const toDate = new Date(dateTo);
-        toDate.setHours(23, 59, 59, 999); // 包含整天
-        
-        query = query.where('changeDate', '>=', fromDate)
-                     .where('changeDate', '<=', toDate);
-      }
+  if (fragranceId) {
+    // 分別查詢作為舊香精和新香精的記錄
+    const oldFragranceQuery = db.collection('fragranceChangeHistory')
+      .where('oldFragranceId', '==', fragranceId);
+    const newFragranceQuery = db.collection('fragranceChangeHistory')
+      .where('newFragranceId', '==', fragranceId);
 
-      // 按時間降序排列
-      query = query.orderBy('changeDate', 'desc');
-      const snapshot = await query.get();
-      allDocs = snapshot.docs;
+    const [oldResults, newResults] = await Promise.all([
+      oldFragranceQuery.get(),
+      newFragranceQuery.get()
+    ]);
+
+    // 合併結果，避免重複
+    const docIds = new Set<string>();
+    [...oldResults.docs, ...newResults.docs].forEach(doc => {
+      if (!docIds.has(doc.id)) {
+        docIds.add(doc.id);
+        allDocs.push(doc);
+      }
+    });
+  } else {
+    // 正常查詢流程
+    let query: FirebaseFirestore.Query = db.collection('fragranceChangeHistory');
+
+    // 應用篩選條件
+    if (productId) {
+      query = query.where('productId', '==', productId);
     }
 
-    // 對文檔按時間排序（如果是香精ID查詢）
-    if (fragranceId) {
-      allDocs.sort((a, b) => {
-        const aDate = a.data().changeDate?.toDate() || new Date(0);
-        const bDate = b.data().changeDate?.toDate() || new Date(0);
-        return bDate.getTime() - aDate.getTime();
-      });
+    // 日期範圍篩選（這需要複合索引）
+    if (dateFrom && dateTo) {
+      const fromDate = new Date(dateFrom);
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999); // 包含整天
+
+      query = query.where('changeDate', '>=', fromDate)
+                   .where('changeDate', '<=', toDate);
     }
 
-    // 計算總數
-    const total = allDocs.length;
-    const totalPages = Math.ceil(total / pageSize);
-
-    // 手動分頁
-    const offset = (page - 1) * pageSize;
-    const pagedDocs = allDocs.slice(offset, offset + pageSize);
-
-    let records = pagedDocs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-
-    // 客戶端搜尋過濾（因為 Firestore 全文搜尋限制）
-    if (searchTerm && searchTerm.trim() !== '') {
-      const searchLower = searchTerm.toLowerCase();
-      records = records.filter((record: any) => 
-        record.productName?.toLowerCase().includes(searchLower) ||
-        record.productCode?.toLowerCase().includes(searchLower) ||
-        record.oldFragranceName?.toLowerCase().includes(searchLower) ||
-        record.oldFragranceCode?.toLowerCase().includes(searchLower) ||
-        record.newFragranceName?.toLowerCase().includes(searchLower) ||
-        record.newFragranceCode?.toLowerCase().includes(searchLower) ||
-        record.changeReason?.toLowerCase().includes(searchLower) ||
-        record.changedByName?.toLowerCase().includes(searchLower)
-      );
-    }
-
-    return {
-      success: true,
-      data: records,
-      pagination: {
-        page,
-        pageSize,
-        total: searchTerm ? records.length : total,
-        totalPages: searchTerm ? Math.ceil(records.length / pageSize) : totalPages
-      }
-    };
-  } catch (error) {
-    logger.error("查詢香精更換歷史時發生錯誤:", error);
-    throw new HttpsError("internal", "查詢香精更換歷史失敗");
+    // 按時間降序排列
+    query = query.orderBy('changeDate', 'desc');
+    const snapshot = await query.get();
+    allDocs = snapshot.docs;
   }
+
+  // 對文檔按時間排序（如果是香精ID查詢）
+  if (fragranceId) {
+    allDocs.sort((a, b) => {
+      const aDate = a.data().changeDate?.toDate() || new Date(0);
+      const bDate = b.data().changeDate?.toDate() || new Date(0);
+      return bDate.getTime() - aDate.getTime();
+    });
+  }
+
+  // 計算總數
+  const total = allDocs.length;
+  const totalPages = Math.ceil(total / pageSize);
+
+  // 手動分頁
+  const offset = (page - 1) * pageSize;
+  const pagedDocs = allDocs.slice(offset, offset + pageSize);
+
+  let records = pagedDocs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+
+  // 客戶端搜尋過濾（因為 Firestore 全文搜尋限制）
+  if (searchTerm && searchTerm.trim() !== '') {
+    const searchLower = searchTerm.toLowerCase();
+    records = records.filter((record: any) =>
+      record.productName?.toLowerCase().includes(searchLower) ||
+      record.productCode?.toLowerCase().includes(searchLower) ||
+      record.oldFragranceName?.toLowerCase().includes(searchLower) ||
+      record.oldFragranceCode?.toLowerCase().includes(searchLower) ||
+      record.newFragranceName?.toLowerCase().includes(searchLower) ||
+      record.newFragranceCode?.toLowerCase().includes(searchLower) ||
+      record.changeReason?.toLowerCase().includes(searchLower) ||
+      record.changedByName?.toLowerCase().includes(searchLower)
+    );
+  }
+
+  // 返回標準化格式
+  return {
+    data: records,
+    total: searchTerm ? records.length : total,
+    totalPages: searchTerm ? Math.ceil(records.length / pageSize) : totalPages,
+    page,
+    pageSize
+  };
 });
 
 /**
