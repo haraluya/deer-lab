@@ -926,13 +926,14 @@ function PurchaseOrdersPageContent() {
         suppliersToProcess = currentCartBySupplier.map(supplierGroup => {
           console.log(`🔍 檢查供應商 ${supplierGroup.supplierName} 的項目:`, supplierGroup.items.map(item => ({
             id: item.id,
+            cartId: item.cartId,
             type: item.type,
-            key: `${item.id}-${item.type}`,
-            selected: selectedCartItems.has(`${item.id}-${item.type}`)
+            key: `${item.cartId}-${item.type}`,
+            selected: selectedCartItems.has(`${item.cartId}-${item.type}`)
           })));
 
           const selectedItems = supplierGroup.items.filter(item => {
-            const key = `${item.id}-${item.type}`;
+            const key = `${item.cartId}-${item.type}`;
             const isSelected = selectedCartItems.has(key);
             console.log(`🔍 項目 ${item.name} (${key}) 是否選中: ${isSelected}`);
             return isSelected;
