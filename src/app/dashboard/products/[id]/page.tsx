@@ -103,15 +103,19 @@ export default function ProductDetailPage() {
       
       // 檢查 API 是否成功返回
       if (result.success && result.data) {
-        // 適配器已修正，直接使用資料
-        const historyData = Array.isArray(result.data) ? result.data : [];
+        // 🔧 修復：使用新統一API格式的 records 陣列
+        const historyData = Array.isArray(result.data.records) ? result.data.records :
+                          Array.isArray(result.data) ? result.data : [];
         setFragranceHistory(historyData);
 
-        console.log(`載入香精歷程成功，共 ${historyData.length} 筆記錄`);
+        console.log(`載入香精歷程成功，共 ${historyData.length} 筆記錄`, {
+          rawData: result.data,
+          records: historyData
+        });
       } else {
         // Function 成功執行但沒有資料，設置空陣列（這是正常情況，不顯示任何通知）
         setFragranceHistory([]);
-        console.log('該產品尚無香精更換歷程');
+        console.log('該產品尚無香精更換歷程', { result });
       }
     } catch (error) {
       console.error("載入香精歷程時發生錯誤:", error);
