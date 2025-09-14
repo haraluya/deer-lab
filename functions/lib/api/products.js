@@ -231,7 +231,18 @@ exports.updateProduct = apiWrapper_1.CrudApiHandlers.createUpdateHandler('Produc
         // 8. 更新資料庫
         await productRef.update(updateData);
         // 9. 如果有香精更換，創建歷史記錄
+        firebase_functions_1.logger.info(`[${requestId}] 香精更換檢查:`, {
+            hasFragranceChangeInfo: !!fragranceChangeInfo,
+            fragranceChangeInfo,
+            isDifferent: fragranceChangeInfo ?
+                fragranceChangeInfo.oldFragranceId !== fragranceChangeInfo.newFragranceId : false
+        });
         if (fragranceChangeInfo && fragranceChangeInfo.oldFragranceId !== fragranceChangeInfo.newFragranceId) {
+            firebase_functions_1.logger.info(`[${requestId}] 檢測到香精更換，準備創建歷史記錄:`, {
+                oldFragranceId: fragranceChangeInfo.oldFragranceId,
+                newFragranceId: fragranceChangeInfo.newFragranceId,
+                reason: fragranceChangeInfo.changeReason
+            });
             try {
                 // 獲取當前用戶資訊
                 const userId = ((_a = context.auth) === null || _a === void 0 ? void 0 : _a.uid) || 'system';
@@ -263,7 +274,11 @@ exports.updateProduct = apiWrapper_1.CrudApiHandlers.createUpdateHandler('Produc
                     changedByEmail: ((_c = (_b = context.auth) === null || _b === void 0 ? void 0 : _b.token) === null || _c === void 0 ? void 0 : _c.email) || 'system',
                     createdAt: firestore_1.FieldValue.serverTimestamp()
                 });
-                firebase_functions_1.logger.info(`[${requestId}] 已創建香精更換歷史記錄 for product ${productId}`);
+                firebase_functions_1.logger.info(`[${requestId}] 已創建香精更換歷史記錄:`, {
+                    historyId: historyRef.id,
+                    productId: productId,
+                    collectionPath: 'fragranceChangeHistory'
+                });
             }
             catch (historyError) {
                 firebase_functions_1.logger.error(`[${requestId}] 創建香精更換歷史記錄失敗:`, historyError);

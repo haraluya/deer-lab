@@ -326,7 +326,20 @@ export const updateProduct = CrudApiHandlers.createUpdateHandler<UpdateProductRe
       await productRef.update(updateData);
 
       // 9. 如果有香精更換，創建歷史記錄
+      logger.info(`[${requestId}] 香精更換檢查:`, {
+        hasFragranceChangeInfo: !!fragranceChangeInfo,
+        fragranceChangeInfo,
+        isDifferent: fragranceChangeInfo ?
+          fragranceChangeInfo.oldFragranceId !== fragranceChangeInfo.newFragranceId : false
+      });
+
       if (fragranceChangeInfo && fragranceChangeInfo.oldFragranceId !== fragranceChangeInfo.newFragranceId) {
+        logger.info(`[${requestId}] 檢測到香精更換，準備創建歷史記錄:`, {
+          oldFragranceId: fragranceChangeInfo.oldFragranceId,
+          newFragranceId: fragranceChangeInfo.newFragranceId,
+          reason: fragranceChangeInfo.changeReason
+        });
+
         try {
           // 獲取當前用戶資訊
           const userId = context.auth?.uid || 'system';
@@ -363,7 +376,11 @@ export const updateProduct = CrudApiHandlers.createUpdateHandler<UpdateProductRe
             createdAt: FieldValue.serverTimestamp()
           });
 
-          logger.info(`[${requestId}] 已創建香精更換歷史記錄 for product ${productId}`);
+          logger.info(`[${requestId}] 已創建香精更換歷史記錄:`, {
+            historyId: historyRef.id,
+            productId: productId,
+            collectionPath: 'fragranceChangeHistory'
+          });
         } catch (historyError) {
           logger.error(`[${requestId}] 創建香精更換歷史記錄失敗:`, historyError);
           // 不拋出錯誤，因為主要操作已經成功
