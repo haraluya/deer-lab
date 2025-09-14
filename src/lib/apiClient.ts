@@ -366,6 +366,24 @@ export class ApiClient {
       };
     }
 
+    // 🎯 適配 BatchOperationResult 格式（quickUpdateInventory 等批量操作）
+    if (response.summary && typeof response.summary === 'object' &&
+        Array.isArray(response.successful) && Array.isArray(response.failed)) {
+      return {
+        success: response.summary.successful > 0 || response.summary.failed === 0, // 有成功項目或無失敗項目都算成功
+        data: response,
+        error: response.summary.failed > 0 ? {
+          code: 'BATCH_PARTIAL_FAILURE',
+          message: `批量操作部分失敗：成功 ${response.summary.successful} 項，失敗 ${response.summary.failed} 項`
+        } : undefined,
+        meta: {
+          timestamp: Date.now(),
+          requestId: `batch_adapted_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+          version: 'batch-operation-result'
+        }
+      };
+    }
+
     // 🎯 適配任何包含 records 陣列的格式
     if (response.records && Array.isArray(response.records)) {
       return {

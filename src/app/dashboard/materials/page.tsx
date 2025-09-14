@@ -568,19 +568,27 @@ export default function MaterialsPage() {
       });
 
       if (result.success) {
-        toast.success(`已更新 ${Object.keys(stocktakeUpdates).length} 項原料庫存`);
+        // 檢查是否為批量操作結果
+        if (result.data?.summary) {
+          const summary = result.data.summary;
+          toast.success(`已更新 ${summary.successful} 項原料庫存`);
+          if (summary.failed > 0) {
+            toast.warning(`${summary.failed} 項原料更新失敗`);
+          }
+        } else {
+          toast.success(`已更新 ${Object.keys(stocktakeUpdates).length} 項原料庫存`);
+        }
         setStocktakeUpdates({});
         setStocktakeMode(false);
         fetchMaterials();
-      } else if (result.summary) {
+      } else if (result.data?.summary) {
         // 使用新的 BatchOperationResult 格式
-        if (result.summary.successful > 0) {
-          toast.success(`已更新 ${result.summary.successful} 項原料庫存`);
-          if (result.summary.failed > 0) {
-            toast.warning(`${result.summary.failed} 項原料更新失敗`);
+        const summary = result.data.summary;
+        if (summary.successful > 0) {
+          toast.success(`已更新 ${summary.successful} 項原料庫存`);
+          if (summary.failed > 0) {
+            toast.warning(`${summary.failed} 項原料更新失敗`);
           }
-        }
-        if (result.summary.successful > 0) {
           setStocktakeUpdates({});
           setStocktakeMode(false);
           fetchMaterials();
