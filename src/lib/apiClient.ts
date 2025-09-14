@@ -292,16 +292,12 @@ export class ApiClient {
     if (response.success && Array.isArray(response.data) && typeof response.count === 'number') {
       return {
         success: true,
-        data: {
-          data: response.data,
-          count: response.count,
-          message: response.message
-        },
+        data: response.data,        // ✅ 直接使用，移除多餘包裝
         error: undefined,
         meta: {
           timestamp: Date.now(),
           requestId: `productFragranceHistory_adapted_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
-          version: 'product-fragrance-history-legacy'
+          version: 'product-fragrance-history-fixed'
         }
       };
     }

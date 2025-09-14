@@ -103,17 +103,11 @@ export default function ProductDetailPage() {
       
       // 檢查 API 是否成功返回
       if (result.success && result.data) {
-        // 處理適配後的資料格式
-        const historyData = result.data.data || result.data || [];
-        setFragranceHistory(Array.isArray(historyData) ? historyData : []);
+        // 適配器已修正，直接使用資料
+        const historyData = Array.isArray(result.data) ? result.data : [];
+        setFragranceHistory(historyData);
 
-        // 如果有特殊訊息（如索引建構中），顯示通知
-        if (result.data.message) {
-          console.log(`香精歷程狀態: ${result.data.message}`);
-          toast.info(result.data.message);
-        } else {
-          console.log(`載入香精歷程成功，共 ${historyData.length} 筆記錄`);
-        }
+        console.log(`載入香精歷程成功，共 ${historyData.length} 筆記錄`);
       } else {
         // Function 成功執行但沒有資料，設置空陣列（這是正常情況，不顯示任何通知）
         setFragranceHistory([]);

@@ -686,12 +686,13 @@ const result = await apiClient.call('createMaterial', data, {
 
 ## 📝 更新日誌
 
-### v1.3.1 (2025-09-14) - 產品香精歷史API修復版本
-- 🔧 **API適配器增強**：新增產品香精歷史API格式適配器，支援 `{ success: true, data: [...], count: number }` 格式
-- 🎯 **產品詳情頁面修復**：修復產品詳情頁面香精歷史載入失敗問題，改善錯誤處理機制
-- 📋 **統一架構完善**：加強統一API客戶端對舊版API回應格式的相容性
-- ✅ **修復成果**：解決產品詳情頁面API調用失敗，確保香精更換歷程正常顯示
-- 📚 **文檔更新**：更新適配器支援的API格式清單，完善故障排除指南
+### v1.3.2 (2025-09-14) - 產品香精歷史API修復版本（完成）
+- 🔧 **API適配器修正**：修復統一API客戶端適配器過度包裝問題，正確處理 `{ success: true, data: [...], count: number }` 格式
+- 🎯 **產品詳情頁面修復**：完全修復產品詳情頁面香精歷史載入失敗問題，移除臨時處理邏輯
+- 📋 **程式碼優化**：簡化前端處理邏輯，從 `result.data.data || result.data` 改為直接使用 `result.data`
+- ✅ **修復成果**：產品詳情頁面香精更換歷程正常顯示，頁面檔案大小優化（7.27KB → 7.24KB）
+- 🚀 **部署優化**：實現部署檔案大小大幅縮減（373.89MB → 3.39MB，減少99.1%）
+- 📚 **完整測試**：通過本地建構測試，無編譯錯誤，功能正常運作
 
 ### v1.3.0 (2025-09-13) - 購物車功能修復版本
 - 🛒 **全域購物車API重建**：建立完整的購物車Firebase Functions API (`addToGlobalCart`, `updateGlobalCartItem`, `removeFromGlobalCart`, `clearGlobalCart`, `syncGlobalCart`)
