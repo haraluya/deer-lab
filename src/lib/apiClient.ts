@@ -506,7 +506,12 @@ export class ApiClient {
       errorMessage = '服務暫時不可用，請稍後再試';
     } else if (error.code === 'functions/internal') {
       errorCode = 'INTERNAL_ERROR';
-      errorMessage = '伺服器發生內部錯誤，請稍後再試';
+      // 保留原始錯誤訊息以便診斷
+      if (error.message && error.message.includes('contextAuth')) {
+        errorMessage = '身份驗證失效，請重新登入後再試';
+      } else {
+        errorMessage = error.message || '伺服器發生內部錯誤，請稍後再試';
+      }
     }
 
     const errorInfo = {
