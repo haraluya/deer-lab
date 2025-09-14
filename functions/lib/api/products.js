@@ -697,7 +697,30 @@ exports.getFragranceChangeHistory = (0, apiWrapper_1.createApiHandler)({
     // 手動分頁
     const offset = (page - 1) * pageSize;
     const pagedDocs = allDocs.slice(offset, offset + pageSize);
-    let records = pagedDocs.map(doc => (Object.assign({ id: doc.id }, doc.data())));
+    let records = pagedDocs.map(doc => {
+        const data = doc.data();
+        // 轉換 Timestamp 為可序列化的格式
+        const processedData = Object.assign({ id: doc.id }, data);
+        // 處理 changeDate 欄位
+        if (data.changeDate) {
+            if (data.changeDate.toDate && typeof data.changeDate.toDate === 'function') {
+                processedData.changeDate = data.changeDate.toDate().toISOString();
+            }
+            else if (data.changeDate._seconds) {
+                processedData.changeDate = new Date(data.changeDate._seconds * 1000).toISOString();
+            }
+        }
+        // 處理 createdAt 欄位
+        if (data.createdAt) {
+            if (data.createdAt.toDate && typeof data.createdAt.toDate === 'function') {
+                processedData.createdAt = data.createdAt.toDate().toISOString();
+            }
+            else if (data.createdAt._seconds) {
+                processedData.createdAt = new Date(data.createdAt._seconds * 1000).toISOString();
+            }
+        }
+        return processedData;
+    });
     // 客戶端搜尋過濾（因為 Firestore 全文搜尋限制）
     if (searchTerm && searchTerm.trim() !== '') {
         const searchLower = searchTerm.toLowerCase();
@@ -746,10 +769,28 @@ exports.getProductFragranceHistory = (0, apiWrapper_1.createApiHandler)({
             .orderBy('changeDate', 'desc');
         const snapshot = await query.get();
         const records = snapshot.docs.map(doc => {
-            var _a, _b;
             const data = doc.data();
-            // 🔧 修復：明確轉換 Firestore Timestamp 為 JavaScript Date
-            return Object.assign(Object.assign({ id: doc.id }, data), { changeDate: ((_a = data.changeDate) === null || _a === void 0 ? void 0 : _a.toDate()) || null, createdAt: ((_b = data.createdAt) === null || _b === void 0 ? void 0 : _b.toDate()) || null });
+            // 🔧 修復：明確轉換 Firestore Timestamp 為 ISO 字串
+            const processedData = Object.assign({ id: doc.id }, data);
+            // 處理 changeDate 欄位
+            if (data.changeDate) {
+                if (data.changeDate.toDate && typeof data.changeDate.toDate === 'function') {
+                    processedData.changeDate = data.changeDate.toDate().toISOString();
+                }
+                else if (data.changeDate._seconds) {
+                    processedData.changeDate = new Date(data.changeDate._seconds * 1000).toISOString();
+                }
+            }
+            // 處理 createdAt 欄位
+            if (data.createdAt) {
+                if (data.createdAt.toDate && typeof data.createdAt.toDate === 'function') {
+                    processedData.createdAt = data.createdAt.toDate().toISOString();
+                }
+                else if (data.createdAt._seconds) {
+                    processedData.createdAt = new Date(data.createdAt._seconds * 1000).toISOString();
+                }
+            }
+            return processedData;
         });
         firebase_functions_1.logger.info(`[${requestId}] 產品 ${productId} 香精歷史查詢成功，找到 ${records.length} 筆記錄`);
         return {

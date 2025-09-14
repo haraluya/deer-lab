@@ -572,6 +572,19 @@ export default function MaterialsPage() {
         setStocktakeUpdates({});
         setStocktakeMode(false);
         fetchMaterials();
+      } else if (result.summary) {
+        // 使用新的 BatchOperationResult 格式
+        if (result.summary.successful > 0) {
+          toast.success(`已更新 ${result.summary.successful} 項原料庫存`);
+          if (result.summary.failed > 0) {
+            toast.warning(`${result.summary.failed} 項原料更新失敗`);
+          }
+        }
+        if (result.summary.successful > 0) {
+          setStocktakeUpdates({});
+          setStocktakeMode(false);
+          fetchMaterials();
+        }
       }
     } catch (error) {
       console.error("盤點儲存失敗:", error);

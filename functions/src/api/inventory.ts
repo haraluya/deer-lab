@@ -66,12 +66,12 @@ export const adjustInventory = onCall(async (request) => {
       const inventoryRecordRef = db.collection("inventory_records").doc();
       transaction.set(inventoryRecordRef, {
         changeDate: FieldValue.serverTimestamp(),
-        changeReason: 'direct_modification',
+        changeReason: 'manual_adjustment',
         operatorId: contextAuth.uid,
         operatorName: contextAuth.token?.name || '未知用戶',
         remarks: remarks || '直接修改庫存',
         relatedDocumentId: itemId,
-        relatedDocumentType: 'direct_modification',
+        relatedDocumentType: 'manual_adjustment',
         details: [{
           itemId: itemId,
           itemType: itemType,
@@ -169,74 +169,149 @@ export const getInventoryOverview = onCall(async (request) => {
 });
 
 /**
- * 快速更新庫存
+ * 快速更新庫存 - 支援批量操作
  */
 export const quickUpdateInventory = onCall(async (request) => {
   const { auth: contextAuth, data } = request;
-  
+
   if (!contextAuth) {
     throw new HttpsError("internal", "驗證檢查後 contextAuth 不應為空。");
   }
 
-  const { itemId, itemType, newStock, remarks } = data;
-  
-  if (!itemId || !itemType || typeof newStock !== 'number' || newStock < 0) {
-    throw new HttpsError("invalid-argument", "缺少必要的更新參數。");
+  const { updates } = data;
+
+  if (!updates || !Array.isArray(updates) || updates.length === 0) {
+    throw new HttpsError("invalid-argument", "缺少更新項目陣列。");
   }
 
-  if (!['material', 'fragrance'].includes(itemType)) {
-    throw new HttpsError("invalid-argument", "不支援的項目類型。");
-  }
+  const successful: any[] = [];
+  const failed: any[] = [];
+  const inventoryRecordDetails: any[] = [];
 
   try {
     await db.runTransaction(async (transaction) => {
-      const collectionName = itemType === 'material' ? 'materials' : 'fragrances';
-      const itemRef = db.doc(`${collectionName}/${itemId}`);
-      const itemDoc = await transaction.get(itemRef);
-      
-      if (!itemDoc.exists) {
-        throw new HttpsError("not-found", "項目不存在。");
+      // 處理每個更新項目
+      for (const update of updates) {
+        try {
+          const { type, itemId, newStock, reason } = update;
+
+          // 驗證單一更新項目參數
+          if (!itemId || !type || typeof newStock !== 'number' || newStock < 0) {
+            failed.push({
+              item: update,
+              error: "缺少必要的更新參數或參數格式錯誤"
+            });
+            continue;
+          }
+
+          if (!['material', 'fragrance'].includes(type)) {
+            failed.push({
+              item: update,
+              error: "不支援的項目類型"
+            });
+            continue;
+          }
+
+          // 獲取項目資料
+          const collectionName = type === 'material' ? 'materials' : 'fragrances';
+          const itemRef = db.doc(`${collectionName}/${itemId}`);
+          const itemDoc = await transaction.get(itemRef);
+
+          if (!itemDoc.exists) {
+            failed.push({
+              item: update,
+              error: "項目不存在"
+            });
+            continue;
+          }
+
+          const itemData = itemDoc.data()!;
+          const oldStock = itemData.currentStock || 0;
+          const quantityChange = newStock - oldStock;
+
+          // 如果庫存沒有變化，跳過更新
+          if (quantityChange === 0) {
+            successful.push({
+              ...update,
+              result: 'skipped',
+              message: '庫存數量無變化'
+            });
+            continue;
+          }
+
+          // 更新庫存
+          transaction.update(itemRef, {
+            currentStock: newStock,
+            lastStockUpdate: FieldValue.serverTimestamp(),
+          });
+
+          // 收集庫存記錄明細
+          inventoryRecordDetails.push({
+            itemId: itemId,
+            itemType: type,
+            itemCode: itemData.code || '',
+            itemName: itemData.name || '',
+            quantityChange: quantityChange,
+            quantityAfter: newStock
+          });
+
+          successful.push({
+            ...update,
+            result: 'updated',
+            message: `成功更新庫存：${oldStock} → ${newStock}`,
+            oldStock,
+            newStock,
+            quantityChange
+          });
+
+        } catch (error) {
+          logger.error(`處理單一更新項目時發生錯誤:`, error);
+          failed.push({
+            item: update,
+            error: error instanceof Error ? error.message : "未知錯誤"
+          });
+        }
       }
-      
-      const itemData = itemDoc.data()!;
-      const oldStock = itemData.currentStock || 0;
-      const quantityChange = newStock - oldStock;
-      
-      // 更新庫存
-      transaction.update(itemRef, {
-        currentStock: newStock,
-        lastStockUpdate: FieldValue.serverTimestamp(),
-      });
-      
-      // 建立庫存紀錄
-      const inventoryRecordRef = db.collection("inventory_records").doc();
-      transaction.set(inventoryRecordRef, {
-        changeDate: FieldValue.serverTimestamp(),
-        changeReason: 'direct_modification',
-        operatorId: contextAuth.uid,
-        operatorName: contextAuth.token?.name || '未知用戶',
-        remarks: remarks || '直接修改庫存',
-        relatedDocumentId: itemId,
-        relatedDocumentType: 'direct_modification',
-        details: [{
-          itemId: itemId,
-          itemType: itemType,
-          itemCode: itemData.code || '',
-          itemName: itemData.name || '',
-          quantityChange: quantityChange,
-          quantityAfter: newStock
-        }],
-        createdAt: FieldValue.serverTimestamp(),
-      });
+
+      // 建立統一的庫存紀錄（僅當有實際更新時）
+      if (inventoryRecordDetails.length > 0) {
+        const inventoryRecordRef = db.collection("inventory_records").doc();
+        const isStocktake = updates.some(u => u.reason && u.reason.includes('盤點'));
+
+        transaction.set(inventoryRecordRef, {
+          changeDate: FieldValue.serverTimestamp(),
+          changeReason: isStocktake ? 'inventory_check' : 'manual_adjustment',
+          operatorId: contextAuth.uid,
+          operatorName: contextAuth.token?.name || '未知用戶',
+          remarks: updates[0]?.reason || (isStocktake ? '庫存盤點調整' : '快速更新庫存'),
+          relatedDocumentId: null,
+          relatedDocumentType: isStocktake ? 'stocktake' : 'quick_update',
+          details: inventoryRecordDetails,
+          createdAt: FieldValue.serverTimestamp(),
+        });
+      }
     });
 
-    logger.info(`使用者 ${contextAuth.uid} 快速更新了 ${itemType} ${itemId} 的庫存到 ${newStock}`);
-    return { success: true };
+    const summary = {
+      total: updates.length,
+      successful: successful.length,
+      failed: failed.length,
+      skipped: successful.filter(s => s.result === 'skipped').length
+    };
+
+    logger.info(`使用者 ${contextAuth.uid} 批量更新庫存：成功 ${summary.successful}，失敗 ${summary.failed}，跳過 ${summary.skipped}`);
+
+    // 回傳符合 BatchOperationResult 格式的回應
+    return {
+      successful,
+      failed,
+      summary
+    };
 
   } catch (error) {
-    logger.error(`快速更新庫存時發生錯誤:`, error);
+    logger.error(`批量更新庫存時發生錯誤:`, error);
     if (error instanceof HttpsError) { throw error; }
-    throw new HttpsError("internal", "快速更新庫存時發生未知錯誤。");
+    throw new HttpsError("internal", "批量更新庫存時發生未知錯誤。");
   }
 });
 

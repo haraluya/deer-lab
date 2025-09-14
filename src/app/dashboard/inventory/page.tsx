@@ -478,7 +478,7 @@ export default function InventoryPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            庫存監控
+            庫存管理
           </h1>
           <p className="text-gray-600 mt-2">全方位庫存監控與管理系統</p>
         </div>

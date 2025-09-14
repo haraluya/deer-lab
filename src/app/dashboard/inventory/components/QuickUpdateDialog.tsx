@@ -63,6 +63,11 @@ export function QuickUpdateDialog({ isOpen, onClose, item, onSuccess }: QuickUpd
     if (result.success) {
       onSuccess()
       onClose()
+    } else if (result.summary && result.summary.successful > 0) {
+      // 部分成功的情況
+      toast.success(`成功更新 ${result.summary.successful} 項庫存`)
+      onSuccess()
+      onClose()
     }
   }
 
