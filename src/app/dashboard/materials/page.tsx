@@ -567,32 +567,21 @@ export default function MaterialsPage() {
         }))
       });
 
-      if (result.success) {
-        // 檢查是否為批量操作結果
-        if (result.data?.summary) {
-          const summary = result.data.summary;
-          toast.success(`已更新 ${summary.successful} 項原料庫存`);
+      if (result.success && result.data) {
+        const { summary } = result.data;
+        if (summary.successful > 0) {
+          toast.success(`成功更新 ${summary.successful} 項原料庫存`);
           if (summary.failed > 0) {
-            toast.warning(`${summary.failed} 項原料更新失敗`);
+            toast.warning(`${summary.failed} 項更新失敗`);
           }
-        } else {
-          toast.success(`已更新 ${Object.keys(stocktakeUpdates).length} 項原料庫存`);
         }
         setStocktakeUpdates({});
         setStocktakeMode(false);
         fetchMaterials();
-      } else if (result.data?.summary) {
-        // 使用新的 BatchOperationResult 格式
-        const summary = result.data.summary;
-        if (summary.successful > 0) {
-          toast.success(`已更新 ${summary.successful} 項原料庫存`);
-          if (summary.failed > 0) {
-            toast.warning(`${summary.failed} 項原料更新失敗`);
-          }
-          setStocktakeUpdates({});
-          setStocktakeMode(false);
-          fetchMaterials();
-        }
+      } else {
+        // 處理API調用失敗
+        console.error('原料盤點API調用失敗:', result.error);
+        toast.error(result.error?.message || '盤點儲存失敗');
       }
     } catch (error) {
       console.error("盤點儲存失敗:", error);

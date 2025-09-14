@@ -65,28 +65,22 @@ export function QuickUpdateDialog({ isOpen, onClose, item, onSuccess }: QuickUpd
     const result = await apiClient.call('quickUpdateInventory', {
       updates: [updateData]
     })
-    
-    if (result.success) {
-      // 檢查是否為批量操作結果
-      if (result.data?.summary) {
-        const summary = result.data.summary;
-        if (summary.successful > 0) {
-          toast.success(`成功更新庫存`);
-          if (summary.failed > 0) {
-            toast.warning(`部分更新失敗：${summary.failed} 項`);
-          }
-        }
+
+    if (result.success && result.data) {
+      // 處理批量操作結果
+      const { summary } = result.data;
+      if (summary.successful > 0) {
+        toast.success('庫存更新成功');
+        onSuccess();
+        onClose();
       }
-      onSuccess()
-      onClose()
-    } else if (result.data?.summary && result.data.summary.successful > 0) {
-      // 部分成功的情況
-      toast.success(`成功更新 ${result.data.summary.successful} 項庫存`)
-      if (result.data.summary.failed > 0) {
-        toast.warning(`${result.data.summary.failed} 項更新失敗`)
+      if (summary.failed > 0) {
+        toast.error(`${summary.failed} 項更新失敗`);
       }
-      onSuccess()
-      onClose()
+    } else {
+      // 處理API調用失敗
+      console.error('API調用失敗:', result.error);
+      toast.error(result.error?.message || '庫存更新失敗');
     }
   }
 

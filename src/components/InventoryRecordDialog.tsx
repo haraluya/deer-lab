@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 
-import { Calendar, User, Package, TrendingUp, FileText, MessageSquare, List, Eye } from 'lucide-react';
+import { Calendar, User, Package, TrendingUp, FileText, MessageSquare, List } from 'lucide-react';
 import { InventoryRecord, getChangeReasonLabel, getItemTypeLabel, getItemDetailFromRecord } from '@/lib/inventoryRecords';
 
 interface InventoryRecordDialogProps {
@@ -122,17 +122,6 @@ export function InventoryRecordDialog({ record, isOpen, onClose, onViewItemHisto
                 </div>
               </div>
 
-              {record.relatedDocumentId && (
-                <div>
-                  <label className="text-sm font-medium text-gray-600">相關文件</label>
-                  <div className="mt-1 flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm bg-blue-50 px-3 py-2 rounded-md border text-blue-700">
-                      {record.relatedDocumentType || '相關文件'}: {record.relatedDocumentId}
-                    </span>
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
 
@@ -171,7 +160,6 @@ export function InventoryRecordDialog({ record, isOpen, onClose, onViewItemHisto
                       <TableHead>名稱</TableHead>
                       <TableHead>變動數量</TableHead>
                       <TableHead>變動後數量</TableHead>
-                      <TableHead>操作</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -203,17 +191,6 @@ export function InventoryRecordDialog({ record, isOpen, onClose, onViewItemHisto
                         </TableCell>
                         <TableCell className="font-bold text-gray-800">
                           {detail.quantityAfter}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleViewItemHistory(detail.itemId, detail.itemType)}
-                            className="text-xs"
-                          >
-                            <Eye className="h-3 w-3 mr-1" />
-                            查看歷史
-                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}

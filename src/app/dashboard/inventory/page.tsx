@@ -109,13 +109,51 @@ export default function InventoryPage() {
     testDirectLoad()
   }, [])
 
+  // 直接載入資料的函數
+  const loadInventoryData = useCallback(async () => {
+    try {
+      console.log('📦 重新載入庫存資料...')
+      setDirectLoading(true)
+      const { db } = await import('@/lib/firebase')
+      const { collection, getDocs } = await import('firebase/firestore')
+
+      if (!db) {
+        console.error('Firebase db 未初始化')
+        return
+      }
+
+      // 直接查詢 materials
+      const materialsSnapshot = await getDocs(collection(db, 'materials'))
+      const materialsList = materialsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+      console.log('重新載入的物料數量:', materialsList.length)
+      setDirectMaterials(materialsList)
+
+      // 直接查詢 fragrances
+      const fragrancesSnapshot = await getDocs(collection(db, 'fragrances'))
+      const fragrancesList = fragrancesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+      console.log('重新載入的香精數量:', fragrancesList.length)
+      setDirectFragrances(fragrancesList)
+
+    } catch (error) {
+      console.error('重新載入資料失敗:', error)
+    } finally {
+      setDirectLoading(false)
+    }
+  }, [])
+
   // 使用直接載入的資料替代快取 hooks
   const materials = directMaterials
   const fragrances = directFragrances
   const materialsLoading = directLoading
   const fragrancesLoading = directLoading
-  const refetchMaterials = async () => {}
-  const refetchFragrances = async () => {}
+  const refetchMaterials = loadInventoryData
+  const refetchFragrances = loadInventoryData
   
   // 計算整體載入狀態
   const loading = materialsLoading || fragrancesLoading
@@ -209,7 +247,7 @@ export default function InventoryPage() {
     },
     {
       title: '總庫存價值',
-      value: allInventoryItems.reduce((total, item) => total + ((item.currentStock || 0) * (item.costPerUnit || 0)), 0),
+      value: Math.round(allInventoryItems.reduce((total, item) => total + ((item.currentStock || 0) * (item.costPerUnit || 0)), 0)),
       subtitle: '元',
       icon: <DollarSign className="h-4 w-4" />,
       color: 'green',
@@ -393,8 +431,8 @@ export default function InventoryPage() {
         const apiData = result.data;
         console.log('📊 API 返回的數據結構:', apiData);
 
-        // 修正：使用正確的API回應結構
-        const overview = (apiData as any).overview || apiData;
+        // 修正：使用正確的API回應結構 (新格式: data.overview 或舊格式: overview)
+        const overview = (apiData as any).data?.overview || (apiData as any).overview || apiData;
         const localOverview: InventoryOverview = {
           totalMaterials: overview.totalMaterials || 0,
           totalFragrances: overview.totalFragrances || 0,
@@ -421,17 +459,13 @@ export default function InventoryPage() {
   // 重新載入庫存數據
   const reloadInventoryData = useCallback(async () => {
     try {
-      // 空的重新整理邏輯（因為我們直接使用統一 API）
-      const refetchMaterials = async () => {}
-      const refetchFragrances = async () => {}
-      
-      await refetchMaterials()
-      await refetchFragrances()
-      toast.success('庫存資料重新載入完成')
+      await loadInventoryData()
+      console.log('✅ 庫存資料重新載入完成')
     } catch (error) {
+      console.error('❌ 庫存重新載入失敗:', error)
       toast.error('重新載入失敗')
     }
-  }, [])
+  }, [loadInventoryData])
 
   // 重新整理所有數據  
   const refreshAll = useCallback(async () => {

@@ -10,7 +10,7 @@ import { useCartOperations } from '@/hooks/useCartOperations';
 import { useApiClient } from '@/hooks/useApiClient';
 import { StandardDataListPage, StandardColumn, StandardAction, StandardFilter, QuickFilter } from '@/components/StandardDataListPage';
 import { StandardStats } from '@/components/StandardStatsCard';
-import { Droplets, DollarSign, AlertTriangle, Building, Eye, Edit, Trash2, ShoppingCart, Plus, Calculator, Package, MoreHorizontal } from 'lucide-react';
+import { Droplets, DollarSign, AlertTriangle, Building, Eye, Edit, Trash2, ShoppingCart, Plus, Calculator, Package, MoreHorizontal, Warehouse } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,8 @@ export default function FragrancesPage() {
   const [searchValue, setSearchValue] = useState('');
   const [activeFilters, setActiveFilters] = useState<Record<string, any>>({});
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [stocktakeMode, setStocktakeMode] = useState(false);
+  const [stocktakeUpdates, setStocktakeUpdates] = useState<Record<string, number>>({});
 
   // 分頁狀態
   const [currentPage, setCurrentPage] = useState(1);
@@ -156,6 +158,45 @@ export default function FragrancesPage() {
     } catch (error) {
       console.error("加入購物車失敗:", error);
       toast.error("加入購物車失敗");
+    }
+  };
+
+  // 處理盤點儲存
+  const handleStocktakeSave = async () => {
+    if (!canManageFragrances || Object.keys(stocktakeUpdates).length === 0) {
+      toast.error("沒有變更需要儲存");
+      return;
+    }
+
+    try {
+      const result = await apiClient.call('quickUpdateInventory', {
+        updates: Object.entries(stocktakeUpdates).map(([id, quantity]) => ({
+          itemId: id,
+          newStock: quantity,
+          type: 'fragrance' as const,
+          reason: '盤點調整'
+        }))
+      });
+
+      if (result.success && result.data) {
+        const { summary } = result.data;
+        if (summary.successful > 0) {
+          toast.success(`成功更新 ${summary.successful} 項香精庫存`);
+          if (summary.failed > 0) {
+            toast.warning(`${summary.failed} 項更新失敗`);
+          }
+        }
+        setStocktakeUpdates({});
+        setStocktakeMode(false);
+        fetchFragrances();
+      } else {
+        // 處理API調用失敗
+        console.error('香精盤點API調用失敗:', result.error);
+        toast.error(result.error?.message || '盤點儲存失敗');
+      }
+    } catch (error) {
+      console.error("盤點儲存失敗:", error);
+      toast.error("盤點儲存失敗");
     }
   };
 
@@ -533,6 +574,26 @@ export default function FragrancesPage() {
     setActiveFilters({});
   };
 
+  // 工具列額外動作
+  const toolbarActions = (
+    <>
+      {canManageFragrances && (
+        <Button
+          variant="outline"
+          onClick={() => setStocktakeMode(!stocktakeMode)}
+          className={`transition-all duration-200 ${
+            stocktakeMode
+              ? 'bg-orange-100 border-orange-300 text-orange-700 hover:bg-orange-200'
+              : 'border-orange-200 text-orange-600 hover:bg-orange-600 hover:text-white hover:border-orange-600'
+          }`}
+        >
+          <Warehouse className="h-4 w-4 mr-2" />
+          {stocktakeMode ? '退出盤點' : '庫存盤點'}
+        </Button>
+      )}
+    </>
+  );
+
   // 自訂卡片渲染函數
   const renderFragranceCard = (fragrance: FragranceWithSupplier, index: number) => {
     const isLowStock = fragrance.safetyStockLevel && fragrance.currentStock < fragrance.safetyStockLevel;
@@ -750,6 +811,7 @@ export default function FragrancesPage() {
         
         // 工具列功能
         showToolbar={true}
+        toolbarActions={toolbarActions}
         showImportExport={canManageFragrances}
         onImport={() => setIsImportExportOpen(true)}
         
@@ -757,7 +819,14 @@ export default function FragrancesPage() {
         showAddButton={canManageFragrances}
         addButtonText="新增香精"
         onAdd={handleAdd}
-        
+
+        // 盤點模式
+        stocktakeMode={stocktakeMode}
+        onStocktakeModeChange={setStocktakeMode}
+        stocktakeUpdates={stocktakeUpdates}
+        onStocktakeUpdateChange={setStocktakeUpdates}
+        onStocktakeSave={handleStocktakeSave}
+
         // 權限控制
         permissions={{
           view: canViewFragrances,

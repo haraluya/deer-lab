@@ -27,7 +27,9 @@
       "Bash(gsutil lifecycle:*)",
       "Bash(gcloud storage buckets update:*)",
       "Bash(firebase firestore:export:*)",
-      "Bash(firebase functions:list:*)"
+      "Bash(firebase functions:list:*)",
+      "Bash(firebase firestore:databases:get:*)",
+      "Bash(gcloud firestore collections:*)"
     ],
     "deny": [],
     "ask": []

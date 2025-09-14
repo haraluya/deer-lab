@@ -41,14 +41,14 @@ export function InventoryOverviewCards({ overview, loading }: InventoryOverviewC
     },
     {
       title: "總物料成本",
-      value: `$${overview.totalMaterialCost.toLocaleString()}`,
+      value: `$${Math.round(overview.totalMaterialCost).toLocaleString()}`,
       subtitle: "當前庫存價值",
       icon: <DollarSign />,
       color: "green"
     },
     {
       title: "總香精成本",
-      value: `$${overview.totalFragranceCost.toLocaleString()}`, 
+      value: `$${Math.round(overview.totalFragranceCost).toLocaleString()}`,
       subtitle: "當前庫存價值",
       icon: <DollarSign />,
       color: "orange"

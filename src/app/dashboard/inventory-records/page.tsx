@@ -1,53 +1,49 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { useAuth } from "@/context/AuthContext"
 import { toast } from "sonner"
-import { DataTable } from "./data-table"
-import { createColumns, InventoryRecordColumn } from "./columns"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { usePermission } from '@/hooks/usePermission'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useDataSearch } from '@/hooks/useDataSearch'
+import { StandardDataListPage, StandardColumn, StandardAction, QuickFilter } from '@/components/StandardDataListPage'
+import { StandardStats } from '@/components/StandardStatsCard'
 import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { 
-  ClipboardList, 
-  Filter, 
-  Search, 
-  TrendingUp, 
-  Package, 
-  FlaskConical,
+import { Button } from "@/components/ui/button"
+import {
   Plus,
   Minus,
-  RefreshCw,
+  TrendingUp,
+  Calendar,
+  User,
+  Package,
+  FlaskConical,
   Eye,
   Shield
 } from "lucide-react"
-import { StandardStatsCard, StandardStats } from "@/components/StandardStatsCard"
-import { 
-  getInventoryRecords, 
-  InventoryRecord, 
+import {
+  getInventoryRecords,
+  InventoryRecord,
   InventoryRecordQueryParams,
   getChangeReasonLabel,
   getItemTypeLabel
 } from "@/lib/inventoryRecords"
 import { BUSINESS_CONFIG } from '@/config/business'
 import { InventoryRecordDialog } from "@/components/InventoryRecordDialog"
+import { Alert, AlertDescription } from '@/components/ui/alert'
+
+// 將 InventoryRecord 擴展為適合表格顯示的格式
+interface InventoryRecordWithExtras extends InventoryRecord {
+  materialCount: number;
+  fragranceCount: number;
+  changeReasonLabel: string;
+}
 
 function InventoryRecordsPageContent() {
   const { appUser } = useAuth()
-  const [records, setRecords] = useState<InventoryRecordColumn[]>([])
-  const [filteredRecords, setFilteredRecords] = useState<InventoryRecordColumn[]>([])
-  const [loading, setLoading] = useState(true)
-  
-  // 篩選狀態
-  const [filters, setFilters] = useState<InventoryRecordQueryParams>({
-    pageSize: BUSINESS_CONFIG.inventory.pagination.defaultPageSize
-  })
-  
+  const [records, setRecords] = useState<InventoryRecordWithExtras[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [selectedRows, setSelectedRows] = useState<string[]>([])
+
   // 對話框狀態
   const [selectedRecord, setSelectedRecord] = useState<InventoryRecord | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -55,90 +51,260 @@ function InventoryRecordsPageContent() {
   // 權限檢查
   const { hasPermission, isAdmin } = usePermission();
   const canViewInventoryRecords = hasPermission('inventoryRecords.view') || hasPermission('inventoryRecords:view');
-  
-  // 統計數據
-  const stats = useCallback(() => {
-    const total = records.length
-    const purchase = records.filter(r => r.changeReason === 'purchase').length
-    const workorder = records.filter(r => r.changeReason === 'workorder').length
-    const inventoryCheck = records.filter(r => r.changeReason === 'inventory_check').length
-    const manualAdjustment = records.filter(r => r.changeReason === 'manual_adjustment').length
-    
-    // 計算物料和香精數量（從details中統計）
-    let materials = 0
-    let fragrances = 0
-    records.forEach(record => {
-      record.details.forEach(detail => {
-        if (detail.itemType === 'material') {
-          materials++
-        } else if (detail.itemType === 'fragrance') {
-          fragrances++
-        }
-      })
-    })
 
-    return { total, purchase, workorder, inventoryCheck, manualAdjustment, materials, fragrances }
-  }, [records])
+  // 搜尋配置
+  const searchConfig = {
+    searchFields: [
+      { key: 'remarks' as keyof InventoryRecordWithExtras },
+      { key: 'operatorName' as keyof InventoryRecordWithExtras }
+    ],
+    filterConfigs: [
+      {
+        key: 'changeReason' as keyof InventoryRecordWithExtras,
+        type: 'set' as const
+      }
+    ]
+  };
+
+  const {
+    searchTerm,
+    setSearchTerm,
+    activeFilters,
+    setFilter,
+    clearFilter,
+    filteredData: filteredRecords,
+    totalCount,
+    filteredCount
+  } = useDataSearch(records, searchConfig);
 
   const loadRecords = useCallback(async () => {
-    setLoading(true)
+    setIsLoading(true)
     try {
-      const result = await getInventoryRecords(filters)
-      setRecords(result.records)
-      setFilteredRecords(result.records)
+      const result = await getInventoryRecords({
+        pageSize: BUSINESS_CONFIG.inventory.pagination.defaultPageSize
+      })
+
+      // 擴展記錄資料以便於表格顯示
+      const extendedRecords: InventoryRecordWithExtras[] = result.records.map(record => ({
+        ...record,
+        materialCount: record.details.filter(d => d.itemType === 'material').length,
+        fragranceCount: record.details.filter(d => d.itemType === 'fragrance').length,
+        changeReasonLabel: getChangeReasonLabel(record.changeReason)
+      }))
+
+      setRecords(extendedRecords)
     } catch (error) {
       console.error('載入庫存紀錄失敗:', error)
       toast.error('載入庫存紀錄失敗')
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
-  }, [filters])
+  }, [])
 
   useEffect(() => {
-    loadRecords()
-  }, [loadRecords])
+    if (canViewInventoryRecords) {
+      loadRecords()
+    }
+  }, [canViewInventoryRecords, loadRecords])
 
-  // 篩選功能
-  const applyFilters = useCallback(() => {
-    let filtered = records
-
-    // 搜尋篩選
-    if (filters.remarks) {
-      filtered = filtered.filter(r => 
-        (r.remarks && r.remarks.toLowerCase().includes(filters.remarks!.toLowerCase())) ||
-        (r.operatorName && r.operatorName.toLowerCase().includes(filters.remarks!.toLowerCase()))
+  // 定義表格欄位
+  const columns: StandardColumn<InventoryRecordWithExtras>[] = [
+    {
+      key: 'changeDate',
+      title: '動作時間',
+      sortable: true,
+      priority: 5,
+      render: (value, record) => {
+        const date = record.changeDate
+        return (
+          <div className="text-sm text-gray-700">
+            <div className="font-medium">
+              {new Intl.DateTimeFormat('zh-TW', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+              }).format(date)}
+            </div>
+            <div className="text-xs text-gray-500">
+              {new Intl.DateTimeFormat('zh-TW', {
+                hour: '2-digit',
+                minute: '2-digit'
+              }).format(date)}
+            </div>
+          </div>
+        )
+      },
+      mobileRender: (value, record) => (
+        <div className="text-sm">
+          <div className="font-medium">
+            {new Intl.DateTimeFormat('zh-TW', {
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit'
+            }).format(record.changeDate)}
+          </div>
+        </div>
       )
+    },
+    {
+      key: 'changeReason',
+      title: '動作類型',
+      sortable: true,
+      filterable: true,
+      priority: 4,
+      render: (value, record) => {
+        const getBadgeVariant = (reason: string) => {
+          switch (reason) {
+            case 'purchase': return 'default'
+            case 'workorder': return 'secondary'
+            case 'inventory_check': return 'outline'
+            case 'manual_adjustment': return 'destructive'
+            default: return 'secondary'
+          }
+        }
+
+        return (
+          <Badge variant={getBadgeVariant(record.changeReason)} className="text-xs">
+            {record.changeReasonLabel}
+          </Badge>
+        )
+      }
+    },
+    {
+      key: 'details',
+      title: '影響項目',
+      sortable: true,
+      priority: 3,
+      render: (value, record) => (
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            <Package className="h-3 w-3 text-blue-500" />
+            <span className="text-xs text-blue-600 font-medium">{record.materialCount}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <FlaskConical className="h-3 w-3 text-purple-500" />
+            <span className="text-xs text-purple-600 font-medium">{record.fragranceCount}</span>
+          </div>
+          <div className="text-xs text-gray-500">
+            共 {record.details.length} 項
+          </div>
+        </div>
+      ),
+      mobileRender: (value, record) => (
+        <div className="text-xs text-gray-500">
+          共 {record.details.length} 項
+        </div>
+      )
+    },
+    {
+      key: 'operatorName',
+      title: '操作人員',
+      sortable: true,
+      searchable: true,
+      priority: 3,
+      render: (value) => (
+        <div className="text-gray-700 font-medium">
+          {value}
+        </div>
+      )
+    },
+    {
+      key: 'remarks',
+      title: '備註',
+      sortable: true,
+      searchable: true,
+      priority: 2,
+      hideOnMobile: true,
+      render: (value) => {
+        if (!value) {
+          return <div className="text-gray-400 text-sm">-</div>
+        }
+        return (
+          <div className="text-gray-600 text-sm max-w-xs truncate" title={value}>
+            {value}
+          </div>
+        )
+      }
     }
+  ];
 
-    // 原因篩選
-    if (filters.changeReason) {
-      filtered = filtered.filter(r => r.changeReason === filters.changeReason)
+  // 定義操作
+  const actions: StandardAction<InventoryRecordWithExtras>[] = [
+    {
+      key: 'view',
+      title: '查看詳情',
+      icon: <Eye className="h-4 w-4" />,
+      onClick: (record) => {
+        setSelectedRecord(record)
+        setIsDialogOpen(true)
+      }
     }
+  ];
 
-    setFilteredRecords(filtered)
-  }, [records, filters])
+  // 統計資訊
+  const stats: StandardStats[] = useMemo(() => {
+    const purchase = records.filter(r => r.changeReason === 'purchase').length
+    const workorder = records.filter(r => r.changeReason === 'workorder').length
+    const inventoryCheck = records.filter(r => r.changeReason === 'inventory_check').length
+    const manualAdjustment = records.filter(r => r.changeReason === 'manual_adjustment').length
 
-  useEffect(() => {
-    applyFilters()
-  }, [applyFilters])
+    return [
+      {
+        title: '採購購入',
+        value: purchase,
+        subtitle: '採購入庫紀錄',
+        icon: <Plus className="h-4 w-4" />,
+        color: 'green'
+      },
+      {
+        title: '工單領料',
+        value: workorder,
+        subtitle: '工單出庫紀錄',
+        icon: <Minus className="h-4 w-4" />,
+        color: 'orange'
+      },
+      {
+        title: '庫存盤點',
+        value: inventoryCheck,
+        subtitle: '盤點調整紀錄',
+        icon: <TrendingUp className="h-4 w-4" />,
+        color: 'blue'
+      },
+      {
+        title: '直接修改',
+        value: manualAdjustment,
+        subtitle: '手動調整紀錄',
+        icon: <TrendingUp className="h-4 w-4" />,
+        color: 'red'
+      }
+    ];
+  }, [records]);
 
-  const handleFilterChange = (key: keyof InventoryRecordQueryParams, value: string | null | undefined) => {
-    setFilters(prev => ({ ...prev, [key]: value }))
-  }
+  // 快速篩選標籤
+  const quickFilters: QuickFilter[] = useMemo(() => {
+    const changeReasons = new Map<string, number>();
 
-  const clearFilters = () => {
-    setFilters({ pageSize: BUSINESS_CONFIG.inventory.pagination.defaultPageSize })
-  }
+    records.forEach(record => {
+      const reason = record.changeReason;
+      changeReasons.set(reason, (changeReasons.get(reason) || 0) + 1);
+    });
 
-  const handleRecordClick = (record: InventoryRecord) => {
-    setSelectedRecord(record)
-    setIsDialogOpen(true)
-  }
+    const reasonColors: Record<string, 'blue' | 'green' | 'orange' | 'red'> = {
+      'purchase': 'green',
+      'workorder': 'orange',
+      'inventory_check': 'blue',
+      'manual_adjustment': 'red'
+    };
 
-  // 創建表格欄位定義，傳入點擊處理函數
-  const columns = createColumns(handleRecordClick)
-
-  const currentStats = stats()
+    return Array.from(changeReasons.entries()).map(([reason, count]) => ({
+      key: 'changeReason',
+      label: getChangeReasonLabel(reason),
+      value: reason,
+      count: count,
+      color: reasonColors[reason] || 'blue'
+    }));
+  }, [records]);
 
   // 權限保護：如果沒有查看權限，顯示無權限頁面
   if (!canViewInventoryRecords && !isAdmin()) {
@@ -155,7 +321,7 @@ function InventoryRecordsPageContent() {
   }
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8 max-w-7xl">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-600 to-indigo-600 bg-clip-text text-transparent">
@@ -163,123 +329,69 @@ function InventoryRecordsPageContent() {
           </h1>
           <p className="text-gray-600 mt-2">完整的庫存變動追蹤與審計系統</p>
         </div>
-        <Button 
-          variant="outline"
-          onClick={loadRecords}
-          className="hover:bg-gray-50 transition-all duration-200"
-        >
-          <RefreshCw className="mr-2 h-4 w-4" />
-          重新整理
-        </Button>
       </div>
 
-      {/* 統計卡片 */}
-      <StandardStatsCard stats={[
-        {
-          title: "採購購入",
-          value: currentStats.purchase,
-          subtitle: "採購入庫紀錄",
-          icon: <Plus />,
-          color: "green"
-        },
-        {
-          title: "工單領料",
-          value: currentStats.workorder,
-          subtitle: "工單出庫紀錄",
-          icon: <Minus />,
-          color: "orange"
-        },
-        {
-          title: "庫存盤點",
-          value: currentStats.inventoryCheck,
-          subtitle: "盤點調整紀錄",
-          icon: <TrendingUp />,
-          color: "blue"
-        },
-        {
-          title: "直接修改",
-          value: currentStats.manualAdjustment,
-          subtitle: "手動調整紀錄",
-          icon: <TrendingUp />,
-          color: "red"
+      <StandardDataListPage
+        data={filteredRecords}
+        loading={isLoading}
+        columns={columns}
+        actions={actions}
+        onRowClick={(record) => {
+          setSelectedRecord(record)
+          setIsDialogOpen(true)
+        }}
+
+        // 搜尋與過濾
+        searchable={true}
+        searchPlaceholder="搜尋備註、操作人員..."
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        quickFilters={quickFilters}
+        activeFilters={activeFilters}
+        onFilterChange={(key, value) => {
+          if (value === null) {
+            clearFilter(key);
+          } else {
+            setFilter(key, value);
+          }
+        }}
+        onClearFilters={() => {
+          Object.keys(activeFilters).forEach(key => clearFilter(key));
+        }}
+
+        // 選擇功能
+        selectable={false}
+
+        // 統計資訊
+        stats={stats}
+        showStats={true}
+
+        // 工具列功能
+        showToolbar={true}
+        toolbarActions={
+          <Button
+            variant="outline"
+            onClick={loadRecords}
+            className="hover:bg-gray-50 transition-all duration-200"
+          >
+            <TrendingUp className="mr-2 h-4 w-4" />
+            重新整理
+          </Button>
         }
-      ]} />
 
-      {/* 篩選區域 */}
-      <Card className="bg-white/80 backdrop-blur-sm border-gray-200">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg text-gray-800 flex items-center gap-2">
-            <Filter className="h-5 w-5 text-gray-600" />
-            篩選條件
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="search" className="text-sm font-medium text-gray-700">搜尋</Label>
-              <Input
-                id="search"
-                placeholder="備註、操作人員..."
-                value={filters.remarks || ''}
-                onChange={(e) => handleFilterChange('remarks', e.target.value)}
-                className="mt-1"
-              />
-            </div>
+        // 權限控制
+        permissions={{
+          view: canViewInventoryRecords,
+          create: false,
+          edit: false,
+          delete: false,
+          export: false,
+          import: false
+        }}
 
-            <div>
-              <Label htmlFor="changeReason" className="text-sm font-medium text-gray-700">變動原因</Label>
-              <Select
-                value={filters.changeReason || 'all'}
-                onValueChange={(value) => handleFilterChange('changeReason', value === 'all' ? undefined : value)}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="選擇原因" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">全部原因</SelectItem>
-                  <SelectItem value="purchase">採購購入</SelectItem>
-                  <SelectItem value="workorder">工單領料</SelectItem>
-                  <SelectItem value="inventory_check">庫存盤點</SelectItem>
-                  <SelectItem value="manual_adjustment">直接修改</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+        className="space-y-6"
+      />
 
-            <div className="flex items-end">
-              <Button
-                variant="outline"
-                onClick={clearFilters}
-                className="w-full hover:bg-gray-50 transition-all duration-200"
-              >
-                清除篩選
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 庫存紀錄表格 */}
-      {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <div className="flex flex-col items-center justify-center">
-            <div className="relative">
-              <div className="w-16 h-16 border-4 border-gray-200 rounded-full animate-spin"></div>
-              <div className="absolute top-0 left-0 w-16 h-16 border-4 border-transparent border-t-blue-500 rounded-full animate-spin"></div>
-            </div>
-            <span className="mt-6 text-gray-600 font-medium text-lg">載入庫存紀錄中...</span>
-            <p className="text-gray-500 text-sm mt-2">請稍候，正在從資料庫讀取資料</p>
-          </div>
-        </div>
-      ) : (
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm">
-          <DataTable 
-            columns={columns} 
-            data={filteredRecords} 
-            onRowClick={handleRecordClick}
-          />
-        </div>
-      )}
-      
       {/* 庫存紀錄詳情對話框 */}
       <InventoryRecordDialog
         record={selectedRecord}

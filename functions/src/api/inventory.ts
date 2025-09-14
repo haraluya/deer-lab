@@ -152,14 +152,22 @@ export const getInventoryOverview = onCall(async (request) => {
     });
 
     return {
-      overview: {
-        totalMaterials,
-        totalFragrances,
-        totalMaterialCost: Math.round(totalMaterialCost),
-        totalFragranceCost: Math.round(totalFragranceCost),
-        lowStockMaterials,
-        lowStockFragrances,
-        totalLowStock: lowStockMaterials + lowStockFragrances
+      success: true,
+      data: {
+        overview: {
+          totalMaterials,
+          totalFragrances,
+          totalMaterialCost: Math.round(totalMaterialCost),
+          totalFragranceCost: Math.round(totalFragranceCost),
+          lowStockMaterials,
+          lowStockFragrances,
+          totalLowStock: lowStockMaterials + lowStockFragrances
+        }
+      },
+      meta: {
+        timestamp: Date.now(),
+        requestId: `inventory_overview_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+        version: '1.0'
       }
     };
   } catch (error) {
