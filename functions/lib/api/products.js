@@ -745,7 +745,12 @@ exports.getProductFragranceHistory = (0, apiWrapper_1.createApiHandler)({
             .where('productId', '==', productId)
             .orderBy('changeDate', 'desc');
         const snapshot = await query.get();
-        const records = snapshot.docs.map(doc => (Object.assign({ id: doc.id }, doc.data())));
+        const records = snapshot.docs.map(doc => {
+            var _a, _b;
+            const data = doc.data();
+            // 🔧 修復：明確轉換 Firestore Timestamp 為 JavaScript Date
+            return Object.assign(Object.assign({ id: doc.id }, data), { changeDate: ((_a = data.changeDate) === null || _a === void 0 ? void 0 : _a.toDate()) || null, createdAt: ((_b = data.createdAt) === null || _b === void 0 ? void 0 : _b.toDate()) || null });
+        });
         firebase_functions_1.logger.info(`[${requestId}] 產品 ${productId} 香精歷史查詢成功，找到 ${records.length} 筆記錄`);
         return {
             records,

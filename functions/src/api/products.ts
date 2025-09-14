@@ -926,10 +926,17 @@ export const getProductFragranceHistory = createApiHandler(
         .orderBy('changeDate', 'desc');
 
       const snapshot = await query.get();
-      const records = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const records = snapshot.docs.map(doc => {
+        const data = doc.data();
+
+        // 🔧 修復：明確轉換 Firestore Timestamp 為 JavaScript Date
+        return {
+          id: doc.id,
+          ...data,
+          changeDate: data.changeDate?.toDate() || null,
+          createdAt: data.createdAt?.toDate() || null
+        };
+      });
 
       logger.info(`[${requestId}] 產品 ${productId} 香精歷史查詢成功，找到 ${records.length} 筆記錄`);
 

@@ -49,14 +49,14 @@ function FragranceHistoryPageContent() {
   const canManageProducts = hasPermission('products.manage') || hasPermission('products:manage');
 
   // 載入香精更換歷史資料
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (currentPage: number, pageSize: number, searchTerm: string) => {
     setState(prev => ({ ...prev, loading: true, error: null }));
-    
+
     try {
       const result = await apiClient.call('getFragranceChangeHistory', {
-        page: state.currentPage,
-        pageSize: state.pageSize,
-        searchTerm: state.searchTerm.trim()
+        page: currentPage,
+        pageSize: pageSize,
+        searchTerm: searchTerm.trim()
       });
 
       if (result.success && result.data) {
@@ -80,11 +80,12 @@ function FragranceHistoryPageContent() {
       }));
       toast.error(errorMessage);
     }
-  }, [state.currentPage, state.pageSize, state.searchTerm, apiClient]);
+  }, [apiClient]);
 
+  // 🔧 修復：使用 state 的值作為 useEffect 的依賴，避免無限循環
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    loadData(state.currentPage, state.pageSize, state.searchTerm);
+  }, [state.currentPage, state.pageSize, state.searchTerm, loadData]);
 
   // 處理搜尋
   const handleSearch = (searchValue: string) => {
@@ -267,7 +268,7 @@ function FragranceHistoryPageContent() {
                         </div>
                         <h3 className="text-lg font-medium text-foreground mb-2">載入失敗</h3>
                         <p className="text-muted-foreground mb-4">{state.error}</p>
-                        <Button onClick={loadData} variant="outline">重新載入</Button>
+                        <Button onClick={() => loadData(state.currentPage, state.pageSize, state.searchTerm)} variant="outline">重新載入</Button>
                       </div>
                     </TableCell>
                   </TableRow>
