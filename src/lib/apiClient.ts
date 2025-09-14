@@ -138,7 +138,7 @@ export class ApiClient {
       }
 
     } catch (error: any) {
-      return this.handleExceptionError(error, mergedOptions, toastId);
+      return this.handleExceptionError(error, mergedOptions, toastId, functionName);
     }
   }
 
@@ -378,7 +378,8 @@ export class ApiClient {
   private handleExceptionError(
     error: any,
     options: ApiCallOptions,
-    toastId?: string | number
+    toastId?: string | number,
+    functionName?: string
   ): ApiCallResult {
     if (toastId !== undefined) {
       toast.dismiss(toastId);
@@ -418,7 +419,7 @@ export class ApiClient {
     console.error('API 調用異常:', {
       originalError: error,
       processedError: errorInfo,
-      functionName: error.functionName || 'unknown'
+      functionName: functionName || error.functionName || 'unknown'
     });
 
     if (options.customErrorHandler) {

@@ -372,7 +372,7 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
       const result = await apiClient.call(
         isEditMode ? 'updateProduct' : 'createProduct',
         isEditMode
-          ? { id: productData.id, ...payload } as any
+          ? { productId: productData.id, ...payload } as any
           : payload
       );
       
@@ -474,7 +474,7 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
                      render={({ field }) => (
                        <FormItem className="space-y-2">
                          <FormLabel className="text-sm font-semibold text-gray-700">產品狀態</FormLabel>
-                         <Select onValueChange={field.onChange} defaultValue={field.value}>
+                         <Select onValueChange={field.onChange} value={field.value}>
                            <FormControl>
                              <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
                                <SelectValue placeholder="選擇產品狀態" />
