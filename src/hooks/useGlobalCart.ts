@@ -93,70 +93,33 @@ export function useGlobalCart() {
     }
   }, [isLoading, apiClient]);
 
-  // 添加項目到購物車 - 樂觀更新以提升速度
-  const addToCart = useCallback(async (item: Omit<CartItem, 'id' | 'addedBy' | 'addedAt' | 'updatedAt'>) => {
-    // 立即樂觀更新本地狀態
-    const newItemId = `${item.type}_${item.code}_${Date.now()}`;
-    const optimisticItem: CartItem = {
-      ...item,
-      id: newItemId,
-      addedBy: 'current_user',
-      addedAt: new Date(),
-      updatedAt: new Date()
-    };
-
-    // 使用函數式更新來檢查和更新狀態
-    setCartItems(prevItems => {
-      // 檢查是否已存在相同項目
-      const existingItemIndex = prevItems.findIndex(
-        (i) => i.type === item.type && i.code === item.code && i.supplierId === item.supplierId
-      );
-
-      let updatedItems;
-      if (existingItemIndex >= 0) {
-        // 增加現有項目的數量
-        updatedItems = [...prevItems];
-        updatedItems[existingItemIndex] = {
-          ...updatedItems[existingItemIndex],
-          quantity: updatedItems[existingItemIndex].quantity + item.quantity,
-          updatedAt: new Date()
-        };
-      } else {
-        // 添加新項目
-        updatedItems = [...prevItems, optimisticItem];
-      }
-
-      // 更新計數
-      setCartItemCount(updatedItems.length);
-      return updatedItems;
-    });
-
-    // 立即顯示成功提示，不等待網路請求
-    toast.success('已加入購物車');
-
-    // 背景同步到 Firebase
+  // 添加項目到購物車 - 極簡引用模式，響應式更新
+  const addToCart = useCallback(async (item: { type: 'material' | 'fragrance'; code: string; quantity: number }) => {
     try {
       setIsSyncing(true);
-      
-      const result = await apiClient.call('testAddToGlobalCart', {
+
+      console.log('🚀 開始加入購物車:', { type: item.type, code: item.code, quantity: item.quantity });
+
+      const result = await apiClient.call('addToGlobalCart', {
         type: item.type,
-        itemId: item.code, // 使用 code 作為 itemId
-        quantity: item.quantity,
-        supplierId: item.supplierId
+        code: item.code,
+        quantity: item.quantity
       });
-      
+
+      console.log('📝 API 調用結果:', result);
+
       if (result.success) {
-        // 成功，但不再顯示提示（已經顯示過了）
+        // ✅ 只有 API 成功後才顯示成功提示
+        toast.success('已加入購物車');
         return true;
       } else {
-        // 失敗時顯示錯誤並讓 Firestore 監聽自動同步回正確狀態
-        toast.error('同步到雲端失敗，但項目已暫存本地');
+        console.error('❌ API 調用失敗:', result.error);
+        toast.error(`加入購物車失敗: ${result.error?.message || '未知錯誤'}`);
         return false;
       }
     } catch (error) {
-      console.error('背景同步失敗:', error);
-      // 暫時顯示錯誤訊息以便調試
-      toast.error(`購物車同步失敗: ${error instanceof Error ? error.message : '未知錯誤'}`);
+      console.error('❌ API 調用異常:', error);
+      toast.error(`加入購物車失敗: ${error instanceof Error ? error.message : '未知錯誤'}`);
       return false;
     } finally {
       setIsSyncing(false);
@@ -249,18 +212,9 @@ export function useGlobalCart() {
   }, [apiClient]);
 
   // 獲取供應商分組的購物車項目
-  const getCartBySupplier = useCallback(() => {
-    const grouped: { [key: string]: CartItem[] } = {};
-    
-    cartItems.forEach(item => {
-      if (!grouped[item.supplierId]) {
-        grouped[item.supplierId] = [];
-      }
-      grouped[item.supplierId].push(item);
-    });
-    
-    return grouped;
-  }, [cartItems]);
+  // 🚫 已移除 getCartBySupplier 函數
+  // 理由：極簡引用模式下 CartItem 不包含 supplierId/supplierName
+  // 供應商分組功能已移至各個頁面的 cartBySupplier useMemo 中實作
 
   return {
     cartItems,
@@ -270,8 +224,7 @@ export function useGlobalCart() {
     addToCart,
     updateCartItem,
     removeFromCart,
-    clearCart,
-    getCartBySupplier
+    clearCart
   };
 }
 

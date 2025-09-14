@@ -372,7 +372,7 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
       const result = await apiClient.call(
         isEditMode ? 'updateProduct' : 'createProduct',
         isEditMode
-          ? { id: productData.id, ...payload }
+          ? { id: productData.id, ...payload } as any
           : payload
       );
       

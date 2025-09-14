@@ -46,11 +46,11 @@ interface PurchaseOrderView {
 }
 
 
-// 供應商分組的採購車
+// 供應商分組的採購車 - 包含豐富的項目資料
 interface SupplierCartGroup {
   supplierId: string;
   supplierName: string;
-  items: CartItem[];
+  items: any[]; // 豐富的項目資料，包含從原料/香精查詢到的詳細資訊
 }
 
 // 搜尋結果項目
@@ -66,7 +66,7 @@ interface SearchResult {
   currentStock: number;
   // 新增欄位
   category?: string;
-  subcategory?: string;
+  subCategory?: string;
   series?: string;
   usedInProducts?: string[];
 }
@@ -337,7 +337,7 @@ function PurchaseOrdersPageContent() {
   const [selectedCartItems, setSelectedCartItems] = useState<Set<string>>(new Set());
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-  const [itemDetailDialog, setItemDetailDialog] = useState<{open: boolean, item: CartItem | null}>({open: false, item: null});
+  const [itemDetailDialog, setItemDetailDialog] = useState<{open: boolean, item: any | null}>({open: false, item: null});
 
   // 載入採購單資料
   const loadPurchaseOrders = useCallback(async () => {
@@ -407,179 +407,244 @@ function PurchaseOrdersPageContent() {
     }
   }, []);
 
-  // 載入物料、香精和供應商資料 - 全部即時計算用途/使用產品
+  // 🚀 按需載入模式：只載入購物車內項目的對應資料
   const loadItems = useCallback(async () => {
     try {
       if (!db) {
         throw new Error("Firebase 未初始化")
       }
 
-      // 載入供應商
-      const suppliersSnapshot = await getDocs(collection(db, 'suppliers'));
-      const suppliersList = suppliersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        name: doc.data().name
-      }));
-      setSuppliers(suppliersList);
+      // 🚀 按需載入：只處理購物車中實際存在的項目
+      if (cartItems.length === 0) {
+        console.log('📝 購物車為空，跳過資料載入');
+        setMaterials([]);
+        setFragrances([]);
+        setSuppliers([]);
+        return;
+      }
 
-      const suppliersMap = new Map<string, string>();
-      suppliersSnapshot.forEach(doc => suppliersMap.set(doc.id, doc.data().name));
+      console.log(`🎯 按需載入：處理 ${cartItems.length} 個購物車項目`);
 
-      // 載入分類資料 - 即時計算原料分類
-      const categoriesSnapshot = await getDocs(collection(db, 'materialCategories'));
-      const categoriesMap = new Map<string, {name: string, subCategories?: any}>();
-      categoriesSnapshot.forEach(doc => {
-        const data = doc.data();
-        categoriesMap.set(doc.id, {
-          name: data.name,
-          subCategories: data.subCategories || {}
+      // 分析購物車中的項目類型和代碼
+      const materialCodes = cartItems.filter(item => item.type === 'material').map(item => item.code);
+      const fragranceCodes = cartItems.filter(item => item.type === 'fragrance').map(item => item.code);
+
+      console.log(`📦 需要載入原料: ${materialCodes.length} 個`, materialCodes);
+      console.log(`🌸 需要載入香精: ${fragranceCodes.length} 個`, fragranceCodes);
+
+      // 用於收集需要載入的關聯資料ID
+      const neededSupplierIds = new Set<string>();
+      const neededFragranceIds = new Set<string>();
+      const neededSeriesIds = new Set<string>();
+
+      // 📦 第一步：載入購物車中的原料資料，收集關聯ID
+      let materialsData: any[] = [];
+      if (materialCodes.length > 0) {
+        const materialsSnapshot = await getDocs(
+          query(collection(db, 'materials'), where('code', 'in', materialCodes))
+        );
+
+        materialsSnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          materialsData.push({ id: doc.id, ...data });
+
+          // 收集需要的供應商 ID - 支援多種資料格式
+          // 注意：原料分類是直接以字串儲存，不需要額外查詢
+          if (data.supplierId) neededSupplierIds.add(data.supplierId);
+          if (data.supplierRef?.id) neededSupplierIds.add(data.supplierRef.id);
         });
-      });
+        console.log(`📦 載入了 ${materialsSnapshot.docs.length} 個原料`);
+      }
 
-      // 載入產品系列資料
-      const productSeriesSnapshot = await getDocs(collection(db, 'productSeries'));
-      const seriesMap = new Map<string, string>();
-      productSeriesSnapshot.forEach(doc => {
-        const data = doc.data();
-        seriesMap.set(doc.id, data.name);
-      });
+      // 🌸 第二步：載入購物車中的香精資料，收集關聯ID
+      let fragrancesData: any[] = [];
+      if (fragranceCodes.length > 0) {
+        const fragrancesSnapshot = await getDocs(
+          query(collection(db, 'fragrances'), where('code', 'in', fragranceCodes))
+        );
 
-      // 載入產品資料，用於找出香精的使用產品
-      const productsSnapshot = await getDocs(collection(db, 'products'));
-      const productsMap = new Map<string, string[]>(); // fragranceId -> productDisplayNames[]
+        fragrancesSnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          fragrancesData.push({ id: doc.id, ...data });
 
-      productsSnapshot.docs.forEach(doc => {
-        const productData = doc.data();
-        const productName = productData.name;
-        // 從 productSeries 集合中獲取系列名稱
-        const seriesName = seriesMap.get(productData.seriesRef?.id);
+          // 收集需要的供應商 ID 和香精 ID - 支援多種資料格式
+          if (data.supplierId) neededSupplierIds.add(data.supplierId);
+          if (data.supplierRef?.id) neededSupplierIds.add(data.supplierRef.id);
+          neededFragranceIds.add(doc.id); // 用於查找使用產品
+        });
+        console.log(`🌸 載入了 ${fragrancesSnapshot.docs.length} 個香精`);
+      }
 
-        // 組合顯示名稱：如果有系列名稱，則顯示為「系列名稱 - 產品名稱」
-        const displayName = seriesName ? `${seriesName} - ${productName}` : productName;
+      // 🏪 第三步：載入需要的供應商資料
+      const suppliersMap = new Map<string, string>();
+      if (neededSupplierIds.size > 0) {
+        const suppliersSnapshot = await getDocs(
+          query(collection(db, 'suppliers'), where('__name__', 'in', Array.from(neededSupplierIds)))
+        );
+        suppliersSnapshot.forEach(doc => {
+          suppliersMap.set(doc.id, doc.data().name);
+        });
+        console.log(`🏪 載入了 ${suppliersSnapshot.docs.length} 個供應商`);
+      }
 
-        // 檢查產品的香精參考
-        if (productData.currentFragranceRef?.id) {
-          const fragranceId = productData.currentFragranceRef.id;
+      // 📁 第四步：分類資料處理（原料分類直接以字串儲存，跳過此步驟）
+      console.log(`📁 原料分類以直接字串儲存，無需額外查詢`);
 
-          console.log(`🔗 產品 "${displayName}" 使用香精:`, {
-            產品ID: doc.id,
-            產品名稱: displayName,
-            引用的香精ID: fragranceId,
-            currentFragranceRef: productData.currentFragranceRef
-          });
+      // 🎯 第五步：載入香精相關的產品資料（只查詢使用了這些香精的產品）
+      const productsMap = new Map<string, string[]>();
+      if (neededFragranceIds.size > 0) {
+        console.log(`🔍 開始查詢使用香精的產品，香精ID:`, Array.from(neededFragranceIds));
 
-          if (!productsMap.has(fragranceId)) {
-            productsMap.set(fragranceId, []);
+        // 嘗試不同的查詢方式來找到使用香精的產品
+        const productsSnapshot = await getDocs(collection(db, 'products'));
+
+        console.log(`📋 載入了 ${productsSnapshot.docs.length} 個產品進行篩選`);
+
+        // 收集需要的產品系列 ID 和香精映射
+        const validProducts: any[] = [];
+
+        productsSnapshot.docs.forEach(doc => {
+          const productData = doc.data();
+          const fragranceRefId = productData.currentFragranceRef?.id;
+
+          if (fragranceRefId && neededFragranceIds.has(fragranceRefId)) {
+            console.log(`✅ 找到使用香精 ${fragranceRefId} 的產品: ${productData.name}`);
+            validProducts.push({ id: doc.id, ...productData });
+            if (productData.seriesRef?.id) neededSeriesIds.add(productData.seriesRef.id);
           }
-          productsMap.get(fragranceId)?.push(displayName);
-        } else {
-          console.log(`❌ 產品 "${displayName}" 沒有香精引用:`, {
-            產品ID: doc.id,
-            currentFragranceRef: productData.currentFragranceRef
+        });
+
+        console.log(`🎯 篩選出 ${validProducts.length} 個使用目標香精的產品`);
+
+        // 載入需要的產品系列
+        const seriesMap = new Map<string, string>();
+        if (neededSeriesIds.size > 0) {
+          const seriesSnapshot = await getDocs(
+            query(collection(db, 'productSeries'), where('__name__', 'in', Array.from(neededSeriesIds)))
+          );
+          seriesSnapshot.forEach(doc => {
+            seriesMap.set(doc.id, doc.data().name);
           });
+          console.log(`📁 載入了 ${seriesSnapshot.docs.length} 個產品系列`);
         }
-      });
 
-      // 載入物料 - 即時計算分類資訊
-      const materialsSnapshot = await getDocs(collection(db, 'materials'));
-      const materialsList = materialsSnapshot.docs.map(doc => {
-        const data = doc.data();
+        // 組合產品名稱並建立香精→產品的映射
+        validProducts.forEach(productData => {
+          const productName = productData.name;
+          const seriesName = seriesMap.get(productData.seriesRef?.id);
+          const displayName = seriesName ? `${seriesName} - ${productName}` : productName;
 
-        // 即時計算分類名稱
-        let categoryName = '';
-        let subCategoryName = '';
-
-        if (data.categoryRef?.id) {
-          const categoryData = categoriesMap.get(data.categoryRef.id);
-          if (categoryData) {
-            categoryName = categoryData.name;
-            // 獲取細分分類名稱
-            if (data.subCategoryRef?.id && categoryData.subCategories) {
-              const subCategory = categoryData.subCategories[data.subCategoryRef.id];
-              if (subCategory) {
-                subCategoryName = subCategory.name || subCategory;
-              }
+          if (productData.currentFragranceRef?.id) {
+            const fragranceId = productData.currentFragranceRef.id;
+            if (!productsMap.has(fragranceId)) {
+              productsMap.set(fragranceId, []);
             }
+            productsMap.get(fragranceId)?.push(displayName);
+            console.log(`🔗 香精 ${fragranceId} 添加產品: ${displayName}`);
           }
+        });
+
+        console.log(`🎯 最終香精→產品映射:`, Object.fromEntries(productsMap));
+      }
+
+      // 📝 第六步：組合最終的原料資料
+      const materialsList = materialsData.map(data => {
+        // 🔍 原料分類處理（與原料頁面保持一致）
+        // 原料分類是以直接字串儲存，不是引用
+        const categoryName = data.category || '未分類';
+        const subCategoryName = data.subCategory || '';
+
+        console.log(`📦 處理原料 ${data.name}:`, {
+          原始category: data.category,
+          原始subCategory: data.subCategory,
+          處理後categoryName: categoryName,
+          處理後subCategoryName: subCategoryName
+        });
+
+        // 🔍 多層級供應商資料處理（與原料頁面保持一致）
+        let supplierName = '未指定';
+        let supplierId = '';
+
+        if (data.supplierName && data.supplierName.trim() !== '') {
+          supplierName = data.supplierName.trim();
+          supplierId = data.supplierId || data.supplierRef?.id || '';
+        } else if (data.supplierId && suppliersMap.has(data.supplierId)) {
+          supplierName = suppliersMap.get(data.supplierId)!;
+          supplierId = data.supplierId;
+        } else if (data.supplierRef?.id && suppliersMap.has(data.supplierRef.id)) {
+          supplierName = suppliersMap.get(data.supplierRef.id)!;
+          supplierId = data.supplierRef.id;
+        } else if (data.supplier && typeof data.supplier === 'string') {
+          supplierName = data.supplier;
         }
 
         return {
-          id: doc.id,
+          id: data.id,
           name: data.name,
           code: data.code,
           type: 'material' as const,
-          supplierId: data.supplierRef?.id || '',
-          supplierName: data.supplierRef?.id ? suppliersMap.get(data.supplierRef.id) || '未知供應商' : '未指定',
+          supplierId,
+          supplierName,
           unit: data.unit || '',
           costPerUnit: data.costPerUnit || 0,
           currentStock: data.currentStock || 0,
-          // 即時計算的分類資訊
           category: categoryName,
-          subcategory: subCategoryName,
+          subCategory: subCategoryName,
         };
       });
 
-      // 載入香精 - 即時計算使用產品
-      const fragrancesSnapshot = await getDocs(collection(db, 'fragrances'));
-      const fragrancesList = fragrancesSnapshot.docs.map(doc => {
-        const data = doc.data();
+      // 🌸 第七步：組合最終的香精資料
+      const fragrancesList = fragrancesData.map(data => {
+        // 🔍 多層級供應商資料處理（與原料頁面保持一致）
+        let supplierName = '未指定';
+        let supplierId = '';
 
-        const calculatedProducts = productsMap.get(doc.id) || [];
-
-        // 特別關注魔爪（富詳）香精的調試
-        if (data.name?.includes('魔爪') || data.code === 'I-0089') {
-          console.log(`🔍 重點關注 - 魔爪（富詳）香精:`, {
-            文檔ID: doc.id,
-            香精名稱: data.name,
-            香精代碼: data.code,
-            在productsMap中的key: doc.id,
-            productsMap是否有這個key: productsMap.has(doc.id),
-            即時計算的使用產品: calculatedProducts,
-            productsMap完整內容: Object.fromEntries(productsMap)
-          });
+        if (data.supplierName && data.supplierName.trim() !== '') {
+          supplierName = data.supplierName.trim();
+          supplierId = data.supplierId || data.supplierRef?.id || '';
+        } else if (data.supplierId && suppliersMap.has(data.supplierId)) {
+          supplierName = suppliersMap.get(data.supplierId)!;
+          supplierId = data.supplierId;
+        } else if (data.supplierRef?.id && suppliersMap.has(data.supplierRef.id)) {
+          supplierName = suppliersMap.get(data.supplierRef.id)!;
+          supplierId = data.supplierRef.id;
+        } else if (data.supplier && typeof data.supplier === 'string') {
+          supplierName = data.supplier;
         }
 
-        console.log(`📋 載入香精資料:`, {
-          id: doc.id,
-          name: data.name,
-          code: data.code,
-          costPerUnit: data.costPerUnit,
-          原始costPerUnit類型: typeof data.costPerUnit,
-          即時計算使用產品: calculatedProducts
-        });
-
         return {
-          id: doc.id,
+          id: data.id,
           name: data.name,
           code: data.code,
           type: 'fragrance' as const,
-          supplierId: data.supplierRef?.id || '',
-          supplierName: data.supplierRef?.id ? suppliersMap.get(data.supplierRef.id) || '未知供應商' : '未指定',
+          supplierId,
+          supplierName,
           unit: data.unit || 'KG',
           costPerUnit: data.costPerUnit || 0,
           currentStock: data.currentStock || 0,
           category: data.category || '',
           series: data.series || '',
-          // 即時計算的使用產品
-          usedInProducts: productsMap.get(doc.id) || [],
+          usedInProducts: productsMap.get(data.id) || [],
         };
       });
 
+      // 📊 設置狀態
       setMaterials(materialsList);
       setFragrances(fragrancesList);
+      setSuppliers(Array.from(suppliersMap.entries()).map(([id, name]) => ({ id, name })));
 
-      // 調試資訊
-      console.log('🔄 即時計算結果:');
-      console.log('產品對香精的對應關係:', productsMap);
-      console.log('分類對照表:', categoriesMap);
-      console.log('載入的物料列表 (含即時分類):', materialsList.slice(0, 2));
-      console.log('載入的香精列表 (含即時使用產品):', fragrancesList.slice(0, 2));
+      console.log('✅ 按需載入完成:', {
+        原料數量: materialsList.length,
+        香精數量: fragrancesList.length,
+        供應商數量: suppliersMap.size,
+        產品關係數量: productsMap.size
+      });
 
     } catch (error) {
-      console.error("載入物料和香精資料失敗:", error);
+      console.error("按需載入失敗:", error);
       toast.error("載入物料和香精資料失敗。");
     }
-  }, []);
+  }, [cartItems]); // 依賴購物車項目變化
 
   // 全域購物車已經自動同步，不需要本地存儲函數
 
@@ -624,7 +689,7 @@ function PurchaseOrdersPageContent() {
       setSearchResults(sorted.slice(0, 10).map(item => ({
         ...item,
         category: item.category || '',
-        subcategory: item.subcategory || '',
+        subCategory: item.subCategory || '',
         series: item.series || '',
         usedInProducts: item.usedInProducts || [],
       }))); // 限制搜尋結果數量並確保包含所有欄位
@@ -669,7 +734,7 @@ function PurchaseOrdersPageContent() {
       costPerUnit: item.costPerUnit,
       // 新增欄位
       category: item.category,
-      subcategory: item.subcategory,
+      subCategory: item.subCategory,
       series: item.series,
       usedInProducts: item.usedInProducts
     };
@@ -678,25 +743,45 @@ function PurchaseOrdersPageContent() {
   }, [globalAddToCart, materials, fragrances, setSearchResults, setSearchType]);
 
   // 從採購車移除項目 - 使用全域購物車
-  const removeFromCart = useCallback(async (itemId: string, type: 'material' | 'fragrance') => {
-    const item = cartItems.find(item => item.id === itemId && item.type === type);
-    if (item) {
-      await globalRemoveFromCart(item.id);
+  const removeFromCart = useCallback(async (cartItemId: string) => {
+    console.log(`🗑️ 嘗試刪除購物車項目:`, { cartItemId });
+
+    // 🚀 極簡引用模式：直接使用購物車項目ID刪除
+    const targetItem = cartItems.find(item => item.id === cartItemId);
+
+    if (targetItem) {
+      console.log(`✅ 找到要刪除的購物車項目:`, targetItem);
+      await globalRemoveFromCart(cartItemId);
+    } else {
+      console.warn(`❌ 找不到要刪除的購物車項目:`, { cartItemId });
     }
   }, [cartItems, globalRemoveFromCart]);
 
   // 更新採購車項目數量 - 使用全域購物車
   const updateCartItemQuantity = useCallback(async (itemId: string, type: 'material' | 'fragrance', quantity: number) => {
-    if (quantity <= 0) {
-      await removeFromCart(itemId, type);
-      return;
+    // 🚀 極簡引用模式：需要透過 code 來匹配購物車項目
+    let targetItem = null;
+
+    if (type === 'material') {
+      const material = materials.find(m => m.id === itemId);
+      if (material) {
+        targetItem = cartItems.find(item => item.type === 'material' && item.code === material.code);
+      }
+    } else if (type === 'fragrance') {
+      const fragrance = fragrances.find(f => f.id === itemId);
+      if (fragrance) {
+        targetItem = cartItems.find(item => item.type === 'fragrance' && item.code === fragrance.code);
+      }
     }
 
-    const item = cartItems.find(item => item.id === itemId && item.type === type);
-    if (item) {
-      await globalUpdateCartItem(item.id, { quantity });
+    if (targetItem) {
+      if (quantity <= 0) {
+        await removeFromCart(targetItem.id);
+        return;
+      }
+      await globalUpdateCartItem(targetItem.id, { quantity });
     }
-  }, [cartItems, removeFromCart, globalUpdateCartItem]);
+  }, [cartItems, materials, fragrances, removeFromCart, globalUpdateCartItem]);
 
   // 切換採購車項目選擇狀態
   const toggleCartItemSelection = useCallback((itemId: string, type: 'material' | 'fragrance') => {
@@ -712,15 +797,18 @@ function PurchaseOrdersPageContent() {
     });
   }, []);
 
-  // 切換供應商全選狀態
+  // 切換供應商全選狀態 - 極簡引用模式適配
   const toggleSupplierSelection = useCallback((supplierId: string) => {
-    const supplierItems = cartItems.filter(item => item.supplierId === supplierId);
-    const supplierItemKeys = supplierItems.map(item => `${item.id}-${item.type}`);
-    
+    // 🚀 極簡模式：從 cartBySupplier 中找到對應供應商的項目
+    const supplierGroup = cartBySupplier.find(group => group.supplierId === supplierId);
+    if (!supplierGroup) return;
+
+    const supplierItemKeys = supplierGroup.items.map(item => `${item.cartId}-${item.type}`);
+
     setSelectedCartItems(prev => {
       const newSet = new Set(prev);
       const allSelected = supplierItemKeys.every(key => newSet.has(key));
-      
+
       if (allSelected) {
         // 如果全部已選中，則取消選中
         supplierItemKeys.forEach(key => newSet.delete(key));
@@ -731,7 +819,7 @@ function PurchaseOrdersPageContent() {
       
       return newSet;
     });
-  }, [cartItems]);
+  }, []); // 移除 cartBySupplier 依賴，避免循環依賴，在函數內部動態獲取即可
 
   // 顯示確認對話框
   const showConfirmDialog = useCallback(() => {
@@ -739,90 +827,184 @@ function PurchaseOrdersPageContent() {
   }, []);
 
   // 處理點擊項目詳情
-  const handleItemDetailClick = useCallback((item: CartItem) => {
+  const handleItemDetailClick = useCallback((item: any) => {
     setItemDetailDialog({open: true, item});
   }, []);
 
-  // 建立採購單
+  // 建立採購單 - 動態計算供應商分組
   const createPurchaseOrder = useCallback(async () => {
+    console.log('🚀 開始建立採購單，當前選中項目:', Array.from(selectedCartItems));
+    console.log('🛒 當前購物車項目數量:', cartItems.length);
+    console.log('📦 當前原料數量:', materials.length);
+    console.log('🌸 當前香精數量:', fragrances.length);
+    console.log('🛒 購物車項目詳細:', cartItems.map(item => ({
+      id: item.id,
+      type: item.type,
+      code: item.code
+    })));
+
     setIsCreatingOrder(true);
 
     try {
-      // 決定要建立採購單的項目
-      let itemsToProcess: CartItem[];
+      // 🚀 動態計算當前的 cartBySupplier 資料，避免依賴問題
+      const currentCartBySupplier = (() => {
+        const groups: Record<string, SupplierCartGroup> = {};
+
+        cartItems.forEach(cartItem => {
+          // 根據 cartItem.code 即時查詢完整資料
+          let enrichedItem: any = null;
+          let supplierId = 'unknown';
+          let supplierName = '未指定供應商';
+
+          if (cartItem.type === 'material') {
+            console.log(`🔍 尋找原料 ${cartItem.code}，原料總數: ${materials.length}`);
+            const material = materials.find(m => m.code === cartItem.code);
+            if (material) {
+              console.log(`✅ 找到原料:`, material);
+              enrichedItem = {
+                ...material,
+                cartId: cartItem.id,
+                quantity: cartItem.quantity,
+                type: 'material' as const,
+                addedBy: cartItem.addedBy,
+                addedAt: cartItem.addedAt
+              };
+              // 🔍 使用已處理的供應商資料（與資料載入邏輯保持一致）
+              supplierId = material.supplierId || 'unknown';
+              supplierName = material.supplierName || '未指定供應商';
+            } else {
+              console.warn(`❌ 找不到原料 ${cartItem.code}`);
+            }
+          } else if (cartItem.type === 'fragrance') {
+            console.log(`🔍 尋找香精 ${cartItem.code}，香精總數: ${fragrances.length}`);
+            const fragrance = fragrances.find(f => f.code === cartItem.code);
+            if (fragrance) {
+              console.log(`✅ 找到香精:`, fragrance);
+              enrichedItem = {
+                ...fragrance,
+                cartId: cartItem.id,
+                quantity: cartItem.quantity,
+                type: 'fragrance' as const,
+                addedBy: cartItem.addedBy,
+                addedAt: cartItem.addedAt
+              };
+              // 🔍 使用已處理的供應商資料（與資料載入邏輯保持一致）
+              supplierId = fragrance.supplierId || 'unknown';
+              supplierName = fragrance.supplierName || '未指定供應商';
+            } else {
+              console.warn(`❌ 找不到香精 ${cartItem.code}`);
+            }
+          }
+
+          if (enrichedItem) {
+            if (!groups[supplierId]) {
+              groups[supplierId] = {
+                supplierId,
+                supplierName,
+                items: []
+              };
+            }
+            groups[supplierId].items.push(enrichedItem);
+          }
+        });
+
+        return Object.values(groups);
+      })();
+
+      // 決定要處理的供應商項目
+      let suppliersToProcess: SupplierCartGroup[] = [];
+
       if (selectedCartItems.size === 0) {
-        // 沒有勾選任何項目，建立所有項目
-        itemsToProcess = cartItems;
+        // 沒有勾選任何項目，建立所有供應商的項目
+        console.log('📋 沒有選中項目，建立所有採購單');
+        suppliersToProcess = currentCartBySupplier;
       } else {
-        // 只建立勾選的項目
-        itemsToProcess = cartItems.filter(item => 
-          selectedCartItems.has(`${item.id}-${item.type}`)
-        );
+        // 只建立勾選的項目，需要按供應商重新分組
+        console.log('📋 處理選中的項目...');
+        console.log('📋 當前選中的項目keys:', Array.from(selectedCartItems));
+
+        suppliersToProcess = currentCartBySupplier.map(supplierGroup => {
+          console.log(`🔍 檢查供應商 ${supplierGroup.supplierName} 的項目:`, supplierGroup.items.map(item => ({
+            id: item.id,
+            type: item.type,
+            key: `${item.id}-${item.type}`,
+            selected: selectedCartItems.has(`${item.id}-${item.type}`)
+          })));
+
+          const selectedItems = supplierGroup.items.filter(item => {
+            const key = `${item.id}-${item.type}`;
+            const isSelected = selectedCartItems.has(key);
+            console.log(`🔍 項目 ${item.name} (${key}) 是否選中: ${isSelected}`);
+            return isSelected;
+          });
+
+          console.log(`✅ 供應商 ${supplierGroup.supplierName} 選中 ${selectedItems.length} 個項目`);
+
+          return {
+            ...supplierGroup,
+            items: selectedItems
+          };
+        }).filter(group => group.items.length > 0); // 過濾掉沒有選中項目的供應商
       }
 
-      if (itemsToProcess.length === 0) {
+      if (suppliersToProcess.length === 0) {
         toast.error("沒有項目可以建立採購單");
         return;
       }
 
-      // 按供應商分組 - 使用最新價格資料
-      const supplierGroups = itemsToProcess.reduce((groups, item) => {
-        if (!groups[item.supplierId]) {
-          groups[item.supplierId] = {
-            supplierId: item.supplierId,
-            items: []
-          };
-        }
-        
-        // 🔄 獲取最新的價格資料
-        let latestPrice = item.price || item.costPerUnit || 0;
-        
-        if (item.type === 'material') {
-          const latestMaterial = materials.find(m => m.id === item.id);
-          if (latestMaterial && latestMaterial.costPerUnit) {
-            latestPrice = latestMaterial.costPerUnit;
-          }
-        } else if (item.type === 'fragrance') {
-          const latestFragrance = fragrances.find(f => f.id === item.id);
-          if (latestFragrance && latestFragrance.costPerUnit) {
-            latestPrice = latestFragrance.costPerUnit;
-          }
-        }
-        
-        groups[item.supplierId].items.push({
+      // 轉換為 API 所需的格式
+      const supplierGroups = suppliersToProcess.map(supplierGroup => ({
+        supplierId: supplierGroup.supplierId,
+        items: supplierGroup.items.map(item => ({
           id: item.id,
           name: item.name,
           code: item.code,
           quantity: item.quantity,
           unit: item.unit,
-          price: latestPrice, // 使用最新價格
+          price: item.costPerUnit || 0, // 使用即時查詢的最新價格
           itemRefPath: `${item.type === 'material' ? 'materials' : 'fragrances'}/${item.id}`
-        });
-        return groups;
-      }, {} as Record<string, any>);
+        }))
+      }));
 
       const payload = {
-        suppliers: Object.values(supplierGroups)
+        suppliers: supplierGroups
       };
 
+      console.log('🚀 建立採購單 payload:', payload);
+
       // 使用統一 API 客戶端
-      const result = await apiClient.call('createPurchaseOrders', payload);
-      
+      const result = await apiClient.call('createPurchaseOrders', payload as any);
+
       if (result.success) {
-        toast.success(`成功建立 ${Object.keys(supplierGroups).length} 張採購單`);
-        
-        // 從全域採購車中移除已使用的項目
-        for (const item of itemsToProcess) {
-          await globalRemoveFromCart(item.id);
+        toast.success(`成功建立 ${supplierGroups.length} 張採購單`);
+
+        // 🚀 從全域採購車中移除已使用的項目（使用原始 cartItems ID）
+        const processedItemIds = new Set<string>();
+        suppliersToProcess.forEach(supplierGroup => {
+          supplierGroup.items.forEach(item => {
+            // 找到對應的原始 CartItem ID
+            const originalCartItem = cartItems.find(cartItem =>
+              cartItem.type === item.type && cartItem.code === item.code
+            );
+            if (originalCartItem) {
+              processedItemIds.add(originalCartItem.id);
+            }
+          });
+        });
+
+        for (const itemId of processedItemIds) {
+          await globalRemoveFromCart(itemId);
         }
+
         setSelectedCartItems(new Set());
         setIsConfirmDialogOpen(false);
-        
+
         // 重新載入採購單列表
         loadPurchaseOrders();
       }
     } catch (error) {
       console.error("建立採購單失敗:", error);
+      toast.error("建立採購單失敗，請稍後重試");
     } finally {
       setIsCreatingOrder(false);
     }
@@ -833,140 +1015,96 @@ function PurchaseOrdersPageContent() {
 
 
 
-  // 按供應商分組採購車 - 動態更新最新資料
+  // 按供應商分組採購車 - 極簡引用模式，即時查詢資料
   const cartBySupplier = useMemo(() => {
     const groups: Record<string, SupplierCartGroup> = {};
-    
-    cartItems.forEach(item => {
-      if (!groups[item.supplierId]) {
-        groups[item.supplierId] = {
-          supplierId: item.supplierId,
-          supplierName: item.supplierName || '未指定供應商',
+
+    cartItems.forEach(cartItem => {
+      // 🚀 極簡模式：根據 cartItem.code 即時查詢完整資料
+      let enrichedItem: any = null;
+      let supplierId = 'unknown';
+      let supplierName = '未指定供應商';
+
+      if (cartItem.type === 'material') {
+        const material = materials.find(m => m.code === cartItem.code);
+        if (material) {
+          enrichedItem = {
+            ...material,
+            cartId: cartItem.id, // 購物車項目 ID
+            quantity: cartItem.quantity, // 購物車數量
+            type: 'material' as const,
+            addedBy: cartItem.addedBy,
+            addedAt: cartItem.addedAt
+          };
+          supplierId = material.supplierId || 'unknown';
+          supplierName = material.supplierName || '未指定供應商';
+        }
+      } else if (cartItem.type === 'fragrance') {
+        const fragrance = fragrances.find(f => f.code === cartItem.code);
+        if (fragrance) {
+          enrichedItem = {
+            ...fragrance,
+            cartId: cartItem.id, // 購物車項目 ID
+            quantity: cartItem.quantity, // 購物車數量
+            type: 'fragrance' as const,
+            addedBy: cartItem.addedBy,
+            addedAt: cartItem.addedAt
+          };
+          supplierId = fragrance.supplierId || 'unknown';
+          supplierName = fragrance.supplierName || '未指定供應商';
+        }
+      }
+
+      // 如果找不到對應的原料或香精，建立錯誤項目
+      if (!enrichedItem) {
+        enrichedItem = {
+          id: cartItem.id,
+          cartId: cartItem.id,
+          code: cartItem.code,
+          name: `⚠️ 找不到項目 (${cartItem.code})`,
+          type: cartItem.type,
+          quantity: cartItem.quantity,
+          currentStock: 0,
+          unit: '未知',
+          costPerUnit: 0,
+          category: '⚠️ 需要更新',
+          addedBy: cartItem.addedBy,
+          addedAt: cartItem.addedAt
+        };
+        supplierId = 'error';
+        supplierName = '⚠️ 資料錯誤';
+      }
+
+      // 建立或更新供應商分組
+      if (!groups[supplierId]) {
+        groups[supplierId] = {
+          supplierId,
+          supplierName,
           items: []
         };
       }
-      
-      // 🔄 動態合併最新的物料/香精資料
-      let updatedItem = { ...item };
-      
-      if (item.type === 'material') {
-        const latestMaterial = materials.find(m => m.code === item.code);
-        if (latestMaterial) {
-          const oldPrice = item.costPerUnit || item.price || 0;
-          const newPrice = latestMaterial.costPerUnit || 0;
-          
-          updatedItem = {
-            ...item, // 保留數量和其他用戶設定
-            name: latestMaterial.name,
-            code: latestMaterial.code,
-            costPerUnit: latestMaterial.costPerUnit,
-            price: latestMaterial.costPerUnit, // 同步更新價格
-            currentStock: latestMaterial.currentStock,
-            unit: latestMaterial.unit,
-            category: latestMaterial.category,
-            subcategory: latestMaterial.subcategory,
-          };
-          
-          if (oldPrice !== newPrice) {
-            console.log(`🔄 物料 ${item.name} 價格已更新:`, {
-              原價格: oldPrice,
-              新價格: newPrice,
-              數量: item.quantity // 數量保持不變
-            });
-          }
-        } else {
-          console.warn(`⚠️ 找不到物料 ${item.name} (${item.code}) 的最新數據`);
-        }
-      } else if (item.type === 'fragrance') {
-        // 🔧 修復：統一使用文檔ID匹配，確保使用產品資訊正確
-        const latestFragrance = fragrances.find(f => f.id === item.id);
-        
-        console.log(`🔍 查找香精資料匹配:`, {
-          購物車項目: {
-            id: item.id,
-            name: item.name,
-            code: item.code,
-            costPerUnit: item.costPerUnit,
-            price: item.price
-          },
-          香精資料總數: fragrances.length,
-          找到匹配: !!latestFragrance,
-          匹配結果: latestFragrance ? {
-            id: latestFragrance.id,
-            name: latestFragrance.name,
-            code: latestFragrance.code,
-            costPerUnit: latestFragrance.costPerUnit
-          } : '無匹配'
-        });
-        
-        if (latestFragrance) {
-          const oldPrice = item.costPerUnit || item.price || 0;
-          const newPrice = latestFragrance.costPerUnit || 0;
-          
-          updatedItem = {
-            ...item, // 保留數量和其他用戶設定
-            name: latestFragrance.name,
-            code: latestFragrance.code,
-            costPerUnit: latestFragrance.costPerUnit,
-            price: latestFragrance.costPerUnit, // 同步更新價格
-            currentStock: latestFragrance.currentStock,
-            unit: latestFragrance.unit,
-            series: latestFragrance.series,
-            usedInProducts: latestFragrance.usedInProducts,
-          };
-          
-          if (oldPrice !== newPrice) {
-            console.log(`🔄 香精 ${item.name} 價格已更新:`, {
-              原價格: oldPrice,
-              新價格: newPrice,
-              數量: item.quantity // 數量保持不變
-            });
-          }
-        } else {
-          // 🔧 修復：找不到最新香精資料時，確保使用購物車項目本身的價格
-          console.warn(`⚠️ 找不到香精資料匹配，使用購物車原有價格:`, {
-            購物車項目代碼: item.code,
-            購物車項目名稱: item.name,
-            原始價格: item.price,
-            原始costPerUnit: item.costPerUnit,
-            可用香精代碼: fragrances.map(f => ({ code: f.code, name: f.name }))
-          });
-          
-          // 確保價格字段存在且合理
-          updatedItem = {
-            ...item,
-            price: item.price || item.costPerUnit || 0,
-            costPerUnit: item.costPerUnit || item.price || 0
-          };
-        }
-      }
-      
-      groups[item.supplierId].items.push(updatedItem);
+
+      groups[supplierId].items.push(enrichedItem);
     });
 
     return Object.values(groups);
   }, [cartItems, materials, fragrances]);
 
-  // 計算總金額 - 使用最新的成本資料
+  // 計算總金額 - 極簡引用模式，即時查詢價格
   const totalAmount = useMemo(() => {
-    return cartItems.reduce((total, item) => {
-      let price = item.price || item.costPerUnit || 0;
-      
-      // 🔄 動態獲取最新成本價格
-      if (item.type === 'material') {
-        const latestMaterial = materials.find(m => m.code === item.code);
-        if (latestMaterial && latestMaterial.costPerUnit) {
-          price = latestMaterial.costPerUnit;
-        }
-      } else if (item.type === 'fragrance') {
-        // 🔧 修復：統一使用文檔ID匹配
-        const latestFragrance = fragrances.find(f => f.id === item.id);
-        if (latestFragrance && latestFragrance.costPerUnit) {
-          price = latestFragrance.costPerUnit;
-        }
+    return cartItems.reduce((total, cartItem) => {
+      let price = 0;
+
+      // 🚀 極簡模式：根據 code 即時查詢最新價格
+      if (cartItem.type === 'material') {
+        const material = materials.find(m => m.code === cartItem.code);
+        price = material?.costPerUnit || 0;
+      } else if (cartItem.type === 'fragrance') {
+        const fragrance = fragrances.find(f => f.code === cartItem.code);
+        price = fragrance?.costPerUnit || 0;
       }
-      
-      return total + (price * item.quantity);
+
+      return total + (price * cartItem.quantity);
     }, 0);
   }, [cartItems, materials, fragrances]);
 
@@ -1273,8 +1411,8 @@ function PurchaseOrdersPageContent() {
                   <div className="bg-amber-50 px-4 py-3 border-b border-amber-200">
                     <div className="flex items-center gap-2">
                       <Checkbox
-                        checked={supplierGroup.items.every(item => 
-                          selectedCartItems.has(`${item.id}-${item.type}`)
+                        checked={supplierGroup.items.every(item =>
+                          selectedCartItems.has(`${item.cartId}-${item.type}`)
                         )}
                         onCheckedChange={() => toggleSupplierSelection(supplierGroup.supplierId)}
                         className="border-amber-300 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
@@ -1305,11 +1443,11 @@ function PurchaseOrdersPageContent() {
                       </TableHeader>
                       <TableBody>
                         {supplierGroup.items.map((item) => (
-                          <TableRow key={`${item.id}-${item.type}`} className="hover:bg-amber-50/50">
+                          <TableRow key={`${item.cartId}-${item.type}`} className="hover:bg-amber-50/50">
                             <TableCell>
                               <Checkbox
-                                checked={selectedCartItems.has(`${item.id}-${item.type}`)}
-                                onCheckedChange={() => toggleCartItemSelection(item.id, item.type)}
+                                checked={selectedCartItems.has(`${item.cartId}-${item.type}`)}
+                                onCheckedChange={() => toggleCartItemSelection(item.cartId, item.type)}
                                 className="border-amber-300 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
                               />
                             </TableCell>
@@ -1336,10 +1474,10 @@ function PurchaseOrdersPageContent() {
                             <TableCell>
                               {item.type === 'material' ? (
                                 <div className="text-sm">
-                                  {item.category && item.subcategory ? (
+                                  {item.category && item.subCategory ? (
                                     <div className="text-blue-600">
                                       <div className="font-semibold">{item.category}</div>
-                                      <div className="text-xs">→ {item.subcategory}</div>
+                                      <div className="text-xs">→ {item.subCategory}</div>
                                     </div>
                                   ) : item.category ? (
                                     <span className="text-blue-600 font-semibold">{item.category}</span>
@@ -1353,7 +1491,7 @@ function PurchaseOrdersPageContent() {
                                     <div className="text-pink-600">
                                       <div className="text-xs mb-1">用於 {item.usedInProducts.length} 項產品</div>
                                       <div className="space-y-1">
-                                        {item.usedInProducts.slice(0, 2).map((product, index) => (
+                                        {item.usedInProducts.slice(0, 2).map((product: string, index: number) => (
                                           <div key={index} className="text-xs bg-pink-50 px-2 py-1 rounded inline-block mr-1">
                                             {product}
                                           </div>
@@ -1403,7 +1541,7 @@ function PurchaseOrdersPageContent() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => removeFromCart(item.id, item.type)}
+                                onClick={() => removeFromCart(item.cartId)}
                                 className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
                               >
                                 <X className="h-4 w-4" />
@@ -1418,11 +1556,11 @@ function PurchaseOrdersPageContent() {
                   {/* 平板和手機版卡片顯示 */}
                   <div className="lg:hidden divide-y divide-amber-100">
                     {supplierGroup.items.map((item) => (
-                      <div key={`${item.id}-${item.type}`} className="p-4">
+                      <div key={`${item.cartId}-${item.type}`} className="p-4">
                         <div className="flex items-center gap-3">
                           <Checkbox
-                            checked={selectedCartItems.has(`${item.id}-${item.type}`)}
-                            onCheckedChange={() => toggleCartItemSelection(item.id, item.type)}
+                            checked={selectedCartItems.has(`${item.cartId}-${item.type}`)}
+                            onCheckedChange={() => toggleCartItemSelection(item.cartId, item.type)}
                             className="border-amber-300 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
                           />
                           <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
@@ -1446,8 +1584,8 @@ function PurchaseOrdersPageContent() {
                               {/* 原料用途或香精使用產品 */}
                               {item.type === 'material' ? (
                                 <div className="text-xs text-blue-600">
-                                  {item.category && item.subcategory ? (
-                                    <span>📦 {item.category} → {item.subcategory}</span>
+                                  {item.category && item.subCategory ? (
+                                    <span>📦 {item.category} → {item.subCategory}</span>
                                   ) : item.category ? (
                                     <span>📦 {item.category}</span>
                                   ) : (
@@ -1487,7 +1625,7 @@ function PurchaseOrdersPageContent() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => removeFromCart(item.id, item.type)}
+                              onClick={() => removeFromCart(item.cartId)}
                               className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
                             >
                               <X className="h-4 w-4" />
@@ -1517,19 +1655,61 @@ function PurchaseOrdersPageContent() {
           <div className="max-h-60 overflow-y-auto space-y-3">
             {(() => {
               // 決定要顯示的項目
-              const itemsToShow = selectedCartItems.size === 0 
-                ? cartItems 
-                : cartItems.filter(item => selectedCartItems.has(`${item.id}-${item.type}`));
+              const itemsToShow = selectedCartItems.size === 0
+                ? cartItems
+                : cartItems.filter(cartItem => {
+                    // 直接使用 cartItem 的 id 來構建 key
+                    const key = `${cartItem.id}-${cartItem.type}`;
+                    const isSelected = selectedCartItems.has(key);
+                    console.log(`🔍 確認對話框 - ${cartItem.type === 'material' ? '原料' : '香精'} ${cartItem.code} (${key}) 是否選中: ${isSelected}`);
+                    return isSelected;
+                  });
               
-              // 按供應商分組
-              const supplierGroups = itemsToShow.reduce((groups, item) => {
-                if (!groups[item.supplierId]) {
-                  groups[item.supplierId] = {
-                    supplierName: item.supplierName,
-                    items: []
-                  };
+              // 🚀 按供應商分組 - 需要即時查詢供應商資訊
+              const supplierGroups = itemsToShow.reduce((groups, cartItem) => {
+                // 根據 cartItem.code 查詢完整資料以獲取供應商資訊
+                let supplierId = 'unknown';
+                let supplierName = '未指定供應商';
+                let enrichedItem: any = null;
+
+                if (cartItem.type === 'material') {
+                  const material = materials.find(m => m.code === cartItem.code);
+                  if (material) {
+                    supplierId = material.supplierId || 'unknown';
+                    supplierName = material.supplierName || '未指定供應商';
+                    enrichedItem = {
+                      ...material,
+                      quantity: cartItem.quantity,
+                      type: cartItem.type,
+                      code: cartItem.code,
+                      id: cartItem.id
+                    };
+                  }
+                } else if (cartItem.type === 'fragrance') {
+                  const fragrance = fragrances.find(f => f.code === cartItem.code);
+                  if (fragrance) {
+                    supplierId = fragrance.supplierId || 'unknown';
+                    supplierName = fragrance.supplierName || '未指定供應商';
+                    enrichedItem = {
+                      ...fragrance,
+                      quantity: cartItem.quantity,
+                      type: cartItem.type,
+                      code: cartItem.code,
+                      id: cartItem.id
+                    };
+                  }
                 }
-                groups[item.supplierId].items.push(item);
+
+                if (enrichedItem) {
+                  if (!groups[supplierId]) {
+                    groups[supplierId] = {
+                      supplierName,
+                      items: []
+                    };
+                  }
+                  groups[supplierId].items.push(enrichedItem);
+                }
+
                 return groups;
               }, {} as Record<string, any>);
 
@@ -1553,7 +1733,7 @@ function PurchaseOrdersPageContent() {
                         </div>
                       </div>
                       <div className="divide-y divide-amber-100">
-                        {group.items.map((item: CartItem) => (
+                        {group.items.map((item: any) => (
                           <div key={`${item.id}-${item.type}`} className="p-3">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
@@ -1684,10 +1864,10 @@ function PurchaseOrdersPageContent() {
                     <Package className="h-4 w-4 text-blue-600" />
                     <span className="text-sm font-medium text-blue-800">原料分類</span>
                   </div>
-                  {itemDetailDialog.item.category && itemDetailDialog.item.subcategory ? (
+                  {itemDetailDialog.item.category && itemDetailDialog.item.subCategory ? (
                     <div className="space-y-1">
                       <div className="text-sm font-semibold text-blue-700">{itemDetailDialog.item.category}</div>
-                      <div className="text-sm text-blue-600">→ {itemDetailDialog.item.subcategory}</div>
+                      <div className="text-sm text-blue-600">→ {itemDetailDialog.item.subCategory}</div>
                     </div>
                   ) : itemDetailDialog.item.category ? (
                     <div className="text-sm font-semibold text-blue-700">{itemDetailDialog.item.category}</div>
@@ -1707,7 +1887,7 @@ function PurchaseOrdersPageContent() {
                         此香精用於 {itemDetailDialog.item.usedInProducts.length} 項產品：
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {itemDetailDialog.item.usedInProducts.map((product, index) => (
+                        {itemDetailDialog.item.usedInProducts.map((product: string, index: number) => (
                           <span key={index} className="inline-block bg-pink-100 text-pink-800 text-xs px-2 py-1 rounded-full">
                             {product}
                           </span>

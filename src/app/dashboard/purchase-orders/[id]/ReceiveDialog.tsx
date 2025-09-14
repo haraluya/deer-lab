@@ -71,7 +71,7 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
       console.log("發送 payload:", JSON.stringify(payload, null, 2));
       
       // 使用統一 API 客戶端
-      const result = await apiClient.call('receivePurchaseOrderItems', payload);
+      const result = await apiClient.call('receivePurchaseOrderItems', payload as any);
       console.log("統一 API 回應:", JSON.stringify(result, null, 2));
       
       if (result.success) {

@@ -250,7 +250,7 @@ export function FragranceCalculatorDialog({
     }));
   }, [calculationItems]);
 
-  // 加入採購車
+  // 加入採購車 - 極簡引用模式
   const handleAddToCart = async () => {
     if (totalRequirements.length === 0) {
       toast.error('沒有需要加入採購車的香精');
@@ -258,16 +258,19 @@ export function FragranceCalculatorDialog({
     }
 
     try {
-      // 使用統一 API 客戶端依代碼加入採購車
-      for (const item of totalRequirements) {
-        const result = await apiClient.call('addToGlobalCartByCode', {
-          code: item.code,
-          quantity: item.totalRequired // 保留小數點精確度
-        });
-        
-        if (!result.success) {
-          throw new Error(result.error?.message || '加入購物車失敗');
-        }
+      // 🚀 使用批量API，極簡資料傳送
+      const batchItems = totalRequirements.map(item => ({
+        type: 'fragrance' as const,
+        code: item.code,
+        quantity: item.totalRequired
+      }));
+
+      const result = await apiClient.call('batchAddToGlobalCart', {
+        items: batchItems
+      });
+
+      if (!result.success) {
+        throw new Error(result.error?.message || '加入購物車失敗');
       }
 
       toast.success(`已將 ${totalRequirements.length} 項香精加入採購車`);
@@ -389,7 +392,7 @@ export function FragranceCalculatorDialog({
                           <div>
                             <Label className="text-xs text-gray-500">所需香精</Label>
                             <div className="h-9 px-3 bg-purple-50 border border-purple-200 rounded-md flex items-center text-sm font-medium text-purple-700">
-                              {item.requiredFragrance.toFixed(2)} {item.fragranceUnit}
+                              {item.requiredFragrance.toFixed(3)} {item.fragranceUnit}
                             </div>
                           </div>
                         </div>
@@ -404,7 +407,7 @@ export function FragranceCalculatorDialog({
                             {item.currentStock} {item.fragranceUnit}
                             {item.currentStock < item.requiredFragrance && (
                               <span className="ml-2 text-xs">
-                                (缺少 {(item.requiredFragrance - item.currentStock).toFixed(2)} {item.fragranceUnit})
+                                (缺少 {(item.requiredFragrance - item.currentStock).toFixed(3)} {item.fragranceUnit})
                               </span>
                             )}
                           </div>
@@ -446,7 +449,7 @@ export function FragranceCalculatorDialog({
                               <div>
                                 <span className="text-gray-500">需求：</span>
                                 <span className="font-medium text-indigo-600">
-                                  {fragrance.totalRequired.toFixed(2)} {fragrance.unit}
+                                  {fragrance.totalRequired.toFixed(3)} {fragrance.unit}
                                 </span>
                               </div>
                               <div>
@@ -461,7 +464,7 @@ export function FragranceCalculatorDialog({
                                   fragrance.shortage > 0 ? 'text-red-600' : 'text-green-600'
                                 }`}>
                                   {fragrance.shortage > 0 
-                                    ? `缺少 ${fragrance.shortage.toFixed(2)} ${fragrance.unit}` 
+                                    ? `缺少 ${fragrance.shortage.toFixed(3)} ${fragrance.unit}` 
                                     : '庫存充足'
                                   }
                                 </span>

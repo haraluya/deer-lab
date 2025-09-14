@@ -61,30 +61,23 @@ export function useCartOperations<T extends CartOperationItem>(
     setSelectedItems(new Set());
   }, []);
 
-  // 單項加入購物車
+  // 單項加入購物車 - 極簡引用模式
   const addSingleItem = useCallback(async (item: T) => {
     try {
       setCartLoading(true);
-      
+
+      // 🚀 極簡調用：只傳送引用資料
       const cartItem = {
-        id: item.id,
-        name: item.name,
-        code: item.code,
+        id: item.id, // 保留用於前端顯示，但後端不使用
         type: item.type,
-        supplierId: item.supplierRef?.id || item.supplierId || '',
-        supplierName: item.supplierName || '未指定',
-        unit: item.unit || (item.type === 'material' ? 'KG' : 'KG'),
-        quantity: 1,
-        costPerUnit: item.costPerUnit || 0,
-        price: item.costPerUnit || 0,
-        currentStock: item.currentStock || 0,
+        code: item.code,
+        quantity: 1
       };
 
       logger.debug(`準備加入採購車的${itemTypeName}資料`, {
-        id: item.id,
-        name: item.name,
+        type: item.type,
         code: item.code,
-        costPerUnit: item.costPerUnit
+        name: item.name
       });
 
       await addToCart(cartItem);
@@ -97,45 +90,44 @@ export function useCartOperations<T extends CartOperationItem>(
     }
   }, [addToCart, itemTypeName]);
 
-  // 批量加入購物車
+  // 批量加入購物車 - 極簡引用模式
   const addSelectedItems = useCallback(async () => {
     if (selectedItems.size === 0) {
       toast.info(`請至少選擇一個${itemTypeName}加入採購車。`);
       return;
     }
-    
+
     try {
       setCartLoading(true);
-      
+
       // 獲取選中的項目資料
       const selectedItemsData = items.filter(item => selectedItems.has(item.id));
+
+      // 🚀 批量極簡調用
       let successCount = 0;
-      
-      // 逐一添加到全域購物車
       for (const item of selectedItemsData) {
         const cartItem = {
-          id: item.id,
+          id: item.id, // 保留用於前端顯示，但後端不使用
           type: item.type,
           code: item.code,
-          name: item.name,
-          supplierId: item.supplierRef?.id || item.supplierId || '',
-          supplierName: item.supplierName || '未指定',
-          quantity: 1,
-          unit: item.unit || (item.type === 'material' ? 'KG' : 'KG'),
-          currentStock: item.currentStock || 0,
-          costPerUnit: item.costPerUnit || 0,
-          price: item.costPerUnit || 0
+          quantity: 1
         };
-        
-        await addToCart(cartItem);
-        successCount++;
+
+        try {
+          await addToCart(cartItem);
+          successCount++;
+        } catch (error) {
+          console.warn(`加入 ${item.code} 失敗:`, error);
+        }
       }
-      
+
       if (successCount > 0) {
         toast.success(`成功加入 ${successCount} 個${itemTypeName}到採購車`);
         clearSelection(); // 清空選擇
+      } else {
+        toast.error(`所有項目都加入失敗`);
       }
-      
+
     } catch (error) {
       logger.error(`批量添加${itemTypeName}到採購車失敗`, error as Error);
       toast.error(`批量添加${itemTypeName}到採購車失敗`);

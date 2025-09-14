@@ -179,35 +179,15 @@ export interface BillOfMaterialsItem {
 // ==================== 購物車和採購相關類型 ====================
 
 /**
- * 統一的購物車項目定義
- * 整合了 useGlobalCart.ts 和 business.ts 中的重複定義
+ * 極簡購物車項目定義 - 只存引用
  */
 export interface CartItem {
   id: string;
-  name: string;
-  code: string;
   type: 'material' | 'fragrance';
-  supplierId: string;
-  supplierName: string;
-  unit: string;
+  code: string;
   quantity: number;
-  currentStock: number;
-  
-  // 價格資訊（支援多種命名方式以保持相容性）
-  costPerUnit?: number;
-  price?: number;
-  
-  // 分類和用途資訊
-  category?: string;
-  subcategory?: string;
-  series?: string;
-  usedInProducts?: string[];
-  
-  // 系統和追蹤資訊
-  addedBy?: string;
-  addedAt?: any;
-  updatedAt?: any;
-  notes?: string;
+  addedBy: string;
+  addedAt: any; // Date or Timestamp
 }
 
 /**

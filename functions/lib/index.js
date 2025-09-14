@@ -95,5 +95,4 @@ __exportStar(require("./api/personnel"), exports);
 __exportStar(require("./api/timeRecords"), exports);
 __exportStar(require("./api/timeRecords-v2"), exports);
 __exportStar(require("./api/globalCart"), exports);
-__exportStar(require("./api/globalCart-simple"), exports);
 //# sourceMappingURL=index.js.map

@@ -312,33 +312,33 @@ export namespace WorkOrdersApi {
 
 export namespace PurchaseOrdersApi {
   export interface CreateRequest {
-    items: {
-      type: 'material' | 'fragrance';
-      itemId: string;
-      quantity: number;
-      cost?: number;
+    suppliers: {
+      supplierId: string;
+      items: {
+        id: string;
+        name: string;
+        code: string;
+        quantity: number;
+        unit?: string;
+        price?: number;
+        itemRefPath?: string;
+      }[];
     }[];
-    supplierId?: string;
-    notes?: string;
-    expectedDeliveryDate?: string;
   }
 
   export interface UpdateStatusRequest {
-    id: string;
-    status: 'pending' | 'ordered' | 'shipped' | 'received' | 'cancelled';
-    notes?: string;
+    purchaseOrderId: string;
+    newStatus: string;
   }
 
   export interface ReceiveItemsRequest {
-    id: string;
-    receivedItems: {
-      itemId: string;
+    purchaseOrderId: string;
+    items: {
+      itemRefPath: string;
       receivedQuantity: number;
-      actualCost?: number;
-      notes?: string;
+      code?: string;
+      name?: string;
     }[];
-    receivedDate?: string;
-    notes?: string;
   }
 }
 
@@ -681,15 +681,13 @@ export namespace GlobalCartApi {
 
   export interface AddItemRequest {
     type: 'material' | 'fragrance';
-    itemId: string;
+    code: string;
     quantity: number;
-    supplierId?: string;
   }
 
   export interface UpdateItemRequest {
     itemId: string;
     quantity?: number;
-    supplierId?: string;
   }
 
   export interface RemoveItemRequest {
@@ -700,9 +698,18 @@ export namespace GlobalCartApi {
     // 無參數
   }
 
-  export interface AddByCodeRequest {
-    code: string;
-    quantity: number;
+  export interface BatchAddRequest {
+    items: {
+      type: 'material' | 'fragrance';
+      code: string;
+      quantity: number;
+    }[];
+  }
+
+  export interface BatchAddResponse {
+    message: string;
+    addedCount: number;
+    totalItems: number;
   }
 
   export interface SyncCartRequest {
@@ -1071,9 +1078,9 @@ export interface ApiEndpoints {
     request: GlobalCartApi.ClearCartRequest;
     response: any;
   };
-  'addToGlobalCartByCode': {
-    request: GlobalCartApi.AddByCodeRequest;
-    response: any;
+  'batchAddToGlobalCart': {
+    request: GlobalCartApi.BatchAddRequest;
+    response: GlobalCartApi.BatchAddResponse;
   };
   'syncGlobalCart': {
     request: GlobalCartApi.SyncCartRequest;

@@ -420,9 +420,9 @@ export default function PurchaseOrderDetailPage() {
       
       const apiStatus = statusMap[newStatus] || newStatus;
       
-      const result = await apiClient.call('updatePurchaseOrderStatus', { 
-        id: po.id, 
-        status: apiStatus as 'pending' | 'ordered' | 'shipped' | 'received' | 'cancelled'
+      const result = await apiClient.call('updatePurchaseOrderStatus', {
+        purchaseOrderId: po.id,
+        newStatus: apiStatus
       });
       
       if (result.success) {
