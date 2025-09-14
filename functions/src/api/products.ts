@@ -826,6 +826,10 @@ export const getProductFragranceHistory = onCall(async (request) => {
   }
 
   try {
+    // 首先檢查集合是否有任何資料
+    const collectionSnapshot = await db.collection('fragranceChangeHistory').limit(1).get();
+    logger.info(`fragranceChangeHistory 集合檢查：${collectionSnapshot.empty ? '空集合' : '有資料'}`);
+
     const query = db.collection('fragranceChangeHistory')
       .where('productId', '==', productId)
       .orderBy('changeDate', 'desc');
@@ -836,6 +840,8 @@ export const getProductFragranceHistory = onCall(async (request) => {
       ...doc.data()
     }));
 
+    logger.info(`產品 ${productId} 香精歷史查詢成功，找到 ${records.length} 筆記錄`);
+
     return {
       success: true,
       data: records,
@@ -843,6 +849,18 @@ export const getProductFragranceHistory = onCall(async (request) => {
     };
   } catch (error) {
     logger.error(`獲取產品 ${productId} 香精歷史時發生錯誤:`, error);
+
+    // 如果是索引錯誤，提供更友善的回應
+    if (error.code === 9 && error.message?.includes('index')) {
+      logger.warn('Firestore 索引尚未完成建構，返回空結果');
+      return {
+        success: true,
+        data: [],
+        count: 0,
+        message: '索引建構中，請稍後再試'
+      };
+    }
+
     throw new HttpsError("internal", "獲取產品香精歷史失敗");
   }
 });

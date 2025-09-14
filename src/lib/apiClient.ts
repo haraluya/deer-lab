@@ -288,13 +288,14 @@ export class ApiClient {
       };
     }
 
-    // 🎯 適配產品香精歷史API格式: { success: true, data: [...], count: number }
+    // 🎯 適配產品香精歷史API格式: { success: true, data: [...], count: number, message?: string }
     if (response.success && Array.isArray(response.data) && typeof response.count === 'number') {
       return {
         success: true,
         data: {
           data: response.data,
-          count: response.count
+          count: response.count,
+          message: response.message
         },
         error: undefined,
         meta: {

@@ -655,17 +655,22 @@ exports.getFragranceChangeHistory = (0, apiWrapper_1.createApiHandler)({
  * 獲取特定產品的香精更換歷史 - 用於產品詳情頁面
  */
 exports.getProductFragranceHistory = (0, https_1.onCall)(async (request) => {
+    var _a;
     const { auth: contextAuth, data } = request;
     const { productId } = data;
     if (!productId) {
         throw new https_1.HttpsError("invalid-argument", "缺少 productId");
     }
     try {
+        // 首先檢查集合是否有任何資料
+        const collectionSnapshot = await db.collection('fragranceChangeHistory').limit(1).get();
+        firebase_functions_1.logger.info(`fragranceChangeHistory 集合檢查：${collectionSnapshot.empty ? '空集合' : '有資料'}`);
         const query = db.collection('fragranceChangeHistory')
             .where('productId', '==', productId)
             .orderBy('changeDate', 'desc');
         const snapshot = await query.get();
         const records = snapshot.docs.map(doc => (Object.assign({ id: doc.id }, doc.data())));
+        firebase_functions_1.logger.info(`產品 ${productId} 香精歷史查詢成功，找到 ${records.length} 筆記錄`);
         return {
             success: true,
             data: records,
@@ -674,6 +679,16 @@ exports.getProductFragranceHistory = (0, https_1.onCall)(async (request) => {
     }
     catch (error) {
         firebase_functions_1.logger.error(`獲取產品 ${productId} 香精歷史時發生錯誤:`, error);
+        // 如果是索引錯誤，提供更友善的回應
+        if (error.code === 9 && ((_a = error.message) === null || _a === void 0 ? void 0 : _a.includes('index'))) {
+            firebase_functions_1.logger.warn('Firestore 索引尚未完成建構，返回空結果');
+            return {
+                success: true,
+                data: [],
+                count: 0,
+                message: '索引建構中，請稍後再試'
+            };
+        }
         throw new https_1.HttpsError("internal", "獲取產品香精歷史失敗");
     }
 });
