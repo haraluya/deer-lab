@@ -628,15 +628,29 @@ export default function WorkOrderDetailPage() {
             // 🚨 重要：只使用 ID 和 code 匹配，絕對不使用 name 匹配！
             // 🚨 修復：檢查 type 或 category 來判斷是否為香精
             if (item.type === 'fragrance' || item.category === 'fragrance') {
+              console.log(`🔍 查找香精: BOM中的香精 ID=${item.id}, Code=${item.code}, Name=${item.name}`);
+              console.log(`🔍 可用香精列表:`, fragrancesList.map(f => ({
+                id: f.id,
+                code: f.code,
+                name: f.name,
+                currentStock: f.currentStock
+              })));
+
               material = fragrancesList.find((f: Fragrance) =>
                 f.id === item.id ||
                 f.code === item.code
               ) || null;
-              
+
               if (material) {
                 console.log(`✅ 香精精確匹配: ${item.code} -> ${material.name} (庫存: ${material.currentStock})`);
               } else {
-                console.warn(`❌ 香精匹配失敗: ID=${item.id}, Code=${item.code}`);
+                console.warn(`❌ 香精匹配失敗: BOM中 ID=${item.id}, Code=${item.code} 找不到對應的香精`);
+                // 嘗試通過名稱匹配
+                const nameMatch = fragrancesList.find(f => f.name === item.name);
+                if (nameMatch) {
+                  console.log(`🔄 嘗試名稱匹配成功: ${item.name} -> ${nameMatch.name} (庫存: ${nameMatch.currentStock})`);
+                  material = nameMatch;
+                }
               }
             }
             
