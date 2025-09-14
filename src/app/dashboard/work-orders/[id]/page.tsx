@@ -680,10 +680,20 @@ export default function WorkOrderDetailPage() {
                 currentStock: f.currentStock
               })));
 
+              // 🚨 核心修復：優先用代號匹配，代號是唯一的
               material = fragrancesList.find((f: Fragrance) =>
-                f.id === item.id ||
                 f.code === item.code
               ) || null;
+
+              // 如果代號匹配失敗，才嘗試ID匹配（向後相容）
+              if (!material) {
+                material = fragrancesList.find((f: Fragrance) =>
+                  f.id === item.id
+                ) || null;
+                if (material) {
+                  console.warn(`⚠️ 代號匹配失敗，使用ID匹配: ${item.code} -> ID:${material.id}`);
+                }
+              }
 
               if (material) {
                 console.log(`✅ 香精精確匹配: ${item.code} -> ${material.name} (庫存: ${material.currentStock})`);
@@ -928,11 +938,13 @@ export default function WorkOrderDetailPage() {
         
         // 🚨 修復：檢查 type 或 category 來判斷是否為香精
         if (item.type === 'fragrance' || item.category === 'fragrance') {
-          material = fragrancesList.find((f: Fragrance) =>
-            f.id === item.id ||
-            f.code === item.code ||
-            f.name === item.name
-          );
+          // 優先用代號匹配（唯一且準確）
+          material = fragrancesList.find((f: Fragrance) => f.code === item.code);
+
+          // 如果代號匹配失敗，嘗試ID匹配
+          if (!material) {
+            material = fragrancesList.find((f: Fragrance) => f.id === item.id);
+          }
         }
         
         // 如果沒找到或不是香精，從物料集合中查找
