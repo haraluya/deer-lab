@@ -25,6 +25,23 @@ async function updateFragranceStatuses(params) {
     if (!newFragranceId && !oldFragranceId) {
         throw new https_1.HttpsError("invalid-argument", "必須提供 newFragranceId 或 oldFragranceId");
     }
+    // 🔧 修復：在事務外部先查詢所有需要的數據
+    let newFragranceProductCount = 0;
+    let oldFragranceProductCount = 0;
+    if (newFragranceId) {
+        const newFragranceRef = db.doc(`fragrances/${newFragranceId}`);
+        const newFragranceProducts = await db.collection('products')
+            .where('currentFragranceRef', '==', newFragranceRef)
+            .get();
+        newFragranceProductCount = newFragranceProducts.size;
+    }
+    if (oldFragranceId) {
+        const oldFragranceRef = db.doc(`fragrances/${oldFragranceId}`);
+        const oldFragranceProducts = await db.collection('products')
+            .where('currentFragranceRef', '==', oldFragranceRef)
+            .get();
+        oldFragranceProductCount = oldFragranceProducts.size;
+    }
     return await db.runTransaction(async (transaction) => {
         // 處理新香精 - 自動設為啟用
         if (newFragranceId) {
@@ -32,19 +49,15 @@ async function updateFragranceStatuses(params) {
             const newFragranceDoc = await transaction.get(newFragranceRef);
             if (newFragranceDoc.exists) {
                 const newFragranceData = newFragranceDoc.data();
-                // 查詢使用此香精的所有產品
-                const newFragranceProducts = await db.collection('products')
-                    .where('currentFragranceRef', '==', newFragranceRef)
-                    .get();
                 // 更新為啟用狀態，除非手動設為棄用
                 if ((newFragranceData === null || newFragranceData === void 0 ? void 0 : newFragranceData.fragranceStatus) !== '棄用') {
                     transaction.update(newFragranceRef, {
                         fragranceStatus: '啟用',
-                        usageCount: newFragranceProducts.size,
+                        usageCount: newFragranceProductCount,
                         lastUsedAt: firestore_1.FieldValue.serverTimestamp(),
                         updatedAt: firestore_1.FieldValue.serverTimestamp()
                     });
-                    firebase_functions_1.logger.info(`香精 ${newFragranceId} 自動設為啟用狀態，使用產品數: ${newFragranceProducts.size}`);
+                    firebase_functions_1.logger.info(`香精 ${newFragranceId} 自動設為啟用狀態，使用產品數: ${newFragranceProductCount}`);
                 }
             }
         }
@@ -54,14 +67,10 @@ async function updateFragranceStatuses(params) {
             const oldFragranceDoc = await transaction.get(oldFragranceRef);
             if (oldFragranceDoc.exists) {
                 const oldFragranceData = oldFragranceDoc.data();
-                // 查詢仍在使用此香精的產品（排除當前正在更換的產品）
-                let oldFragranceProductsQuery = db.collection('products')
-                    .where('currentFragranceRef', '==', oldFragranceRef);
-                const oldFragranceProducts = await oldFragranceProductsQuery.get();
-                // 檢查剩餘的產品數量（排除當前產品）
-                const remainingProducts = oldFragranceProducts.docs.filter(doc => doc.id !== productId);
+                // 檢查剩餘的產品數量（減1是因為當前產品正在更換）
+                const remainingProductCount = Math.max(0, oldFragranceProductCount - 1);
                 // 如果沒有其他產品使用此香精，且非棄用狀態，則設為備用
-                if (remainingProducts.length === 0 && (oldFragranceData === null || oldFragranceData === void 0 ? void 0 : oldFragranceData.fragranceStatus) !== '棄用') {
+                if (remainingProductCount === 0 && (oldFragranceData === null || oldFragranceData === void 0 ? void 0 : oldFragranceData.fragranceStatus) !== '棄用') {
                     transaction.update(oldFragranceRef, {
                         fragranceStatus: '備用',
                         usageCount: 0,
@@ -72,10 +81,10 @@ async function updateFragranceStatuses(params) {
                 else {
                     // 更新使用數量
                     transaction.update(oldFragranceRef, {
-                        usageCount: remainingProducts.length,
+                        usageCount: remainingProductCount,
                         updatedAt: firestore_1.FieldValue.serverTimestamp()
                     });
-                    firebase_functions_1.logger.info(`香精 ${oldFragranceId} 使用數量更新為: ${remainingProducts.length}`);
+                    firebase_functions_1.logger.info(`香精 ${oldFragranceId} 使用數量更新為: ${remainingProductCount}`);
                 }
             }
         }

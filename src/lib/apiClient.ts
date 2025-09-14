@@ -100,6 +100,14 @@ export class ApiClient {
     const mergedOptions = { ...this.defaultOptions, ...options };
     let toastId: string | number | undefined;
 
+    // 🔍 調試：記錄API調用開始
+    console.log('🚀 統一API客戶端調用開始:', {
+      functionName,
+      hasData: !!data,
+      dataKeys: data ? Object.keys(data) : [],
+      options: mergedOptions
+    });
+
     try {
       // 顯示載入中 toast
       if (mergedOptions.showLoadingToast) {
@@ -108,7 +116,13 @@ export class ApiClient {
 
       // 建立 Firebase callable function
       const callable = httpsCallable(this.functions, functionName);
-      
+
+      // 🔍 調試：記錄即將發送的資料
+      console.log('📤 發送資料到 Firebase Function:', {
+        functionName,
+        payload: data
+      });
+
       // 設置超時處理
       const callPromise = callable(data || {});
       const timeoutPromise = new Promise((_, reject) => {
@@ -117,19 +131,60 @@ export class ApiClient {
 
       // 執行調用 (帶超時)
       const result = await Promise.race([callPromise, timeoutPromise]) as any;
-      
-      // 處理回應
+
+      // 🔍 調試：記錄原始回應
+      console.log('📥 Firebase Function 原始回應:', {
+        functionName,
+        result: result,
+        resultData: result?.data,
+        hasData: !!result?.data
+      });
+
+      // 處理回應 - 修復：直接使用 result.data 而非嵌套
       const apiResponse: ApiResponse<TResponse> = result.data;
       
+      // 🔍 調試：檢查回應格式
+      console.log('🔍 回應格式檢查:', {
+        functionName,
+        isValidApiResponse: this.isValidApiResponse(apiResponse),
+        apiResponseStructure: {
+          hasSuccess: typeof apiResponse?.success === 'boolean',
+          hasMeta: !!apiResponse?.meta,
+          hasTimestamp: typeof apiResponse?.meta?.timestamp === 'number',
+          hasRequestId: typeof apiResponse?.meta?.requestId === 'string'
+        },
+        apiResponse
+      });
+
       // 統一回應格式檢查
       if (!this.isValidApiResponse(apiResponse)) {
-        // 嘗試適配舊版回應格式
+        // 🔍 調試：嘗試適配舊版格式
+        console.log('⚠️ API回應格式不符，嘗試適配舊版格式:', {
+          functionName,
+          rawData: result.data
+        });
+
         const adaptedResponse = this.adaptLegacyResponse(result.data);
         if (adaptedResponse) {
+          console.log('✅ 舊版格式適配成功:', adaptedResponse);
           return this.handleSuccessResponse(adaptedResponse, mergedOptions, toastId);
         }
-        throw new Error('API 回應格式不正確');
+
+        console.error('❌ API 回應格式不正確，無法處理:', {
+          functionName,
+          rawResponse: result,
+          extractedData: result.data
+        });
+        throw new Error(`API 回應格式不正確: ${functionName}`);
       }
+
+      // 🔍 調試：記錄成功/失敗狀態
+      console.log('📊 API調用結果:', {
+        functionName,
+        success: apiResponse.success,
+        hasData: !!apiResponse.data,
+        hasError: !!apiResponse.error
+      });
 
       if (apiResponse.success) {
         return this.handleSuccessResponse(apiResponse, mergedOptions, toastId);
@@ -138,6 +193,15 @@ export class ApiClient {
       }
 
     } catch (error: any) {
+      // 🔍 調試：記錄異常錯誤
+      console.error('💥 統一API客戶端異常:', {
+        functionName,
+        error: error,
+        errorMessage: error?.message,
+        errorCode: error?.code,
+        errorDetails: error?.details
+      });
+
       return this.handleExceptionError(error, mergedOptions, toastId, functionName);
     }
   }
@@ -323,17 +387,25 @@ export class ApiClient {
    * 處理成功回應
    */
   private handleSuccessResponse<T>(
-    response: ApiResponse<T>, 
-    options: ApiCallOptions, 
+    response: ApiResponse<T>,
+    options: ApiCallOptions,
     toastId?: string | number
   ): ApiCallResult<T> {
+    // 🔍 調試：記錄成功處理
+    console.log('✅ API調用成功處理:', {
+      hasData: !!response.data,
+      meta: response.meta,
+      showSuccessToast: options.showSuccessToast,
+      dataPreview: response.data
+    });
+
     if (toastId !== undefined) {
       toast.dismiss(toastId);
     }
 
     if (options.showSuccessToast) {
-      const message = options.successMessage || 
-                     (response.data as any)?.message || 
+      const message = options.successMessage ||
+                     (response.data as any)?.message ||
                      '操作成功';
       toast.success(message);
     }
@@ -349,15 +421,24 @@ export class ApiClient {
    * 處理錯誤回應
    */
   private handleErrorResponse<T>(
-    response: ApiResponse<T>, 
-    options: ApiCallOptions, 
+    response: ApiResponse<T>,
+    options: ApiCallOptions,
     toastId?: string | number
   ): ApiCallResult<T> {
+    const error = response.error || { code: 'UNKNOWN_ERROR', message: '未知錯誤' };
+
+    // 🔍 調試：記錄錯誤處理
+    console.error('❌ API調用錯誤處理:', {
+      errorCode: error.code,
+      errorMessage: error.message,
+      errorDetails: error.details,
+      showErrorToast: options.showErrorToast,
+      hasCustomHandler: !!options.customErrorHandler
+    });
+
     if (toastId !== undefined) {
       toast.dismiss(toastId);
     }
-
-    const error = response.error || { code: 'UNKNOWN_ERROR', message: '未知錯誤' };
 
     if (options.customErrorHandler) {
       options.customErrorHandler(error);

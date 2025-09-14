@@ -337,14 +337,24 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
   }, [form.watch('seriesId'), seriesInfo, isEditMode]);
 
   // 監聽香精選擇變更，檢測是否有更換
+  const watchedFragranceId = form.watch('fragranceId');
   useEffect(() => {
-    const currentFragranceId = form.watch('fragranceId');
-    if (isEditMode && originalFragranceId && currentFragranceId) {
-      setIsFragranceChanged(currentFragranceId !== originalFragranceId);
+    console.log('香精更換監測:', {
+      isEditMode,
+      originalFragranceId,
+      currentFragranceId: watchedFragranceId,
+      isDifferent: originalFragranceId && watchedFragranceId ?
+        originalFragranceId !== watchedFragranceId : false
+    });
+
+    if (isEditMode && originalFragranceId && watchedFragranceId) {
+      const changed = watchedFragranceId !== originalFragranceId;
+      setIsFragranceChanged(changed);
+      console.log('設定 isFragranceChanged:', changed);
     } else {
       setIsFragranceChanged(false);
     }
-  }, [form.watch('fragranceId'), originalFragranceId, isEditMode]);
+  }, [watchedFragranceId, originalFragranceId, isEditMode]);
 
   // 表單提交處理
   async function onSubmit(values: FormData) {

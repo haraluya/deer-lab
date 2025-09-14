@@ -59,6 +59,34 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "fragranceChangeHistory",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "oldFragranceId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "changeDate",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "fragranceChangeHistory",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "newFragranceId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "changeDate",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
