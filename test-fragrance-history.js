@@ -30,8 +30,8 @@ async function createTestHistory() {
       newFragranceCode: 'NEW-001',
       changeReason: '測試香精更換',
       changeDate: admin.firestore.FieldValue.serverTimestamp(),
-      changedBy: 'test-user',
-      changedByEmail: 'test@example.com',
+      changedBy: '052', // 使用統一的用戶ID
+      changedByName: '哈雷雷', // 添加操作人員姓名
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     };
 

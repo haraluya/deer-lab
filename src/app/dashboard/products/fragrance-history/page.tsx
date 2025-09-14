@@ -1,7 +1,7 @@
 // src/app/dashboard/products/fragrance-history/page.tsx
 'use client';
 
-import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useEffect, useState, useCallback, useRef, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApiClient } from '@/hooks/useApiClient';
 import { ArrowLeft, Search, Calendar, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Droplets, Package, Eye } from 'lucide-react';
@@ -82,10 +82,13 @@ function FragranceHistoryPageContent() {
     }
   }, [apiClient]);
 
-  // 🔧 修復：使用 state 的值作為 useEffect 的依賴，避免無限循環
+  // 🔧 修復無限循環：移除 loadData 依賴，使用 ref 來避免過度重新渲染
+  const loadDataRef = useRef(loadData);
+  loadDataRef.current = loadData;
+
   useEffect(() => {
-    loadData(state.currentPage, state.pageSize, state.searchTerm);
-  }, [state.currentPage, state.pageSize, state.searchTerm, loadData]);
+    loadDataRef.current(state.currentPage, state.pageSize, state.searchTerm);
+  }, [state.currentPage, state.pageSize, state.searchTerm]);
 
   // 處理搜尋
   const handleSearch = (searchValue: string) => {
