@@ -252,14 +252,43 @@ export default function WorkOrderDetailPage() {
 
     setIsCompleting(true);
     try {
+      // 🔍 診斷日誌：檢查所有 BOM 項目
+      console.log('🔍 [診斷] 工單完工前的 BOM 檢查:');
+      console.log('🔍 [診斷] 總BOM項目數:', workOrder.billOfMaterials.length);
+
+      workOrder.billOfMaterials.forEach((item, index) => {
+        console.log(`🔍 [診斷] BOM[${index}]:`, {
+          id: item.id,
+          name: item.name,
+          type: item.type,
+          category: item.category,
+          usedQuantity: item.usedQuantity,
+          quantity: item.quantity,
+          isFragrance: item.type === 'fragrance' || item.category === 'fragrance'
+        });
+      });
+
       // 準備物料消耗資料
       const materialsToUpdate = workOrder.billOfMaterials.filter(item => (item.usedQuantity || 0) > 0);
+      console.log('🔍 [診斷] 過濾後有使用量的項目數:', materialsToUpdate.length);
+
+      const fragranceItems = materialsToUpdate.filter(item => item.type === 'fragrance' || item.category === 'fragrance');
+      console.log('🔍 [診斷] 香精項目數:', fragranceItems.length);
+      fragranceItems.forEach((item, index) => {
+        console.log(`🔍 [診斷] 香精[${index}]:`, {
+          id: item.id,
+          name: item.name,
+          usedQuantity: item.usedQuantity
+        });
+      });
+
       const consumedMaterials = materialsToUpdate
         .filter(item => item.type !== 'fragrance' && item.category !== 'fragrance')
         .map(item => ({
           materialId: item.id,
           consumedQuantity: item.usedQuantity || 0
         }));
+      console.log('🔍 [診斷] 傳送給後端的物料消耗數據:', consumedMaterials);
 
       // 呼叫統一API完成工單
       const result = await apiClient.call('completeWorkOrder', {
