@@ -167,20 +167,52 @@ export default function WorkOrderDetailPage() {
   // 保存使用數量更新
   const handleSaveQuantities = async () => {
     if (!workOrder || !db) return;
-    
+
     try {
-      const updatedBillOfMaterials = workOrder.billOfMaterials.map(item => ({
-        ...item,
-        usedQuantity: editingQuantities[item.id] !== undefined ?
+      // 🔍 診斷日誌：保存前的編輯數量
+      console.log('🔍 [保存診斷] 編輯中的數量:', editingQuantities);
+
+      const updatedBillOfMaterials = workOrder.billOfMaterials.map(item => {
+        const newUsedQuantity = editingQuantities[item.id] !== undefined ?
           Math.max(0, parseFloat(editingQuantities[item.id].toFixed(3))) :
-          (item.usedQuantity !== undefined ? Math.max(0, parseFloat(item.usedQuantity.toFixed(3))) : Math.max(0, parseFloat((item.quantity || 0).toFixed(3))))
-      }));
+          (item.usedQuantity !== undefined ? Math.max(0, parseFloat(item.usedQuantity.toFixed(3))) : Math.max(0, parseFloat((item.quantity || 0).toFixed(3))));
+
+        // 特別診斷香精項目
+        if (item.type === 'fragrance' || item.category === 'fragrance') {
+          console.log('🔍 [保存診斷] 香精保存詳情:', {
+            id: item.id,
+            name: item.name,
+            originalUsedQuantity: item.usedQuantity,
+            editingValue: editingQuantities[item.id],
+            finalUsedQuantity: newUsedQuantity
+          });
+        }
+
+        return {
+          ...item,
+          usedQuantity: newUsedQuantity
+        };
+      });
+
+      // 🔍 診斷日誌：保存到Firestore前的最終數據
+      console.log('🔍 [保存診斷] 即將保存到Firestore的BOM數據:');
+      updatedBillOfMaterials.forEach((item, index) => {
+        if (item.type === 'fragrance' || item.category === 'fragrance') {
+          console.log(`🔍 [保存診斷] 香精[${index}] 最終數據:`, {
+            id: item.id,
+            name: item.name,
+            usedQuantity: item.usedQuantity
+          });
+        }
+      });
 
       const docRef = doc(db, "workOrders", workOrderId);
       await updateDoc(docRef, {
         billOfMaterials: updatedBillOfMaterials,
         updatedAt: Timestamp.now()
       });
+
+      console.log('🔍 [保存診斷] Firestore更新完成');
 
       // 更新本地狀態
       setWorkOrder(prev => prev ? {
