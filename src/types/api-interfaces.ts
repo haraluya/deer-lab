@@ -1,6 +1,6 @@
 // src/types/api-interfaces.ts
 /**
- * 🎯 鹿鹿小作坊 API 介面類型定義
+ * 🎯 德科斯特的實驗室 API 介面類型定義
  * 
  * 建立時間：2025-09-12
  * 目的：為所有 Firebase Functions API 提供類型安全支援

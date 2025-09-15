@@ -38,7 +38,7 @@ export class FragranceCalculations {
   }
 
   /**
-   * 計算 PG 和 VG 比例（基於鹿鹿小作坊的配方邏輯）
+   * 計算 PG 和 VG 比例（基於德科斯特的實驗室的配方邏輯）
    * 
    * 邏輯說明：
    * - 香精比例 ≤ 60%：香精+PG補滿60%，VG為40%

@@ -76,7 +76,7 @@ exports.nextServer = (0, https_1.onRequest)({
 exports.healthCheck = (0, https_1.onRequest)((request, response) => {
     response.json({
         status: "healthy",
-        service: "鹿鹿小作坊 API Service",
+        service: "德科斯特的實驗室 API Service",
         version: "1.0.0",
         timestamp: new Date().toISOString()
     });

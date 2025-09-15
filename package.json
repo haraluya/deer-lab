@@ -1,8 +1,8 @@
 {
   "name": "deer-lab",
   "version": "1.0.0",
-  "description": "鹿鹿小作坊 - 全方位生產管理系統 | 專為小型製造工坊設計的完整生產流程管理解決方案",
-  "author": "鹿鹿小作坊開發團隊",
+  "description": "德科斯特的實驗室 - 全方位生產管理系統 | 專為小型製造工坊設計的完整生產流程管理解決方案",
+  "author": "德科斯特的實驗室開發團隊",
   "license": "MIT",
   "homepage": "https://deer-lab.web.app",
   "repository": {

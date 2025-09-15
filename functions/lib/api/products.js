@@ -1,7 +1,7 @@
 "use strict";
 // functions/src/api/products.ts
 /**
- * 🎯 鹿鹿小作坊 - 產品管理 API (已標準化)
+ * 🎯 德科斯特的實驗室 - 產品管理 API (已標準化)
  *
  * 升級時間：2025-09-12
  * 升級內容：套用統一 API 標準化架構

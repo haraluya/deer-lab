@@ -1,4 +1,4 @@
-// Service Worker for Deer Lab PMS
+// Service Worker for Dexter's Lab PMS
 const CACHE_NAME = 'deer-lab-pms-v1';
 const urlsToCache = [
   '/',

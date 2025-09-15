@@ -18,7 +18,7 @@ export default function TestApiClientPage() {
             🧪 API 客戶端測試頁面
           </h1>
           <p className="text-gray-600">
-            測試鹿鹿小作坊統一 API 客戶端的各項功能
+            測試德科斯特的實驗室統一 API 客戶端的各項功能
           </p>
         </div>
         

@@ -1,6 +1,6 @@
 {
-  "name": "Deer Lab 生產管理系統",
-  "short_name": "Deer Lab PMS",
+  "name": "Dexter's Lab 生產管理系統",
+  "short_name": "Dexter's Lab PMS",
   "description": "專業的生產管理系統，提供完整的生產流程管理功能",
   "start_url": "/",
   "display": "standalone",

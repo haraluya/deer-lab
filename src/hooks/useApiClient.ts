@@ -1,6 +1,6 @@
 // src/hooks/useApiClient.ts
 /**
- * 🎯 鹿鹿小作坊 API 客戶端 React Hook
+ * 🎯 德科斯特的實驗室 API 客戶端 React Hook
  * 
  * 建立時間：2025-09-12
  * 目的：提供統一的 API 調用體驗，整合載入狀態、錯誤處理和類型安全

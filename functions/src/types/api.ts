@@ -1,6 +1,6 @@
 // functions/src/types/api.ts
 /**
- * 🎯 鹿鹿小作坊 API 標準化 - 統一回應格式
+ * 🎯 德科斯特的實驗室 API 標準化 - 統一回應格式
  * 
  * 建立時間：2025-09-12
  * 目的：統一所有 Firebase Functions 的回應格式，提升 API 一致性和可維護性

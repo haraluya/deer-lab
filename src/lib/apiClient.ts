@@ -1,6 +1,6 @@
 // src/lib/apiClient.ts
 /**
- * 🎯 鹿鹿小作坊 統一 API 客戶端
+ * 🎯 德科斯特的實驗室 統一 API 客戶端
  * 
  * 建立時間：2025-09-12
  * 目的：統一前端 Firebase Functions API 調用，提供類型安全和錯誤處理
