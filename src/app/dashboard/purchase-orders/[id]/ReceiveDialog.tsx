@@ -58,7 +58,7 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
     defaultValues: {
       items: safeItems.map((item: any) => ({
         ...item,
-        receivedQuantity: item.quantity
+        receivedQuantity: Number(item.quantity) || 0 // 確保是數字且有默認值
       })),
     },
   });
@@ -81,7 +81,14 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
       data: data
     });
 
-    // 防止重複提交 - 檢查更嚴格
+    // 🚨 重要：如果表單驗證失敗，不要繼續提交
+    if (!form.formState.isValid) {
+      console.log("❌ 表單驗證失敗，停止提交");
+      console.log("❌ 驗證錯誤詳情:", form.formState.errors);
+      return;
+    }
+
+    // 防止重複提交
     if (form.formState.isSubmitting) {
       console.log("⚠️ 已在提交中，忽略重複提交");
       return;
