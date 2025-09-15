@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { doc, getDoc, updateDoc, Timestamp, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useApiForm } from '@/hooks/useApiClient';
+import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { uploadMultipleImages } from '@/lib/imageUpload';
 import { ArrowLeft, Loader2, CheckCircle, Truck, ShoppingCart, Building, User, Calendar, Package, Plus, MessageSquare, Upload, X, Trash2 } from 'lucide-react';
@@ -66,6 +67,7 @@ export default function PurchaseOrderDetailPage() {
   const params = useParams();
   const { id } = params;
   const apiClient = useApiForm();
+  const { appUser } = useAuth();
 
   const [po, setPo] = useState<PurchaseOrderDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -258,7 +260,7 @@ export default function PurchaseOrderDetailPage() {
         text: newComment.trim(),
         images: uploadedImages,
         createdAt: new Date().toISOString(),
-        createdBy: po.createdByName || "當前用戶"
+        createdBy: appUser?.name || "未知用戶"
       };
 
       // 更新採購單文檔

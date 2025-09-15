@@ -9,6 +9,7 @@ import { toast } from "sonner"
 import { uploadImage, uploadMultipleImages } from "@/lib/imageUpload"
 import { error, debug, info } from "@/utils/logger"
 import { useApiClient } from "@/hooks/useApiClient"
+import { useAuth } from "@/context/AuthContext"
 import { findMaterialByCategory } from "@/lib/systemConfig"
 import { Material, Fragrance, Personnel, WorkOrder, TimeEntry, BillOfMaterialsItem } from "@/types"
 import { 
@@ -103,6 +104,7 @@ export default function WorkOrderDetailPage() {
   const router = useRouter()
   const workOrderId = params.id as string
   const apiClient = useApiClient()
+  const { appUser } = useAuth()
 
   const [workOrder, setWorkOrder] = useState<WorkOrderData | null>(null)
   const [timeEntries, setTimeEntries] = useState<any[]>([])
@@ -1214,7 +1216,7 @@ export default function WorkOrderDetailPage() {
         text: newComment.trim(),
         images: uploadedImages,
         createdAt: new Date().toISOString(),
-        createdBy: "當前用戶" // 這裡應該使用實際的用戶名稱
+        createdBy: appUser?.name || "未知用戶"
       };
 
       // 更新工單文檔
