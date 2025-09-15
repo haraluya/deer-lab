@@ -408,23 +408,14 @@ export default function PurchaseOrderDetailPage() {
   const handleUpdateStatus = async (newStatus: PurchaseOrderDetails['status']) => {
     if (!po) return;
     setIsUpdating(true);
-    
+
     try {
-      // 轉換中文狀態為API期望的英文狀態
-      const statusMap: Record<string, string> = {
-        '預報單': 'pending',
-        '已訂購': 'ordered',
-        '已收貨': 'received',
-        '已取消': 'cancelled'
-      };
-      
-      const apiStatus = statusMap[newStatus] || newStatus;
-      
+      // 🔧 修復：直接發送中文狀態，與後端保持一致
       const result = await apiClient.call('updatePurchaseOrderStatus', {
         purchaseOrderId: po.id,
-        newStatus: apiStatus
+        newStatus: newStatus  // 直接使用中文狀態：'已訂購', '已收貨', '已取消'
       });
-      
+
       if (result.success) {
         toast.success("狀態更新成功。");
         loadData(po.id); // 重新載入資料以顯示最新狀態

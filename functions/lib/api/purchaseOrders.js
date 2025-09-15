@@ -6,6 +6,19 @@ const firebase_functions_1 = require("firebase-functions");
 const https_1 = require("firebase-functions/v2/https");
 const firestore_1 = require("firebase-admin/firestore");
 const db = (0, firestore_1.getFirestore)();
+// 🎯 統一API回應格式輔助函數
+function createStandardResponse(success, data, error) {
+    return {
+        success,
+        data,
+        error,
+        meta: {
+            timestamp: Date.now(),
+            requestId: `po_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+            version: 'v1'
+        }
+    };
+}
 exports.createPurchaseOrders = (0, https_1.onCall)(async (request) => {
     const { auth: contextAuth, data } = request;
     if (!(contextAuth === null || contextAuth === void 0 ? void 0 : contextAuth.uid)) {
@@ -78,7 +91,12 @@ exports.updatePurchaseOrderStatus = (0, https_1.onCall)(async (request) => {
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
         });
         firebase_functions_1.logger.info(`管理員 ${contextAuth.uid} 將採購單 ${purchaseOrderId} 狀態更新為 ${newStatus}`);
-        return { success: true };
+        // 🎯 回傳標準化格式
+        return createStandardResponse(true, {
+            purchaseOrderId,
+            newStatus,
+            message: `採購單狀態已更新為 ${newStatus}`
+        });
     }
     catch (error) {
         firebase_functions_1.logger.error(`更新採購單 ${purchaseOrderId} 狀態時失敗:`, error);
@@ -98,6 +116,8 @@ exports.receivePurchaseOrderItems = (0, https_1.onCall)(async (request) => {
     }
     const receivedByRef = db.doc(`users/${contextAuth.uid}`);
     const poRef = db.doc(`purchaseOrders/${purchaseOrderId}`);
+    // 🔧 修復：將 itemDetails 移到 transaction 外部以便在回應中使用
+    const itemDetails = [];
     try {
         await db.runTransaction(async (transaction) => {
             var _a, _b, _c, _d;
@@ -113,8 +133,6 @@ exports.receivePurchaseOrderItems = (0, https_1.onCall)(async (request) => {
                 receivedAt: firestore_1.FieldValue.serverTimestamp(),
                 receivedByRef,
             });
-            // 收集所有入庫項目的明細
-            const itemDetails = [];
             for (const item of items) {
                 if (!item.itemRefPath)
                     continue;
@@ -167,7 +185,19 @@ exports.receivePurchaseOrderItems = (0, https_1.onCall)(async (request) => {
             }
         });
         firebase_functions_1.logger.info(`管理員 ${contextAuth.uid} 成功完成採購單 ${purchaseOrderId} 的入庫操作。`);
-        return {};
+        // 🎯 回傳標準化格式，包含詳細的入庫資訊
+        return createStandardResponse(true, {
+            purchaseOrderId,
+            message: `採購單 ${purchaseOrderId} 收貨入庫成功`,
+            receivedItemsCount: itemDetails.length,
+            itemDetails: itemDetails.map(item => ({
+                itemId: item.itemId,
+                itemType: item.itemType,
+                itemName: item.itemName,
+                quantityReceived: item.quantityChange,
+                newStock: item.quantityAfter
+            }))
+        });
     }
     catch (error) {
         firebase_functions_1.logger.error(`採購單 ${purchaseOrderId} 入庫操作失敗:`, error);

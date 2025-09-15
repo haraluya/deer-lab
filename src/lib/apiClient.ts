@@ -289,6 +289,23 @@ export class ApiClient {
    * 適配舊版回應格式
    */
   private adaptLegacyResponse(response: any): ApiResponse | null {
+    // 🎯 適配採購管理API簡化格式: { success: true } (updatePurchaseOrderStatus, receivePurchaseOrderItems)
+    if (typeof response.success === 'boolean' && Object.keys(response).length <= 3) {
+      return {
+        success: response.success,
+        data: response.success ? (response.message ? { message: response.message } : { message: '操作成功' }) : undefined,
+        error: !response.success ? {
+          code: 'PURCHASE_ORDER_ERROR',
+          message: response.message || '採購操作失敗'
+        } : undefined,
+        meta: {
+          timestamp: Date.now(),
+          requestId: `purchase_adapted_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+          version: 'purchase-order-legacy'
+        }
+      };
+    }
+
     // 適配 materials.ts 舊格式: { status: "success", message: "...", materialId: "..." }
     if (response.status === 'success' || response.status === 'error') {
       return {

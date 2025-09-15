@@ -6,6 +6,20 @@ import { ensureIsAdmin } from "../utils/auth";
 
 const db = getFirestore();
 
+// 🎯 統一API回應格式輔助函數
+function createStandardResponse<T = any>(success: boolean, data?: T, error?: { code: string; message: string; details?: any }) {
+  return {
+    success,
+    data,
+    error,
+    meta: {
+      timestamp: Date.now(),
+      requestId: `po_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      version: 'v1'
+    }
+  };
+}
+
 interface PurchaseItemPayload {
   id: string;
   name: string;
@@ -98,7 +112,13 @@ export const updatePurchaseOrderStatus = onCall(async (request) => {
       updatedAt: FieldValue.serverTimestamp(),
     });
     logger.info(`管理員 ${contextAuth.uid} 將採購單 ${purchaseOrderId} 狀態更新為 ${newStatus}`);
-    return { success: true };
+
+    // 🎯 回傳標準化格式
+    return createStandardResponse(true, {
+      purchaseOrderId,
+      newStatus,
+      message: `採購單狀態已更新為 ${newStatus}`
+    });
   } catch (error) {
     logger.error(`更新採購單 ${purchaseOrderId} 狀態時失敗:`, error);
     throw new HttpsError("internal", "更新狀態時發生錯誤。");
@@ -122,6 +142,9 @@ export const receivePurchaseOrderItems = onCall(async (request) => {
   const receivedByRef = db.doc(`users/${contextAuth.uid}`);
   const poRef = db.doc(`purchaseOrders/${purchaseOrderId}`);
 
+  // 🔧 修復：將 itemDetails 移到 transaction 外部以便在回應中使用
+  const itemDetails: any[] = [];
+
   try {
     await db.runTransaction(async (transaction) => {
       const poDoc = await transaction.get(poRef);
@@ -137,9 +160,6 @@ export const receivePurchaseOrderItems = onCall(async (request) => {
         receivedAt: FieldValue.serverTimestamp(),
         receivedByRef,
       });
-
-      // 收集所有入庫項目的明細
-      const itemDetails = [];
       
       for (const item of items) {
         if (!item.itemRefPath) continue;
@@ -199,8 +219,20 @@ export const receivePurchaseOrderItems = onCall(async (request) => {
     });
 
     logger.info(`管理員 ${contextAuth.uid} 成功完成採購單 ${purchaseOrderId} 的入庫操作。`);
-    
-    return {};
+
+    // 🎯 回傳標準化格式，包含詳細的入庫資訊
+    return createStandardResponse(true, {
+      purchaseOrderId,
+      message: `採購單 ${purchaseOrderId} 收貨入庫成功`,
+      receivedItemsCount: itemDetails.length,
+      itemDetails: itemDetails.map(item => ({
+        itemId: item.itemId,
+        itemType: item.itemType,
+        itemName: item.itemName,
+        quantityReceived: item.quantityChange,
+        newStock: item.quantityAfter
+      }))
+    });
   } catch (error) {
     logger.error(`採購單 ${purchaseOrderId} 入庫操作失敗:`, error);
     throw new HttpsError("internal", "入庫操作失敗");
