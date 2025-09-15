@@ -157,7 +157,7 @@ export default function WorkOrderDetailPage() {
 
   // 處理使用數量更新
   const handleQuantityChange = (itemId: string, value: string) => {
-    const numValue = parseFloat(parseFloat(value || '0').toFixed(3));
+    const numValue = Math.max(0, parseFloat(parseFloat(value || '0').toFixed(3))); // 確保不是負數
     setEditingQuantities(prev => ({
       ...prev,
       [itemId]: numValue
@@ -172,8 +172,8 @@ export default function WorkOrderDetailPage() {
       const updatedBillOfMaterials = workOrder.billOfMaterials.map(item => ({
         ...item,
         usedQuantity: editingQuantities[item.id] !== undefined ?
-          parseFloat(editingQuantities[item.id].toFixed(3)) :
-          (item.usedQuantity !== undefined ? parseFloat(item.usedQuantity.toFixed(3)) : parseFloat((item.quantity || 0).toFixed(3)))
+          Math.max(0, parseFloat(editingQuantities[item.id].toFixed(3))) :
+          (item.usedQuantity !== undefined ? Math.max(0, parseFloat(item.usedQuantity.toFixed(3))) : Math.max(0, parseFloat((item.quantity || 0).toFixed(3))))
       }));
 
       const docRef = doc(db, "workOrders", workOrderId);
@@ -210,7 +210,7 @@ export default function WorkOrderDetailPage() {
         return {
           ...item,
           quantity: newQuantity,
-          usedQuantity: item.usedQuantity !== undefined ? parseFloat(item.usedQuantity.toFixed(3)) : parseFloat(newQuantity.toFixed(3)) // 保留已設定的使用數量，包括 0
+          usedQuantity: item.usedQuantity !== undefined ? Math.max(0, parseFloat(item.usedQuantity.toFixed(3))) : Math.max(0, parseFloat(newQuantity.toFixed(3))) // 保留已設定的使用數量，包括 0，並確保不是負數
         };
       }
       return item;
