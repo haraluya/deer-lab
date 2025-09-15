@@ -55,9 +55,11 @@ function ProductionCalculatorPageContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 格式化數值顯示，整數不顯示小數點
+  // 格式化數值顯示，整數不顯示小數點，小數最多3位
   const formatNumber = (value: number) => {
-    return value % 1 === 0 ? value.toString() : value.toFixed(3);
+    // 四捨五入到小數點第三位
+    const rounded = Math.round(value * 1000) / 1000;
+    return rounded % 1 === 0 ? rounded.toString() : rounded.toFixed(3);
   };
 
   useEffect(() => {
@@ -106,10 +108,12 @@ function ProductionCalculatorPageContent() {
             if(fragranceSnap.exists()) {
                 // --- **修正點：使用類型斷言** ---
                 const fragranceData = fragranceSnap.data() as FragranceDoc;
+                // 四捨五入到小數點第三位
+                const fragranceQuantity = Math.round((targetQuantity * fragranceData.percentage) / 100 * 1000) / 1000;
                 bom.push({
                     name: fragranceData.name,
                     code: fragranceData.code,
-                    quantity: (targetQuantity * fragranceData.percentage) / 100,
+                    quantity: fragranceQuantity,
                     unit: 'kg'
                 });
             }
@@ -123,19 +127,23 @@ function ProductionCalculatorPageContent() {
                 
                 // 使用香精配方中儲存的原始PG和VG比例
                 if (fragranceData.pgRatio && fragranceData.pgRatio > 0) {
+                    // 四捨五入到小數點第三位
+                    const pgQuantity = Math.round((targetQuantity * fragranceData.pgRatio) / 100 * 1000) / 1000;
                     bom.push({
                         name: 'PG (Propylene Glycol)',
                         code: 'PG001',
-                        quantity: (targetQuantity * fragranceData.pgRatio) / 100,
+                        quantity: pgQuantity,
                         unit: 'kg'
                     });
                 }
-                
+
                 if (fragranceData.vgRatio && fragranceData.vgRatio > 0) {
+                    // 四捨五入到小數點第三位
+                    const vgQuantity = Math.round((targetQuantity * fragranceData.vgRatio) / 100 * 1000) / 1000;
                     bom.push({
                         name: 'VG (Vegetable Glycerin)',
                         code: 'VG001',
-                        quantity: (targetQuantity * fragranceData.vgRatio) / 100,
+                        quantity: vgQuantity,
                         unit: 'kg'
                     });
                 }
@@ -144,10 +152,12 @@ function ProductionCalculatorPageContent() {
 
         // Nicotine (if applicable)
         if (productData.nicotineMg && productData.nicotineMg > 0) {
+            // 四捨五入到小數點第三位
+            const nicotineQuantity = Math.round((targetQuantity * productData.nicotineMg) / 250 * 1000) / 1000; // Convert mg to kg
             bom.push({
                 name: 'Nicotine Salt',
                 code: 'NIC001',
-                quantity: (targetQuantity * productData.nicotineMg) / 250, // Convert mg to kg
+                quantity: nicotineQuantity,
                 unit: 'kg'
             });
         }
