@@ -60,32 +60,47 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
       const payload = {
         purchaseOrderId: purchaseOrder.id,
         items: data.items.map(item => {
-          // 🔧 修復：安全處理 Firebase DocumentReference 物件
+          // 🎯 修復：使用物品代號(ID)而非名稱來更新庫存
           let itemRefPath = '';
+          let itemId = '';
 
           // 調試：輸出 itemRef 結構
           console.log("Item ref structure:", item.itemRef);
+          console.log("Item code:", item.code);
 
           if (item.itemRef) {
-            // 嘗試不同的路徑格式
-            if (item.itemRef._path && item.itemRef._path.segments) {
+            // Firebase DocumentReference 物件處理
+            if (item.itemRef._key && item.itemRef._key.path && item.itemRef._key.path.segments) {
+              // Firestore v9+ 格式
+              const segments = item.itemRef._key.path.segments;
+              itemRefPath = segments.slice(segments.length - 2).join('/');
+              itemId = segments[segments.length - 1];
+            } else if (item.itemRef._path && item.itemRef._path.segments) {
+              // 舊版 Firestore 格式
               itemRefPath = item.itemRef._path.segments.join('/');
+              itemId = item.itemRef._path.segments[item.itemRef._path.segments.length - 1];
             } else if (item.itemRef.path) {
+              // path 字串格式
               itemRefPath = item.itemRef.path;
-            } else if (typeof item.itemRef === 'string') {
-              itemRefPath = item.itemRef;
+              const pathParts = item.itemRef.path.split('/');
+              itemId = pathParts[pathParts.length - 1];
             } else if (item.itemRef.id) {
-              // 根據 unit 決定是 materials 還是 fragrances
-              itemRefPath = item.unit ? `materials/${item.itemRef.id}` : `fragrances/${item.itemRef.id}`;
+              // 直接有 id 屬性
+              itemId = item.itemRef.id;
+              itemRefPath = item.unit ? `materials/${itemId}` : `fragrances/${itemId}`;
             }
           }
 
-          // 如果還是沒有路徑，使用 fallback
-          if (!itemRefPath && item.id) {
-            itemRefPath = item.unit ? `materials/${item.id}` : `fragrances/${item.id}`;
+          // 🚨 重要：絕對不要使用名稱，必須使用代號(code)作為文檔ID
+          // 如果沒有從 itemRef 獲取到路徑，使用 code 作為 ID
+          if (!itemRefPath && item.code) {
+            // 使用 code 作為文檔 ID（因為物品是用 code 作為文檔ID儲存的）
+            itemRefPath = item.unit ? `materials/${item.code}` : `fragrances/${item.code}`;
+            console.log("Using code as document ID:", item.code);
           }
 
           console.log("Resolved itemRefPath:", itemRefPath);
+          console.log("Item ID:", itemId || item.code);
 
           return {
             itemRefPath,
