@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { ReceiveDialog } from './ReceiveDialog'; // 引入新元件
+import { NewReceiveDialog } from './NewReceiveDialog'; // 引入新的簡潔收貨元件
 
 interface PurchaseOrderItem {
   name: string;
@@ -1084,7 +1084,7 @@ export default function PurchaseOrderDetailPage() {
       </Card>
       
       {/* 收貨對話框 */}
-      {po && <ReceiveDialog isOpen={isReceiveDialogOpen} onOpenChange={setIsReceiveDialogOpen} onSuccess={() => loadData(po.id)} purchaseOrder={po} />}
+      {po && <NewReceiveDialog isOpen={isReceiveDialogOpen} onOpenChange={setIsReceiveDialogOpen} onSuccess={() => loadData(po.id)} purchaseOrder={po} />}
 
       {/* 增加其他費用對話框 */}
       <Dialog open={isAddFeeDialogOpen} onOpenChange={setIsAddFeeDialogOpen}>
