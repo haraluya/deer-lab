@@ -515,88 +515,117 @@ export const completeWorkOrder = onCall(async (request) => {
         completedBy: contextAuth.uid,
       });
 
-      // 7. 處理物料消耗和庫存紀錄
-      const materialDetails = [];
+      // 7. 🎯 準備統一API的庫存更新請求（物料和香精消耗）
+      const allConsumptionUpdates = [];
 
+      // 7.1 處理物料消耗
       logger.info(`開始處理工單 ${workOrderId} 的物料消耗:`, {
         consumedMaterials: consumedMaterials || 'null',
         consumedMaterialsLength: consumedMaterials ? consumedMaterials.length : 0
       });
 
-      // 更新物料庫存
       for (let i = 0; i < materialRefs.length; i++) {
         const { ref: materialRef, consumedQuantity } = materialRefs[i];
         const materialSnap = materialSnaps[i];
 
-        if (materialSnap.exists) {
-          const materialData = materialSnap.data()!;
-          const currentStock = materialData.currentStock || 0;
-          const newStock = Math.max(0, currentStock - consumedQuantity);
+        if (materialSnap.exists && consumedQuantity > 0) {
+          allConsumptionUpdates.push({
+            itemId: materialRef.id,
+            itemType: 'material' as const,
+            operation: 'subtract' as const,
+            quantity: consumedQuantity,
+            reason: `工單 ${workOrderId} 完工消耗`
+          });
+        }
+      }
+
+      // 7.2 處理香精消耗
+      for (const fragranceInfo of fragranceRefs) {
+        try {
+          const { snap: fragranceSnap, consumedQuantity } = fragranceInfo;
+
+          if (fragranceSnap.exists && consumedQuantity > 0) {
+            allConsumptionUpdates.push({
+              itemId: fragranceSnap.id,
+              itemType: 'fragrance' as const,
+              operation: 'subtract' as const,
+              quantity: consumedQuantity,
+              reason: `工單 ${workOrderId} 香精消耗`
+            });
+          }
+        } catch (error) {
+          logger.error(`處理香精消耗時發生錯誤:`, error);
+        }
+      }
+
+      // 7.3 🎯 執行統一庫存更新（在同一事務內）
+      const materialDetails: any[] = [];
+      const failedUpdates: any[] = [];
+
+      logger.info(`準備執行統一庫存更新，總計 ${allConsumptionUpdates.length} 個項目`);
+
+      for (const update of allConsumptionUpdates) {
+        try {
+          const itemRef = db.doc(`${update.itemType === 'material' ? 'materials' : 'fragrances'}/${update.itemId}`);
+          const itemDoc = await transaction.get(itemRef);
+
+          if (!itemDoc.exists) {
+            failedUpdates.push({
+              itemId: update.itemId,
+              error: 'Item not found',
+              details: { reason: '找不到指定項目' }
+            });
+            continue;
+          }
+
+          const currentStock = itemDoc.data()?.currentStock || 0;
+          const newStock = Math.max(0, currentStock - update.quantity); // 工單消耗，使用subtract但確保不為負
 
           // 更新庫存
-          transaction.update(materialRef, {
+          transaction.update(itemRef, {
             currentStock: newStock,
             lastStockUpdate: FieldValue.serverTimestamp(),
           });
 
-          // 收集物料明細
+          // 獲取項目詳細信息
+          const itemData = itemDoc.data()!;
+
+          // 收集庫存記錄明細
           materialDetails.push({
-            itemId: materialRef.id,
-            itemType: 'material',
-            itemCode: materialData.code || '',
-            itemName: materialData.name || '',
-            quantityChange: -consumedQuantity, // 負數表示消耗
-            quantityAfter: newStock
+            itemId: update.itemId,
+            itemType: update.itemType,
+            itemCode: itemData.code || '',
+            itemName: itemData.name || '',
+            quantityBefore: currentStock,
+            quantityChange: -update.quantity, // 負數表示消耗
+            quantityAfter: newStock,
+            changeReason: update.reason
+          });
+
+          logger.info(`${update.itemType === 'material' ? '物料' : '香精'}庫存已扣除: ${itemData.name}`, {
+            id: update.itemId,
+            code: itemData.code,
+            currentStock,
+            newStock,
+            consumedQuantity: update.quantity
+          });
+
+        } catch (error) {
+          logger.error(`處理項目 ${update.itemId} 時發生錯誤:`, error);
+          failedUpdates.push({
+            itemId: update.itemId,
+            error: error instanceof Error ? error.message : String(error),
+            details: { originalUpdate: update }
           });
         }
       }
 
-      // 6. 更新香精庫存（使用預先讀取的數據）
-      for (const fragranceInfo of fragranceRefs) {
-        try {
-          const { ref: fragranceRef, snap: fragranceSnap, item: fragranceItem, consumedQuantity } = fragranceInfo;
-
-          if (fragranceSnap.exists) {
-            const fragranceData = fragranceSnap.data();
-            const currentStock = fragranceData.currentStock || 0;
-            const newStock = Math.max(0, currentStock - consumedQuantity);
-
-            // 更新香精庫存
-            transaction.update(fragranceRef, {
-              currentStock: newStock,
-              lastStockUpdate: FieldValue.serverTimestamp(),
-            });
-
-            // 收集香精明細
-            materialDetails.push({
-              itemId: fragranceSnap.id,
-              itemType: 'fragrance',
-              itemCode: fragranceData.code || fragranceItem.code || '',
-              itemName: fragranceData.name || fragranceItem.name || '',
-              quantityChange: -consumedQuantity, // 負數表示消耗
-              quantityAfter: newStock
-            });
-
-            logger.info(`香精庫存已扣除: ${fragranceItem.name}`, {
-              id: fragranceSnap.id,
-              code: fragranceItem.code,
-              currentStock,
-              newStock,
-              consumedQuantity
-            });
-          }
-        } catch (error) {
-          logger.error(`處理香精消耗時發生錯誤: ${fragranceInfo.item.name}`, error);
-          // 不阻擋主要流程，只記錄錯誤
-        }
-      }
-
-      // 5. 建立統一的庫存紀錄（以動作為單位）
-      logger.info(`準備建立庫存紀錄:`, { 
+      // 7.4 建立統一的庫存紀錄
+      logger.info(`準備建立庫存紀錄:`, {
         materialDetailsLength: materialDetails.length,
-        materialDetails: materialDetails
+        failedUpdatesLength: failedUpdates.length
       });
-      
+
       if (materialDetails.length > 0) {
         const inventoryRecordRef = db.collection("inventory_records").doc();
         transaction.set(inventoryRecordRef, {
@@ -604,7 +633,7 @@ export const completeWorkOrder = onCall(async (request) => {
           changeReason: 'workorder',
           operatorId: contextAuth.uid,
           operatorName: contextAuth.token?.name || '未知用戶',
-          remarks: `工單 ${workOrderData.workOrderNumber || workOrderId} 完工，實際生產數量：${actualQuantity}`,
+          remarks: `工單 ${workOrderData.code || workOrderId} 完工，實際生產數量：${actualQuantity}`,
           relatedDocumentId: workOrderId,
           relatedDocumentType: 'work_order',
           details: materialDetails,
@@ -613,6 +642,11 @@ export const completeWorkOrder = onCall(async (request) => {
         logger.info(`已建立工單 ${workOrderId} 的庫存紀錄，包含 ${materialDetails.length} 個項目`);
       } else {
         logger.warn(`工單 ${workOrderId} 完工但沒有物料消耗記錄，未建立庫存紀錄`);
+      }
+
+      // 如果有失敗項目，記錄警告但不阻斷流程
+      if (failedUpdates.length > 0) {
+        logger.warn(`工單 ${workOrderId} 完工時部分項目處理失敗:`, failedUpdates);
       }
     });
 

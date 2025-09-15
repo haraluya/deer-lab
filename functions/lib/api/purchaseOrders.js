@@ -104,7 +104,7 @@ exports.updatePurchaseOrderStatus = (0, https_1.onCall)(async (request) => {
     }
 });
 exports.receivePurchaseOrderItems = (0, https_1.onCall)(async (request) => {
-    var _a;
+    var _a, _b;
     // 🔍 調試：記錄函數開始執行
     firebase_functions_1.logger.info("=== receivePurchaseOrderItems 函數開始執行 ===");
     const { auth: contextAuth, data } = request;
@@ -138,10 +138,40 @@ exports.receivePurchaseOrderItems = (0, https_1.onCall)(async (request) => {
     // 🔧 修復：將 itemDetails 移到 transaction 外部以便在回應中使用
     const itemDetails = [];
     try {
-        firebase_functions_1.logger.info("開始執行事務處理");
+        // 🎯 準備統一API的庫存更新請求
+        const unifiedUpdates = items
+            .filter(item => item.itemRefPath && Number(item.receivedQuantity) > 0)
+            .map(item => ({
+            itemId: db.doc(item.itemRefPath).id,
+            itemType: item.itemRefPath.includes('materials') ? 'material' : 'fragrance',
+            operation: 'add',
+            quantity: Number(item.receivedQuantity),
+            reason: `採購單 ${purchaseOrderId} 收貨入庫`
+        }));
+        if (unifiedUpdates.length === 0) {
+            throw new https_1.HttpsError("invalid-argument", "沒有有效的入庫項目。");
+        }
+        const unifiedRequest = {
+            source: {
+                type: 'purchase_receive',
+                operatorId: contextAuth.uid,
+                operatorName: ((_a = contextAuth.token) === null || _a === void 0 ? void 0 : _a.name) || '未知用戶',
+                remarks: `採購單 ${purchaseOrderId} 入庫`,
+                relatedDocumentId: purchaseOrderId,
+                relatedDocumentType: 'purchase_order',
+            },
+            updates: unifiedUpdates,
+            options: {
+                allowNegativeStock: false,
+                skipStockValidation: false,
+                batchMode: true
+            }
+        };
+        firebase_functions_1.logger.info("開始執行統一庫存更新");
+        // 🎯 使用統一API進行庫存更新，並更新採購單狀態
         await db.runTransaction(async (transaction) => {
-            var _a, _b, _c, _d;
-            firebase_functions_1.logger.info("事務內部開始執行");
+            var _a, _b, _c, _d, _e, _f, _g;
+            // 1. 檢查採購單狀態
             const poDoc = await transaction.get(poRef);
             if (!poDoc.exists) {
                 throw new https_1.HttpsError("not-found", "找不到指定的採購單。");
@@ -149,60 +179,93 @@ exports.receivePurchaseOrderItems = (0, https_1.onCall)(async (request) => {
             if (((_a = poDoc.data()) === null || _a === void 0 ? void 0 : _a.status) !== '已訂購') {
                 throw new https_1.HttpsError("failed-precondition", `採購單狀態為 "${(_b = poDoc.data()) === null || _b === void 0 ? void 0 : _b.status}"，無法執行入庫。`);
             }
+            // 2. 更新採購單狀態
             transaction.update(poRef, {
                 status: "已收貨",
                 receivedAt: firestore_1.FieldValue.serverTimestamp(),
                 receivedByRef,
             });
-            for (const item of items) {
-                if (!item.itemRefPath)
-                    continue;
-                const itemRef = db.doc(item.itemRefPath);
-                const receivedQuantity = Number(item.receivedQuantity);
-                if (receivedQuantity > 0) {
-                    // 先獲取當前庫存，然後計算新庫存
+            // 3. 執行統一庫存更新（在同一事務內）
+            const inventoryRecordDetails = [];
+            const failedUpdates = [];
+            for (const update of unifiedUpdates) {
+                try {
+                    const itemRef = db.doc(`${update.itemType === 'material' ? 'materials' : 'fragrances'}/${update.itemId}`);
                     const itemDoc = await transaction.get(itemRef);
+                    if (!itemDoc.exists) {
+                        failedUpdates.push({
+                            itemId: update.itemId,
+                            error: 'Item not found',
+                            details: { reason: '找不到指定項目' }
+                        });
+                        continue;
+                    }
                     const currentStock = ((_c = itemDoc.data()) === null || _c === void 0 ? void 0 : _c.currentStock) || 0;
-                    const newStock = currentStock + receivedQuantity;
+                    const newStock = currentStock + update.quantity;
+                    // 更新庫存
                     transaction.update(itemRef, {
                         currentStock: newStock,
                         lastStockUpdate: firestore_1.FieldValue.serverTimestamp(),
                     });
-                    // 收集項目明細
+                    // 收集庫存記錄明細
+                    inventoryRecordDetails.push({
+                        itemId: update.itemId,
+                        itemType: update.itemType,
+                        itemCode: ((_d = items.find(item => db.doc(item.itemRefPath).id === update.itemId)) === null || _d === void 0 ? void 0 : _d.code) || '',
+                        itemName: ((_e = items.find(item => db.doc(item.itemRefPath).id === update.itemId)) === null || _e === void 0 ? void 0 : _e.name) || '',
+                        quantityBefore: currentStock,
+                        quantityChange: update.quantity,
+                        quantityAfter: newStock,
+                        changeReason: update.reason || `採購單 ${purchaseOrderId} 收貨入庫`
+                    });
+                    // 收集項目明細供回應使用
                     itemDetails.push({
-                        itemId: itemRef.id,
-                        itemType: item.itemRefPath.includes('materials') ? 'material' : 'fragrance',
-                        itemCode: item.code || '',
-                        itemName: item.name || '',
-                        quantityChange: receivedQuantity,
+                        itemId: update.itemId,
+                        itemType: update.itemType,
+                        itemCode: ((_f = items.find(item => db.doc(item.itemRefPath).id === update.itemId)) === null || _f === void 0 ? void 0 : _f.code) || '',
+                        itemName: ((_g = items.find(item => db.doc(item.itemRefPath).id === update.itemId)) === null || _g === void 0 ? void 0 : _g.name) || '',
+                        quantityChange: update.quantity,
                         quantityAfter: newStock
                     });
+                    // 建立庫存異動記錄
                     const movementRef = db.collection("inventoryMovements").doc();
                     transaction.set(movementRef, {
                         itemRef: itemRef,
-                        itemType: item.itemRefPath.includes('materials') ? 'material' : 'fragrance',
-                        changeQuantity: receivedQuantity,
+                        itemType: update.itemType,
+                        changeQuantity: update.quantity,
                         type: "purchase_inbound",
                         relatedDocRef: poRef,
                         createdAt: firestore_1.FieldValue.serverTimestamp(),
                         createdByRef: receivedByRef,
                     });
                 }
+                catch (error) {
+                    firebase_functions_1.logger.error(`處理項目 ${update.itemId} 時發生錯誤:`, error);
+                    failedUpdates.push({
+                        itemId: update.itemId,
+                        error: error instanceof Error ? error.message : String(error),
+                        details: { originalUpdate: update }
+                    });
+                }
             }
-            // 建立統一的庫存紀錄（以動作為單位）
-            if (itemDetails.length > 0) {
+            // 4. 建立統一的庫存紀錄
+            if (inventoryRecordDetails.length > 0) {
                 const inventoryRecordRef = db.collection("inventory_records").doc();
                 transaction.set(inventoryRecordRef, {
                     changeDate: firestore_1.FieldValue.serverTimestamp(),
                     changeReason: 'purchase',
-                    operatorId: contextAuth.uid,
-                    operatorName: ((_d = contextAuth.token) === null || _d === void 0 ? void 0 : _d.name) || '未知用戶',
-                    remarks: `採購單 ${purchaseOrderId} 入庫`,
-                    relatedDocumentId: purchaseOrderId,
-                    relatedDocumentType: 'purchase_order',
-                    details: itemDetails,
+                    operatorId: unifiedRequest.source.operatorId,
+                    operatorName: unifiedRequest.source.operatorName,
+                    remarks: unifiedRequest.source.remarks,
+                    relatedDocumentId: unifiedRequest.source.relatedDocumentId,
+                    relatedDocumentType: unifiedRequest.source.relatedDocumentType,
+                    details: inventoryRecordDetails,
                     createdAt: firestore_1.FieldValue.serverTimestamp(),
                 });
+            }
+            // 如果有失敗項目，拋出錯誤
+            if (failedUpdates.length > 0) {
+                throw new https_1.HttpsError("internal", `部分項目處理失敗：${failedUpdates.map(f => f.itemId).join(', ')}`);
             }
         });
         firebase_functions_1.logger.info("事務處理完成");
@@ -225,7 +288,7 @@ exports.receivePurchaseOrderItems = (0, https_1.onCall)(async (request) => {
         firebase_functions_1.logger.error("=== receivePurchaseOrderItems 函數執行失敗 ===");
         firebase_functions_1.logger.error(`採購單 ${purchaseOrderId} 入庫操作失敗:`, error);
         firebase_functions_1.logger.error("錯誤詳細信息:", {
-            errorType: (_a = error === null || error === void 0 ? void 0 : error.constructor) === null || _a === void 0 ? void 0 : _a.name,
+            errorType: (_b = error === null || error === void 0 ? void 0 : error.constructor) === null || _b === void 0 ? void 0 : _b.name,
             errorMessage: error instanceof Error ? error.message : String(error),
             errorStack: error instanceof Error ? error.stack : undefined
         });

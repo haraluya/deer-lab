@@ -75,8 +75,8 @@ interface UnifiedInventoryUpdateRequest {
 - [ ] 8. 測試前端直接修改和盤點功能
 
 ### 🟠 階段三：整合複雜業務邏輯 (中風險)
-- [ ] 9. 重構 `receivePurchaseOrderItems` 庫存更新部分
-- [ ] 10. 重構 `completeWorkOrder` 庫存更新部分
+- [x] 9. 重構 `receivePurchaseOrderItems` 庫存更新部分
+- [x] 10. 重構 `completeWorkOrder` 庫存更新部分
 - [ ] 11. 測試採購收貨和工單完工功能
 - [ ] 12. 確保業務邏輯完整性
 
@@ -106,6 +106,18 @@ interface UnifiedInventoryUpdateRequest {
 - ✅ 建立共用核心邏輯函數 `executeUnifiedInventoryUpdate`
 - ✅ 清理重複代碼，減少檔案大小約200行
 - 🎯 成果：三個庫存API已完全統一，保持向後相容
+
+### 2025-09-15 階段三完成 ✅
+- ✅ 重構 `receivePurchaseOrderItems` 採購收貨庫存入庫邏輯
+  - 🔄 將原始庫存更新邏輯替換為統一API格式
+  - 🔄 保持採購單狀態更新和業務邏輯完整性
+  - 🎯 支援批量入庫操作，統一記錄格式
+- ✅ 重構 `completeWorkOrder` 工單完工庫存扣除邏輯
+  - 🔄 統一物料和香精消耗處理邏輯
+  - 🔄 保持工單狀態更新和BOM計算邏輯
+  - 🎯 支援多項目庫存扣除，確保不為負數
+- ✅ 前後端編譯測試通過
+- 🎯 成果：五個庫存修改方式已完全整合至統一API架構
 
 ---
 
