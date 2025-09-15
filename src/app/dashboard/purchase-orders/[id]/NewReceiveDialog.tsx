@@ -49,17 +49,51 @@ export function NewReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrde
     setIsSubmitting(true);
 
     try {
+      // 調試日誌
+      console.log('📦 採購單項目:', purchaseOrder.items);
+      console.log('📦 第一個項目的 itemRef:', purchaseOrder.items[0]?.itemRef);
+
       const payload = {
         purchaseOrderId: purchaseOrder.id,
         items: purchaseOrder.items.map((item: any, index: number) => {
-          // 生成 itemRefPath
+          // 生成 itemRefPath - 優先使用 itemRef
           let itemRefPath = '';
-          if (item.itemRef && item.itemRef.path) {
-            itemRefPath = item.itemRef.path;
-          } else if (item.itemRef && item.itemRef.id) {
-            itemRefPath = item.unit ? `materials/${item.itemRef.id}` : `fragrances/${item.itemRef.id}`;
-          } else {
-            itemRefPath = item.unit ? `materials/${item.id}` : `fragrances/${item.id}`;
+
+          // 調試日誌：查看 itemRef 的實際結構
+          console.log(`項目 ${index} - itemRef 結構:`, {
+            itemRef: item.itemRef,
+            hasPath: item.itemRef?.path,
+            hasId: item.itemRef?.id,
+            hasKey: item.itemRef?._key,
+            fullItem: item
+          });
+
+          // Firebase DocumentReference 會有 _key 屬性，包含完整路徑
+          if (item.itemRef) {
+            // 處理 Firebase DocumentReference 的各種可能格式
+            if (item.itemRef._key && item.itemRef._key.path && item.itemRef._key.path.segments) {
+              // Firestore DocumentReference 結構
+              const segments = item.itemRef._key.path.segments;
+              itemRefPath = segments.join('/');
+              console.log(`使用 _key.path.segments: ${itemRefPath}`);
+            } else if (item.itemRef.path) {
+              // 標準 path 屬性
+              itemRefPath = item.itemRef.path;
+              console.log(`使用 path: ${itemRefPath}`);
+            } else if (item.itemRef.id) {
+              // 只有 id 的情況，根據 unit 判斷類型
+              const collection = item.unit ? 'materials' : 'fragrances';
+              itemRefPath = `${collection}/${item.itemRef.id}`;
+              console.log(`使用 id: ${itemRefPath}`);
+            }
+          }
+
+          // 如果還是沒有 itemRefPath，記錄警告
+          if (!itemRefPath) {
+            console.error('⚠️ 無法從項目生成 itemRefPath:', item);
+            // 不應該使用代號作為ID - 這會導致查找失敗
+            // 如果沒有 itemRef，這個項目可能有問題
+            toast.error(`項目 "${item.name}" 缺少有效的物料/香精參考`);
           }
 
           return {

@@ -171,22 +171,67 @@ export const receivePurchaseOrderItems = onCall(async (request) => {
       const failedUpdates: any[] = [];
 
       for (const item of validItems) {
-        const itemId = db.doc(item.itemRefPath).id;
+        logger.info(`處理項目：${item.code} - itemRefPath: ${item.itemRefPath}`);
+
+        // 根據 itemRefPath 確定物料類型
         const itemType = item.itemRefPath.includes('materials') ? 'material' : 'fragrance';
-        const itemRef = db.doc(`${itemType === 'material' ? 'materials' : 'fragrances'}/${itemId}`);
+        const collection = itemType === 'material' ? 'materials' : 'fragrances';
 
-        const itemDoc = await transaction.get(itemRef);
+        let itemRef = null;
+        let itemDoc = null;
+        let itemId = '';
 
-        if (!itemDoc.exists) {
+        // 先嘗試從 itemRefPath 中提取 ID
+        if (item.itemRefPath && item.itemRefPath.includes('/')) {
+          const pathParts = item.itemRefPath.split('/');
+          const potentialId = pathParts[pathParts.length - 1];
+
+          // 嘗試使用提取的 ID 查找
+          if (potentialId) {
+            itemRef = db.doc(`${collection}/${potentialId}`);
+            itemDoc = await transaction.get(itemRef);
+
+            if (itemDoc.exists) {
+              itemId = potentialId;
+              logger.info(`✅ 使用路徑 ID 找到項目: ${collection}/${itemId}`);
+            }
+          }
+        }
+
+        // 如果通過 ID 找不到，嘗試使用代號查找
+        if (!itemDoc || !itemDoc.exists) {
+          logger.info(`使用代號 ${item.code} 在 ${collection} 中查找...`);
+
+          // 使用代號查詢物料/香精
+          const querySnapshot = await db.collection(collection)
+            .where('code', '==', item.code)
+            .limit(1)
+            .get();
+
+          if (!querySnapshot.empty) {
+            const doc = querySnapshot.docs[0];
+            itemId = doc.id;
+            itemRef = doc.ref;
+            // 在事務中重新讀取文檔
+            itemDoc = await transaction.get(itemRef);
+            logger.info(`✅ 使用代號找到項目: ${collection}/${itemId}`);
+          } else {
+            logger.warn(`❌ 找不到項目 - 代號: ${item.code}, 集合: ${collection}`);
+          }
+        }
+
+        // 如果仍然找不到，記錄失敗
+        if (!itemDoc || !itemDoc.exists) {
           failedUpdates.push({
             itemRefPath: item.itemRefPath,
+            code: item.code,
             error: 'Item not found',
-            details: { reason: '找不到指定項目' }
+            details: { reason: `找不到代號為 ${item.code} 的${itemType === 'material' ? '物料' : '香精'}` }
           });
           continue;
         }
 
-        itemDataMap.set(item.itemRefPath, {
+        itemDataMap.set(item.itemRefPath || `${collection}/${itemId}`, {
           itemRef,
           itemDoc,
           itemId,
