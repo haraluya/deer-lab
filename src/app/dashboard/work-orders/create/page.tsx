@@ -412,15 +412,20 @@ export default function CreateWorkOrderPage() {
     console.log('專屬材料名稱:', selectedProduct.specificMaterialNames)
     if (selectedProduct.specificMaterialNames && selectedProduct.specificMaterialNames.length > 0) {
       selectedProduct.specificMaterialNames.forEach(materialName => {
-        // 🔧 修復：優先使用代號匹配，materialName 可能是代號或名稱
-        const material = materials.find(m => m.code === materialName || m.id === materialName)
+        // 🔧 修復：多重匹配策略，因為 materialName 實際上是材料的「名稱」而非代號
+        const material = materials.find(m =>
+          m.name === materialName ||  // 優先匹配名稱（當前實際儲存的內容）
+          m.code === materialName ||  // 備用：代號匹配
+          m.id === materialName       // 備用：ID匹配
+        )
         console.log('專屬材料匹配:', {
           materialName,
           foundMaterial: material ? {
             id: material.id,
             code: material.code,
             name: material.name
-          } : null
+          } : null,
+          allMaterialNames: materials.map(m => m.name).slice(0, 5) // 顯示前5個材料名稱供除錯
         })
         if (material) {
           // 根據物料類型計算需求量
@@ -461,8 +466,20 @@ export default function CreateWorkOrderPage() {
     console.log('通用材料名稱:', selectedProduct.commonMaterialNames)
     if (selectedProduct.commonMaterialNames && selectedProduct.commonMaterialNames.length > 0) {
       selectedProduct.commonMaterialNames.forEach(materialName => {
-        // 🔧 修復：優先使用代號匹配，materialName 可能是代號或名稱
-        const material = materials.find(m => m.code === materialName || m.id === materialName)
+        // 🔧 修復：多重匹配策略，因為 materialName 實際上是材料的「名稱」而非代號
+        const material = materials.find(m =>
+          m.name === materialName ||  // 優先匹配名稱（當前實際儲存的內容）
+          m.code === materialName ||  // 備用：代號匹配
+          m.id === materialName       // 備用：ID匹配
+        )
+        console.log('通用材料匹配:', {
+          materialName,
+          foundMaterial: material ? {
+            id: material.id,
+            code: material.code,
+            name: material.name
+          } : null
+        })
         if (material) {
           // 根據物料類型計算需求量
           let requiredQuantity = 0
