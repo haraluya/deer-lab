@@ -3199,72 +3199,30 @@ export default function WorkOrderDetailPage() {
 
             {/* 完工總結 */}
             <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <h3 className="text-lg font-semibold text-blue-800 mb-3">完工總結</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <div className="text-sm text-blue-600 mb-1">已填寫使用數量的物料</div>
-                  <div className="text-lg font-bold text-blue-800">
+              <h3 className="text-lg font-semibold text-blue-800 mb-4">完工總結</h3>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="text-center">
+                  <div className="text-sm text-blue-600 mb-2">已填寫使用數量的物料</div>
+                  <div className="text-2xl font-bold text-blue-800">
                     {workOrder?.billOfMaterials.filter(item => (item.usedQuantity || 0) > 0).length || 0} 項
                   </div>
                 </div>
-                <div>
-                  <div className="text-sm text-blue-600 mb-1">總工時記錄</div>
-                  <div className="text-lg font-bold text-blue-800">
+                <div className="text-center">
+                  <div className="text-sm text-blue-600 mb-2">總工時記錄</div>
+                  <div className="text-2xl font-bold text-blue-800">
                     {timeEntries?.length || 0} 筆
                   </div>
                 </div>
-                <div>
-                  <div className="text-sm text-blue-600 mb-1">總人工小時</div>
-                  <div className="text-lg font-bold text-blue-800">
+                <div className="text-center">
+                  <div className="text-sm text-blue-600 mb-2">總人工小時</div>
+                  <div className="text-2xl font-bold text-blue-800">
                     {totalHours} 小時 {totalMinutes} 分鐘
                   </div>
                 </div>
-                <div>
-                  <div className="text-sm text-blue-600 mb-1">目標產量</div>
-                  <div className="text-lg font-bold text-blue-800">
+                <div className="text-center">
+                  <div className="text-sm text-blue-600 mb-2">目標產量</div>
+                  <div className="text-2xl font-bold text-blue-800">
                     {workOrder?.targetQuantity} KG
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm text-blue-600 mb-1">庫存不足項目</div>
-                  <div className="text-lg font-bold text-red-600">
-                    {workOrder?.billOfMaterials.filter(item => {
-                      const currentStock = item.currentStock || 0;
-                      const usedQuantity = item.usedQuantity || 0;
-                      return (currentStock - usedQuantity) < 0;
-                    }).length || 0} 項
-                  </div>
-                  <div className="text-xs text-red-500">
-                    不足: {workOrder?.billOfMaterials.reduce((total, item) => {
-                      const currentStock = item.currentStock || 0;
-                      const usedQuantity = item.usedQuantity || 0;
-                      const shortage = Math.max(0, usedQuantity - currentStock);
-                      return total + shortage;
-                    }, 0).toFixed(3)} KG
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm text-blue-600 mb-1">總使用數量</div>
-                  <div className="text-lg font-bold text-blue-800">
-                    {workOrder?.billOfMaterials.reduce((total, item) => total + (item.usedQuantity || 0), 0).toFixed(3)} KG
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm text-blue-600 mb-1">庫存充足項目</div>
-                  <div className="text-lg font-bold text-green-600">
-                    {workOrder?.billOfMaterials.filter(item => {
-                      const currentStock = item.currentStock || 0;
-                      const usedQuantity = item.usedQuantity || 0;
-                      return (currentStock - usedQuantity) >= 0 && usedQuantity > 0;
-                    }).length || 0} 項
-                  </div>
-                  <div className="text-xs text-green-500">
-                    剩餘: {workOrder?.billOfMaterials.reduce((total, item) => {
-                      const currentStock = item.currentStock || 0;
-                      const usedQuantity = item.usedQuantity || 0;
-                      const remaining = Math.max(0, currentStock - usedQuantity);
-                      return total + remaining;
-                    }, 0).toFixed(3)} KG
                   </div>
                 </div>
               </div>
