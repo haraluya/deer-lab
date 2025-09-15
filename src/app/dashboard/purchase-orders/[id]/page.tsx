@@ -138,19 +138,6 @@ export default function PurchaseOrderDetailPage() {
     }
   }, [id, loadData]);
 
-  // 🔍 調試：監控採購單狀態變化
-  useEffect(() => {
-    if (po) {
-      console.log('🔍 採購單狀態更新:', {
-        id: po.id,
-        code: po.code,
-        status: po.status,
-        supplierName: po.supplierName,
-        itemsLength: po.items?.length,
-        shouldShowReceiveButton: po.status === '已訂購'
-      });
-    }
-  }, [po]);
 
   const handleQuantityChange = (index: number, newQuantity: number) => {
     if (newQuantity < 1) return;
@@ -494,15 +481,7 @@ export default function PurchaseOrderDetailPage() {
           )}
           {po.status === '已訂購' && (
             <Button
-              onClick={() => {
-                console.log('🔍 收貨入庫按鈕被點擊');
-                console.log('🔍 當前狀態:', {
-                  poStatus: po.status,
-                  isUpdating,
-                  isReceiveDialogOpen
-                });
-                setIsReceiveDialogOpen(true);
-              }}
+              onClick={() => setIsReceiveDialogOpen(true)}
               disabled={isUpdating}
               className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
             >

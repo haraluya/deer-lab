@@ -41,14 +41,6 @@ interface ReceiveDialogProps {
 export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }: ReceiveDialogProps) {
   const apiClient = useApiForm();
 
-  // 🔍 調試：記錄對話框狀態
-  console.log('🔍 ReceiveDialog 渲染:', {
-    isOpen,
-    hasPurchaseOrder: !!purchaseOrder,
-    purchaseOrderId: purchaseOrder?.id,
-    purchaseOrderStatus: purchaseOrder?.status,
-    itemsLength: purchaseOrder?.items?.length
-  });
 
   // 🚨 防護：確保 items 是有效的數組
   const safeItems = Array.isArray(purchaseOrder.items) ? purchaseOrder.items : [];
@@ -63,9 +55,6 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
     },
   });
 
-  // 🔍 調試：監控表單值變化
-  const watchedValues = form.watch();
-  console.log('🔍 表單當前值:', watchedValues);
 
   const { fields } = useFieldArray({
     control: form.control,
@@ -73,36 +62,14 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
   });
 
   const onSubmit = async (data: FormData) => {
-    console.log("🔍 onSubmit 函數被調用");
-    console.log("🔍 表單狀態:", {
-      isSubmitting: form.formState.isSubmitting,
-      isValid: form.formState.isValid,
-      errors: form.formState.errors,
-      data: data
-    });
-
-    // 🚨 重要：如果表單驗證失敗，不要繼續提交
-    if (!form.formState.isValid) {
-      console.log("❌ 表單驗證失敗，停止提交");
-      console.log("❌ 驗證錯誤詳情:", form.formState.errors);
+    // 防止重複提交和驗證失敗提交
+    if (form.formState.isSubmitting || !form.formState.isValid) {
       return;
     }
-
-    // 防止重複提交
-    if (form.formState.isSubmitting) {
-      console.log("⚠️ 已在提交中，忽略重複提交");
-      return;
-    }
-
-    // 記錄開始提交
-    console.log("📤 開始表單提交流程");
 
     form.clearErrors();
 
     try {
-      console.log("=== 開始入庫操作 ===");
-      console.log("採購單 ID:", purchaseOrder.id);
-      console.log("項目數量:", data.items.length);
 
       const payload = {
         purchaseOrderId: purchaseOrder.id,
@@ -126,34 +93,8 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
         }),
       };
 
-      console.log("發送 payload:", payload);
-
-      // 🔍 更詳細的調試
-      console.log("🔍 準備調用 API:", {
-        functionName: 'receivePurchaseOrderItems',
-        payload: payload,
-        apiClientType: typeof apiClient,
-        apiClientMethods: Object.getOwnPropertyNames(apiClient)
-      });
-
       // 使用統一 API 客戶端
-      let result;
-      try {
-        result = await apiClient.call('receivePurchaseOrderItems', payload);
-      } catch (apiError) {
-        console.error("🚨 API 調用拋出錯誤:", apiError);
-        console.error("🚨 錯誤堆疊:", apiError instanceof Error ? apiError.stack : '無堆疊資訊');
-        throw apiError;
-      }
-      console.log("🔍 API 回應:", result);
-      console.log("🔍 API 回應詳細:", {
-        success: result.success,
-        hasData: !!result.data,
-        hasError: !!result.error,
-        errorCode: result.error?.code,
-        errorMessage: result.error?.message,
-        rawResponse: result.rawResponse
-      });
+      const result = await apiClient.call('receivePurchaseOrderItems', payload);
 
       if (result.success) {
         toast.success("收貨入庫成功，庫存已更新");
@@ -168,8 +109,7 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
       const errorMessage = error instanceof Error ? error.message : "入庫操作失敗，請稍後再試";
       toast.error(errorMessage);
     } finally {
-      // 確保重置提交狀態
-      console.log("🔄 重置表單提交狀態");
+      // 表單狀態會自動重置
     }
   };
 
@@ -264,11 +204,6 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
               <Button
                 type="submit"
                 disabled={form.formState.isSubmitting}
-                onClick={() => {
-                  console.log("🔍 確認入庫按鈕被點擊");
-                  console.log("🔍 表單是否有效:", form.formState.isValid);
-                  console.log("🔍 表單錯誤:", form.formState.errors);
-                }}
               >
                 {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 確認入庫
