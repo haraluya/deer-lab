@@ -336,12 +336,12 @@ export default function WorkOrderDetailPage() {
         });
       });
 
-      const consumedMaterials = materialsToUpdate
-        .filter(item => item.type !== 'fragrance' && item.category !== 'fragrance')
-        .map(item => ({
-          materialId: item.id,
-          consumedQuantity: item.usedQuantity || 0
-        }));
+      // 🔧 修復：將所有物料（包含香精）都傳送給後端
+      const consumedMaterials = materialsToUpdate.map(item => ({
+        materialId: item.id,
+        materialType: item.type === 'fragrance' || item.category === 'fragrance' ? 'fragrance' : 'material',
+        consumedQuantity: item.usedQuantity || 0
+      }));
       console.log('🔍 [診斷] 傳送給後端的物料消耗數據:', consumedMaterials);
 
       // 呼叫統一API完成工單
