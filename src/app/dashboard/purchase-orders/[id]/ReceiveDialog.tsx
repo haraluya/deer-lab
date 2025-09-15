@@ -25,7 +25,7 @@ const formSchema = z.object({
     unit: z.string().optional(),
     itemRef: z.any().optional(), // We'll pass the ref object directly
     quantity: z.coerce.number().min(0, "數量不能為負數").optional(),
-    receivedQuantity: z.coerce.number().min(0, "收貨數量不能為負數"),
+    receivedQuantity: z.coerce.number().min(0, "收貨數量不能為負數").default(0),
   })),
 });
 
@@ -81,11 +81,14 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
       data: data
     });
 
-    // 防止重複提交
+    // 防止重複提交 - 檢查更嚴格
     if (form.formState.isSubmitting) {
-      console.log("已在提交中，忽略重複提交");
+      console.log("⚠️ 已在提交中，忽略重複提交");
       return;
     }
+
+    // 記錄開始提交
+    console.log("📤 開始表單提交流程");
 
     form.clearErrors();
 
@@ -157,6 +160,9 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
       console.error("入庫操作失敗:", error);
       const errorMessage = error instanceof Error ? error.message : "入庫操作失敗，請稍後再試";
       toast.error(errorMessage);
+    } finally {
+      // 確保重置提交狀態
+      console.log("🔄 重置表單提交狀態");
     }
   };
 
