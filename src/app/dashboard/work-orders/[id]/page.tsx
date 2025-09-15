@@ -171,7 +171,7 @@ export default function WorkOrderDetailPage() {
         ...item,
         usedQuantity: editingQuantities[item.id] !== undefined ?
           parseFloat(editingQuantities[item.id].toFixed(3)) :
-          parseFloat((item.usedQuantity || item.quantity || 0).toFixed(3))
+          (item.usedQuantity !== undefined ? parseFloat(item.usedQuantity.toFixed(3)) : parseFloat((item.quantity || 0).toFixed(3)))
       }));
 
       const docRef = doc(db, "workOrders", workOrderId);
@@ -208,7 +208,7 @@ export default function WorkOrderDetailPage() {
         return {
           ...item,
           quantity: newQuantity,
-          usedQuantity: parseFloat((item.usedQuantity || newQuantity).toFixed(3)) // 如果沒有使用數量，預設為需求數量
+          usedQuantity: item.usedQuantity !== undefined ? parseFloat(item.usedQuantity.toFixed(3)) : parseFloat(newQuantity.toFixed(3)) // 保留已設定的使用數量，包括 0
         };
       }
       return item;
@@ -744,7 +744,7 @@ export default function WorkOrderDetailPage() {
               ratio: item.ratio || 0,
               isCalculated: item.isCalculated !== undefined ? item.isCalculated : true,
               category: item.category || 'other',
-              usedQuantity: item.usedQuantity || item.quantity || item.requiredQuantity || 0,
+              usedQuantity: item.usedQuantity !== undefined ? item.usedQuantity : (item.quantity || item.requiredQuantity || 0),
               currentStock: material ? (material.currentStock || 0) : 0
             };
           }),
@@ -914,7 +914,7 @@ export default function WorkOrderDetailPage() {
         const existingItem = existingBOM.find(item => item.id === newItem.id);
         return {
           ...newItem,
-          usedQuantity: existingItem?.usedQuantity || newItem.usedQuantity,
+          usedQuantity: existingItem?.usedQuantity !== undefined ? existingItem.usedQuantity : newItem.usedQuantity,
           currentStock: existingItem?.currentStock || newItem.currentStock || 0
         };
       });
