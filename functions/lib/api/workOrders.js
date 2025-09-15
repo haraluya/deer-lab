@@ -334,9 +334,31 @@ exports.completeWorkOrder = (0, https_1.onCall)(async (request) => {
         }
         // 2. 預先查詢所有需要的香精（事務外）
         const fragranceIdMap = new Map();
+        // 🔍 診斷日誌：檢查工單中的所有BOM項目
+        firebase_functions_1.logger.info(`🔍 [後端診斷] 工單 ${workOrderId} 的完整BOM檢查:`);
+        firebase_functions_1.logger.info(`🔍 [後端診斷] 總BOM項目數: ${(workOrderData.billOfMaterials || []).length}`);
+        (workOrderData.billOfMaterials || []).forEach((item, index) => {
+            firebase_functions_1.logger.info(`🔍 [後端診斷] BOM[${index}]:`, {
+                id: item.id,
+                name: item.name,
+                type: item.type,
+                category: item.category,
+                usedQuantity: item.usedQuantity,
+                isFragrance: item.type === 'fragrance' || item.category === 'fragrance',
+                hasPositiveQuantity: (item.usedQuantity || 0) > 0
+            });
+        });
         const fragranceBOMItems = (workOrderData.billOfMaterials || [])
             .filter((item) => item.type === 'fragrance' || item.category === 'fragrance')
             .filter((item) => (item.usedQuantity || 0) > 0);
+        firebase_functions_1.logger.info(`🔍 [後端診斷] 篩選出的香精項目數: ${fragranceBOMItems.length}`);
+        fragranceBOMItems.forEach((item, index) => {
+            firebase_functions_1.logger.info(`🔍 [後端診斷] 香精[${index}]:`, {
+                id: item.id,
+                name: item.name,
+                usedQuantity: item.usedQuantity
+            });
+        });
         for (const fragranceItem of fragranceBOMItems) {
             if (fragranceItem.id && !fragranceItem.id.startsWith('temp_fragrance_')) {
                 // 直接使用ID
