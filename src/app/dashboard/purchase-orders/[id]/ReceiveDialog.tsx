@@ -60,8 +60,13 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
       const payload = {
         purchaseOrderId: purchaseOrder.id,
         items: data.items.map(item => ({
-          itemRefPath: item.itemRef?.path || item.itemRef, // 處理不同的 ref 格式
+          // 🔧 修復：正確處理 Firebase DocumentReference 物件
+          itemRefPath: item.itemRef?._path?.segments?.join('/') ||
+                      item.itemRef?.path ||
+                      (typeof item.itemRef === 'string' ? item.itemRef : `materials/${item.id}`),
           receivedQuantity: item.receivedQuantity,
+          code: item.code,
+          name: item.name,
         })),
       };
 
