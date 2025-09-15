@@ -19,13 +19,13 @@ import { Package } from 'lucide-react';
 // Zod schema for form validation
 const formSchema = z.object({
   items: z.array(z.object({
-    id: z.string(),
-    name: z.string(),
-    code: z.string(),
-    unit: z.string(),
-    itemRef: z.any(), // We'll pass the ref object directly
-    quantity: z.coerce.number().min(0, "數量不能為負數"),
-    receivedQuantity: z.coerce.number().min(0, "數量不能為負數"),
+    id: z.string().optional(),
+    name: z.string().optional(),
+    code: z.string().optional(),
+    unit: z.string().optional(),
+    itemRef: z.any().optional(), // We'll pass the ref object directly
+    quantity: z.coerce.number().min(0, "數量不能為負數").optional(),
+    receivedQuantity: z.coerce.number().min(0, "收貨數量不能為負數"),
   })),
 });
 
@@ -62,6 +62,10 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
       })),
     },
   });
+
+  // 🔍 調試：監控表單值變化
+  const watchedValues = form.watch();
+  console.log('🔍 表單當前值:', watchedValues);
 
   const { fields } = useFieldArray({
     control: form.control,
