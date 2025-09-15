@@ -329,7 +329,8 @@ exports.completeWorkOrder = (0, https_1.onCall)(async (request) => {
                 throw new https_1.HttpsError("not-found", "找不到指定的工單。");
             }
             const workOrderData = workOrderSnap.data();
-            if (workOrderData.status !== '進行') {
+            // 允許 "預報" 和 "進行" 狀態的工單完工
+            if (workOrderData.status !== '進行' && workOrderData.status !== '預報') {
                 throw new https_1.HttpsError("failed-precondition", `工單狀態為 "${workOrderData.status}"，無法完工。`);
             }
             // 2. 更新工單狀態
@@ -374,42 +375,66 @@ exports.completeWorkOrder = (0, https_1.onCall)(async (request) => {
                     }
                 }
             }
-            // 4. 處理香精消耗（如果有的話）
-            if (workOrderData.fragranceRef) {
+            // 4. 處理香精消耗（從BOM表中查找香精項目）
+            const fragranceBOMItems = (workOrderData.billOfMaterials || [])
+                .filter((item) => item.type === 'fragrance' || item.category === 'fragrance')
+                .filter((item) => (item.usedQuantity || 0) > 0);
+            for (const fragranceItem of fragranceBOMItems) {
                 try {
-                    // 確保 fragranceRef 是一個有效的文檔引用
-                    const fragranceRef = workOrderData.fragranceRef;
-                    if (fragranceRef && typeof fragranceRef.get === 'function') {
-                        const fragranceSnap = await transaction.get(fragranceRef);
-                        // 使用類型斷言來解決 TypeScript 類型問題
-                        if (fragranceSnap && fragranceSnap.exists && fragranceSnap.exists()) {
-                            const fragranceData = fragranceSnap.data();
-                            if (fragranceData) {
-                                const currentStock = fragranceData.currentStock || 0;
-                                // 假設每單位產品消耗固定數量的香精
-                                const consumedFragrance = (workOrderData.fragranceRatio || 0.01) * actualQuantity;
-                                const newStock = Math.max(0, currentStock - consumedFragrance);
-                                // 更新香精庫存
-                                transaction.update(fragranceRef, {
-                                    currentStock: newStock,
-                                    lastStockUpdate: firestore_1.FieldValue.serverTimestamp(),
-                                });
-                                // 收集香精明細
-                                materialDetails.push({
-                                    itemId: fragranceRef.id,
-                                    itemType: 'fragrance',
-                                    itemCode: fragranceData.code || '',
-                                    itemName: fragranceData.name || '',
-                                    quantityChange: -consumedFragrance,
-                                    quantityAfter: newStock
-                                });
-                            }
+                    let fragranceRef = null;
+                    let fragranceSnap = null;
+                    // 優先用ID查詢香精
+                    if (fragranceItem.id && !fragranceItem.id.startsWith('temp_fragrance_')) {
+                        fragranceRef = db.doc(`fragrances/${fragranceItem.id}`);
+                        fragranceSnap = await transaction.get(fragranceRef);
+                    }
+                    // 如果ID查詢失敗，嘗試用代號查詢
+                    if (!(fragranceSnap === null || fragranceSnap === void 0 ? void 0 : fragranceSnap.exists) && fragranceItem.code) {
+                        firebase_functions_1.logger.info(`香精ID查詢失敗，嘗試用代號查詢: ${fragranceItem.code}`);
+                        const fragranceQuery = db.collection('fragrances')
+                            .where('code', '==', fragranceItem.code)
+                            .limit(1);
+                        const fragranceQuerySnap = await fragranceQuery.get();
+                        if (!fragranceQuerySnap.empty) {
+                            fragranceSnap = fragranceQuerySnap.docs[0];
+                            fragranceRef = fragranceSnap.ref;
+                            firebase_functions_1.logger.info(`✅ 找到香精: ${fragranceItem.code} -> ${fragranceSnap.id}`);
                         }
+                    }
+                    if ((fragranceSnap === null || fragranceSnap === void 0 ? void 0 : fragranceSnap.exists) && fragranceRef) {
+                        const fragranceData = fragranceSnap.data();
+                        const currentStock = fragranceData.currentStock || 0;
+                        const consumedFragrance = fragranceItem.usedQuantity || 0;
+                        const newStock = Math.max(0, currentStock - consumedFragrance);
+                        // 更新香精庫存
+                        transaction.update(fragranceRef, {
+                            currentStock: newStock,
+                            lastStockUpdate: firestore_1.FieldValue.serverTimestamp(),
+                        });
+                        // 收集香精明細
+                        materialDetails.push({
+                            itemId: fragranceSnap.id,
+                            itemType: 'fragrance',
+                            itemCode: fragranceData.code || fragranceItem.code || '',
+                            itemName: fragranceData.name || fragranceItem.name || '',
+                            quantityChange: -consumedFragrance,
+                            quantityAfter: newStock
+                        });
+                        firebase_functions_1.logger.info(`香精庫存已扣除: ${fragranceItem.name}`, {
+                            id: fragranceSnap.id,
+                            code: fragranceItem.code,
+                            currentStock,
+                            newStock,
+                            consumedFragrance
+                        });
+                    }
+                    else {
+                        firebase_functions_1.logger.warn(`找不到香精進行扣庫存: ${fragranceItem.name} (${fragranceItem.code})`);
                     }
                 }
                 catch (error) {
-                    firebase_functions_1.logger.warn(`處理香精消耗時發生錯誤:`, error);
-                    // 不阻擋主要流程，只記錄警告
+                    firebase_functions_1.logger.error(`處理香精消耗時發生錯誤: ${fragranceItem.name}`, error);
+                    // 不阻擋主要流程，只記錄錯誤
                 }
             }
             // 5. 建立統一的庫存紀錄（以動作為單位）

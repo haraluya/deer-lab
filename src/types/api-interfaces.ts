@@ -306,6 +306,10 @@ export namespace WorkOrdersApi {
   export interface CompleteWorkOrderRequest {
     workOrderId: string;
     actualQuantity: number;
+    consumedMaterials?: Array<{
+      materialId: string;
+      consumedQuantity: number;
+    }>;
     notes?: string;
   }
 }

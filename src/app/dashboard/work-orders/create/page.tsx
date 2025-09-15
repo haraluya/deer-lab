@@ -412,8 +412,8 @@ export default function CreateWorkOrderPage() {
     console.log('專屬材料名稱:', selectedProduct.specificMaterialNames)
     if (selectedProduct.specificMaterialNames && selectedProduct.specificMaterialNames.length > 0) {
       selectedProduct.specificMaterialNames.forEach(materialName => {
-        // ⚠️ 警告：使用名稱匹配可能不準確，建議改為儲存材料代號
-        const material = materials.find(m => m.name === materialName)
+        // 🔧 修復：優先使用代號匹配，materialName 可能是代號或名稱
+        const material = materials.find(m => m.code === materialName || m.id === materialName)
         console.log('專屬材料匹配:', {
           materialName,
           foundMaterial: material ? {
@@ -461,8 +461,8 @@ export default function CreateWorkOrderPage() {
     console.log('通用材料名稱:', selectedProduct.commonMaterialNames)
     if (selectedProduct.commonMaterialNames && selectedProduct.commonMaterialNames.length > 0) {
       selectedProduct.commonMaterialNames.forEach(materialName => {
-        // ⚠️ 警告：使用名稱匹配可能不準確，建議改為儲存材料代號
-        const material = materials.find(m => m.name === materialName)
+        // 🔧 修復：優先使用代號匹配，materialName 可能是代號或名稱
+        const material = materials.find(m => m.code === materialName || m.id === materialName)
         if (material) {
           // 根據物料類型計算需求量
           let requiredQuantity = 0

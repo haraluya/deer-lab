@@ -3,11 +3,12 @@
 import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Image from 'next/image'
-import { doc, getDoc, updateDoc, collection, getDocs, addDoc, Timestamp, query, where, orderBy, deleteDoc } from "firebase/firestore"
+import { doc, getDoc, updateDoc, collection, getDocs, addDoc, Timestamp, query, where, orderBy, deleteDoc, limit } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
 import { uploadImage, uploadMultipleImages } from "@/lib/imageUpload"
 import { error, debug, info } from "@/utils/logger"
+import { useApiClient } from "@/hooks/useApiClient"
 import { findMaterialByCategory } from "@/lib/systemConfig"
 import { Material, Fragrance, Personnel, WorkOrder, TimeEntry, BillOfMaterialsItem } from "@/types"
 import { 
@@ -101,6 +102,7 @@ export default function WorkOrderDetailPage() {
   const params = useParams()
   const router = useRouter()
   const workOrderId = params.id as string
+  const apiClient = useApiClient()
 
   const [workOrder, setWorkOrder] = useState<WorkOrderData | null>(null)
   const [timeEntries, setTimeEntries] = useState<any[]>([])
@@ -244,126 +246,41 @@ export default function WorkOrderDetailPage() {
     setIsCompleteDialogOpen(true);
   };
 
-  // 確認完工
+  // 確認完工 - 使用統一API
   const handleConfirmComplete = async () => {
-    if (!workOrder || !db) return;
-    
+    if (!workOrder) return;
+
     setIsCompleting(true);
     try {
-      // 預先檢查庫存是否足夠
+      // 準備物料消耗資料
       const materialsToUpdate = workOrder.billOfMaterials.filter(item => (item.usedQuantity || 0) > 0);
-      const insufficientItems = [];
-      
-      for (const item of materialsToUpdate) {
-        const usedQuantity = item.usedQuantity || 0;
+      const consumedMaterials = materialsToUpdate
+        .filter(item => item.type !== 'fragrance' && item.category !== 'fragrance')
+        .map(item => ({
+          materialId: item.id,
+          consumedQuantity: item.usedQuantity || 0
+        }));
 
-        // 🚨 修復：檢查 type 或 category 來判斷是否為香精
-        if (item.type === 'fragrance' || item.category === 'fragrance') {
-          // 檢查香精庫存
-          const fragranceRef = doc(db, "fragrances", item.id);
-          const fragranceDoc = await getDoc(fragranceRef);
-          if (fragranceDoc.exists()) {
-            const currentStock = fragranceDoc.data().currentStock || 0;
-            if (currentStock < usedQuantity) {
-              insufficientItems.push({
-                name: item.name,
-                currentStock,
-                requiredQuantity: usedQuantity,
-                shortage: usedQuantity - currentStock
-              });
-            }
-          }
-        } else {
-          // 檢查物料庫存
-          const materialRef = doc(db, "materials", item.id);
-          const materialDoc = await getDoc(materialRef);
-          if (materialDoc.exists()) {
-            const currentStock = materialDoc.data().currentStock || 0;
-            if (currentStock < usedQuantity) {
-              insufficientItems.push({
-                name: item.name,
-                currentStock,
-                requiredQuantity: usedQuantity,
-                shortage: usedQuantity - currentStock
-              });
-            }
-          }
-        }
-      }
-      
-      // 如果有庫存不足，顯示錯誤並停止完工
-      if (insufficientItems.length > 0) {
-        const errorMessage = insufficientItems
-          .map(item => `${item.name}: 庫存 ${item.currentStock}，需求 ${item.requiredQuantity}，缺少 ${item.shortage}`)
-          .join('\n');
-        toast.error(`庫存不足，無法完工：\n${errorMessage}`, { duration: 8000 });
-        setIsCompleting(false);
-        return;
-      }
-      // 1. 更新工單狀態
-      const docRef = doc(db, "workOrders", workOrderId);
-      await updateDoc(docRef, {
-        status: "完工",
-        updatedAt: Timestamp.now()
+      // 呼叫統一API完成工單
+      const result = await apiClient.call('completeWorkOrder', {
+        workOrderId: workOrderId,
+        actualQuantity: workOrder.targetQuantity,
+        consumedMaterials: consumedMaterials
       });
 
-      // 2. 扣除物料和香精庫存
-      // materialsToUpdate 已在上面定義，直接使用
-      
-      for (const item of materialsToUpdate) {
-        const usedQuantity = item.usedQuantity || 0;
+      if (result.success) {
+        // 更新本地狀態
+        setWorkOrder(prev => prev ? {
+          ...prev,
+          status: "完工"
+        } : null);
 
-        // 🚨 修復：檢查 type 或 category 來判斷是否為香精
-        if (item.type === 'fragrance' || item.category === 'fragrance') {
-          // 更新香精庫存
-          const fragranceRef = doc(db, "fragrances", item.id);
-          try {
-            const fragranceDoc = await getDoc(fragranceRef);
-            if (fragranceDoc.exists()) {
-              const currentStock = fragranceDoc.data().currentStock || 0;
-              // 統一處理小數點精度到第三位
-              const newStock = Math.max(0, parseFloat((currentStock - usedQuantity).toFixed(3)));
-              await updateDoc(fragranceRef, {
-                currentStock: newStock,
-                updatedAt: Timestamp.now()
-              });
-              debug(`香精庫存已扣除: ${item.name}`, { currentStock, newStock, usedQuantity });
-            }
-          } catch (err) {
-            error(`更新香精庫存失敗: ${item.name}`, err as Error);
-            toast.error(`更新香精 ${item.name} 庫存失敗`);
-          }
-        } else {
-          // 更新物料庫存
-          const materialRef = doc(db, "materials", item.id);
-          try {
-            const materialDoc = await getDoc(materialRef);
-            if (materialDoc.exists()) {
-              const currentStock = materialDoc.data().currentStock || 0;
-              // 統一處理小數點精度到第三位
-              const newStock = Math.max(0, parseFloat((currentStock - usedQuantity).toFixed(3)));
-              await updateDoc(materialRef, {
-                currentStock: newStock,
-                updatedAt: Timestamp.now()
-              });
-              debug(`物料庫存已扣除: ${item.name}`, { currentStock, newStock, usedQuantity });
-            }
-          } catch (err) {
-            error(`更新物料庫存失敗: ${item.name}`, err as Error);
-            toast.error(`更新物料 ${item.name} 庫存失敗`);
-          }
-        }
+        setIsCompleteDialogOpen(false);
+        setIsEditing(false);
+        toast.success("工單已完工，庫存已扣除");
+      } else {
+        throw new Error(result.error?.message || '完工操作失敗');
       }
-
-      // 3. 更新本地狀態
-      setWorkOrder(prev => prev ? {
-        ...prev,
-        status: "完工"
-      } : null);
-
-      setIsCompleteDialogOpen(false);
-      setIsEditing(false);
-      toast.success("工單已完工，庫存已扣除");
     } catch (err) {
       error("完工操作失敗", err as Error);
       toast.error("完工操作失敗");
@@ -606,43 +523,22 @@ export default function WorkOrderDetailPage() {
           fragrancesCount: fragrancesList.length
         });
 
-        // 🔍 深度調試：檢查是否有重複的香精記錄
+        // 🔍 檢查是否有重複的香精代號（只檢查代號，不檢查名稱）
         const fragrancesByCode = new Map();
-        const fragrancesByName = new Map();
         fragrancesList.forEach(fragrance => {
           const code = fragrance.code;
-          const name = fragrance.name;
-
           if (!fragrancesByCode.has(code)) {
             fragrancesByCode.set(code, []);
           }
           fragrancesByCode.get(code).push(fragrance);
-
-          if (!fragrancesByName.has(name)) {
-            fragrancesByName.set(name, []);
-          }
-          fragrancesByName.get(name).push(fragrance);
         });
 
-        // 檢查重複的 Code
+        // 檢查重複的 Code（代號應該是唯一的）
         fragrancesByCode.forEach((fragrances: Fragrance[], code) => {
           if (fragrances.length > 1) {
-            console.warn(`⚠️ 發現重複香精編號 ${code}:`, fragrances.map((f: Fragrance) => ({
+            console.warn(`⚠️ 發現重複香精代號 ${code}:`, fragrances.map((f: Fragrance) => ({
               id: f.id,
               name: f.name,
-              currentStock: f.currentStock,
-              createdAt: f.createdAt,
-              updatedAt: f.updatedAt
-            })));
-          }
-        });
-
-        // 檢查重複的 Name
-        fragrancesByName.forEach((fragrances: Fragrance[], name) => {
-          if (fragrances.length > 1) {
-            console.warn(`⚠️ 發現重複香精名稱 ${name}:`, fragrances.map((f: Fragrance) => ({
-              id: f.id,
-              code: f.code,
               currentStock: f.currentStock,
               createdAt: f.createdAt,
               updatedAt: f.updatedAt
@@ -708,12 +604,7 @@ export default function WorkOrderDetailPage() {
                 });
               } else {
                 console.warn(`❌ 香精匹配失敗: BOM中 ID=${item.id}, Code=${item.code} 找不到對應的香精`);
-                // 嘗試通過名稱匹配
-                const nameMatch = fragrancesList.find(f => f.name === item.name);
-                if (nameMatch) {
-                  console.log(`🔄 嘗試名稱匹配成功: ${item.name} -> ${nameMatch.name} (庫存: ${nameMatch.currentStock})`);
-                  material = nameMatch;
-                }
+                // 不再使用名稱匹配，因為名稱可能重複
               }
             }
             
@@ -949,10 +840,9 @@ export default function WorkOrderDetailPage() {
         
         // 如果沒找到或不是香精，從物料集合中查找
         if (!material) {
-          material = materialsList.find((m: Material) => 
-            m.id === item.id || 
-            m.code === item.code || 
-            m.name === item.name
+          material = materialsList.find((m: Material) =>
+            m.id === item.id ||
+            m.code === item.code
           );
         }
         
@@ -1060,10 +950,9 @@ export default function WorkOrderDetailPage() {
     if (productData.fragranceName && productData.fragranceName !== '未指定') {
       const fragranceQuantity = targetQuantity * (fragranceRatios.fragrance / 100); // 35.7% = 0.357
       
-      // 查找香精的實際庫存 - 從香精集合中查找
-      const fragranceMaterial = fragrancesList.find((f: Fragrance) => 
-        f.code === productData.fragranceCode || 
-        f.name === productData.fragranceName
+      // 查找香精的實際庫存 - 從香精集合中查找（只用代號匹配）
+      const fragranceMaterial = fragrancesList.find((f: Fragrance) =>
+        f.code === productData.fragranceCode
       );
       
               console.log('重新載入BOM表 - 香精匹配結果:', {
@@ -1082,8 +971,11 @@ export default function WorkOrderDetailPage() {
       const hasEnoughStock = currentStock >= fragranceQuantity;
       
       // 總是添加香精，即使沒有找到對應的物料記錄
+      // 🔧 修復：如果找不到香精，不應該使用代號作為ID
+      const fragranceId = fragranceMaterial ? fragranceMaterial.id : `temp_fragrance_${Date.now()}`;
+
       materialRequirementsMap.set('fragrance', {
-        id: fragranceMaterial ? fragranceMaterial.id : productData.fragranceCode || 'fragrance',
+        id: fragranceId,
         name: productData.fragranceName,
         code: productData.fragranceCode,
         type: 'fragrance',
@@ -1093,7 +985,9 @@ export default function WorkOrderDetailPage() {
         isCalculated: true,
         category: 'fragrance',
         usedQuantity: fragranceQuantity,
-        currentStock: currentStock
+        currentStock: currentStock,
+        // 添加標記：是否找到實際的香精記錄
+        isMatched: !!fragranceMaterial
       });
       console.log('重新載入BOM表 - 添加香精:', productData.fragranceName, fragranceQuantity, '比例:', fragranceRatios.fragrance, '庫存:', currentStock, '充足:', hasEnoughStock);
     } else {
@@ -1171,11 +1065,10 @@ export default function WorkOrderDetailPage() {
       console.log('重新載入BOM表 - 專屬材料名稱:', workOrder?.billOfMaterials?.filter(item => item.category === 'specific').map(item => item.name));
       const existingSpecificMaterials = workOrder?.billOfMaterials?.filter(item => item.category === 'specific') || [];
       existingSpecificMaterials.forEach(item => {
-        // 查找對應的物料，獲取當前庫存
-        const material = materialsList.find((m: Material) => 
-          m.id === item.id || 
-          m.code === item.code || 
-          m.name === item.name
+        // 查找對應的物料，獲取當前庫存（只用ID或代號匹配）
+        const material = materialsList.find((m: Material) =>
+          m.id === item.id ||
+          m.code === item.code
         );
         
         materialRequirementsMap.set(item.id, {
@@ -1191,11 +1084,10 @@ export default function WorkOrderDetailPage() {
       console.log('重新載入BOM表 - 通用材料名稱:', workOrder?.billOfMaterials?.filter(item => item.category === 'common').map(item => item.name));
       const existingCommonMaterials = workOrder?.billOfMaterials?.filter(item => item.category === 'common') || [];
       existingCommonMaterials.forEach(item => {
-        // 查找對應的物料，獲取當前庫存
-        const material = materialsList.find((m: Material) => 
-          m.id === item.id || 
-          m.code === item.code || 
-          m.name === item.name
+        // 查找對應的物料，獲取當前庫存（只用ID或代號匹配）
+        const material = materialsList.find((m: Material) =>
+          m.id === item.id ||
+          m.code === item.code
         );
         
         materialRequirementsMap.set(item.id, {
