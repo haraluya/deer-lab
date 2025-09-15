@@ -40,11 +40,17 @@ interface ReceiveDialogProps {
 
 export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }: ReceiveDialogProps) {
   const apiClient = useApiForm();
-  
+
+  // 🚨 防護：確保 items 是有效的數組
+  const safeItems = Array.isArray(purchaseOrder.items) ? purchaseOrder.items : [];
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      items: purchaseOrder.items.map((item: any) => ({ ...item, receivedQuantity: item.quantity })),
+      items: safeItems.map((item: any) => ({
+        ...item,
+        receivedQuantity: item.quantity
+      })),
     },
   });
 
@@ -54,53 +60,31 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
   });
 
   const onSubmit = async (data: FormData) => {
+    // 防止重複提交
+    if (form.formState.isSubmitting) {
+      console.log("已在提交中，忽略重複提交");
+      return;
+    }
+
     form.clearErrors();
-    
+
     try {
+      console.log("=== 開始入庫操作 ===");
+      console.log("採購單 ID:", purchaseOrder.id);
+      console.log("項目數量:", data.items.length);
+
       const payload = {
         purchaseOrderId: purchaseOrder.id,
         items: data.items.map(item => {
-          // 🎯 修復：使用物品代號(ID)而非名稱來更新庫存
+          // 🎯 簡化：直接使用 code 作為 ID，配合後端修復
           let itemRefPath = '';
-          let itemId = '';
 
-          // 調試：輸出 itemRef 結構
-          console.log("Item ref structure:", item.itemRef);
-          console.log("Item code:", item.code);
-
-          if (item.itemRef) {
-            // Firebase DocumentReference 物件處理
-            if (item.itemRef._key && item.itemRef._key.path && item.itemRef._key.path.segments) {
-              // Firestore v9+ 格式
-              const segments = item.itemRef._key.path.segments;
-              itemRefPath = segments.slice(segments.length - 2).join('/');
-              itemId = segments[segments.length - 1];
-            } else if (item.itemRef._path && item.itemRef._path.segments) {
-              // 舊版 Firestore 格式
-              itemRefPath = item.itemRef._path.segments.join('/');
-              itemId = item.itemRef._path.segments[item.itemRef._path.segments.length - 1];
-            } else if (item.itemRef.path) {
-              // path 字串格式
-              itemRefPath = item.itemRef.path;
-              const pathParts = item.itemRef.path.split('/');
-              itemId = pathParts[pathParts.length - 1];
-            } else if (item.itemRef.id) {
-              // 直接有 id 屬性
-              itemId = item.itemRef.id;
-              itemRefPath = item.unit ? `materials/${itemId}` : `fragrances/${itemId}`;
-            }
-          }
-
-          // 🚨 重要：絕對不要使用名稱，必須使用代號(code)作為文檔ID
-          // 如果沒有從 itemRef 獲取到路徑，使用 code 作為 ID
-          if (!itemRefPath && item.code) {
-            // 使用 code 作為文檔 ID（因為物品是用 code 作為文檔ID儲存的）
+          if (item.itemRef && item.itemRef.path) {
+            itemRefPath = item.itemRef.path;
+          } else if (item.code) {
+            // 使用 code 作為文檔 ID
             itemRefPath = item.unit ? `materials/${item.code}` : `fragrances/${item.code}`;
-            console.log("Using code as document ID:", item.code);
           }
-
-          console.log("Resolved itemRefPath:", itemRefPath);
-          console.log("Item ID:", itemId || item.code);
 
           return {
             itemRefPath,
@@ -111,26 +95,24 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
         }),
       };
 
-      console.log("=== 採購單入庫除錯日誌 ===");
-      console.log("採購單 ID:", purchaseOrder.id);
-      console.log("採購單狀態:", purchaseOrder.status);
-      console.log("發送 payload:", JSON.stringify(payload, null, 2));
-      
+      console.log("發送 payload:", payload);
+
       // 使用統一 API 客戶端
-      const result = await apiClient.call('receivePurchaseOrderItems', payload as any);
-      console.log("統一 API 回應:", JSON.stringify(result, null, 2));
-      
+      const result = await apiClient.call('receivePurchaseOrderItems', payload);
+      console.log("API 回應:", result);
+
       if (result.success) {
-        console.log("入庫成功，更新結果:", result.data);
-        toast.success("收貨入庫成功，庫存已更新。");
+        toast.success("收貨入庫成功，庫存已更新");
         onSuccess();
         onOpenChange(false);
+      } else {
+        const errorMessage = result.error?.message || "入庫操作失敗，請稍後再試";
+        toast.error(errorMessage);
       }
     } catch (error) {
-      console.error("=== 入庫操作失敗 ===");
-      console.error("錯誤類型:", error?.constructor?.name);
-      console.error("錯誤訊息:", error instanceof Error ? error.message : error);
-      console.error("完整錯誤物件:", error);
+      console.error("入庫操作失敗:", error);
+      const errorMessage = error instanceof Error ? error.message : "入庫操作失敗，請稍後再試";
+      toast.error(errorMessage);
     }
   };
 

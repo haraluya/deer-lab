@@ -104,14 +104,33 @@ exports.updatePurchaseOrderStatus = (0, https_1.onCall)(async (request) => {
     }
 });
 exports.receivePurchaseOrderItems = (0, https_1.onCall)(async (request) => {
+    var _a;
+    // 🔍 調試：記錄函數開始執行
+    firebase_functions_1.logger.info("=== receivePurchaseOrderItems 函數開始執行 ===");
     const { auth: contextAuth, data } = request;
+    // 🔍 調試：記錄接收到的參數
+    firebase_functions_1.logger.info("接收到的參數:", {
+        hasAuth: !!contextAuth,
+        authUid: contextAuth === null || contextAuth === void 0 ? void 0 : contextAuth.uid,
+        hasData: !!data,
+        dataKeys: data ? Object.keys(data) : [],
+        data: JSON.stringify(data)
+    });
     // await ensureIsAdmin(contextAuth?.uid);
     // --- ** 修正點：加入明確的類型檢查 ** ---
     if (!contextAuth) {
         throw new https_1.HttpsError("internal", "驗證檢查後 contextAuth 不應為空。");
     }
     const { purchaseOrderId, items } = data;
+    // 🔍 調試：記錄解構後的參數
+    firebase_functions_1.logger.info("解構後的參數:", {
+        purchaseOrderId,
+        itemsType: Array.isArray(items),
+        itemsLength: items === null || items === void 0 ? void 0 : items.length,
+        items: JSON.stringify(items)
+    });
     if (!purchaseOrderId || !Array.isArray(items)) {
+        firebase_functions_1.logger.error("參數驗證失敗:", { purchaseOrderId, itemsIsArray: Array.isArray(items) });
         throw new https_1.HttpsError("invalid-argument", "缺少或無效的參數。");
     }
     const receivedByRef = db.doc(`users/${contextAuth.uid}`);
@@ -119,8 +138,10 @@ exports.receivePurchaseOrderItems = (0, https_1.onCall)(async (request) => {
     // 🔧 修復：將 itemDetails 移到 transaction 外部以便在回應中使用
     const itemDetails = [];
     try {
+        firebase_functions_1.logger.info("開始執行事務處理");
         await db.runTransaction(async (transaction) => {
             var _a, _b, _c, _d;
+            firebase_functions_1.logger.info("事務內部開始執行");
             const poDoc = await transaction.get(poRef);
             if (!poDoc.exists) {
                 throw new https_1.HttpsError("not-found", "找不到指定的採購單。");
@@ -184,6 +205,7 @@ exports.receivePurchaseOrderItems = (0, https_1.onCall)(async (request) => {
                 });
             }
         });
+        firebase_functions_1.logger.info("事務處理完成");
         firebase_functions_1.logger.info(`管理員 ${contextAuth.uid} 成功完成採購單 ${purchaseOrderId} 的入庫操作。`);
         // 🎯 回傳標準化格式，包含詳細的入庫資訊
         return createStandardResponse(true, {
@@ -200,7 +222,13 @@ exports.receivePurchaseOrderItems = (0, https_1.onCall)(async (request) => {
         });
     }
     catch (error) {
+        firebase_functions_1.logger.error("=== receivePurchaseOrderItems 函數執行失敗 ===");
         firebase_functions_1.logger.error(`採購單 ${purchaseOrderId} 入庫操作失敗:`, error);
+        firebase_functions_1.logger.error("錯誤詳細信息:", {
+            errorType: (_a = error === null || error === void 0 ? void 0 : error.constructor) === null || _a === void 0 ? void 0 : _a.name,
+            errorMessage: error instanceof Error ? error.message : String(error),
+            errorStack: error instanceof Error ? error.stack : undefined
+        });
         throw new https_1.HttpsError("internal", "入庫操作失敗");
     }
 });

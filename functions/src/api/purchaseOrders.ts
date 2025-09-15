@@ -126,7 +126,19 @@ export const updatePurchaseOrderStatus = onCall(async (request) => {
 });
 
 export const receivePurchaseOrderItems = onCall(async (request) => {
+  // 🔍 調試：記錄函數開始執行
+  logger.info("=== receivePurchaseOrderItems 函數開始執行 ===");
+
   const { auth: contextAuth, data } = request;
+
+  // 🔍 調試：記錄接收到的參數
+  logger.info("接收到的參數:", {
+    hasAuth: !!contextAuth,
+    authUid: contextAuth?.uid,
+    hasData: !!data,
+    dataKeys: data ? Object.keys(data) : [],
+    data: JSON.stringify(data)
+  });
   // await ensureIsAdmin(contextAuth?.uid);
 
   // --- ** 修正點：加入明確的類型檢查 ** ---
@@ -135,7 +147,17 @@ export const receivePurchaseOrderItems = onCall(async (request) => {
   }
 
   const { purchaseOrderId, items } = data;
+
+  // 🔍 調試：記錄解構後的參數
+  logger.info("解構後的參數:", {
+    purchaseOrderId,
+    itemsType: Array.isArray(items),
+    itemsLength: items?.length,
+    items: JSON.stringify(items)
+  });
+
   if (!purchaseOrderId || !Array.isArray(items)) {
+    logger.error("參數驗證失敗:", { purchaseOrderId, itemsIsArray: Array.isArray(items) });
     throw new HttpsError("invalid-argument", "缺少或無效的參數。");
   }
 
@@ -146,7 +168,9 @@ export const receivePurchaseOrderItems = onCall(async (request) => {
   const itemDetails: any[] = [];
 
   try {
+    logger.info("開始執行事務處理");
     await db.runTransaction(async (transaction) => {
+      logger.info("事務內部開始執行");
       const poDoc = await transaction.get(poRef);
       if (!poDoc.exists) {
         throw new HttpsError("not-found", "找不到指定的採購單。");
@@ -218,6 +242,7 @@ export const receivePurchaseOrderItems = onCall(async (request) => {
       }
     });
 
+    logger.info("事務處理完成");
     logger.info(`管理員 ${contextAuth.uid} 成功完成採購單 ${purchaseOrderId} 的入庫操作。`);
 
     // 🎯 回傳標準化格式，包含詳細的入庫資訊
@@ -234,7 +259,13 @@ export const receivePurchaseOrderItems = onCall(async (request) => {
       }))
     });
   } catch (error) {
+    logger.error("=== receivePurchaseOrderItems 函數執行失敗 ===");
     logger.error(`採購單 ${purchaseOrderId} 入庫操作失敗:`, error);
+    logger.error("錯誤詳細信息:", {
+      errorType: error?.constructor?.name,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined
+    });
     throw new HttpsError("internal", "入庫操作失敗");
   }
 });

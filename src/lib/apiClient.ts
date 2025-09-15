@@ -7,7 +7,7 @@
  */
 
 import { httpsCallable, Functions } from 'firebase/functions';
-import { getFunctionsInstance } from '@/lib/firebase';
+import { getFunctionsInstance, getAuthInstance } from '@/lib/firebase';
 import { toast } from 'sonner';
 
 // =============================================================================
@@ -97,15 +97,32 @@ export class ApiClient {
       throw new Error('Firebase Functions 尚未初始化');
     }
 
+    // 🚨 重要：檢查身份驗證狀態
+    const auth = getAuthInstance();
+    if (!auth) {
+      throw new Error('Firebase Auth 尚未初始化');
+    }
+
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      console.error('❌ 用戶未登入，無法調用 Firebase Functions');
+      throw new Error('用戶未登入，請先登入再執行此操作');
+    }
+
     const mergedOptions = { ...this.defaultOptions, ...options };
     let toastId: string | number | undefined;
 
-    // 🔍 調試：記錄API調用開始
+    // 🔍 調試：記錄API調用開始（包含身份驗證資訊）
     console.log('🚀 統一API客戶端調用開始:', {
       functionName,
       hasData: !!data,
       dataKeys: data ? Object.keys(data) : [],
-      options: mergedOptions
+      options: mergedOptions,
+      authUser: {
+        uid: currentUser.uid,
+        email: currentUser.email,
+        isAuthenticated: true
+      }
     });
 
     try {
@@ -115,22 +132,47 @@ export class ApiClient {
       }
 
       // 建立 Firebase callable function
-      const callable = httpsCallable(this.functions, functionName);
+      const callable = httpsCallable(this.functions, functionName, {
+        timeout: mergedOptions.timeout
+      });
 
-      // 🔍 調試：記錄即將發送的資料
+      // 🔍 調試：記錄即將發送的資料和函數資訊
       console.log('📤 發送資料到 Firebase Function:', {
         functionName,
-        payload: data
+        payload: data,
+        functionsInstance: !!this.functions,
+        functionsApp: this.functions?.app?.name,
+        functionsRegion: 'us-central1', // Firebase Functions 區域
+        authContext: {
+          userUid: currentUser.uid,
+          userEmail: currentUser.email,
+          hasIdToken: !!await currentUser.getIdToken(false).catch(() => null)
+        }
       });
 
       // 設置超時處理
-      const callPromise = callable(data || {});
+      const callPromise = callable(data || {}).catch(networkError => {
+        console.error('🚨 Firebase Function 網路錯誤:', {
+          functionName,
+          errorCode: networkError.code,
+          errorMessage: networkError.message,
+          errorDetails: networkError.details,
+          errorStack: networkError.stack
+        });
+        throw networkError;
+      });
+
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('請求超時')), mergedOptions.timeout);
+        setTimeout(() => {
+          console.error('⏰ Firebase Function 請求超時:', { functionName, timeout: mergedOptions.timeout });
+          reject(new Error('請求超時'));
+        }, mergedOptions.timeout);
       });
 
       // 執行調用 (帶超時)
+      console.log('🔄 開始 Firebase Function 調用:', functionName);
       const result = await Promise.race([callPromise, timeoutPromise]) as any;
+      console.log('✅ Firebase Function 調用完成:', functionName);
 
       // 🔍 調試：記錄原始回應
       console.log('📥 Firebase Function 原始回應:', {
@@ -289,8 +331,24 @@ export class ApiClient {
    * 適配舊版回應格式
    */
   private adaptLegacyResponse(response: any): ApiResponse | null {
-    // 🎯 適配採購管理API簡化格式: { success: true } (updatePurchaseOrderStatus, receivePurchaseOrderItems)
-    if (typeof response.success === 'boolean' && Object.keys(response).length <= 3) {
+    // 🔍 調試：記錄所有進入適配的回應
+    console.log('🔧 適配舊版回應格式檢查:', {
+      response,
+      hasSuccess: typeof response.success === 'boolean',
+      objectKeys: Object.keys(response || {}),
+      objectKeysCount: Object.keys(response || {}).length,
+      hasPurchaseOrderId: !!response.purchaseOrderId,
+      hasReceivedItemsCount: !!response.receivedItemsCount,
+      hasDataPurchaseOrderId: !!response.data?.purchaseOrderId,
+      hasDataReceivedItemsCount: !!response.data?.receivedItemsCount
+    });
+
+    // 🎯 適配採購管理API簡化格式: { success: true } (僅限 updatePurchaseOrderStatus)
+    // 排除 receivePurchaseOrderItems，因為它返回完整的標準格式
+    if (typeof response.success === 'boolean' &&
+        Object.keys(response).length <= 3 &&
+        !response.purchaseOrderId && // receivePurchaseOrderItems 會有這個欄位
+        !response.receivedItemsCount) { // receivePurchaseOrderItems 會有這個欄位
       return {
         success: response.success,
         data: response.success ? (response.message ? { message: response.message } : { message: '操作成功' }) : undefined,

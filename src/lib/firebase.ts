@@ -77,8 +77,8 @@ function initializeFirebase() {
     firebase('Firestore 初始化成功');
 
     firebase('正在初始化 Firebase Functions...');
-    functionsInstance = getFunctions(app);
-    firebase('Firebase Functions 初始化成功');
+    functionsInstance = getFunctions(app, 'us-central1'); // 🚨 重要：設定正確的區域
+    firebase('Firebase Functions 初始化成功 (us-central1)');
 
     firebase('正在初始化 Firebase Storage...');
     storageInstance = getStorage(app);
