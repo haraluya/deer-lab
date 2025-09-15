@@ -467,6 +467,8 @@ export const completeWorkOrder = onCall(async (request) => {
         throw new HttpsError("not-found", `找不到以下項目：${missingItemDetails.map(item => `${item.type}:${item.id}`).join(', ')}`);
       }
 
+      // ============ 所有讀取操作已完成，現在開始所有寫入操作 ============
+
       // 6. 更新工單狀態
       transaction.update(workOrderRef, {
         status: '完工',
@@ -482,7 +484,7 @@ export const completeWorkOrder = onCall(async (request) => {
 
       for (const itemInfo of itemRefs) {
         const { ref: itemRef, snap: itemSnap, consumedQuantity, itemType } = itemInfo;
-        const itemData = itemSnap.data()!;
+        const itemData = itemSnap.data()!; // 使用之前讀取的數據
 
         const currentStock = itemData.currentStock || 0;
         const newStock = Math.max(0, currentStock - consumedQuantity); // 確保庫存不為負
