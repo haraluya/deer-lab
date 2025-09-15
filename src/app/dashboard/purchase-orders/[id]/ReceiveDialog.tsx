@@ -106,9 +106,32 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
 
       console.log("發送 payload:", payload);
 
+      // 🔍 更詳細的調試
+      console.log("🔍 準備調用 API:", {
+        functionName: 'receivePurchaseOrderItems',
+        payload: payload,
+        apiClientType: typeof apiClient,
+        apiClientMethods: Object.getOwnPropertyNames(apiClient)
+      });
+
       // 使用統一 API 客戶端
-      const result = await apiClient.call('receivePurchaseOrderItems', payload);
-      console.log("API 回應:", result);
+      let result;
+      try {
+        result = await apiClient.call('receivePurchaseOrderItems', payload);
+      } catch (apiError) {
+        console.error("🚨 API 調用拋出錯誤:", apiError);
+        console.error("🚨 錯誤堆疊:", apiError instanceof Error ? apiError.stack : '無堆疊資訊');
+        throw apiError;
+      }
+      console.log("🔍 API 回應:", result);
+      console.log("🔍 API 回應詳細:", {
+        success: result.success,
+        hasData: !!result.data,
+        hasError: !!result.error,
+        errorCode: result.error?.code,
+        errorMessage: result.error?.message,
+        rawResponse: result.rawResponse
+      });
 
       if (result.success) {
         toast.success("收貨入庫成功，庫存已更新");
