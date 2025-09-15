@@ -141,21 +141,21 @@ export default function WorkOrderDetailPage() {
     endTime: ''
   })
 
-  // 格式化數值顯示，智能去除尾隨的0，並處理浮點數精度問題
+  // 格式化數值顯示，統一處理小數點精度到第三位
   const formatNumber = (value: number) => {
     if (value === 0) return '0';
-    // 使用 parseFloat 和 toFixed 來處理浮點數精度問題
-    const fixedValue = parseFloat(value.toFixed(6));
+    // 統一處理到小數點第三位
+    const fixedValue = parseFloat(value.toFixed(3));
     if (fixedValue % 1 === 0) {
       return fixedValue.toString();
     }
     // 使用 parseFloat 來去除尾隨的0
-    return parseFloat(fixedValue.toFixed(6)).toString();
+    return parseFloat(fixedValue.toFixed(3)).toString();
   };
 
   // 處理使用數量更新
   const handleQuantityChange = (itemId: string, value: string) => {
-    const numValue = parseFloat(parseFloat(value || '0').toFixed(6));
+    const numValue = parseFloat(parseFloat(value || '0').toFixed(3));
     setEditingQuantities(prev => ({
       ...prev,
       [itemId]: numValue
@@ -169,9 +169,9 @@ export default function WorkOrderDetailPage() {
     try {
       const updatedBillOfMaterials = workOrder.billOfMaterials.map(item => ({
         ...item,
-        usedQuantity: editingQuantities[item.id] !== undefined ? 
-          parseFloat(editingQuantities[item.id].toFixed(6)) : 
-          parseFloat((item.usedQuantity || 0).toFixed(6))
+        usedQuantity: editingQuantities[item.id] !== undefined ?
+          parseFloat(editingQuantities[item.id].toFixed(3)) :
+          parseFloat((item.usedQuantity || item.quantity || 0).toFixed(3))
       }));
 
       const docRef = doc(db, "workOrders", workOrderId);
@@ -204,11 +204,11 @@ export default function WorkOrderDetailPage() {
     return workOrder.billOfMaterials.map(item => {
       if (['fragrance', 'pg', 'vg', 'nicotine'].includes(item.category) && item.ratio) {
         // 重新計算核心配方物料的需求數量
-        const newQuantity = parseFloat((newTargetQuantity * (item.ratio / 100)).toFixed(6));
+        const newQuantity = parseFloat((newTargetQuantity * (item.ratio / 100)).toFixed(3));
         return {
           ...item,
           quantity: newQuantity,
-          usedQuantity: parseFloat((item.usedQuantity || newQuantity).toFixed(6)) // 如果沒有使用數量，預設為需求數量
+          usedQuantity: parseFloat((item.usedQuantity || newQuantity).toFixed(3)) // 如果沒有使用數量，預設為需求數量
         };
       }
       return item;
@@ -321,8 +321,8 @@ export default function WorkOrderDetailPage() {
             const fragranceDoc = await getDoc(fragranceRef);
             if (fragranceDoc.exists()) {
               const currentStock = fragranceDoc.data().currentStock || 0;
-              // 使用 parseFloat 和 toFixed 來處理浮點數精度問題
-              const newStock = Math.max(0, parseFloat((currentStock - usedQuantity).toFixed(6)));
+              // 統一處理小數點精度到第三位
+              const newStock = Math.max(0, parseFloat((currentStock - usedQuantity).toFixed(3)));
               await updateDoc(fragranceRef, {
                 currentStock: newStock,
                 updatedAt: Timestamp.now()
@@ -340,8 +340,8 @@ export default function WorkOrderDetailPage() {
             const materialDoc = await getDoc(materialRef);
             if (materialDoc.exists()) {
               const currentStock = materialDoc.data().currentStock || 0;
-              // 使用 parseFloat 和 toFixed 來處理浮點數精度問題
-              const newStock = Math.max(0, parseFloat((currentStock - usedQuantity).toFixed(6)));
+              // 統一處理小數點精度到第三位
+              const newStock = Math.max(0, parseFloat((currentStock - usedQuantity).toFixed(3)));
               await updateDoc(materialRef, {
                 currentStock: newStock,
                 updatedAt: Timestamp.now()

@@ -20,9 +20,12 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           "text-base sm:text-sm",
           // 觸控友好的最小點擊區域
           "min-h-[44px]",
+          // 移除數字輸入框的上下箭頭
+          "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
           className
         )}
         ref={ref}
+        inputMode={type === 'number' ? 'decimal' : undefined}
         {...props}
       />
     )
