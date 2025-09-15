@@ -41,6 +41,9 @@ interface ReceiveDialogProps {
 export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }: ReceiveDialogProps) {
   const apiClient = useApiForm();
 
+  // 🔍 調試：檢查對話框狀態
+  console.log('🔍 ReceiveDialog 渲染:', { isOpen, purchaseOrderId: purchaseOrder?.id });
+
 
   // 🚨 防護：確保 items 是有效的數組
   const safeItems = Array.isArray(purchaseOrder.items) ? purchaseOrder.items : [];

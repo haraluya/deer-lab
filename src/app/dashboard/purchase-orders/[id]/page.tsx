@@ -481,7 +481,10 @@ export default function PurchaseOrderDetailPage() {
           )}
           {po.status === '已訂購' && (
             <Button
-              onClick={() => setIsReceiveDialogOpen(true)}
+              onClick={() => {
+                console.log('🔍 收貨入庫按鈕被點擊');
+                setIsReceiveDialogOpen(true);
+              }}
               disabled={isUpdating}
               className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
             >
