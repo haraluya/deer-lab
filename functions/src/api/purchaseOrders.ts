@@ -126,38 +126,15 @@ export const updatePurchaseOrderStatus = onCall(async (request) => {
 });
 
 export const receivePurchaseOrderItems = onCall(async (request) => {
-  // 🔍 調試：記錄函數開始執行
-  logger.info("=== receivePurchaseOrderItems 函數開始執行 ===");
-
   const { auth: contextAuth, data } = request;
 
-  // 🔍 調試：記錄接收到的參數
-  logger.info("接收到的參數:", {
-    hasAuth: !!contextAuth,
-    authUid: contextAuth?.uid,
-    hasData: !!data,
-    dataKeys: data ? Object.keys(data) : [],
-    data: JSON.stringify(data)
-  });
-  // await ensureIsAdmin(contextAuth?.uid);
-
-  // --- ** 修正點：加入明確的類型檢查 ** ---
   if (!contextAuth) {
     throw new HttpsError("internal", "驗證檢查後 contextAuth 不應為空。");
   }
 
   const { purchaseOrderId, items } = data;
 
-  // 🔍 調試：記錄解構後的參數
-  logger.info("解構後的參數:", {
-    purchaseOrderId,
-    itemsType: Array.isArray(items),
-    itemsLength: items?.length,
-    items: JSON.stringify(items)
-  });
-
   if (!purchaseOrderId || !Array.isArray(items)) {
-    logger.error("參數驗證失敗:", { purchaseOrderId, itemsIsArray: Array.isArray(items) });
     throw new HttpsError("invalid-argument", "缺少或無效的參數。");
   }
 
@@ -168,42 +145,18 @@ export const receivePurchaseOrderItems = onCall(async (request) => {
   const itemDetails: any[] = [];
 
   try {
-    // 🎯 準備統一API的庫存更新請求
-    const unifiedUpdates = items
-      .filter(item => item.itemRefPath && Number(item.receivedQuantity) > 0)
-      .map(item => ({
-        itemId: db.doc(item.itemRefPath).id,
-        itemType: item.itemRefPath.includes('materials') ? 'material' as const : 'fragrance' as const,
-        operation: 'add' as const,
-        quantity: Number(item.receivedQuantity),
-        reason: `採購單 ${purchaseOrderId} 收貨入庫`
-      }));
+    // 🎯 準備庫存更新項目
+    const validItems = items.filter(item => item.itemRefPath && Number(item.receivedQuantity) > 0);
 
-    if (unifiedUpdates.length === 0) {
+    if (validItems.length === 0) {
       throw new HttpsError("invalid-argument", "沒有有效的入庫項目。");
     }
 
-    const unifiedRequest = {
-      source: {
-        type: 'purchase_receive' as const,
-        operatorId: contextAuth.uid,
-        operatorName: contextAuth.token?.name || '未知用戶',
-        remarks: `採購單 ${purchaseOrderId} 入庫`,
-        relatedDocumentId: purchaseOrderId,
-        relatedDocumentType: 'purchase_order' as const,
-      },
-      updates: unifiedUpdates,
-      options: {
-        allowNegativeStock: false,
-        skipStockValidation: false,
-        batchMode: true
-      }
-    };
 
-    logger.info("開始執行統一庫存更新");
-
-    // 🎯 使用統一API進行庫存更新，並更新採購單狀態
+    // 🔧 修復：使用單一事務處理所有操作，嚴格遵循 Firestore 事務規則（先讀後寫）
     await db.runTransaction(async (transaction) => {
+      // ===== 第一階段：所有讀取操作 =====
+
       // 1. 檢查採購單狀態
       const poDoc = await transaction.get(poRef);
       if (!poDoc.exists) {
@@ -213,108 +166,118 @@ export const receivePurchaseOrderItems = onCall(async (request) => {
         throw new HttpsError("failed-precondition", `採購單狀態為 "${poDoc.data()?.status}"，無法執行入庫。`);
       }
 
-      // 2. 更新採購單狀態
+      // 2. 讀取所有項目資料（必須在任何寫入操作之前完成）
+      const itemDataMap = new Map();
+      const failedUpdates: any[] = [];
+
+      for (const item of validItems) {
+        const itemId = db.doc(item.itemRefPath).id;
+        const itemType = item.itemRefPath.includes('materials') ? 'material' : 'fragrance';
+        const itemRef = db.doc(`${itemType === 'material' ? 'materials' : 'fragrances'}/${itemId}`);
+
+        const itemDoc = await transaction.get(itemRef);
+
+        if (!itemDoc.exists) {
+          failedUpdates.push({
+            itemRefPath: item.itemRefPath,
+            error: 'Item not found',
+            details: { reason: '找不到指定項目' }
+          });
+          continue;
+        }
+
+        itemDataMap.set(item.itemRefPath, {
+          itemRef,
+          itemDoc,
+          itemId,
+          itemType,
+          item,
+          currentStock: itemDoc.data()?.currentStock || 0,
+          receivedQuantity: Number(item.receivedQuantity)
+        });
+      }
+
+      // 如果有失敗項目，直接拋出錯誤（在寫入之前）
+      if (failedUpdates.length > 0) {
+        throw new HttpsError("internal", `部分項目處理失敗：${failedUpdates.map(f => f.itemRefPath).join(', ')}`);
+      }
+
+      // ===== 第二階段：所有寫入操作 =====
+
+      // 3. 更新採購單狀態
       transaction.update(poRef, {
         status: "已收貨",
         receivedAt: FieldValue.serverTimestamp(),
         receivedByRef,
       });
 
-      // 3. 執行統一庫存更新（在同一事務內）
+      // 4. 處理每個項目的庫存更新
       const inventoryRecordDetails: any[] = [];
-      const failedUpdates: any[] = [];
 
-      for (const update of unifiedUpdates) {
-        try {
-          const itemRef = db.doc(`${update.itemType === 'material' ? 'materials' : 'fragrances'}/${update.itemId}`);
-          const itemDoc = await transaction.get(itemRef);
+      for (const [itemRefPath, itemData] of itemDataMap) {
+        const { itemRef, itemDoc, itemId, itemType, item, currentStock, receivedQuantity } = itemData;
 
-          if (!itemDoc.exists) {
-            failedUpdates.push({
-              itemId: update.itemId,
-              error: 'Item not found',
-              details: { reason: '找不到指定項目' }
-            });
-            continue;
-          }
+        const newStock = currentStock + receivedQuantity;
 
-          const currentStock = itemDoc.data()?.currentStock || 0;
-          const newStock = currentStock + update.quantity;
+        // 更新庫存
+        transaction.update(itemRef, {
+          currentStock: newStock,
+          lastStockUpdate: FieldValue.serverTimestamp(),
+        });
 
-          // 更新庫存
-          transaction.update(itemRef, {
-            currentStock: newStock,
-            lastStockUpdate: FieldValue.serverTimestamp(),
-          });
+        // 收集庫存記錄明細
+        inventoryRecordDetails.push({
+          itemId: itemId,
+          itemType: itemType,
+          itemCode: item.code || '',
+          itemName: item.name || '',
+          quantityBefore: currentStock,
+          quantityChange: receivedQuantity,
+          quantityAfter: newStock,
+          changeReason: `採購單 ${purchaseOrderId} 收貨入庫`
+        });
 
-          // 收集庫存記錄明細
-          inventoryRecordDetails.push({
-            itemId: update.itemId,
-            itemType: update.itemType,
-            itemCode: items.find(item => db.doc(item.itemRefPath).id === update.itemId)?.code || '',
-            itemName: items.find(item => db.doc(item.itemRefPath).id === update.itemId)?.name || '',
-            quantityBefore: currentStock,
-            quantityChange: update.quantity,
-            quantityAfter: newStock,
-            changeReason: update.reason || `採購單 ${purchaseOrderId} 收貨入庫`
-          });
+        // 收集項目明細供回應使用
+        itemDetails.push({
+          itemId: itemId,
+          itemType: itemType,
+          itemCode: item.code || '',
+          itemName: item.name || '',
+          quantityChange: receivedQuantity,
+          quantityAfter: newStock
+        });
 
-          // 收集項目明細供回應使用
-          itemDetails.push({
-            itemId: update.itemId,
-            itemType: update.itemType,
-            itemCode: items.find(item => db.doc(item.itemRefPath).id === update.itemId)?.code || '',
-            itemName: items.find(item => db.doc(item.itemRefPath).id === update.itemId)?.name || '',
-            quantityChange: update.quantity,
-            quantityAfter: newStock
-          });
-
-          // 建立庫存異動記錄
-          const movementRef = db.collection("inventoryMovements").doc();
-          transaction.set(movementRef, {
-            itemRef: itemRef,
-            itemType: update.itemType,
-            changeQuantity: update.quantity,
-            type: "purchase_inbound",
-            relatedDocRef: poRef,
-            createdAt: FieldValue.serverTimestamp(),
-            createdByRef: receivedByRef,
-          });
-
-        } catch (error) {
-          logger.error(`處理項目 ${update.itemId} 時發生錯誤:`, error);
-          failedUpdates.push({
-            itemId: update.itemId,
-            error: error instanceof Error ? error.message : String(error),
-            details: { originalUpdate: update }
-          });
-        }
+        // 建立庫存異動記錄
+        const movementRef = db.collection("inventoryMovements").doc();
+        transaction.set(movementRef, {
+          itemRef: itemRef,
+          itemType: itemType,
+          changeQuantity: receivedQuantity,
+          type: "purchase_inbound",
+          relatedDocRef: poRef,
+          createdAt: FieldValue.serverTimestamp(),
+          createdByRef: receivedByRef,
+        });
       }
 
-      // 4. 建立統一的庫存紀錄
+      // 5. 建立統一的庫存紀錄
       if (inventoryRecordDetails.length > 0) {
         const inventoryRecordRef = db.collection("inventory_records").doc();
         transaction.set(inventoryRecordRef, {
           changeDate: FieldValue.serverTimestamp(),
           changeReason: 'purchase',
-          operatorId: unifiedRequest.source.operatorId,
-          operatorName: unifiedRequest.source.operatorName,
-          remarks: unifiedRequest.source.remarks,
-          relatedDocumentId: unifiedRequest.source.relatedDocumentId,
-          relatedDocumentType: unifiedRequest.source.relatedDocumentType,
+          operatorId: contextAuth.uid,
+          operatorName: contextAuth.token?.name || '未知用戶',
+          remarks: `採購單 ${purchaseOrderId} 入庫`,
+          relatedDocumentId: purchaseOrderId,
+          relatedDocumentType: 'purchase_order',
           details: inventoryRecordDetails,
           createdAt: FieldValue.serverTimestamp(),
         });
       }
-
-      // 如果有失敗項目，拋出錯誤
-      if (failedUpdates.length > 0) {
-        throw new HttpsError("internal", `部分項目處理失敗：${failedUpdates.map(f => f.itemId).join(', ')}`);
-      }
     });
 
-    logger.info("事務處理完成");
-    logger.info(`管理員 ${contextAuth.uid} 成功完成採購單 ${purchaseOrderId} 的入庫操作。`);
+    logger.info(`採購單 ${purchaseOrderId} 收貨入庫完成，處理項目數: ${itemDetails.length}`);
 
     // 🎯 回傳標準化格式，包含詳細的入庫資訊
     return createStandardResponse(true, {
@@ -330,13 +293,7 @@ export const receivePurchaseOrderItems = onCall(async (request) => {
       }))
     });
   } catch (error) {
-    logger.error("=== receivePurchaseOrderItems 函數執行失敗 ===");
     logger.error(`採購單 ${purchaseOrderId} 入庫操作失敗:`, error);
-    logger.error("錯誤詳細信息:", {
-      errorType: error?.constructor?.name,
-      errorMessage: error instanceof Error ? error.message : String(error),
-      errorStack: error instanceof Error ? error.stack : undefined
-    });
     throw new HttpsError("internal", "入庫操作失敗");
   }
 });

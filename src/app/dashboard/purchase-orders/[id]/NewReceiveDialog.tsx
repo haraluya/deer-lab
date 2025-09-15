@@ -21,7 +21,6 @@ export function NewReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrde
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [receivedQuantities, setReceivedQuantities] = useState<Record<string, number>>({});
 
-  console.log('🔍 NewReceiveDialog 渲染:', { isOpen, purchaseOrderId: purchaseOrder?.id });
 
   // 初始化收貨數量
   React.useEffect(() => {
@@ -43,10 +42,7 @@ export function NewReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrde
   };
 
   const handleSubmit = async () => {
-    console.log('🔍 開始提交收貨');
-
     if (isSubmitting) {
-      console.log('⚠️ 已在提交中');
       return;
     }
 
@@ -55,19 +51,28 @@ export function NewReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrde
     try {
       const payload = {
         purchaseOrderId: purchaseOrder.id,
-        items: purchaseOrder.items.map((item: any, index: number) => ({
-          itemRefPath: item.itemRef?.path || `${item.unit ? 'materials' : 'fragrances'}/${item.id}`,
-          code: item.code,
-          name: item.name,
-          receivedQuantity: receivedQuantities[index] || 0
-        }))
+        items: purchaseOrder.items.map((item: any, index: number) => {
+          // 生成 itemRefPath
+          let itemRefPath = '';
+          if (item.itemRef && item.itemRef.path) {
+            itemRefPath = item.itemRef.path;
+          } else if (item.itemRef && item.itemRef.id) {
+            itemRefPath = item.unit ? `materials/${item.itemRef.id}` : `fragrances/${item.itemRef.id}`;
+          } else {
+            itemRefPath = item.unit ? `materials/${item.id}` : `fragrances/${item.id}`;
+          }
+
+          return {
+            itemRefPath,
+            code: item.code,
+            name: item.name,
+            receivedQuantity: receivedQuantities[index] || 0
+          };
+        })
       };
 
-      console.log('🔍 提交 payload:', payload);
 
       const result = await apiClient.call('receivePurchaseOrderItems', payload);
-
-      console.log('🔍 API 回應:', result);
 
       if (result.success) {
         toast.success("收貨入庫成功，庫存已更新");

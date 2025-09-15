@@ -46,6 +46,17 @@ functions/                 # Firebase Functions
 │   └── index.ts           # Functions 入口
 ├── package.json           # Functions 依賴
 └── .next/                 # 部署時的 Next.js 建構產物
+
+docs/                      # 📚 技術文檔中心
+├── API客戶端使用指南.md      # 統一API調用規範
+├── 對話框載入機制指南.md     # 標準UI元件開發
+├── 庫存API實施紀錄.md       # 庫存系統實作細節
+└── Firebase成本優化.md     # 成本控制與優化
+
+scripts/                   # 🛠️ 維護工具與指南
+├── optimize-deploy.bat     # 優化部署腳本
+├── cleanup-*.js           # 各種清理工具
+└── *.md                   # 維護操作指南
 ```
 
 ## 🚨 AI 助理必讀：關鍵部署規則
@@ -160,6 +171,25 @@ firebase deploy --force
 2. 複製到 functions：`cp -r .next functions/`
 3. 部署：Firebase Functions 載入 `.next` 運行 SSR
 4. 清理：可以安全刪除本地 `.next`，不影響線上版本
+
+## 📚 技術文檔導引
+
+### 核心技術指南
+- **🔌 API開發**: 參考 [`docs/API客戶端使用指南.md`](docs/API客戶端使用指南.md) - 統一API調用規範與最佳實踐
+- **🎛️ UI元件**: 參考 [`docs/對話框載入機制指南.md`](docs/對話框載入機制指南.md) - 標準對話框開發與載入機制
+- **📦 庫存系統**: 參考 [`docs/庫存API實施紀錄.md`](docs/庫存API實施紀錄.md) - 庫存功能實作細節與API規範
+- **💰 成本控制**: 參考 [`docs/Firebase成本優化.md`](docs/Firebase成本優化.md) - Firebase部署成本管理與優化策略
+
+### 維護工具指南
+- **☁️ GCS清理**: 參考 [`scripts/GCS清理指南.md`](scripts/GCS清理指南.md) - Google Cloud Storage清理操作
+- **🧹 系統清理**: 參考 [`scripts/清理結果報告.md`](scripts/清理結果報告.md) - 系統清理操作記錄與結果
+
+### 📖 文檔使用說明
+所有技術指南都已標準化並集中管理：
+- **docs/** - 核心技術文檔，涵蓋API、UI、系統實作等重要指南
+- **scripts/** - 維護工具與相關操作指南
+- 每份文檔都包含完整的使用說明、範例程式碼與最佳實踐
+- AI助理在開發時應優先參考這些指南以確保符合專案標準
 
 ## 開發指令
 
