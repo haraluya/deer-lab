@@ -69,6 +69,14 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
   });
 
   const onSubmit = async (data: FormData) => {
+    console.log("🔍 onSubmit 函數被調用");
+    console.log("🔍 表單狀態:", {
+      isSubmitting: form.formState.isSubmitting,
+      isValid: form.formState.isValid,
+      errors: form.formState.errors,
+      data: data
+    });
+
     // 防止重複提交
     if (form.formState.isSubmitting) {
       console.log("已在提交中，忽略重複提交");
@@ -236,7 +244,15 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
             </div>
             <DialogFooter className="mt-6">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>取消</Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
+              <Button
+                type="submit"
+                disabled={form.formState.isSubmitting}
+                onClick={() => {
+                  console.log("🔍 確認入庫按鈕被點擊");
+                  console.log("🔍 表單是否有效:", form.formState.isValid);
+                  console.log("🔍 表單錯誤:", form.formState.errors);
+                }}
+              >
                 {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 確認入庫
               </Button>
