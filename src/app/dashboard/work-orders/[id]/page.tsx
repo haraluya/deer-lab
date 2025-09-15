@@ -255,6 +255,12 @@ export default function WorkOrderDetailPage() {
       // 🔍 診斷日誌：檢查所有 BOM 項目
       console.log('🔍 [診斷] 工單完工前的 BOM 檢查:');
       console.log('🔍 [診斷] 總BOM項目數:', workOrder.billOfMaterials.length);
+      console.log('🔍 [診斷] 工單完整資料:', {
+        id: workOrderId,
+        status: workOrder.status,
+        targetQuantity: workOrder.targetQuantity,
+        productSnapshot: workOrder.productSnapshot
+      });
 
       workOrder.billOfMaterials.forEach((item, index) => {
         console.log(`🔍 [診斷] BOM[${index}]:`, {
@@ -267,6 +273,20 @@ export default function WorkOrderDetailPage() {
           isFragrance: item.type === 'fragrance' || item.category === 'fragrance'
         });
       });
+
+      // 🚨 如果BOM項目數少於3個，說明BOM表不完整
+      if (workOrder.billOfMaterials.length < 3) {
+        console.error('🚨 [診斷] 警告：BOM表項目數過少！可能需要重新載入BOM表');
+        console.error('🚨 [診斷] 正常情況下應有：香精 + PG + VG + 尼古丁 至少4個項目');
+
+        // 自動提示用戶
+        if (confirm('⚠️ 偵測到 BOM 表項目數異常（少於3個），這可能導致扣庫存失敗。\n\n是否要重新載入 BOM 表？')) {
+          console.log('🔧 [診斷] 用戶同意重新載入BOM表');
+          setIsCompleting(false);
+          await handleReloadBOM();
+          return;
+        }
+      }
 
       // 準備物料消耗資料
       const materialsToUpdate = workOrder.billOfMaterials.filter(item => (item.usedQuantity || 0) > 0);
