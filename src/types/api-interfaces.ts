@@ -427,6 +427,48 @@ export namespace InventoryApi {
       difference: number;
     }[];
   }
+
+  // =============================================================================
+  // 統一庫存更新 API (2025-09-15 新增)
+  // =============================================================================
+
+  export interface UnifiedInventoryUpdateRequest {
+    source: {
+      type: 'direct_edit' | 'stocktake' | 'purchase_receive' | 'work_order_complete' | 'manual_adjust';
+      operatorId: string;
+      operatorName: string;
+      remarks?: string;
+      relatedDocumentId?: string;
+      relatedDocumentType?: 'work_order' | 'purchase_order' | 'stocktake' | 'manual';
+    };
+    updates: {
+      itemId: string;
+      itemType: 'material' | 'fragrance';
+      operation: 'add' | 'subtract' | 'set';
+      quantity: number;
+      currentStock?: number; // 用於驗證
+      reason?: string;
+    }[];
+    options?: {
+      allowNegativeStock?: boolean;
+      skipStockValidation?: boolean;
+      batchMode?: boolean;
+    };
+  }
+
+  export interface UnifiedInventoryUpdateResponse extends BatchOperationResult {
+    recordId: string;
+    inventoryRecord: {
+      id: string;
+      changeReason: string;
+      operatorName: string;
+      itemCount: number;
+    } | null;
+    additionalSummary: {
+      totalQuantityChanged: number;
+      affectedItems: number;
+    };
+  }
 }
 
 // =============================================================================
@@ -977,6 +1019,10 @@ export interface ApiEndpoints {
   'performStocktake': {
     request: InventoryApi.PerformStocktakeRequest;
     response: InventoryApi.StocktakeResponse;
+  };
+  'unifiedInventoryUpdate': {
+    request: InventoryApi.UnifiedInventoryUpdateRequest;
+    response: InventoryApi.UnifiedInventoryUpdateResponse;
   };
 
   // 人員管理
