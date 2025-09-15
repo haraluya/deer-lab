@@ -59,15 +59,41 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
     try {
       const payload = {
         purchaseOrderId: purchaseOrder.id,
-        items: data.items.map(item => ({
-          // 🔧 修復：正確處理 Firebase DocumentReference 物件
-          itemRefPath: item.itemRef?._path?.segments?.join('/') ||
-                      item.itemRef?.path ||
-                      (typeof item.itemRef === 'string' ? item.itemRef : `materials/${item.id}`),
-          receivedQuantity: item.receivedQuantity,
-          code: item.code,
-          name: item.name,
-        })),
+        items: data.items.map(item => {
+          // 🔧 修復：安全處理 Firebase DocumentReference 物件
+          let itemRefPath = '';
+
+          // 調試：輸出 itemRef 結構
+          console.log("Item ref structure:", item.itemRef);
+
+          if (item.itemRef) {
+            // 嘗試不同的路徑格式
+            if (item.itemRef._path && item.itemRef._path.segments) {
+              itemRefPath = item.itemRef._path.segments.join('/');
+            } else if (item.itemRef.path) {
+              itemRefPath = item.itemRef.path;
+            } else if (typeof item.itemRef === 'string') {
+              itemRefPath = item.itemRef;
+            } else if (item.itemRef.id) {
+              // 根據 unit 決定是 materials 還是 fragrances
+              itemRefPath = item.unit ? `materials/${item.itemRef.id}` : `fragrances/${item.itemRef.id}`;
+            }
+          }
+
+          // 如果還是沒有路徑，使用 fallback
+          if (!itemRefPath && item.id) {
+            itemRefPath = item.unit ? `materials/${item.id}` : `fragrances/${item.id}`;
+          }
+
+          console.log("Resolved itemRefPath:", itemRefPath);
+
+          return {
+            itemRefPath,
+            receivedQuantity: item.receivedQuantity,
+            code: item.code,
+            name: item.name,
+          };
+        }),
       };
 
       console.log("=== 採購單入庫除錯日誌 ===");
