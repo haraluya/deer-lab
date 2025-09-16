@@ -8,7 +8,7 @@ import { ArrowLeft, Building, Edit, MapPin, Phone, Mail, Globe, User, Package, E
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { SupplierDialog, SupplierData } from '../SupplierDialog';
+import { SupplierDialogUnified as SupplierDialog, SupplierData } from '../SupplierDialogUnified';
 
 // 原料和香精介面
 interface Material {
