@@ -188,13 +188,14 @@ export function PersonnelDialog({
       
       // 準備更新資料，確保欄位名稱正確
       const updateData = {
-        id: personnelData.id, // API介面需要 id 欄位
+        id: personnelData.id, // 修正：使用 id 而不是 personnelId
+        personnelId: personnelData.id, // 保留向後兼容
         name: data.name,
         employeeId: data.employeeId,
         phone: data.phone,
-        role: data.role, // 保持role欄位名稱
+        roleId: data.role, // 後端期望 roleId
         password: data.password || "", // 如果沒有密碼則傳空字串
-        isActive: data.status === 'active', // 轉換為boolean
+        status: data.status, // 後端期望 status 字串
       };
       
       console.log('📤 更新資料:', updateData);
@@ -212,9 +213,10 @@ export function PersonnelDialog({
         name: data.name,
         employeeId: data.employeeId,
         phone: data.phone,
-        role: data.role, // 保持role欄位名稱
+        role: data.role, // API 期望 role
+        roleId: data.role, // 保留向後兼容 roleId
         password: data.password,
-        isActive: data.status === 'active', // 轉換為boolean
+        status: data.status, // 後端期望 status 字串
       };
       
       console.log('📤 建立資料:', createData);

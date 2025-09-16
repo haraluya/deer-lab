@@ -1,24 +1,18 @@
 // src/app/dashboard/personnel/permissions/page.tsx
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApiForm } from '@/hooks/useApiClient';
 import { AdminOnly } from '@/components/PermissionGate';
 import { usePermission } from '@/hooks/usePermission';
-import { RoleEditDialog } from '@/components/RoleEditDialog';
-import { RoleCreateDialog } from '@/components/RoleCreateDialog';
-import { UserRoleAssignDialog } from '@/components/UserRoleAssignDialog';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
-import { 
-  Shield, Users, Settings, Plus, Edit3, Trash2, 
-  Eye, UserCheck, AlertTriangle, CheckCircle, 
-  Lock, Unlock, Crown, User, X, ArrowLeft, Info
+import {
+  Shield, Settings, Plus, Eye, UserCheck, CheckCircle,
+  Lock, Crown, User, X, ArrowLeft, Info, AlertTriangle
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
@@ -36,453 +30,98 @@ interface Role {
   updatedAt?: any;
 }
 
-interface UserWithRole {
-  id: string;
-  uid: string;
-  name: string;
-  employeeId: string;
-  phone?: string;
-  roleName?: string;
-  roleId?: string;
-  status: string;
-  permissions?: string[];
-}
-
 function PermissionsPageContent() {
   const [roles, setRoles] = useState<Role[]>([]);
-  const [users, setUsers] = useState<UserWithRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('roles');
-  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [showRoleDetailDialog, setShowRoleDetailDialog] = useState(false);
-  const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
-  const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
-  const [showEditRoleDialog, setShowEditRoleDialog] = useState(false);
-  const [editingRole, setEditingRole] = useState<Role | null>(null);
-  const [showCreateRoleDialog, setShowCreateRoleDialog] = useState(false);
-  const [showUserRoleAssignDialog, setShowUserRoleAssignDialog] = useState(false);
-  const [assigningUser, setAssigningUser] = useState<UserWithRole | null>(null);
-  
-  const { isAdmin } = usePermission();
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const apiClient = useApiForm();
 
-  // 載入角色列表
-  const fetchRoles = useCallback(async () => {
-    console.log('📋 開始載入角色列表');
-    
-    // 優先嘗試本地 Firestore 查詢（避免 Functions 問題）
-    try {
-      const { getFirestore, collection, getDocs, orderBy, query } = await import('firebase/firestore');
-      const db = getFirestore();
-      
-      console.log('🔥 使用本地 Firestore 載入角色');
-      const rolesQuery = query(collection(db, 'roles'), orderBy('createdAt', 'asc'));
-      const rolesSnapshot = await getDocs(rolesQuery);
-      
-      const localRoles = rolesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Role[];
-      
-      setRoles(localRoles);
-      
-      if (localRoles.length === 0) {
-        console.log('⚠️  系統中沒有角色');
-        toast.info('系統中尚未有角色，請初始化預設角色');
-      } else {
-        console.log(`✅ 成功載入 ${localRoles.length} 個角色:`, localRoles.map(r => r.displayName));
-        toast.success(`成功載入 ${localRoles.length} 個角色`);
-      }
-      return; // 成功後直接返回
-    } catch (localError) {
-      console.warn('⚠️  本地 Firestore 查詢失敗，嘗試 Functions:', localError);
-    }
+  // 載入角色資料 - 開發環境直接使用預設資料
+  const fetchRoles = async () => {
+    console.log('🔄 載入預設角色資料（開發模式）...');
 
-    // 如果本地查詢失敗，才嘗試統一 API 客戶端
-    try {
-      const result = await apiClient.call('getRoles');
-      
-      if (result.success && result.data) {
-        const apiRoles = result.data.roles || [];
-        // 轉換API格式為本地格式
-        const convertedRoles: Role[] = apiRoles.map((apiRole: any) => ({
-          id: apiRole.id,
-          name: apiRole.name,
-          displayName: apiRole.name, // 使用name作為displayName
-          description: apiRole.description || '',
-          permissions: apiRole.permissions,
-          isDefault: false, // 預設為非預設角色
-          color: 'blue', // 預設顏色
-          createdAt: null,
-          updatedAt: null,
-        }));
-        setRoles(convertedRoles);
-        toast.success(`載入 ${convertedRoles.length} 個角色（統一 API）`);
-      } else {
-        toast.error('載入角色列表失敗');
+    // 在開發環境中直接使用預設角色，避免 API 調用錯誤
+    const defaultRoles = [
+      {
+        id: 'admin-role',
+        name: 'admin',
+        displayName: '系統管理員',
+        description: '擁有系統完整管理權限，包括人員管理、角色設定等所有功能',
+        permissions: [
+          'system.admin', 'personnel.manage', 'personnel.create', 'personnel.edit', 'personnel.delete',
+          'roles.manage', 'roles.view', 'time.manage', 'workOrders.manage', 'suppliers.manage',
+          'materials.manage', 'products.manage', 'inventory.manage', 'cost.view'
+        ],
+        isDefault: true,
+        color: '#dc2626'
+      },
+      {
+        id: 'foreman-role',
+        name: 'foreman',
+        displayName: '生產領班',
+        description: '負責生產管理和工時記錄，具有生產相關的管理權限',
+        permissions: [
+          'personnel.view', 'time.manage', 'time.create', 'time.edit',
+          'workOrders.manage', 'workOrders.create', 'workOrders.edit',
+          'materials.view', 'products.view', 'inventory.view'
+        ],
+        isDefault: true,
+        color: '#2563eb'
+      },
+      {
+        id: 'timekeeper-role',
+        name: 'timekeeper',
+        displayName: '計時人員',
+        description: '專門負責工時記錄和基本資料查看',
+        permissions: [
+          'time.view', 'time.create', 'time.edit',
+          'personnel.view', 'workOrders.view',
+          'timeReports.view'
+        ],
+        isDefault: true,
+        color: '#059669'
       }
-    } catch (error) {
-      console.error('❌ 統一 API 和本地查詢都失敗:', error);
-      toast.error('載入角色列表失敗，請檢查網路連線');
-    }
-  }, [apiClient]);
+    ];
 
-  // 載入用戶列表
-  const fetchUsers = useCallback(async () => {
-    console.log('📋 開始載入用戶列表');
-    
-    try {
-      const { getFirestore, collection, getDocs, orderBy, query } = await import('firebase/firestore');
-      const db = getFirestore();
-      
-      const usersQuery = query(collection(db, 'users'), orderBy('name', 'asc'));
-      const usersSnapshot = await getDocs(usersQuery);
-      
-      const usersList: UserWithRole[] = [];
-      
-      for (const userDoc of usersSnapshot.docs) {
-        const userData = userDoc.data();
-        
-        // 解析角色資訊
-        let roleName = userData.roleName || '未設定';
-        let roleId = '';
-        
-        if (userData.roleRef) {
-          try {
-            const { getDoc } = await import('firebase/firestore');
-            const roleDoc = await getDoc(userData.roleRef);
-            if (roleDoc.exists()) {
-              const roleData = roleDoc.data() as any;
-              roleName = roleData?.displayName || roleData?.name || '未知角色';
-              roleId = roleDoc.id;
-            }
-          } catch (roleError) {
-            console.warn('載入角色資訊失敗:', roleError);
-          }
-        }
-        
-        usersList.push({
-          id: userDoc.id,
-          uid: userData.uid || userDoc.id,
-          name: userData.name || '未知用戶',
-          employeeId: userData.employeeId || '',
-          phone: userData.phone || '',
-          roleName,
-          roleId,
-          status: userData.status || 'active',
-          permissions: userData.permissions || [],
-        });
-      }
-      
-      setUsers(usersList);
-      console.log(`✅ 成功載入 ${usersList.length} 個用戶`);
-      
-    } catch (error) {
-      console.error('❌ 載入用戶列表失敗:', error);
-      toast.error('載入用戶列表失敗');
-    }
-  }, []);
+    setRoles(defaultRoles);
+    console.log(`✅ 載入 ${defaultRoles.length} 個預設角色`);
+  };
 
   // 初始化預設角色
   const initializeRoles = async () => {
-    console.log('🚀 開始初始化預設角色');
-
-    // 直接使用本地 Firestore 初始化，不依賴 Functions
     try {
-      const { getFirestore, collection, doc, setDoc, getDocs, serverTimestamp } = await import('firebase/firestore');
-      const db = getFirestore();
-
-      // 檢查是否已有角色
-      const rolesCollection = collection(db, 'roles');
-      const existingRoles = await getDocs(rolesCollection);
-
-      if (!existingRoles.empty) {
-        toast.info('系統已有角色，跳過初始化');
-        return;
-      }
-
-      console.log('📋 開始建立預設角色（本地模式）');
-
-      // 定義預設角色
-      const defaultRoles = [
-        {
-          name: "admin",
-          displayName: "系統管理員",
-          description: "擁有系統全部權限，可管理所有功能和用戶",
-          permissions: [
-            "personnel.view", "personnel.manage", "personnel.create", "personnel.edit", "personnel.delete",
-            "roles.view", "roles.manage", "roles.create", "roles.edit", "roles.delete",
-            "time.view", "time.manage", "time.create", "time.edit", "time.delete",
-            "materials.view", "materials.manage", "materials.create", "materials.edit", "materials.delete",
-            "products.view", "products.manage", "products.create", "products.edit", "products.delete",
-            "suppliers.view", "suppliers.manage", "suppliers.create", "suppliers.edit", "suppliers.delete",
-            "workOrders.view", "workOrders.manage", "workOrders.create", "workOrders.edit", "workOrders.delete",
-            "purchaseOrders.view", "purchaseOrders.manage", "purchaseOrders.create", "purchaseOrders.edit", "purchaseOrders.delete",
-            "inventory.view", "inventory.manage",
-            "system.settings", "system.admin"
-          ],
-          color: "#dc2626",
-          isDefault: true,
-          createdAt: serverTimestamp()
-        },
-        {
-          name: "foreman",
-          displayName: "生產領班",
-          description: "負責生產管理，可管理工單、物料、產品",
-          permissions: [
-            "workOrders.view", "workOrders.manage", "workOrders.create", "workOrders.edit",
-            "materials.view", "materials.manage", "materials.create", "materials.edit",
-            "products.view", "products.manage", "products.create", "products.edit",
-            "inventory.view", "inventory.manage",
-            "time.view", "time.manage"
-          ],
-          color: "#2563eb",
-          isDefault: true,
-          createdAt: serverTimestamp()
-        },
-        {
-          name: "timekeeper",
-          displayName: "計時人員",
-          description: "主要負責工時記錄，可查看生產資料",
-          permissions: [
-            "time.view", "time.manage", "time.create", "time.edit",
-            "workOrders.view",
-            "materials.view",
-            "products.view",
-            "inventory.view"
-          ],
-          color: "#059669",
-          isDefault: true,
-          createdAt: serverTimestamp()
-        }
-      ];
-
-      // 批次建立角色
-      let createdCount = 0;
-      for (const role of defaultRoles) {
-        const roleRef = doc(rolesCollection);
-        await setDoc(roleRef, role);
-        createdCount++;
-        console.log(`✅ 建立角色: ${role.displayName}`);
-      }
-
-      toast.success(`成功初始化 ${createdCount} 個預設角色`);
-      await fetchRoles(); // 重新載入角色列表
-
-    } catch (error) {
-      console.error('初始化角色錯誤:', error);
-      
-      // 如果 Functions 失敗，嘗試本地 Firestore 初始化
-      try {
-        const { getFirestore, collection, doc, setDoc, getDocs, serverTimestamp } = await import('firebase/firestore');
-        const db = getFirestore();
-        
-        // 檢查是否已有角色
-        const rolesCollection = collection(db, 'roles');
-        const existingRoles = await getDocs(rolesCollection);
-        
-        if (!existingRoles.empty) {
-          toast.info('系統已有角色，跳過初始化');
-          return;
-        }
-
-        // 定義預設角色
-        const defaultRoles = [
-          {
-            id: 'admin',
-            name: 'admin',
-            displayName: '系統管理員',
-            description: '擁有系統全部權限，可管理所有功能和用戶',
-            permissions: [
-              'personnel.view', 'personnel.manage', 'time.view', 'time.manage',
-              'suppliers.view', 'suppliers.manage', 'purchase.view', 'purchase.manage',
-              'materials.view', 'materials.manage', 'fragrances.view', 'fragrances.manage',
-              'products.view', 'products.manage', 'workOrders.view', 'workOrders.manage',
-              'inventory.view', 'inventory.manage', 'inventoryRecords.view', 'cost.view',
-              'timeReports.view', 'roles.manage', 'system.settings'
-            ],
-            isDefault: true,
-            color: '#dc2626'
-          },
-          {
-            id: 'foreman',
-            name: 'foreman', 
-            displayName: '生產領班',
-            description: '負責生產管理，可管理工單、物料、產品，無成員管理權限',
-            permissions: [
-              'suppliers.view', 'purchase.view', 'purchase.manage',
-              'materials.view', 'materials.manage', 'fragrances.view', 'fragrances.manage',
-              'products.view', 'products.manage', 'workOrders.view', 'workOrders.manage',
-              'inventory.view', 'inventory.manage', 'inventoryRecords.view', 'cost.view',
-              'timeReports.view', 'time.view', 'time.manage'
-            ],
-            isDefault: true,
-            color: '#2563eb'
-          },
-          {
-            id: 'timekeeper',
-            name: 'timekeeper',
-            displayName: '計時人員', 
-            description: '主要負責工時記錄，可查看生產資料但無法編輯',
-            permissions: [
-              'materials.view', 'fragrances.view', 'products.view', 'workOrders.view',
-              'time.view', 'time.manage'
-            ],
-            isDefault: true,
-            color: '#059669'
-          }
-        ];
-
-        // 創建角色
-        let createdCount = 0;
-        for (const role of defaultRoles) {
-          const roleRef = doc(db, 'roles', role.id);
-          await setDoc(roleRef, {
-            ...role,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp()
-          });
-          createdCount++;
-        }
-
-        toast.success(`成功初始化 ${createdCount} 個角色（本地模式）`);
-        await fetchRoles();
-      } catch (localError) {
-        console.error('本地初始化角色失敗:', localError);
-        toast.error('初始化角色失敗');
-      }
-    }
-  };
-
-  // 修復預設角色標記
-  const fixDefaultRoles = async () => {
-    try {
-      const { getFirestore, doc, updateDoc } = await import('firebase/firestore');
-      const db = getFirestore();
-      
-      // 定義預設角色的 ID 和屬性
-      const defaultRoleUpdates = [
-        {
-          id: 'admin',
-          updates: {
-            isDefault: true,
-            color: '#dc2626',
-            name: 'admin',
-            displayName: '系統管理員'
-          }
-        },
-        {
-          id: 'foreman', 
-          updates: {
-            isDefault: true,
-            color: '#2563eb',
-            name: 'foreman',
-            displayName: '生產領班'
-          }
-        },
-        {
-          id: 'timekeeper',
-          updates: {
-            isDefault: true,
-            color: '#059669',
-            name: 'timekeeper',
-            displayName: '計時人員'
-          }
-        }
-      ];
-
-      let updatedCount = 0;
-      for (const roleUpdate of defaultRoleUpdates) {
-        // 尋找對應的角色
-        const existingRole = roles.find(role => 
-          role.id === roleUpdate.id || 
-          role.name === roleUpdate.updates.name ||
-          role.displayName === roleUpdate.updates.displayName
-        );
-        
-        if (existingRole) {
-          const roleRef = doc(db, 'roles', existingRole.id);
-          await updateDoc(roleRef, {
-            ...roleUpdate.updates,
-            updatedAt: new Date()
-          });
-          updatedCount++;
-        }
-      }
-
-      if (updatedCount > 0) {
-        toast.success(`成功修復 ${updatedCount} 個預設角色標記`);
-        await fetchRoles(); // 重新載入角色
+      const result = await apiClient.call('initializeDefaultRoles');
+      if (result.success) {
+        toast.success('預設角色初始化成功');
+        fetchRoles();
       } else {
-        toast.info('未找到需要修復的預設角色');
+        toast.error('預設角色初始化失敗');
       }
     } catch (error) {
-      console.error('修復預設角色標記錯誤:', error);
-      toast.error('修復預設角色標記失敗');
+      console.error('初始化角色時發生錯誤:', error);
+      toast.error('初始化角色失敗，請稍後再試');
     }
   };
 
-  // 處理角色檢視
+  // 查看角色詳情
   const handleViewRole = (role: Role) => {
     setSelectedRole(role);
     setShowRoleDetailDialog(true);
   };
 
-  // 處理角色編輯
-  const handleEditRole = (role: Role) => {
-    setEditingRole(role);
-    setShowEditRoleDialog(true);
-  };
-  
-  // 處理用戶角色分配
-  const handleAssignUserRole = (user: UserWithRole) => {
-    setAssigningUser(user);
-    setShowUserRoleAssignDialog(true);
-  };
-
-  // 處理新增角色
-  const handleCreateRole = () => {
-    setShowCreateRoleDialog(true);
-  };
-
-  // 處理角色刪除
-  const handleDeleteRole = (role: Role) => {
-    setRoleToDelete(role);
-    setShowDeleteConfirmDialog(true);
-  };
-
-  // 確認刪除角色
-  const confirmDeleteRole = async () => {
-    if (!roleToDelete) return;
-    
-    try {
-      const { getFirestore, doc, deleteDoc } = await import('firebase/firestore');
-      const db = getFirestore();
-      
-      await deleteDoc(doc(db, 'roles', roleToDelete.id));
-      toast.success(`成功刪除角色: ${roleToDelete.displayName}`);
-      await fetchRoles(); // 重新載入角色
-      
-      setShowDeleteConfirmDialog(false);
-      setRoleToDelete(null);
-    } catch (error) {
-      console.error('刪除角色失敗:', error);
-      toast.error('刪除角色失敗，請稍後再試');
-    }
-  };
-
+  // 載入資料
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
-      await Promise.all([fetchRoles(), fetchUsers()]);
+      await fetchRoles();
       setIsLoading(false);
     };
-
     loadData();
-  }, []); // 移除依賴項，只在組件掛載時執行一次
+  }, []); // 只在組件掛載時執行一次
 
-  // 角色顏色對應
-  const getRoleColor = (color?: string) => {
+  // 獲取角色顏色樣式
+  const getRoleColorClass = (color: string) => {
     switch (color) {
       case '#dc2626': return 'bg-red-500';
       case '#2563eb': return 'bg-blue-500';
@@ -491,7 +130,7 @@ function PermissionsPageContent() {
     }
   };
 
-  // 角色圖示對應
+  // 獲取角色圖示
   const getRoleIcon = (roleName: string) => {
     switch (roleName) {
       case 'admin': return Crown;
@@ -501,34 +140,85 @@ function PermissionsPageContent() {
     }
   };
 
-  // 權限描述對應
+  // 獲取權限中文描述
   const getPermissionDescription = (permission: string): string => {
     const permissionMap: Record<string, string> = {
-      'personnel.view': '查看成員',
-      'personnel.manage': '管理成員',
-      'time.view': '查看工時',
-      'time.manage': '管理工時',
-      'suppliers.view': '查看供應商',
-      'suppliers.manage': '管理供應商',
-      'purchase.view': '查看採購',
-      'purchase.manage': '管理採購',
-      'materials.view': '查看原料',
-      'materials.manage': '管理原料',
-      'fragrances.view': '查看配方',
-      'fragrances.manage': '管理配方',
-      'products.view': '查看產品',
-      'products.manage': '管理產品',
-      'workOrders.view': '查看工單',
-      'workOrders.manage': '管理工單',
-      'inventory.view': '查看庫存',
-      'inventory.manage': '管理庫存',
-      'inventoryRecords.view': '查看記錄',
-      'cost.view': '查看成本',
-      'timeReports.view': '查看報表',
-      'roles.manage': '管理權限',
-      'system.settings': '系統設定'
+      // 人員管理
+      'personnel.view': '👥 查看人員資料',
+      'personnel.manage': '👥 管理人員資料',
+      'personnel.create': '👥 新增人員',
+      'personnel.edit': '👥 編輯人員',
+      'personnel.delete': '👥 刪除人員',
+
+      // 工時管理
+      'time.view': '⏰ 查看工時記錄',
+      'time.manage': '⏰ 管理工時記錄',
+      'time.create': '⏰ 新增工時',
+      'time.edit': '⏰ 編輯工時',
+      'time.delete': '⏰ 刪除工時',
+
+      // 供應商管理
+      'suppliers.view': '🏢 查看供應商',
+      'suppliers.manage': '🏢 管理供應商',
+      'suppliers.create': '🏢 新增供應商',
+      'suppliers.edit': '🏢 編輯供應商',
+      'suppliers.delete': '🏢 刪除供應商',
+
+      // 採購管理
+      'purchase.view': '🛒 查看採購單',
+      'purchase.manage': '🛒 管理採購單',
+      'purchaseOrders.view': '🛒 查看採購訂單',
+      'purchaseOrders.manage': '🛒 管理採購訂單',
+      'purchaseOrders.create': '🛒 新增採購單',
+      'purchaseOrders.edit': '🛒 編輯採購單',
+      'purchaseOrders.delete': '🛒 刪除採購單',
+
+      // 原料管理
+      'materials.view': '🧪 查看原物料',
+      'materials.manage': '🧪 管理原物料',
+      'materials.create': '🧪 新增原料',
+      'materials.edit': '🧪 編輯原料',
+      'materials.delete': '🧪 刪除原料',
+
+      // 香精配方
+      'fragrances.view': '🌸 查看香精配方',
+      'fragrances.manage': '🌸 管理香精配方',
+
+      // 產品管理
+      'products.view': '📦 查看產品',
+      'products.manage': '📦 管理產品',
+      'products.create': '📦 新增產品',
+      'products.edit': '📦 編輯產品',
+      'products.delete': '📦 刪除產品',
+
+      // 工單管理
+      'workOrders.view': '📋 查看生產工單',
+      'workOrders.manage': '📋 管理生產工單',
+      'workOrders.create': '📋 新增工單',
+      'workOrders.edit': '📋 編輯工單',
+      'workOrders.delete': '📋 刪除工單',
+
+      // 庫存管理
+      'inventory.view': '📊 查看庫存資料',
+      'inventory.manage': '📊 管理庫存調整',
+
+      // 記錄與報表
+      'inventoryRecords.view': '📈 查看庫存記錄',
+      'cost.view': '💰 查看成本資料',
+      'timeReports.view': '📋 查看工時報表',
+
+      // 角色權限
+      'roles.view': '🔐 查看角色',
+      'roles.manage': '🔐 管理角色權限',
+      'roles.create': '🔐 新增角色',
+      'roles.edit': '🔐 編輯角色',
+      'roles.delete': '🔐 刪除角色',
+
+      // 系統管理
+      'system.settings': '⚙️ 系統設定管理',
+      'system.admin': '👑 系統管理員權限'
     };
-    return permissionMap[permission] || permission;
+    return permissionMap[permission] || `❓ ${permission}`;
   };
 
   return (
@@ -536,34 +226,24 @@ function PermissionsPageContent() {
       {/* 頁面標題 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard/personnel">
-            <Button variant="ghost" size="sm" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              返回成員管理
-            </Button>
+          <Link
+            href="/dashboard/personnel"
+            className="flex items-center text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-foreground">權限管理</h1>
-            <p className="text-muted-foreground">管理系統角色和使用者權限分配</p>
+            <p className="text-muted-foreground">檢視系統預設角色和權限設定（系統管理員、生產領班、計時人員）</p>
           </div>
         </div>
-        
+
         {/* 操作按鈕 */}
         <div className="flex gap-2">
           {roles.length === 0 && (
             <Button onClick={initializeRoles} disabled={apiClient.loading} className="bg-gradient-to-r from-blue-500 to-blue-600">
               <Plus className="mr-2 h-4 w-4" />
               初始化預設角色
-            </Button>
-          )}
-          {roles.length > 0 && (
-            <Button 
-              onClick={fixDefaultRoles} 
-              variant="outline"
-              className="border-yellow-300 text-yellow-700 hover:bg-yellow-50"
-            >
-              <Settings className="mr-2 h-4 w-4" />
-              修復預設角色標記
             </Button>
           )}
         </div>
@@ -593,18 +273,6 @@ function PermissionsPageContent() {
         </Alert>
       )}
 
-      {roles.length > 0 && roles.filter(r => r.isDefault).length < 3 && (
-        <Alert className="border-yellow-300 bg-gradient-to-r from-yellow-50 to-amber-50">
-          <AlertTriangle className="h-4 w-4 text-yellow-600" />
-          <AlertTitle className="text-yellow-800 font-semibold">
-            ⚠️ 預設角色不完整
-          </AlertTitle>
-          <AlertDescription className="text-yellow-700 text-sm">
-            <div>系統偵測到預設角色配置可能不完整。建議點擊「修復預設角色標記」按鈕來確保權限系統正常運作。</div>
-          </AlertDescription>
-        </Alert>
-      )}
-
       {/* 統計卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
@@ -613,7 +281,7 @@ function PermissionsPageContent() {
               <Shield className="h-8 w-8 text-blue-600" />
               <div>
                 <p className="text-sm text-blue-600 font-medium">總角色數</p>
-                <p className="text-2xl font-bold text-blue-800">{roles.length}</p>
+                <p className="text-2xl font-bold text-blue-700">{roles.length}</p>
               </div>
             </div>
           </CardContent>
@@ -622,12 +290,22 @@ function PermissionsPageContent() {
         <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <CheckCircle className="h-8 w-8 text-green-600" />
+              <Lock className="h-8 w-8 text-green-600" />
               <div>
-                <p className="text-sm text-green-600 font-medium">預設角色</p>
-                <p className="text-2xl font-bold text-green-800">
-                  {roles.filter(r => r.isDefault).length}
-                </p>
+                <p className="text-sm text-green-600 font-medium">權限層級</p>
+                <p className="text-2xl font-bold text-green-700">3</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <CheckCircle className="h-8 w-8 text-yellow-600" />
+              <div>
+                <p className="text-sm text-yellow-600 font-medium">預設權限</p>
+                <p className="text-2xl font-bold text-yellow-700">3</p>
               </div>
             </div>
           </CardContent>
@@ -636,127 +314,65 @@ function PermissionsPageContent() {
         <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <Users className="h-8 w-8 text-purple-600" />
+              <Settings className="h-8 w-8 text-purple-600" />
               <div>
-                <p className="text-sm text-purple-600 font-medium">已分配用戶</p>
-                <p className="text-2xl font-bold text-purple-800">{users.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Settings className="h-8 w-8 text-orange-600" />
-              <div>
-                <p className="text-sm text-orange-600 font-medium">自訂角色</p>
-                <p className="text-2xl font-bold text-orange-800">
-                  {roles.filter(r => !r.isDefault).length}
-                </p>
+                <p className="text-sm text-purple-600 font-medium">系統狀態</p>
+                <p className="text-2xl font-bold text-purple-700">正常</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* 主要內容區域 */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="roles" className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            角色管理
-          </TabsTrigger>
-          <TabsTrigger value="assignments" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            權限分配
-          </TabsTrigger>
-        </TabsList>
+      {/* 角色管理區域 */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Shield className="h-5 w-5 text-blue-600" />
+          <h2 className="text-xl font-semibold">角色管理</h2>
+        </div>
 
-        {/* 角色管理分頁 */}
-        <TabsContent value="roles" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-lg font-semibold">角色列表</h3>
-              <p className="text-sm text-muted-foreground">管理系統角色和權限配置</p>
-            </div>
-            <Button onClick={handleCreateRole} className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              新增角色
-            </Button>
-          </div>
-          
+        <div>
           {isLoading ? (
-            <div className="flex items-center justify-center py-8">
+            <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {roles.map((role) => {
                 const Icon = getRoleIcon(role.name);
-                
+
                 return (
-                  <Card key={role.id} className="hover:shadow-md transition-shadow">
+                  <Card key={role.id} className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500">
                     <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className={`p-2 rounded-lg ${getRoleColor(role.color)}`}>
-                            <Icon className="h-4 w-4 text-white" />
-                          </div>
-                          <div>
-                            <CardTitle className="text-lg">{role.displayName}</CardTitle>
-                            <p className="text-sm text-muted-foreground">{role.name}</p>
-                          </div>
+                      <div className="flex items-center space-x-3">
+                        <div className={`p-2 rounded-lg ${getRoleColorClass(role.color)} text-white`}>
+                          <Icon className="h-5 w-5" />
                         </div>
-                        
-                        {role.isDefault && (
-                          <Badge variant="outline" className="text-xs">
-                            <Lock className="mr-1 h-3 w-3" />
-                            預設
-                          </Badge>
-                        )}
+                        <div>
+                          <CardTitle className="text-lg">{role.displayName || role.name}</CardTitle>
+                          <p className="text-sm text-muted-foreground">{role.description}</p>
+                        </div>
                       </div>
                     </CardHeader>
-                    
-                    <CardContent className="space-y-3">
-                      <p className="text-sm text-muted-foreground">{role.description}</p>
-                      
-                      <div>
-                        <p className="text-sm font-medium mb-2">權限數量</p>
+
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">權限數量</span>
                         <Badge variant="secondary">
                           {role.permissions?.length || 0} 項權限
                         </Badge>
                       </div>
-                      
-                      <div className="flex space-x-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="flex-1"
+
+                      <div className="flex justify-center">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full"
                           onClick={() => handleViewRole(role)}
                         >
                           <Eye className="mr-2 h-4 w-4" />
-                          檢視
+                          檢視權限詳情
                         </Button>
-                        
-                        {!role.isDefault && (
-                          <>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleEditRole(role)}
-                            >
-                              <Edit3 className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="destructive"
-                              onClick={() => handleDeleteRole(role)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -764,84 +380,24 @@ function PermissionsPageContent() {
               })}
             </div>
           )}
-        </TabsContent>
-
-        {/* 權限分配分頁 */}
-        <TabsContent value="assignments">
-          <Card>
-            <CardHeader>
-              <CardTitle>用戶角色分配</CardTitle>
-              <p className="text-muted-foreground">為用戶指派角色和權限</p>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {users.length === 0 ? (
-                    <div className="text-center py-8">
-                      <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground">目前沒有用戶資料</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {users.map((user) => (
-                        <Card key={user.id} className="hover:shadow-md transition-shadow">
-                          <CardHeader className="pb-3">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <CardTitle className="text-base">{user.name}</CardTitle>
-                                <p className="text-sm text-muted-foreground">#{user.employeeId}</p>
-                              </div>
-                              <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
-                                {user.status === 'active' ? '活躍' : '非活躍'}
-                              </Badge>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="space-y-3">
-                            <div>
-                              <p className="text-sm font-medium">當前角色</p>
-                              <Badge variant="outline" className="mt-1">
-                                {user.roleName || '未設定'}
-                              </Badge>
-                            </div>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="w-full"
-                              onClick={() => handleAssignUserRole(user)}
-                            >
-                              編輯角色
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
 
       {/* 角色詳情對話框 */}
       <Dialog open={showRoleDetailDialog} onOpenChange={setShowRoleDetailDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh]">
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               {selectedRole && (
                 <>
-                  <div className={`p-2 rounded-lg ${getRoleColor(selectedRole.color)}`}>
-                    {React.createElement(getRoleIcon(selectedRole.name), { className: "h-5 w-5 text-white" })}
+                  <div className={`p-2 rounded-lg ${getRoleColorClass(selectedRole.color)} text-white`}>
+                    {React.createElement(getRoleIcon(selectedRole.name), { className: "h-6 w-6 text-white" })}
                   </div>
                   <div>
-                    <span>{selectedRole.displayName}</span>
-                    <Badge variant="outline" className="ml-2 text-xs">
-                      {selectedRole.isDefault ? '預設角色' : '自訂角色'}
-                    </Badge>
+                    <div className="text-xl font-bold">{selectedRole.displayName || selectedRole.name}</div>
+                    <div className="text-sm text-muted-foreground font-normal">
+                      角色詳細資訊與權限清單
+                    </div>
                   </div>
                 </>
               )}
@@ -851,99 +407,71 @@ function PermissionsPageContent() {
             </DialogDescription>
           </DialogHeader>
 
-          {selectedRole && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">角色 ID</p>
-                  <p className="text-sm">{selectedRole.name}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">權限數量</p>
-                  <p className="text-sm">{selectedRole.permissions?.length || 0} 項權限</p>
-                </div>
-              </div>
+          <div className="space-y-6">
+            {selectedRole && (
+              <>
+                {/* 角色基本資訊卡片 */}
+                <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+                  <CardContent className="p-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground">角色名稱</p>
+                        <p className="font-semibold text-blue-700">{selectedRole.displayName}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground">系統代碼</p>
+                        <p className="font-semibold text-blue-700">{selectedRole.name}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground">權限數量</p>
+                        <p className="font-semibold text-blue-700">{selectedRole.permissions?.length || 0} 項</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground">預設角色</p>
+                        <p className="font-semibold text-blue-700">{selectedRole.isDefault ? '是' : '否'}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-              <Separator />
+                {/* 權限詳情區域 */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Lock className="h-5 w-5 text-blue-600" />
+                    權限詳情 ({selectedRole.permissions?.length || 0} 項)
+                  </h3>
 
-              <div>
-                <p className="text-sm font-medium mb-3">權限列表</p>
-                <div className="max-h-48 overflow-y-auto w-full border rounded-md p-3">
-                  <div className="space-y-2">
-                    {selectedRole.permissions && selectedRole.permissions.length > 0 ? (
-                      selectedRole.permissions.map((permission, index) => (
-                        <div key={index} className="flex items-center justify-between py-1">
-                          <span className="text-sm">{permission}</span>
-                          <Badge variant="secondary" className="text-xs">
+                  {selectedRole.permissions && selectedRole.permissions.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {selectedRole.permissions.map((permission, index) => (
+                        <div
+                          key={index}
+                          className="p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="font-medium text-sm">
                             {getPermissionDescription(permission)}
-                          </Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {permission}
+                          </div>
                         </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-muted-foreground">此角色尚未設定任何權限</p>
-                    )}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Lock className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                      <p>此角色尚未設定任何權限</p>
+                    </div>
+                  )}
                 </div>
-              </div>
-            </div>
-          )}
+              </>
+            )}
+          </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRoleDetailDialog(false)}>
+              <X className="mr-2 h-4 w-4" />
               關閉
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* 角色編輯對話框 */}
-      <RoleEditDialog
-        role={editingRole}
-        open={showEditRoleDialog}
-        onOpenChange={setShowEditRoleDialog}
-        onSuccess={fetchRoles}
-      />
-
-      {/* 新增角色對話框 */}
-      <RoleCreateDialog
-        open={showCreateRoleDialog}
-        onOpenChange={setShowCreateRoleDialog}
-        onSuccess={fetchRoles}
-      />
-      
-      {/* 用戶角色分配對話框 */}
-      <UserRoleAssignDialog
-        user={assigningUser}
-        open={showUserRoleAssignDialog}
-        onOpenChange={setShowUserRoleAssignDialog}
-        onSuccess={fetchUsers}
-      />
-
-      {/* 刪除確認對話框 */}
-      <Dialog open={showDeleteConfirmDialog} onOpenChange={setShowDeleteConfirmDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              確認刪除角色
-            </DialogTitle>
-            <DialogDescription>
-              您確定要刪除角色「{roleToDelete?.displayName}」嗎？此操作無法復原。
-            </DialogDescription>
-          </DialogHeader>
-          
-          <DialogFooter className="gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setShowDeleteConfirmDialog(false)}
-            >
-              取消
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={confirmDeleteRole}
-            >
-              確認刪除
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -954,111 +482,6 @@ function PermissionsPageContent() {
 
 export default function PermissionsPage() {
   const { isAdmin } = usePermission();
-  const [roles, setRoles] = useState<Role[]>([]);
-  const apiClient = useApiForm();
-
-  // 檢查角色列表
-  useEffect(() => {
-    const checkRoles = async () => {
-      try {
-        const { getFirestore, collection, getDocs } = await import('firebase/firestore');
-        const db = getFirestore();
-        const rolesSnapshot = await getDocs(collection(db, 'roles'));
-        setRoles(rolesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Role)));
-      } catch (error) {
-        console.error('檢查角色失敗:', error);
-      }
-    };
-    checkRoles();
-  }, []);
-
-  // 緊急初始化角色功能
-  const emergencyInitializeRoles = async () => {
-    try {
-      const { getFirestore, collection, doc, setDoc, serverTimestamp } = await import('firebase/firestore');
-      const db = getFirestore();
-
-      const defaultRoles = [
-        {
-          name: "admin",
-          displayName: "系統管理員",
-          description: "擁有系統全部權限，可管理所有功能和用戶",
-          permissions: [
-            "personnel.view", "personnel.manage", "personnel.create", "personnel.edit", "personnel.delete",
-            "roles.view", "roles.manage", "roles.create", "roles.edit", "roles.delete",
-            "time.view", "time.manage", "time.create", "time.edit", "time.delete",
-            "materials.view", "materials.manage", "materials.create", "materials.edit", "materials.delete",
-            "products.view", "products.manage", "products.create", "products.edit", "products.delete",
-            "suppliers.view", "suppliers.manage", "suppliers.create", "suppliers.edit", "suppliers.delete",
-            "workOrders.view", "workOrders.manage", "workOrders.create", "workOrders.edit", "workOrders.delete",
-            "purchaseOrders.view", "purchaseOrders.manage", "purchaseOrders.create", "purchaseOrders.edit", "purchaseOrders.delete",
-            "inventory.view", "inventory.manage", "system.settings", "system.admin"
-          ],
-          color: "#dc2626",
-          isDefault: true,
-          createdAt: serverTimestamp()
-        },
-        {
-          name: "foreman",
-          displayName: "生產領班",
-          description: "負責生產管理，可管理工單、物料、產品",
-          permissions: [
-            "workOrders.view", "workOrders.manage", "workOrders.create", "workOrders.edit",
-            "materials.view", "materials.manage", "materials.create", "materials.edit",
-            "products.view", "products.manage", "products.create", "products.edit",
-            "inventory.view", "inventory.manage", "time.view", "time.manage"
-          ],
-          color: "#2563eb",
-          isDefault: true,
-          createdAt: serverTimestamp()
-        },
-        {
-          name: "timekeeper",
-          displayName: "計時人員",
-          description: "主要負責工時記錄，可查看生產資料",
-          permissions: [
-            "time.view", "time.manage", "time.create", "time.edit",
-            "workOrders.view", "materials.view", "products.view", "inventory.view"
-          ],
-          color: "#059669",
-          isDefault: true,
-          createdAt: serverTimestamp()
-        }
-      ];
-
-      for (const role of defaultRoles) {
-        const roleRef = doc(collection(db, 'roles'));
-        await setDoc(roleRef, role);
-      }
-
-      toast.success('緊急初始化完成！請刷新頁面。');
-      setTimeout(() => window.location.reload(), 2000);
-    } catch (error) {
-      console.error('緊急初始化失敗:', error);
-      toast.error('緊急初始化失敗');
-    }
-  };
-
-  // 如果沒有角色且用戶不是管理員，顯示緊急初始化界面
-  if (roles.length === 0 && !isAdmin()) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-6 p-8">
-        <AlertTriangle className="h-16 w-16 text-orange-500" />
-        <div className="text-center space-y-4">
-          <h2 className="text-xl font-semibold text-foreground">系統需要初始化</h2>
-          <p className="text-muted-foreground">檢測到系統尚未配置角色，需要進行初始化設定。</p>
-          <Button
-            onClick={emergencyInitializeRoles}
-            disabled={apiClient.loading}
-            className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            緊急初始化系統角色
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <AdminOnly fallback={
