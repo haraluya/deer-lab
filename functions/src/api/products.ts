@@ -596,63 +596,6 @@ export const updateFragranceStatusesRealtime = onCall(async (request) => {
   }
 });
 
-/**
- * 批次檢查並更新所有香精狀態 - 系統維護用
- */
-export const batchUpdateFragranceStatuses = onCall(async (request) => {
-  const { auth: contextAuth } = request;
-  // await ensureCanManageProducts(contextAuth?.uid); // 需要管理權限
-
-  try {
-    const fragrancesSnapshot = await db.collection('fragrances').get();
-    const updatePromises: Promise<any>[] = [];
-
-    for (const fragranceDoc of fragrancesSnapshot.docs) {
-      const fragranceData = fragranceDoc.data();
-      
-      // 跳過已棄用的香精
-      if (fragranceData.status === 'deprecated') continue;
-
-      // 查詢使用此香精的產品
-      const fragranceRef = db.doc(`fragrances/${fragranceDoc.id}`);
-      const productsQuery = db.collection('products')
-        .where('currentFragranceRef', '==', fragranceRef);
-      
-      const updatePromise = productsQuery.get().then(async (productsSnapshot) => {
-        const usageCount = productsSnapshot.size;
-        const newStatus = usageCount > 0 ? 'active' : 'standby';
-        
-        if (fragranceData.status !== newStatus) {
-          await fragranceRef.update({
-            status: newStatus,
-            usageCount,
-            updatedAt: FieldValue.serverTimestamp()
-          });
-          logger.info(`批次更新香精 ${fragranceDoc.id} 狀態: ${fragranceData.status} → ${newStatus}`);
-        } else {
-          // 只更新統計數據
-          await fragranceRef.update({
-            usageCount,
-            updatedAt: FieldValue.serverTimestamp()
-          });
-        }
-      });
-
-      updatePromises.push(updatePromise);
-    }
-
-    await Promise.all(updatePromises);
-    
-    return { 
-      success: true, 
-      message: `已檢查並更新 ${fragrancesSnapshot.size} 個香精的狀態`,
-      processedCount: fragrancesSnapshot.size
-    };
-  } catch (error) {
-    logger.error("批次更新香精狀態時發生錯誤:", error);
-    throw new HttpsError("internal", "批次更新香精狀態失敗");
-  }
-});
 
 export const changeProductFragrance = onCall(async (request) => {
     const { auth: contextAuth, data } = request;

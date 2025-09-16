@@ -4,7 +4,7 @@
  * 權限管理系統 - 權限定義與角色配置
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getPermissionDisplayName = exports.isValidPermission = exports.getRoleColor = exports.getDefaultRoleByName = exports.hasPermission = exports.roleHasPermission = exports.PERMISSION_GROUPS = exports.DEFAULT_ROLES = exports.ALL_PERMISSIONS = exports.PERMISSIONS = void 0;
+exports.getPermissionDisplayName = exports.isValidPermission = exports.getRoleColor = exports.getDefaultRoleByName = exports.getDefaultRoleById = exports.hasPermission = exports.roleHasPermission = exports.PERMISSION_GROUPS = exports.DEFAULT_ROLES = exports.ALL_PERMISSIONS = exports.PERMISSIONS = void 0;
 // ==================== 權限定義 ====================
 /**
  * 系統所有權限定義
@@ -283,6 +283,15 @@ function hasPermission(permissions, requiredPermission) {
 }
 exports.hasPermission = hasPermission;
 /**
+ * 根據角色ID取得預設角色
+ * @param roleId 角色ID
+ * @returns Role | undefined
+ */
+function getDefaultRoleById(roleId) {
+    return exports.DEFAULT_ROLES.find(role => role.id === roleId);
+}
+exports.getDefaultRoleById = getDefaultRoleById;
+/**
  * 根據角色名稱取得預設角色
  * @param roleName 角色名稱
  * @returns Role | undefined
@@ -293,11 +302,12 @@ function getDefaultRoleByName(roleName) {
 exports.getDefaultRoleByName = getDefaultRoleByName;
 /**
  * 取得角色的顏色類別
- * @param roleName 角色名稱
+ * @param roleIdentifier 角色ID或角色名稱
  * @returns string
  */
-function getRoleColor(roleName) {
-    const role = getDefaultRoleByName(roleName);
+function getRoleColor(roleIdentifier) {
+    // 優先使用ID查找，備用名稱查找
+    const role = getDefaultRoleById(roleIdentifier) || getDefaultRoleByName(roleIdentifier);
     return (role === null || role === void 0 ? void 0 : role.color) || '#6b7280'; // 預設為 gray-500
 }
 exports.getRoleColor = getRoleColor;

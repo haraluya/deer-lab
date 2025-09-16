@@ -117,6 +117,9 @@ exports.createWorkOrder = (0, https_1.onCall)(async (request) => {
                 code: productData.code,
                 name: productData.name,
                 seriesName: seriesName,
+                // 🔧 修復：新增香精ID和Ref，優先使用ID而非名稱
+                fragranceId: (fragranceData === null || fragranceData === void 0 ? void 0 : fragranceData.id) || fragranceId || null,
+                fragranceRef: fragranceRef,
                 fragranceName: (fragranceData === null || fragranceData === void 0 ? void 0 : fragranceData.name) || productData.fragranceName || '未指定',
                 fragranceCode: (fragranceData === null || fragranceData === void 0 ? void 0 : fragranceData.code) || productData.fragranceCode || '未指定',
                 nicotineMg: nicotineMg || productData.nicotineMg || 0,

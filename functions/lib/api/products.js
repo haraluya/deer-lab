@@ -12,7 +12,7 @@
  * - 保留複雜業務邏輯（香精狀態管理）
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getProductFragranceHistory = exports.getFragranceChangeHistory = exports.changeProductFragrance = exports.batchUpdateFragranceStatuses = exports.updateFragranceStatusesRealtime = exports.deleteProduct = exports.updateProduct = exports.createProduct = void 0;
+exports.getProductFragranceHistory = exports.getFragranceChangeHistory = exports.changeProductFragrance = exports.updateFragranceStatusesRealtime = exports.deleteProduct = exports.updateProduct = exports.createProduct = void 0;
 const firebase_functions_1 = require("firebase-functions");
 const https_1 = require("firebase-functions/v2/https");
 const firestore_1 = require("firebase-admin/firestore");
@@ -460,57 +460,6 @@ exports.updateFragranceStatusesRealtime = (0, https_1.onCall)(async (request) =>
     catch (error) {
         firebase_functions_1.logger.error("更新香精狀態時發生錯誤:", error);
         throw new https_1.HttpsError("internal", "更新香精狀態失敗");
-    }
-});
-/**
- * 批次檢查並更新所有香精狀態 - 系統維護用
- */
-exports.batchUpdateFragranceStatuses = (0, https_1.onCall)(async (request) => {
-    const { auth: contextAuth } = request;
-    // await ensureCanManageProducts(contextAuth?.uid); // 需要管理權限
-    try {
-        const fragrancesSnapshot = await db.collection('fragrances').get();
-        const updatePromises = [];
-        for (const fragranceDoc of fragrancesSnapshot.docs) {
-            const fragranceData = fragranceDoc.data();
-            // 跳過已棄用的香精
-            if (fragranceData.status === 'deprecated')
-                continue;
-            // 查詢使用此香精的產品
-            const fragranceRef = db.doc(`fragrances/${fragranceDoc.id}`);
-            const productsQuery = db.collection('products')
-                .where('currentFragranceRef', '==', fragranceRef);
-            const updatePromise = productsQuery.get().then(async (productsSnapshot) => {
-                const usageCount = productsSnapshot.size;
-                const newStatus = usageCount > 0 ? 'active' : 'standby';
-                if (fragranceData.status !== newStatus) {
-                    await fragranceRef.update({
-                        status: newStatus,
-                        usageCount,
-                        updatedAt: firestore_1.FieldValue.serverTimestamp()
-                    });
-                    firebase_functions_1.logger.info(`批次更新香精 ${fragranceDoc.id} 狀態: ${fragranceData.status} → ${newStatus}`);
-                }
-                else {
-                    // 只更新統計數據
-                    await fragranceRef.update({
-                        usageCount,
-                        updatedAt: firestore_1.FieldValue.serverTimestamp()
-                    });
-                }
-            });
-            updatePromises.push(updatePromise);
-        }
-        await Promise.all(updatePromises);
-        return {
-            success: true,
-            message: `已檢查並更新 ${fragrancesSnapshot.size} 個香精的狀態`,
-            processedCount: fragrancesSnapshot.size
-        };
-    }
-    catch (error) {
-        firebase_functions_1.logger.error("批次更新香精狀態時發生錯誤:", error);
-        throw new https_1.HttpsError("internal", "批次更新香精狀態失敗");
     }
 });
 exports.changeProductFragrance = (0, https_1.onCall)(async (request) => {

@@ -44,38 +44,56 @@ export default function SuppliersPage() {
   // 獲取供應商統計資訊
   const fetchSupplierStats = useCallback(async () => {
     const stats = new Map<string, { materialsCount: number; fragrancesCount: number }>();
-    
+
     if (!db) {
       console.error('Firestore 未初始化');
       return stats;
     }
-    
+
     try {
-      // 獲取原料統計
+      // 獲取原料統計 - 使用 supplierRef DocumentReference
       const materialsSnapshot = await getDocs(collection(db, "materials"));
       materialsSnapshot.forEach((doc) => {
         const data = doc.data();
-        if (data.supplierId) {
-          const current = stats.get(data.supplierId) || { materialsCount: 0, fragrancesCount: 0 };
+        // 優先使用 supplierRef，再使用舊的 supplierId 作為向後相容
+        let supplierId: string | null = null;
+
+        if (data.supplierRef?.id) {
+          supplierId = data.supplierRef.id;
+        } else if (data.supplierId) {
+          supplierId = data.supplierId;
+        }
+
+        if (supplierId) {
+          const current = stats.get(supplierId) || { materialsCount: 0, fragrancesCount: 0 };
           current.materialsCount++;
-          stats.set(data.supplierId, current);
+          stats.set(supplierId, current);
         }
       });
 
-      // 獲取香精統計
+      // 獲取香精統計 - 使用 supplierRef DocumentReference
       const fragrancesSnapshot = await getDocs(collection(db, "fragrances"));
       fragrancesSnapshot.forEach((doc) => {
         const data = doc.data();
+        // 優先使用 supplierRef，再使用舊的 supplierId 作為向後相容
+        let supplierId: string | null = null;
+
         if (data.supplierRef?.id) {
-          const current = stats.get(data.supplierRef.id) || { materialsCount: 0, fragrancesCount: 0 };
+          supplierId = data.supplierRef.id;
+        } else if (data.supplierId) {
+          supplierId = data.supplierId;
+        }
+
+        if (supplierId) {
+          const current = stats.get(supplierId) || { materialsCount: 0, fragrancesCount: 0 };
           current.fragrancesCount++;
-          stats.set(data.supplierRef.id, current);
+          stats.set(supplierId, current);
         }
       });
     } catch (error) {
       console.error("獲取供應商統計失敗:", error);
     }
-    
+
     return stats;
   }, []);
 

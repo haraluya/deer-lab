@@ -125,6 +125,60 @@ rm -f functions/.next/trace      # 清理追蹤檔
 scripts\optimize-deploy.bat  # Windows一鍵優化部署
 ```
 
+## 🛠️ 維護工具API系統
+
+### 維護工具架構
+- **位置**：`functions/src/api/maintenance/`
+- **控制**：通過環境變數 `ENABLE_MAINTENANCE_TOOLS` 控制啟用
+- **權限**：需要管理員或領班權限
+- **用途**：系統診斷、批量修復、數據維護
+
+### 維護工具類別
+
+#### A. 香精維護工具 (`fragranceTools.ts`)
+```typescript
+// 智能更新API
+updateFragranceByCode       // 根據編號智能更新香精
+diagnoseFragranceStatus     // 診斷香精狀態分佈
+fixFragranceStatus         // 批量修復香精狀態
+diagnoseFragranceRatios    // 診斷PG/VG比例問題
+fixAllFragranceRatios      // 批量修正香精比例
+```
+
+#### B. 庫存維護工具 (`inventoryTools.ts`)
+```typescript
+// 庫存盤點與調整
+performStocktake           // 執行大量庫存盤點
+unifiedInventoryUpdate     // 統一庫存修改入口
+```
+
+#### C. 系統維護工具 (`systemTools.ts`)
+```typescript
+// 批量數據操作
+importMaterials            // 批量匯入物料
+updateWorkOrder           // 工單管理維護
+addTimeRecord            // 工時記錄管理
+deleteWorkOrder          // 工單刪除功能
+deleteSupplier           // 供應商刪除功能
+getRoles                 // 角色系統查詢
+assignUserRole           // 用戶角色分配
+```
+
+### 維護工具啟用方式
+```bash
+# 開發環境自動啟用
+NODE_ENV=development
+
+# 生產環境需明確啟用
+ENABLE_MAINTENANCE_TOOLS=true
+```
+
+### 使用注意事項
+- **⚠️ 謹慎使用**：維護工具可能大量修改數據
+- **🔒 權限控制**：僅限管理員和領班使用
+- **📋 使用記錄**：所有操作都有詳細日誌
+- **🧪 測試優先**：生產使用前先在測試環境驗證
+
 ## 📋 核心資料模型
 
 ### Firestore集合

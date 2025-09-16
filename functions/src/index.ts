@@ -71,7 +71,7 @@ export const healthCheck = onRequest((request, response) => {
   });
 });
 
-// 匯出所有 API 函數
+// 匯出核心業務 API 函數
 export * from "./api/users";
 export * from "./api/suppliers";
 export * from "./api/materials";
@@ -83,5 +83,9 @@ export * from "./api/workOrders";
 export * from "./api/roles";
 export * from "./api/personnel";
 export * from "./api/timeRecords";
-export * from "./api/timeRecords-v2";
 export * from "./api/globalCart";
+
+// 🗑️ 維護工具 API 已移除
+// maintenance 資料夾中的 API 是獨立的維護工具，不需要在主程式中匯入
+// 如需使用維護工具，請直接部署該工具或透過獨立的管理介面調用
+console.log('🧹 維護工具 API 已與核心功能分離');
