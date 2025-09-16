@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { TrendingUp, TrendingDown, Minus, Package, FlaskConical, Clock, RefreshCw, Eye } from 'lucide-react';
 import { getItemInventoryHistory, InventoryRecord, getChangeReasonLabel, getItemDetailFromRecord } from '@/lib/inventoryRecords';
 import { InventoryRecordDialog } from './InventoryRecordDialog';
+import { formatQuantity, formatStock } from '@/utils/numberFormat';
 
 interface InventoryHistorySectionProps {
   itemId: string;
@@ -132,7 +133,7 @@ export function InventoryHistorySection({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
               <div className="text-sm font-medium text-blue-700">當前庫存</div>
-              <div className="text-2xl font-bold text-blue-900">{currentStock}</div>
+              <div className="text-2xl font-bold text-blue-900">{formatStock(currentStock)}</div>
             </div>
             <div className="bg-green-50 rounded-lg p-4 border border-green-200">
               <div className="text-sm font-medium text-green-700">總增加</div>
@@ -219,13 +220,13 @@ export function InventoryHistorySection({
                         <div className="flex items-center justify-end gap-2">
                           {getQuantityChangeIcon(record.quantityChange)}
                           <span className={`font-semibold ${getQuantityChangeColor(record.quantityChange)}`}>
-                            {record.quantityChange > 0 ? '+' : ''}{record.quantityChange}
+                            {record.quantityChange > 0 ? '+' : ''}{formatQuantity(record.quantityChange)}
                           </span>
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <span className="font-semibold text-gray-800">
-                          {record.quantityAfter}
+                          {formatQuantity(record.quantityAfter)}
                         </span>
                       </TableCell>
                       <TableCell className="text-sm text-gray-700">

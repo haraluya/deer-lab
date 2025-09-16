@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Eye, Edit, Trash2 } from 'lucide-react';
+import { formatPrice, formatQuantity, formatStock } from '@/utils/numberFormat';
 
 // 標準欄位定義
 export interface StandardColumn<T> {
@@ -355,7 +356,7 @@ export const StandardColumnRenderers = {
 
   // 金額顯示
   currency: (amount: number, symbol = '$') => (
-    <span>${amount?.toFixed(2) || '0.00'}</span>
+    <span>${formatPrice(amount)}</span>
   ),
 
   // 庫存狀態（含警告）
@@ -366,7 +367,7 @@ export const StandardColumnRenderers = {
     return (
       <div className="flex items-center gap-2">
         <span className={isLowStock ? "text-red-600 font-medium" : ""}>
-          {current || 0} {unit}
+          {formatStock(current || 0)} {unit}
         </span>
         {isLowStock && WarningIcon && (
           <WarningIcon className="h-3 w-3 text-red-600" />

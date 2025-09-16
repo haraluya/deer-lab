@@ -12,6 +12,7 @@ import { useApiClient } from "@/hooks/useApiClient"
 import { useAuth } from "@/context/AuthContext"
 import { findMaterialByCategory } from "@/lib/systemConfig"
 import { Material, Fragrance, Personnel, WorkOrder, TimeEntry, BillOfMaterialsItem } from "@/types"
+import { formatQuantity, formatWeight, formatStock } from "@/utils/numberFormat"
 import { 
   ArrowLeft, Edit, Save, CheckCircle, AlertCircle, Clock, Package, Users, 
   Droplets, Calculator, MessageSquare, Calendar, User, Plus, X, Loader2, Upload, Trash2,
@@ -145,17 +146,8 @@ export default function WorkOrderDetailPage() {
     endTime: ''
   })
 
-  // 格式化數值顯示，統一處理小數點精度到第三位
-  const formatNumber = (value: number) => {
-    if (value === 0) return '0';
-    // 統一處理到小數點第三位
-    const fixedValue = parseFloat(value.toFixed(3));
-    if (fixedValue % 1 === 0) {
-      return fixedValue.toString();
-    }
-    // 使用 parseFloat 來去除尾隨的0
-    return parseFloat(fixedValue.toFixed(3)).toString();
-  };
+  // 使用統一的格式化函數
+  // const formatStock = formatQuantity; // 直接使用統一函數
 
   // 處理使用數量更新
   const handleQuantityChange = (itemId: string, value: string) => {
@@ -1479,12 +1471,8 @@ export default function WorkOrderDetailPage() {
   const generatePrintContent = () => {
     if (!workOrder) return '';
 
-    const formatNumber = (value: number) => {
-      if (value % 1 === 0) {
-        return value.toString();
-      }
-      return parseFloat(value.toFixed(3)).toString();
-    };
+    // 使用統一的格式化函數
+    const formatStock = formatQuantity;
 
     const formatDate = (date: any) => {
       if (!date) return '';
@@ -1694,7 +1682,7 @@ export default function WorkOrderDetailPage() {
            </div>
            <div class="top-info-item">
              <div class="top-info-label">目標產量</div>
-             <div class="top-info-value">${workOrder.targetQuantity} KG</div>
+             <div class="top-info-value">${formatWeight(workOrder.targetQuantity)}</div>
            </div>
          </div>
         
@@ -1718,7 +1706,7 @@ export default function WorkOrderDetailPage() {
                                         <td style="font-weight: bold; font-size: 36px;">${item.name}</td>
                    <td style="font-weight: bold; font-size: 36px;">${item.code}</td>
                    <td style="font-size: 36px;">${item.ratio ? item.ratio + '%' : '-'}</td>
-                   <td style="font-weight: bold; font-size: 36px;">${formatNumber(item.quantity)}</td>
+                   <td style="font-weight: bold; font-size: 36px;">${formatQuantity(item.quantity)}</td>
                    <td style="border: 2px solid #000; background-color: #f9f9f9; min-width: 120px; height: 60px;"></td>
                    <td style="font-size: 36px;">${item.unit}</td>
                    </tr>
@@ -2000,7 +1988,7 @@ export default function WorkOrderDetailPage() {
                   className="mt-1"
                 />
               ) : (
-                <div className="mt-1 font-medium text-gray-900">{workOrder.targetQuantity} KG</div>
+                <div className="mt-1 font-medium text-gray-900">{formatWeight(workOrder.targetQuantity)}</div>
               )}
             </div>
           </div>
@@ -2162,7 +2150,7 @@ export default function WorkOrderDetailPage() {
                           <TableCell>
                             {item.ratio ? `${item.ratio}%` : '-'}
                           </TableCell>
-                          <TableCell className="font-medium">{formatNumber(item.quantity)}</TableCell>
+                          <TableCell className="font-medium">{formatQuantity(item.quantity)}</TableCell>
                           <TableCell>
                             {isEditingQuantity ? (
                               <Input
@@ -2176,7 +2164,7 @@ export default function WorkOrderDetailPage() {
                                 className="w-20"
                               />
                             ) : (
-                              <span className="font-medium">{formatNumber(item.usedQuantity || 0)}</span>
+                              <span className="font-medium">{formatStock(item.usedQuantity || 0)}</span>
                             )}
                           </TableCell>
                           <TableCell>{item.unit}</TableCell>
@@ -2233,7 +2221,7 @@ export default function WorkOrderDetailPage() {
                           <div className="bg-white p-3 rounded-lg border">
                             <div className="text-xs text-gray-600 mb-1">需求數量</div>
                             <div className="font-medium text-gray-900">
-                              {formatNumber(item.quantity)} {item.unit}
+                              {formatQuantity(item.quantity)} {item.unit}
                             </div>
                           </div>
                         </div>
@@ -2254,7 +2242,7 @@ export default function WorkOrderDetailPage() {
                               />
                             ) : (
                               <div className="font-medium text-lg text-blue-800">
-                                {formatNumber(item.usedQuantity || 0)} {item.unit}
+                                {formatStock(item.usedQuantity || 0)} {item.unit}
                               </div>
                             )}
                           </div>
@@ -2304,7 +2292,7 @@ export default function WorkOrderDetailPage() {
                                   className="w-20"
                                 />
                               ) : (
-                                <span className="font-medium">{formatNumber(item.usedQuantity || 0)}</span>
+                                <span className="font-medium">{formatStock(item.usedQuantity || 0)}</span>
                               )}
                             </TableCell>
                             <TableCell>{item.unit}</TableCell>
@@ -2348,7 +2336,7 @@ export default function WorkOrderDetailPage() {
                                 />
                               ) : (
                                 <div className="font-medium text-lg text-blue-800">
-                                  {formatNumber(item.usedQuantity || 0)} {item.unit}
+                                  {formatStock(item.usedQuantity || 0)} {item.unit}
                                 </div>
                               )}
                             </div>
@@ -2399,7 +2387,7 @@ export default function WorkOrderDetailPage() {
                                   className="w-20"
                                 />
                               ) : (
-                                <span className="font-medium">{formatNumber(item.usedQuantity || 0)}</span>
+                                <span className="font-medium">{formatStock(item.usedQuantity || 0)}</span>
                               )}
                             </TableCell>
                             <TableCell>{item.unit}</TableCell>
@@ -2443,7 +2431,7 @@ export default function WorkOrderDetailPage() {
                                 />
                               ) : (
                                 <div className="font-medium text-lg text-green-800">
-                                  {formatNumber(item.usedQuantity || 0)} {item.unit}
+                                  {formatStock(item.usedQuantity || 0)} {item.unit}
                                 </div>
                               )}
                             </div>
@@ -3020,10 +3008,10 @@ export default function WorkOrderDetailPage() {
                           <TableRow key={index}>
                                                           <TableCell className="font-medium">{item.name}</TableCell>
                               <TableCell className="font-mono">{item.code}</TableCell>
-                              <TableCell className="font-medium text-blue-600">{formatNumber(currentStock)} {item.unit}</TableCell>
-                              <TableCell className="font-medium text-red-600">-{formatNumber(usedQuantity)} {item.unit}</TableCell>
+                              <TableCell className="font-medium text-blue-600">{formatStock(currentStock)} {item.unit}</TableCell>
+                              <TableCell className="font-medium text-red-600">-{formatStock(usedQuantity)} {item.unit}</TableCell>
                               <TableCell className={`font-medium ${remainingStock < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                {formatNumber(remainingStock)} {item.unit}
+                                {formatStock(remainingStock)} {item.unit}
                                 {remainingStock < 0 && (
                                   <span className="ml-1 text-xs bg-red-100 text-red-800 px-1 py-0.5 rounded">
                                     庫存不足
@@ -3147,9 +3135,9 @@ export default function WorkOrderDetailPage() {
                             <div key={index} className="text-xs bg-orange-100 p-2 rounded border border-orange-200">
                               <div className="font-medium">{item.name} ({item.code})</div>
                               <div className="text-orange-600">
-                                現有: {formatNumber(currentStock)} {item.unit} | 
-                                使用: {formatNumber(usedQuantity)} {item.unit} | 
-                                不足: {formatNumber(shortage)} {item.unit}
+                                現有: {formatStock(currentStock)} {item.unit} | 
+                                使用: {formatStock(usedQuantity)} {item.unit} | 
+                                不足: {formatStock(shortage)} {item.unit}
                               </div>
                             </div>
                           );
@@ -3233,7 +3221,7 @@ export default function WorkOrderDetailPage() {
                 <div className="text-center">
                   <div className="text-sm text-blue-600 mb-2">目標產量</div>
                   <div className="text-2xl font-bold text-blue-800">
-                    {workOrder?.targetQuantity} KG
+                    {formatWeight(workOrder?.targetQuantity || 0)}
                   </div>
                 </div>
               </div>

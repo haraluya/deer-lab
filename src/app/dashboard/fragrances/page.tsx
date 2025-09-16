@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
+import { formatPrice, formatStock } from '@/utils/numberFormat';
 import { FragranceDialog } from './FragranceDialog';
 import { ImportExportDialog } from '@/components/ImportExportDialog';
 
@@ -732,7 +733,7 @@ export default function FragrancesPage() {
                   <DollarSign className="h-3 w-3 text-green-600" />
                   <span className="text-gray-500">單位成本</span>
                 </div>
-                <span className="font-semibold text-green-600">${fragrance.costPerUnit.toFixed(2)}</span>
+                <span className="font-semibold text-green-600">${formatPrice(fragrance.costPerUnit)}</span>
               </div>
             )}
             
@@ -867,10 +868,36 @@ export default function FragrancesPage() {
         onOpenChange={setIsImportExportOpen}
         onImport={async (data: any[], options?: { updateMode?: boolean }, onProgress?: (current: number, total: number) => void) => {
           try {
-            console.log('香精匯入資料:', data);
-            fetchFragrances();
+            // 呼叫 importFragrances API
+            const result = await apiClient.call('importFragrances', {
+              fragrances: data
+            });
+
+            // 顯示匯入結果
+            if (result.success && result.data?.summary) {
+              const summary = result.data.summary;
+              if (summary.successful > 0 && summary.failed === 0) {
+                toast.success(`成功匯入 ${summary.successful} 筆香精資料！`);
+              } else if (summary.successful > 0 && summary.failed > 0) {
+                toast.warning(`匯入完成：成功 ${summary.successful} 筆，失敗 ${summary.failed} 筆`);
+              } else if (summary.failed > 0) {
+                toast.error(`匯入失敗：共 ${summary.failed} 筆失敗`);
+              }
+            } else {
+              toast.error('匯入過程發生未知錯誤');
+            }
+
+            // 重新載入資料
+            await fetchFragrances();
+
+            // 關閉匯入對話框
+            setIsImportExportOpen(false);
+
+            // return result; // 不需要回傳結果
           } catch (error) {
             console.error('匯入香精失敗', error);
+            const errorMessage = error instanceof Error ? error.message : '匯入過程發生未知錯誤';
+            toast.error(`匯入失敗：${errorMessage}`);
             throw error;
           }
         }}
@@ -878,7 +905,7 @@ export default function FragrancesPage() {
           return fragrances.map(fragrance => ({
             code: fragrance.code,
             name: fragrance.name,
-            fragranceType: fragrance.fragranceType || '未指定',
+            fragranceCategory: fragrance.fragranceCategory || '未指定',
             fragranceStatus: fragrance.fragranceStatus || '未指定',
             supplierName: fragrance.supplierName,
             currentStock: fragrance.currentStock,
@@ -899,7 +926,7 @@ export default function FragrancesPage() {
           {
             code: "FRAG001",
             name: "示例香精",
-            fragranceType: "棉芯",
+            fragranceCategory: "棉芯",
             fragranceStatus: "啟用",
             supplierName: "示例供應商",
             currentStock: 500,
@@ -914,7 +941,7 @@ export default function FragrancesPage() {
         fields={[
           { key: "code", label: "香精代號", required: true, type: "string" },
           { key: "name", label: "香精名稱", required: true, type: "string" },
-          { key: "fragranceType", label: "香精種類", required: false, type: "string" },
+          { key: "fragranceCategory", label: "香精種類", required: false, type: "string" },
           { key: "fragranceStatus", label: "啟用狀態", required: false, type: "string" },
           { key: "supplierName", label: "供應商", required: false, type: "string" },
           { key: "currentStock", label: "目前庫存", required: false, type: "number" },

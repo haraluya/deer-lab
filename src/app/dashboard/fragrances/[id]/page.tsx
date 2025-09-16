@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { FragranceDialog, FragranceData } from '../FragranceDialog';
 import { DetailViewDialog } from '@/components/DetailViewDialog';
 import { InventoryHistorySection } from '@/components/InventoryHistorySection';
+import { formatPrice, formatStock } from '@/utils/numberFormat';
 
 interface Fragrance {
   id: string;
@@ -524,7 +525,7 @@ export default function FragranceDetailPage() {
               <div className="flex justify-between items-center py-2 border-b">
                 <span className="text-muted-foreground">單位成本</span>
                 <span className="font-medium text-green-600">
-                  ${fragrance.costPerUnit?.toFixed(2) || '0.00'} / KG
+                  ${formatPrice(fragrance.costPerUnit)} / KG
                 </span>
               </div>
               <div className="flex justify-between items-center py-2 border-b">

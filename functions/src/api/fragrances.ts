@@ -16,10 +16,43 @@ import { getFirestore, FieldValue, DocumentReference } from "firebase-admin/fire
 import { createApiHandler, CrudApiHandlers } from "../utils/apiWrapper";
 import { BusinessError, ApiErrorCode, ErrorHandler } from "../utils/errorHandler";
 import { Permission, UserRole } from "../middleware/auth";
-import { StandardResponses } from "../types/api";
+import { StandardResponses, BatchOperationResult } from "../types/api";
 import FragranceCalculations, { calculateCorrectRatios } from '../utils/fragranceCalculations';
 
 const db = getFirestore();
+
+/**
+ * 庫存記錄管理器
+ */
+class InventoryRecordManager {
+  static async createInventoryRecord(
+    itemId: string,
+    itemType: string,
+    quantityChange: number,
+    operatorId: string,
+    remarks: string = '庫存異動'
+  ): Promise<void> {
+    try {
+      const inventoryRecordRef = db.collection('inventory_records').doc();
+      await inventoryRecordRef.set({
+        changeDate: FieldValue.serverTimestamp(),
+        changeReason: 'import_operation',
+        operatorId,
+        operatorName: '系統匯入',
+        remarks,
+        relatedDocumentId: itemId,
+        relatedDocumentType: itemType,
+        details: [{
+          itemId,
+          itemType,
+          quantityChange,
+        }]
+      });
+    } catch (error) {
+      logger.warn(`建立庫存記錄失敗`, { itemId, itemType, error });
+    }
+  }
+}
 
 /**
  * 香精資料介面
@@ -358,6 +391,325 @@ export const deleteFragrance = CrudApiHandlers.createDeleteHandler<DeleteFragran
       
     } catch (error) {
       throw ErrorHandler.handle(error, `刪除香精: ${fragranceId}`);
+    }
+  }
+);
+
+/**
+ * 香精匯入請求介面
+ */
+interface ImportFragrancesRequest {
+  fragrances: Array<{
+    code: string;
+    name: string;
+    fragranceType?: string;
+    fragranceStatus?: string;
+    supplierName?: string;
+    currentStock?: number;
+    safetyStockLevel?: number;
+    costPerUnit?: number;
+    percentage?: number;
+    pgRatio?: number;
+    vgRatio?: number;
+    unit?: string;
+  }>;
+}
+
+/**
+ * 批量匯入香精
+ */
+export const importFragrances = CrudApiHandlers.createCreateHandler<ImportFragrancesRequest, BatchOperationResult>(
+  'ImportFragrances',
+  async (data, context, requestId) => {
+    // 1. 驗證必填欄位
+    ErrorHandler.validateRequired(data, ['fragrances']);
+
+    const { fragrances } = data;
+
+    if (!Array.isArray(fragrances) || fragrances.length === 0) {
+      throw new BusinessError(
+        ApiErrorCode.INVALID_INPUT,
+        '香精列表不能為空'
+      );
+    }
+
+    if (fragrances.length > 500) {
+      throw new BusinessError(
+        ApiErrorCode.INVALID_INPUT,
+        `批量匯入限制為500筆資料，目前有${fragrances.length}筆`
+      );
+    }
+
+    const results: BatchOperationResult = {
+      successful: [],
+      failed: [],
+      summary: {
+        total: fragrances.length,
+        successful: 0,
+        failed: 0,
+        skipped: 0
+      }
+    };
+
+    try {
+      // 2. 預先載入所有供應商資料
+      const suppliersSnapshot = await db.collection('suppliers').get();
+      const suppliersMap = new Map<string, string>();
+      suppliersSnapshot.forEach(doc => {
+        const supplierData = doc.data();
+        suppliersMap.set(supplierData.name, doc.id);
+      });
+
+      // 3. 預先載入現有香精（用於檢查重複）
+      const existingFragrancesSnapshot = await db.collection('fragrances').get();
+      const existingFragrancesMap = new Map<string, { id: string; data: FragranceData }>();
+      existingFragrancesSnapshot.forEach(doc => {
+        const data = doc.data() as FragranceData;
+        existingFragrancesMap.set(data.code, { id: doc.id, data });
+      });
+
+      // 4. 處理每個香精
+      for (let i = 0; i < fragrances.length; i++) {
+        const fragranceItem = fragrances[i];
+
+        try {
+          // 基本驗證
+          if (!fragranceItem.code?.trim()) {
+            throw new Error('香精代號為必填欄位');
+          }
+          if (!fragranceItem.name?.trim()) {
+            throw new Error('香精名稱為必填欄位');
+          }
+
+          const code = fragranceItem.code.trim();
+          const name = fragranceItem.name.trim();
+          const fragranceType = (fragranceItem as any).fragranceCategory?.trim() || (fragranceItem as any).fragranceType?.trim() || '';
+          const fragranceStatus = fragranceItem.fragranceStatus?.trim() || '啟用';
+          const unit = fragranceItem.unit?.trim() || 'KG';
+          const currentStock = Number(fragranceItem.currentStock) || 0;
+          const safetyStockLevel = Number(fragranceItem.safetyStockLevel) || 0;
+          const costPerUnit = Number(fragranceItem.costPerUnit) || 0;
+          const percentage = Number(fragranceItem.percentage) || 0;
+          let pgRatio = Number(fragranceItem.pgRatio) || 50;
+          let vgRatio = Number(fragranceItem.vgRatio) || 50;
+
+          // 數值驗證
+          if (currentStock < 0) throw new Error('庫存數量不能為負數');
+          if (safetyStockLevel < 0) throw new Error('安全庫存不能為負數');
+          if (costPerUnit < 0) throw new Error('單位成本不能為負數');
+          if (percentage < 0 || percentage > 100) throw new Error('香精比例必須在0-100之間');
+          if (pgRatio < 0 || pgRatio > 100) throw new Error('PG比例必須在0-100之間');
+          if (vgRatio < 0 || vgRatio > 100) throw new Error('VG比例必須在0-100之間');
+
+          // 自動修正 PG/VG 比例，確保總和為100%
+          const correctedRatios = calculateCorrectRatios(percentage);
+          pgRatio = correctedRatios.pgRatio;
+          vgRatio = correctedRatios.vgRatio;
+
+          // 處理供應商
+          let supplierRef: DocumentReference | undefined;
+          if (fragranceItem.supplierName?.trim()) {
+            const supplierName = fragranceItem.supplierName.trim();
+            const supplierId = suppliersMap.get(supplierName);
+            if (!supplierId) {
+              throw new Error(`找不到供應商「${supplierName}」`);
+            }
+            supplierRef = db.collection('suppliers').doc(supplierId);
+          }
+
+          // 檢查是否已存在相同代號的香精
+          let fragranceId: string;
+
+          if (existingFragrancesMap.has(code)) {
+            // 更新現有香精 - 智能差異比對
+            const existing = existingFragrancesMap.get(code)!;
+            fragranceId = existing.id;
+            const existingData = existing.data;
+
+            const updateData: Partial<FragranceData> = {};
+            let hasChanges = false;
+
+            // 比對所有欄位，只更新有差異的部分
+
+            // 文字欄位比對
+            if (name && name.trim() !== existingData.name) {
+              updateData.name = name.trim();
+              hasChanges = true;
+            }
+
+            if (fragranceType && fragranceType.trim() !== (existingData.fragranceType || '')) {
+              updateData.fragranceType = fragranceType.trim();
+              hasChanges = true;
+            }
+
+            if (fragranceStatus && fragranceStatus.trim() !== (existingData.fragranceStatus || '')) {
+              updateData.fragranceStatus = fragranceStatus.trim();
+              hasChanges = true;
+            }
+
+            if (unit && unit.trim() !== (existingData.unit || 'KG')) {
+              updateData.unit = unit.trim();
+              hasChanges = true;
+            }
+
+            // 數值欄位比對
+            if (currentStock !== (existingData.currentStock || 0)) {
+              updateData.currentStock = currentStock;
+              hasChanges = true;
+            }
+
+            if (safetyStockLevel !== (existingData.safetyStockLevel || 0)) {
+              updateData.safetyStockLevel = safetyStockLevel;
+              hasChanges = true;
+            }
+
+            if (costPerUnit !== (existingData.costPerUnit || 0)) {
+              updateData.costPerUnit = costPerUnit;
+              hasChanges = true;
+            }
+
+            if (percentage !== (existingData.percentage || 0)) {
+              updateData.percentage = percentage;
+              hasChanges = true;
+            }
+
+            if (pgRatio !== (existingData.pgRatio || 50)) {
+              updateData.pgRatio = pgRatio;
+              hasChanges = true;
+            }
+
+            if (vgRatio !== (existingData.vgRatio || 50)) {
+              updateData.vgRatio = vgRatio;
+              hasChanges = true;
+            }
+
+            // 供應商比對
+            if (supplierRef) {
+              const existingSupplierRefId = existingData.supplierRef?.id || existingData.supplierId || null;
+              if (supplierRef.id !== existingSupplierRefId) {
+                updateData.supplierRef = supplierRef;
+                updateData.supplierId = supplierRef.id;
+                hasChanges = true;
+              }
+            }
+
+            // 只有有變更時才執行更新
+            if (hasChanges) {
+              updateData.updatedAt = FieldValue.serverTimestamp();
+              await db.collection('fragrances').doc(fragranceId).update(updateData);
+
+              logger.info(`香精 ${code} 有變更，更新欄位:`, Object.keys(updateData));
+            } else {
+              logger.info(`香精 ${code} 無變更，跳過更新`);
+            }
+
+            // 如果庫存有變更，建立庫存紀錄
+            const oldStock = existing.data.currentStock || 0;
+            if (oldStock !== currentStock && context.auth?.uid) {
+              await InventoryRecordManager.createInventoryRecord(
+                fragranceId,
+                'fragrances',
+                currentStock - oldStock,
+                context.auth.uid,
+                `批量匯入更新 - 從 ${oldStock} 更新為 ${currentStock}`
+              );
+            }
+
+            if (hasChanges) {
+              results.successful.push({
+                code: code,
+                name: updateData.name || existing.data.name,
+                operation: 'updated',
+                message: `香精「${updateData.name || existing.data.name}」已更新 (${Object.keys(updateData).filter(k => k !== 'updatedAt').join(', ')})`
+              });
+            } else {
+              results.successful.push({
+                code: code,
+                name: existing.data.name,
+                operation: 'skipped',
+                message: `香精「${existing.data.name}」無變更，跳過更新`
+              });
+            }
+
+          } else {
+            // 建立新香精
+            const fragranceData: FragranceData = {
+              code,
+              name,
+              fragranceType,
+              fragranceStatus,
+              currentStock,
+              safetyStockLevel,
+              costPerUnit,
+              percentage,
+              pgRatio,
+              vgRatio,
+              unit,
+              createdAt: FieldValue.serverTimestamp(),
+              updatedAt: FieldValue.serverTimestamp(),
+            };
+
+            if (supplierRef) {
+              fragranceData.supplierRef = supplierRef;
+              fragranceData.supplierId = supplierRef.id;
+            }
+
+            const docRef = await db.collection('fragrances').add(fragranceData);
+            fragranceId = docRef.id;
+
+            // 建立初始庫存記錄
+            if (currentStock > 0 && context.auth?.uid) {
+              await InventoryRecordManager.createInventoryRecord(
+                fragranceId,
+                'fragrances',
+                currentStock,
+                context.auth.uid,
+                `批量匯入初始庫存`
+              );
+            }
+
+            // 更新本地快取
+            existingFragrancesMap.set(code, { id: fragranceId, data: fragranceData });
+
+            results.successful.push({
+              code: code,
+              name,
+              operation: 'created',
+              message: `香精「${name}」已建立，代號：${code}`
+            });
+          }
+
+          results.summary.successful++;
+
+        } catch (itemError) {
+          const errorMessage = itemError instanceof Error ? itemError.message : String(itemError);
+          results.summary.failed++;
+          results.failed.push({
+            item: fragranceItem,
+            error: errorMessage
+          });
+
+          logger.warn(`香精匯入項目失敗`, {
+            index: i + 1,
+            item: fragranceItem,
+            error: errorMessage,
+            requestId
+          });
+        }
+      }
+
+      // 5. 記錄操作結果
+      logger.info(`香精批量匯入完成`, {
+        total: results.summary.total,
+        successful: results.summary.successful,
+        failed: results.summary.failed,
+        requestId
+      });
+
+      return results;
+
+    } catch (error) {
+      throw ErrorHandler.handle(error, `批量匯入香精`);
     }
   }
 );

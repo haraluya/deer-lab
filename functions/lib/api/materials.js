@@ -12,7 +12,7 @@
  * - 保留所有複雜業務邏輯
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteMaterial = exports.updateMaterial = exports.createMaterial = void 0;
+exports.importMaterials = exports.deleteMaterial = exports.updateMaterial = exports.createMaterial = void 0;
 const firebase_functions_1 = require("firebase-functions");
 const firestore_1 = require("firebase-admin/firestore");
 const apiWrapper_1 = require("../utils/apiWrapper");
@@ -126,9 +126,9 @@ class MaterialCodeGenerator {
         return `${code.substring(0, 5)}${timestamp.substring(0, 4)}`;
     }
     /**
-     * 生成或取得分類ID
+     * 查詢分類ID（不自動創建）
      */
-    static async getOrCreateCategoryId(categoryName, type) {
+    static async getCategoryId(categoryName, type) {
         try {
             const collectionName = type === 'category' ? 'materialCategories' : 'materialSubCategories';
             const query = await db.collection(collectionName)
@@ -142,55 +142,13 @@ class MaterialCodeGenerator {
                     return existingId;
                 }
             }
-            // 如果不存在，創建新的
-            const newId = type === 'category' ? this.generateCategoryId() : this.generateSubCategoryId();
-            await db.collection(collectionName).add({
-                name: categoryName,
-                id: newId,
-                type: type,
-                createdAt: firestore_1.FieldValue.serverTimestamp()
-            });
-            return newId;
+            // 如果不存在，返回 null
+            return null;
         }
         catch (error) {
-            firebase_functions_1.logger.error(`獲取或創建${type}ID時發生錯誤:`, error);
-            return type === 'category' ? this.generateCategoryId() : this.generateSubCategoryId();
+            firebase_functions_1.logger.error(`查詢${type}ID時發生錯誤:`, error);
+            return null;
         }
-    }
-    /**
-     * 自動生成分類和子分類（包含ID）
-     */
-    static async autoGenerateCategories(materialData) {
-        // 如果沒有分類，自動生成
-        if (!materialData.category) {
-            const categoryName = '自動分類_' + Math.floor(Math.random() * 1000);
-            const categoryId = this.generateCategoryId();
-            await db.collection('materialCategories').add({
-                name: categoryName,
-                id: categoryId,
-                type: 'category',
-                createdAt: firestore_1.FieldValue.serverTimestamp()
-            });
-            materialData.category = categoryName;
-            materialData.mainCategoryId = categoryId;
-            firebase_functions_1.logger.info('自動生成主分類:', categoryName, 'ID:', categoryId);
-        }
-        // 如果沒有子分類，自動生成
-        if (!materialData.subCategory) {
-            const subCategoryName = '自動子分類_' + Math.floor(Math.random() * 1000);
-            const subCategoryId = this.generateSubCategoryId();
-            await db.collection('materialSubCategories').add({
-                name: subCategoryName,
-                id: subCategoryId,
-                type: 'subCategory',
-                parentCategory: materialData.category,
-                createdAt: firestore_1.FieldValue.serverTimestamp()
-            });
-            materialData.subCategory = subCategoryName;
-            materialData.subCategoryId = subCategoryId;
-            firebase_functions_1.logger.info('自動生成子分類:', subCategoryName, 'ID:', subCategoryId);
-        }
-        return materialData;
     }
 }
 /**
@@ -244,14 +202,27 @@ exports.createMaterial = apiWrapper_1.CrudApiHandlers.createCreateHandler('Mater
     errorHandler_1.ErrorHandler.validateRequired(data, ['name']);
     const { code, name, category, subCategory, supplierId, safetyStockLevel, costPerUnit, unit, notes } = data;
     try {
-        // 2. 自動生成分類和子分類（如果沒有提供）
-        let processedData = Object.assign({}, data);
+        // 2. 檢查分類是否提供
         if (!category || !subCategory) {
-            processedData = await MaterialCodeGenerator.autoGenerateCategories(processedData);
+            throw new errorHandler_1.BusinessError(errorHandler_1.ApiErrorCode.INVALID_INPUT, '必須提供主分類和細分分類');
         }
-        // 3. 獲取分類ID
-        const mainCategoryId = await MaterialCodeGenerator.getOrCreateCategoryId(processedData.category, 'category');
-        const subCategoryId = await MaterialCodeGenerator.getOrCreateCategoryId(processedData.subCategory, 'subCategory');
+        // 3. 檢查分類是否存在
+        const categoryQuery = await db.collection('materialCategories')
+            .where('name', '==', category)
+            .limit(1)
+            .get();
+        const subCategoryQuery = await db.collection('materialSubCategories')
+            .where('name', '==', subCategory)
+            .limit(1)
+            .get();
+        if (categoryQuery.empty) {
+            throw new errorHandler_1.BusinessError(errorHandler_1.ApiErrorCode.NOT_FOUND, `主分類「${category}」不存在`);
+        }
+        if (subCategoryQuery.empty) {
+            throw new errorHandler_1.BusinessError(errorHandler_1.ApiErrorCode.NOT_FOUND, `細分分類「${subCategory}」不存在`);
+        }
+        const mainCategoryId = categoryQuery.docs[0].data().id;
+        const subCategoryId = subCategoryQuery.docs[0].data().id;
         // 4. 檢查物料名稱是否重複
         const existingMaterial = await db.collection('materials')
             .where('name', '==', name.trim())
@@ -283,8 +254,8 @@ exports.createMaterial = apiWrapper_1.CrudApiHandlers.createCreateHandler('Mater
         const newMaterial = {
             code: finalCode,
             name: name.trim(),
-            category: processedData.category || '',
-            subCategory: processedData.subCategory || '',
+            category: category || '',
+            subCategory: subCategory || '',
             mainCategoryId,
             subCategoryId,
             safetyStockLevel: Number(safetyStockLevel) || 0,
@@ -348,8 +319,11 @@ exports.updateMaterial = apiWrapper_1.CrudApiHandlers.createUpdateHandler('Mater
         }
         // 4. 如果分類有改變，更新物料代號
         if (category !== currentMaterial.category || subCategory !== currentMaterial.subCategory) {
-            const newMainCategoryId = await MaterialCodeGenerator.getOrCreateCategoryId(category, 'category');
-            const newSubCategoryId = await MaterialCodeGenerator.getOrCreateCategoryId(subCategory, 'subCategory');
+            const newMainCategoryId = await MaterialCodeGenerator.getCategoryId(category, 'category');
+            const newSubCategoryId = await MaterialCodeGenerator.getCategoryId(subCategory, 'subCategory');
+            if (!newMainCategoryId || !newSubCategoryId) {
+                throw new errorHandler_1.BusinessError(errorHandler_1.ApiErrorCode.NOT_FOUND, `分類「${category}/${subCategory}」不存在，請先建立分類`);
+            }
             // 保持隨機生成碼不變，只更新分類部分
             updatedCode = MaterialCodeGenerator.updateMaterialCode(currentMaterial.code, newMainCategoryId, newSubCategoryId);
             firebase_functions_1.logger.info(`物料 ${materialId} 分類改變，更新代號從 ${currentMaterial.code} 到 ${updatedCode}`);
@@ -454,6 +428,319 @@ exports.deleteMaterial = apiWrapper_1.CrudApiHandlers.createDeleteHandler('Mater
     }
     catch (error) {
         throw errorHandler_1.ErrorHandler.handle(error, `刪除物料: ${materialId}`);
+    }
+});
+/**
+ * 批量匯入原料
+ */
+exports.importMaterials = apiWrapper_1.CrudApiHandlers.createCreateHandler('ImportMaterials', async (data, context, requestId) => {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
+    // 1. 驗證必填欄位
+    errorHandler_1.ErrorHandler.validateRequired(data, ['materials']);
+    const { materials } = data;
+    if (!Array.isArray(materials) || materials.length === 0) {
+        throw new errorHandler_1.BusinessError(errorHandler_1.ApiErrorCode.INVALID_INPUT, '原料列表不能為空');
+    }
+    if (materials.length > 500) {
+        throw new errorHandler_1.BusinessError(errorHandler_1.ApiErrorCode.INVALID_INPUT, `批量匯入限制為500筆資料，目前有${materials.length}筆`);
+    }
+    const results = {
+        successful: [],
+        failed: [],
+        summary: {
+            total: materials.length,
+            successful: 0,
+            failed: 0,
+            skipped: 0
+        }
+    };
+    try {
+        // 2. 預先載入所有供應商資料
+        const suppliersSnapshot = await db.collection('suppliers').get();
+        const suppliersMap = new Map();
+        suppliersSnapshot.forEach(doc => {
+            const supplierData = doc.data();
+            suppliersMap.set(supplierData.name, doc.id);
+        });
+        // 3. 預先載入現有原料（用於檢查重複）
+        const existingMaterialsSnapshot = await db.collection('materials').get();
+        const existingMaterialsMap = new Map();
+        existingMaterialsSnapshot.forEach(doc => {
+            const data = doc.data();
+            existingMaterialsMap.set(data.code, { id: doc.id, data });
+        });
+        // 4. 處理每個原料
+        for (let i = 0; i < materials.length; i++) {
+            const materialItem = materials[i];
+            try {
+                // 對於更新操作，原料名稱可以為空（保持原有）
+                // 對於新增操作，原料名稱必填
+                let materialCode = (_a = materialItem.code) === null || _a === void 0 ? void 0 : _a.trim();
+                const isUpdating = materialCode && existingMaterialsMap.has(materialCode);
+                if (!isUpdating && !((_b = materialItem.name) === null || _b === void 0 ? void 0 : _b.trim())) {
+                    throw new Error('新增原料時，原料名稱為必填欄位');
+                }
+                const name = ((_c = materialItem.name) === null || _c === void 0 ? void 0 : _c.trim()) || (isUpdating ? ((_d = existingMaterialsMap.get(materialCode)) === null || _d === void 0 ? void 0 : _d.data.name) || '' : '');
+                const category = ((_e = materialItem.categoryName) === null || _e === void 0 ? void 0 : _e.trim()) || ((_f = materialItem.category) === null || _f === void 0 ? void 0 : _f.trim()) || '';
+                const subCategory = ((_g = materialItem.subCategoryName) === null || _g === void 0 ? void 0 : _g.trim()) || ((_h = materialItem.subCategory) === null || _h === void 0 ? void 0 : _h.trim()) || '';
+                const unit = ((_j = materialItem.unit) === null || _j === void 0 ? void 0 : _j.trim()) || 'KG';
+                const currentStock = Number(materialItem.currentStock) || 0;
+                const safetyStockLevel = Number(materialItem.safetyStockLevel) || 0;
+                const costPerUnit = Number(materialItem.costPerUnit) || 0;
+                // 數值驗證
+                if (currentStock < 0)
+                    throw new Error('庫存數量不能為負數');
+                if (safetyStockLevel < 0)
+                    throw new Error('安全庫存不能為負數');
+                if (costPerUnit < 0)
+                    throw new Error('單位成本不能為負數');
+                // 處理供應商
+                let supplierRef;
+                if ((_k = materialItem.supplierName) === null || _k === void 0 ? void 0 : _k.trim()) {
+                    const supplierName = materialItem.supplierName.trim();
+                    const supplierId = suppliersMap.get(supplierName);
+                    if (!supplierId) {
+                        throw new Error(`找不到供應商「${supplierName}」`);
+                    }
+                    supplierRef = db.collection('suppliers').doc(supplierId);
+                }
+                // 檢查是否已存在相同代號的原料
+                let isUpdate = false;
+                let materialId;
+                if (materialCode && existingMaterialsMap.has(materialCode)) {
+                    // 更新現有原料 - 智能差異比對
+                    isUpdate = true;
+                    const existing = existingMaterialsMap.get(materialCode);
+                    materialId = existing.id;
+                    const existingData = existing.data;
+                    const updateData = {};
+                    let hasChanges = false;
+                    // 比對所有欄位，只更新有差異的部分
+                    // 文字欄位比對
+                    if (materialItem.name && materialItem.name.trim() !== existingData.name) {
+                        updateData.name = materialItem.name.trim();
+                        hasChanges = true;
+                    }
+                    // 分類處理邏輯：
+                    // 1. 如果匯入的分類名稱與現有相同 → 跳過（正確，不需更新）
+                    // 2. 如果匯入的分類名稱與現有不同 → 查詢新分類是否存在
+                    //    - 存在 → 更新為新分類
+                    //    - 不存在 → 跳過（保持原有）
+                    // 3. 如果沒有提供分類名稱 → 跳過（保持原有）
+                    if (materialItem.categoryName !== undefined && materialItem.categoryName !== null && materialItem.categoryName !== '') {
+                        const importCategoryName = materialItem.categoryName.trim();
+                        const currentCategoryName = existingData.category || '';
+                        // 只有當名稱真的不同時才處理
+                        if (importCategoryName !== currentCategoryName) {
+                            // 查詢新分類是否存在
+                            const categoryQuery = await db.collection('materialCategories')
+                                .where('name', '==', importCategoryName)
+                                .limit(1)
+                                .get();
+                            if (!categoryQuery.empty) {
+                                // 分類存在，更新名稱和ID
+                                updateData.category = importCategoryName;
+                                updateData.mainCategoryId = categoryQuery.docs[0].data().id;
+                                hasChanges = true;
+                                firebase_functions_1.logger.info(`更新分類: ${currentCategoryName} → ${importCategoryName}`);
+                            }
+                            else {
+                                firebase_functions_1.logger.warn(`分類 "${importCategoryName}" 不存在，保持原有分類 "${currentCategoryName}"`);
+                            }
+                        }
+                    }
+                    if (materialItem.subCategoryName !== undefined && materialItem.subCategoryName !== null && materialItem.subCategoryName !== '') {
+                        const importSubCategoryName = materialItem.subCategoryName.trim();
+                        const currentSubCategoryName = existingData.subCategory || '';
+                        // 只有當名稱真的不同時才處理
+                        if (importSubCategoryName !== currentSubCategoryName) {
+                            // 查詢新子分類是否存在
+                            const subCategoryQuery = await db.collection('materialSubCategories')
+                                .where('name', '==', importSubCategoryName)
+                                .limit(1)
+                                .get();
+                            if (!subCategoryQuery.empty) {
+                                // 子分類存在，更新名稱和ID
+                                updateData.subCategory = importSubCategoryName;
+                                updateData.subCategoryId = subCategoryQuery.docs[0].data().id;
+                                hasChanges = true;
+                                firebase_functions_1.logger.info(`更新子分類: ${currentSubCategoryName} → ${importSubCategoryName}`);
+                            }
+                            else {
+                                firebase_functions_1.logger.warn(`子分類 "${importSubCategoryName}" 不存在，保持原有子分類 "${currentSubCategoryName}"`);
+                            }
+                        }
+                    }
+                    if (materialItem.unit && materialItem.unit.trim() !== existingData.unit) {
+                        updateData.unit = materialItem.unit.trim();
+                        hasChanges = true;
+                    }
+                    // 數值欄位比對（包括0值）
+                    if (materialItem.currentStock !== undefined && materialItem.currentStock !== null && String(materialItem.currentStock) !== '') {
+                        const newStock = Number(materialItem.currentStock);
+                        if (newStock !== (existingData.currentStock || 0)) {
+                            updateData.currentStock = newStock;
+                            hasChanges = true;
+                        }
+                    }
+                    if (materialItem.safetyStockLevel !== undefined && materialItem.safetyStockLevel !== null && String(materialItem.safetyStockLevel) !== '') {
+                        const newSafetyLevel = Number(materialItem.safetyStockLevel);
+                        if (newSafetyLevel !== (existingData.safetyStockLevel || 0)) {
+                            updateData.safetyStockLevel = newSafetyLevel;
+                            hasChanges = true;
+                        }
+                    }
+                    if (materialItem.costPerUnit !== undefined && materialItem.costPerUnit !== null && String(materialItem.costPerUnit) !== '') {
+                        const newCost = Number(materialItem.costPerUnit);
+                        if (newCost !== (existingData.costPerUnit || 0)) {
+                            updateData.costPerUnit = newCost;
+                            hasChanges = true;
+                        }
+                    }
+                    // 供應商比對
+                    if (supplierRef) {
+                        const existingSupplierRefId = ((_l = existingData.supplierRef) === null || _l === void 0 ? void 0 : _l.id) || null;
+                        const newSupplierRefId = supplierRef.id;
+                        if (newSupplierRefId !== existingSupplierRefId) {
+                            updateData.supplierRef = supplierRef;
+                            hasChanges = true;
+                        }
+                    }
+                    // 只有有變更時才執行更新
+                    if (hasChanges) {
+                        updateData.updatedAt = firestore_1.FieldValue.serverTimestamp();
+                        await db.collection('materials').doc(materialId).update(updateData);
+                        firebase_functions_1.logger.info(`原料 ${materialCode} 有變更，更新欄位:`, Object.keys(updateData));
+                    }
+                    else {
+                        firebase_functions_1.logger.info(`原料 ${materialCode} 無變更，跳過更新`);
+                    }
+                    // 如果庫存有變更，建立庫存紀錄
+                    const oldStock = existing.data.currentStock || 0;
+                    if (oldStock !== currentStock && ((_m = context.auth) === null || _m === void 0 ? void 0 : _m.uid)) {
+                        await InventoryRecordManager.createInventoryRecord(materialId, existing.data.name, existing.data.code, oldStock, currentStock, context.auth.uid, undefined, 'import_update', `批量匯入更新 - 從 ${oldStock} 更新為 ${currentStock}`);
+                    }
+                    if (hasChanges) {
+                        results.successful.push({
+                            code: materialCode,
+                            name: updateData.name || existing.data.name,
+                            operation: 'updated',
+                            message: `原料「${updateData.name || existing.data.name}」已更新 (${Object.keys(updateData).filter(k => k !== 'updatedAt').join(', ')})`
+                        });
+                    }
+                    else {
+                        results.successful.push({
+                            code: materialCode,
+                            name: existing.data.name,
+                            operation: 'skipped',
+                            message: `原料「${existing.data.name}」無變更，跳過更新`
+                        });
+                    }
+                }
+                else {
+                    // 建立新原料
+                    if (!materialCode) {
+                        // 如果沒有提供代號且分類不存在，跳過此項
+                        if (!category || !subCategory) {
+                            throw new Error(`新增原料需要提供代號或完整的分類資訊`);
+                        }
+                        // 檢查分類是否存在
+                        const categoryQuery = await db.collection('materialCategories')
+                            .where('name', '==', category)
+                            .limit(1)
+                            .get();
+                        const subCategoryQuery = await db.collection('materialSubCategories')
+                            .where('name', '==', subCategory)
+                            .limit(1)
+                            .get();
+                        if (categoryQuery.empty || subCategoryQuery.empty) {
+                            throw new Error(`分類「${category}/${subCategory}」不存在，請先建立分類`);
+                        }
+                        const mainCategoryId = categoryQuery.docs[0].data().id;
+                        const subCategoryId = subCategoryQuery.docs[0].data().id;
+                        materialCode = await MaterialCodeGenerator.generateUniqueMaterialCode(mainCategoryId, subCategoryId);
+                    }
+                    else if (existingMaterialsMap.has(materialCode)) {
+                        throw new Error(`原料代號「${materialCode}」已存在`);
+                    }
+                    // 準備要儲存的資料（需要包含分類ID）
+                    const materialData = {
+                        code: materialCode,
+                        name,
+                        category,
+                        subCategory,
+                        currentStock,
+                        safetyStockLevel,
+                        costPerUnit,
+                        unit,
+                        createdAt: firestore_1.FieldValue.serverTimestamp(),
+                        updatedAt: firestore_1.FieldValue.serverTimestamp(),
+                    };
+                    // 如果有提供分類名稱，查詢並加入分類ID
+                    if (category) {
+                        const categoryQuery = await db.collection('materialCategories')
+                            .where('name', '==', category)
+                            .limit(1)
+                            .get();
+                        if (!categoryQuery.empty) {
+                            materialData.mainCategoryId = categoryQuery.docs[0].data().id;
+                        }
+                    }
+                    if (subCategory) {
+                        const subCategoryQuery = await db.collection('materialSubCategories')
+                            .where('name', '==', subCategory)
+                            .limit(1)
+                            .get();
+                        if (!subCategoryQuery.empty) {
+                            materialData.subCategoryId = subCategoryQuery.docs[0].data().id;
+                        }
+                    }
+                    if (supplierRef) {
+                        materialData.supplierRef = supplierRef;
+                    }
+                    const docRef = await db.collection('materials').add(materialData);
+                    materialId = docRef.id;
+                    // 建立初始庫存記錄
+                    if (currentStock > 0 && ((_o = context.auth) === null || _o === void 0 ? void 0 : _o.uid)) {
+                        await InventoryRecordManager.createInventoryRecord(materialId, name, materialData.code, 0, currentStock, context.auth.uid, undefined, 'import_initial', `批量匯入初始庫存`);
+                    }
+                    // 更新本地快取
+                    existingMaterialsMap.set(materialCode, { id: materialId, data: materialData });
+                    results.successful.push({
+                        code: materialCode,
+                        name,
+                        operation: 'created',
+                        message: `原料「${name}」已建立，代號：${materialCode}`
+                    });
+                }
+                results.summary.successful++;
+            }
+            catch (itemError) {
+                const errorMessage = itemError instanceof Error ? itemError.message : String(itemError);
+                results.summary.failed++;
+                results.failed.push({
+                    item: materialItem,
+                    error: errorMessage
+                });
+                firebase_functions_1.logger.warn(`原料匯入項目失敗`, {
+                    index: i + 1,
+                    item: materialItem,
+                    error: errorMessage,
+                    requestId
+                });
+            }
+        }
+        // 5. 記錄操作結果
+        firebase_functions_1.logger.info(`原料批量匯入完成`, {
+            total: results.summary.total,
+            successful: results.summary.successful,
+            failed: results.summary.failed,
+            requestId
+        });
+        return results;
+    }
+    catch (error) {
+        throw errorHandler_1.ErrorHandler.handle(error, `批量匯入原料`);
     }
 });
 //# sourceMappingURL=materials.js.map

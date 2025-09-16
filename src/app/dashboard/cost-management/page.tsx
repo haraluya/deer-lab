@@ -101,6 +101,13 @@ function CostManagementPageContent() {
 
       setInventoryCosts([...materialCosts, ...fragranceCosts])
 
+      // 載入產品資料
+      const productsSnapshot = await getDocs(collection(db, "products"))
+      const productsMap = new Map()
+      productsSnapshot.docs.forEach(doc => {
+        productsMap.set(doc.id, doc.data().name)
+      })
+
       // 載入工單成本
       const workOrdersSnapshot = await getDocs(collection(db, "workOrders"))
       const workOrderCostsList: WorkOrderCost[] = workOrdersSnapshot.docs.map(doc => {
@@ -110,10 +117,20 @@ function CostManagementPageContent() {
         const fragranceCost = (data.targetQuantity || 0) * 0.3 // 模擬香精成本
         const laborCost = (data.targetQuantity || 0) * 0.2 // 模擬人工成本
         const totalCost = materialCost + fragranceCost + laborCost
-        
+
+        // 根據 productId 或 productRef 取得產品名稱
+        let productName = '未知產品'
+        if (data.productId) {
+          productName = productsMap.get(data.productId) || '未知產品'
+        } else if (data.productRef?.id) {
+          productName = productsMap.get(data.productRef.id) || '未知產品'
+        } else if (data.productName) {
+          productName = data.productName
+        }
+
         return {
           id: doc.id,
-          productName: data.productName || '未知產品',
+          productName: productName,
           targetQuantity: data.targetQuantity || 0,
           materialCost,
           fragranceCost,
@@ -488,7 +505,7 @@ function CostManagementPageContent() {
                           </TableCell>
                           <TableCell className="text-right">
                             <span className="number-display number-neutral">
-                              {order.targetQuantity}
+                              {order.targetQuantity} kg
                             </span>
                           </TableCell>
                           <TableCell className="text-right">
@@ -563,7 +580,7 @@ function CostManagementPageContent() {
                           </div>
                           <div className="text-sm">
                             <div className="text-gray-500">目標數量</div>
-                            <div className="font-medium">{order.targetQuantity}</div>
+                            <div className="font-medium">{order.targetQuantity} kg</div>
                           </div>
                           <div className="text-sm text-right">
                             <div className="text-gray-500">物料成本</div>

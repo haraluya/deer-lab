@@ -108,7 +108,7 @@ export const StandardStatsCard: React.FC<StandardStatsCardProps> = ({
                 relative overflow-hidden transition-all duration-200 rounded-lg p-0
                 ${colors.background} ${colors.border}
                 ${stat.onClick ? 'cursor-pointer hover:shadow-md' : 'shadow-sm'}
-                ${isMobile ? 'h-[110px]' : 'h-[115px]'}
+                ${isMobile ? 'h-[120px]' : 'h-[125px]'}
               `}
               onClick={stat.onClick}
             >
@@ -132,8 +132,8 @@ export const StandardStatsCard: React.FC<StandardStatsCardProps> = ({
                 </div>
                 
                 {/* 主要數值 */}
-                <div className={`font-bold text-gray-900 mb-2 leading-none ${
-                  isMobile ? 'text-2xl' : 'text-3xl'
+                <div className={`font-bold text-gray-900 mb-2 leading-none break-all ${
+                  isMobile ? 'text-lg' : 'text-2xl'
                 }`}>
                   {stat.value}
                 </div>

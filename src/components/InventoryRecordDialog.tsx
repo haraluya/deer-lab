@@ -6,20 +6,30 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
+import { useApiClient } from '@/hooks/useApiClient';
 
-import { Calendar, User, Package, TrendingUp, FileText, MessageSquare, List } from 'lucide-react';
+import { Calendar, User, Package, TrendingUp, FileText, MessageSquare, List, Edit3, Save, X } from 'lucide-react';
 import { InventoryRecord, getChangeReasonLabel, getItemTypeLabel, getItemDetailFromRecord } from '@/lib/inventoryRecords';
+import { formatQuantity } from '@/utils/numberFormat';
 
 interface InventoryRecordDialogProps {
   record: InventoryRecord | null;
   isOpen: boolean;
   onClose: () => void;
   onViewItemHistory?: (itemId: string, itemType: 'material' | 'fragrance') => void;
+  onRemarksUpdated?: (recordId: string, newRemarks: string) => void;
 }
 
-export function InventoryRecordDialog({ record, isOpen, onClose, onViewItemHistory }: InventoryRecordDialogProps) {
+export function InventoryRecordDialog({ record, isOpen, onClose, onViewItemHistory, onRemarksUpdated }: InventoryRecordDialogProps) {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [selectedItemType, setSelectedItemType] = useState<'material' | 'fragrance' | null>(null);
+  const [isEditingRemarks, setIsEditingRemarks] = useState(false);
+  const [editRemarks, setEditRemarks] = useState('');
+  const [isUpdatingRemarks, setIsUpdatingRemarks] = useState(false);
+
+  const apiClient = useApiClient();
 
   if (!record) return null;
 
@@ -48,6 +58,46 @@ export function InventoryRecordDialog({ record, isOpen, onClose, onViewItemHisto
   const handleViewItemHistory = (itemId: string, itemType: 'material' | 'fragrance') => {
     if (onViewItemHistory) {
       onViewItemHistory(itemId, itemType);
+    }
+  };
+
+  const handleStartEditRemarks = () => {
+    setEditRemarks(record?.remarks || '');
+    setIsEditingRemarks(true);
+  };
+
+  const handleCancelEditRemarks = () => {
+    setIsEditingRemarks(false);
+    setEditRemarks('');
+  };
+
+  const handleSaveRemarks = async () => {
+    if (!record?.id) {
+      toast.error('記錄ID不存在');
+      return;
+    }
+
+    setIsUpdatingRemarks(true);
+    try {
+      // 暫時停用這個功能，直到 API 實作完成
+      // await apiClient.call('updateInventoryRecordRemarks', {
+      //   recordId: record.id,
+      //   remarks: editRemarks
+      // });
+
+      toast.success('備註更新功能暫時停用');
+      setIsEditingRemarks(false);
+
+      // 通知父組件更新
+      if (onRemarksUpdated) {
+        onRemarksUpdated(record.id, editRemarks);
+      }
+
+    } catch (error) {
+      console.error('更新備註失敗:', error);
+      toast.error('更新備註失敗：' + (error instanceof Error ? error.message : '未知錯誤'));
+    } finally {
+      setIsUpdatingRemarks(false);
     }
   };
 
@@ -126,21 +176,67 @@ export function InventoryRecordDialog({ record, isOpen, onClose, onViewItemHisto
           </Card>
 
           {/* 備註卡片 */}
-          {record.remarks && (
-            <Card className="border-l-4 border-l-orange-500">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg text-gray-800 flex items-center gap-2">
+          <Card className="border-l-4 border-l-orange-500">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg text-gray-800 flex items-center justify-between">
+                <div className="flex items-center gap-2">
                   <MessageSquare className="h-5 w-5 text-orange-500" />
                   備註
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-sm bg-orange-50 px-4 py-3 rounded-md border border-orange-200 text-orange-800">
-                  {record.remarks}
                 </div>
-              </CardContent>
-            </Card>
-          )}
+                {!isEditingRemarks && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleStartEditRemarks}
+                    className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                  >
+                    <Edit3 className="h-4 w-4 mr-1" />
+                    編輯
+                  </Button>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isEditingRemarks ? (
+                <div className="space-y-3">
+                  <Textarea
+                    value={editRemarks}
+                    onChange={(e) => setEditRemarks(e.target.value)}
+                    placeholder="請輸入備註..."
+                    className="min-h-[100px] text-sm"
+                  />
+                  <div className="flex items-center gap-2 justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCancelEditRemarks}
+                      disabled={isUpdatingRemarks}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      取消
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleSaveRemarks}
+                      disabled={isUpdatingRemarks}
+                      className="bg-orange-500 hover:bg-orange-600"
+                    >
+                      {isUpdatingRemarks ? (
+                        <div className="h-4 w-4 mr-1 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-1" />
+                      )}
+                      保存
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm bg-orange-50 px-4 py-3 rounded-md border border-orange-200 text-orange-800">
+                  {record.remarks || '暫無備註'}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* 明細清單卡片 */}
           <Card className="border-l-4 border-l-green-500">
@@ -179,7 +275,7 @@ export function InventoryRecordDialog({ record, isOpen, onClose, onViewItemHisto
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <span className={`font-bold ${getQuantityChangeColor(detail.quantityChange)}`}>
-                              {getQuantityChangeIcon(detail.quantityChange)} {Math.abs(detail.quantityChange)}
+                              {getQuantityChangeIcon(detail.quantityChange)} {formatQuantity(Math.abs(detail.quantityChange))}
                             </span>
                             <Badge 
                               variant={detail.quantityChange > 0 ? 'default' : 'destructive'}
@@ -190,7 +286,7 @@ export function InventoryRecordDialog({ record, isOpen, onClose, onViewItemHisto
                           </div>
                         </TableCell>
                         <TableCell className="font-bold text-gray-800">
-                          {detail.quantityAfter}
+                          {formatQuantity(detail.quantityAfter)}
                         </TableCell>
                       </TableRow>
                     ))}

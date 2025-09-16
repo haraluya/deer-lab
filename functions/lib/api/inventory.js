@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getLowStockItems = exports.quickUpdateInventory = exports.getInventoryOverview = exports.adjustInventory = void 0;
+exports.updateInventoryRecordRemarks = exports.getLowStockItems = exports.quickUpdateInventory = exports.getInventoryOverview = exports.adjustInventory = void 0;
 // functions/src/api/inventory.ts
 const firebase_functions_1 = require("firebase-functions");
 const https_1 = require("firebase-functions/v2/https");
@@ -287,6 +287,50 @@ exports.getLowStockItems = (0, https_1.onCall)(async (request) => {
     catch (error) {
         firebase_functions_1.logger.error("獲取低庫存項目失敗:", error);
         throw new https_1.HttpsError("internal", "獲取低庫存項目失敗");
+    }
+});
+/**
+ * 更新庫存記錄備註
+ */
+exports.updateInventoryRecordRemarks = (0, https_1.onCall)(async (request) => {
+    var _a;
+    const { auth: contextAuth, data } = request;
+    if (!contextAuth) {
+        throw new https_1.HttpsError("internal", "驗證檢查後 contextAuth 不應為空。");
+    }
+    const { recordId, remarks } = data;
+    if (!recordId) {
+        throw new https_1.HttpsError("invalid-argument", "缺少記錄ID。");
+    }
+    if (typeof remarks !== 'string') {
+        throw new https_1.HttpsError("invalid-argument", "備註必須是字串。");
+    }
+    try {
+        // 檢查記錄是否存在
+        const recordRef = db.collection("inventoryRecords").doc(recordId);
+        const recordDoc = await recordRef.get();
+        if (!recordDoc.exists) {
+            throw new https_1.HttpsError("not-found", "庫存記錄不存在");
+        }
+        // 更新備註
+        await recordRef.update({
+            remarks: remarks,
+            updatedAt: firestore_1.FieldValue.serverTimestamp(),
+            lastUpdatedBy: contextAuth.uid,
+            lastUpdatedByName: ((_a = contextAuth.token) === null || _a === void 0 ? void 0 : _a.name) || '未知用戶'
+        });
+        firebase_functions_1.logger.info(`使用者 ${contextAuth.uid} 更新了庫存記錄 ${recordId} 的備註`);
+        return {
+            success: true,
+            message: "備註更新成功"
+        };
+    }
+    catch (error) {
+        firebase_functions_1.logger.error(`更新庫存記錄備註時發生錯誤:`, error);
+        if (error instanceof https_1.HttpsError) {
+            throw error;
+        }
+        throw new https_1.HttpsError("internal", "更新備註時發生未知錯誤。");
     }
 });
 //# sourceMappingURL=inventory.js.map

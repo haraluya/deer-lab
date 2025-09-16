@@ -732,10 +732,36 @@ export default function MaterialsPage() {
         onOpenChange={setIsImportExportOpen}
         onImport={async (data: any[], options?: { updateMode?: boolean }, onProgress?: (current: number, total: number) => void) => {
           try {
-            console.log('原料匯入資料:', data);
-            fetchMaterials();
+            // 呼叫 importMaterials API
+            const result = await apiClient.call('importMaterials', {
+              materials: data
+            });
+
+            // 顯示匯入結果
+            if (result.success && result.data?.summary) {
+              const summary = result.data.summary;
+              if (summary.successful > 0 && summary.failed === 0) {
+                toast.success(`成功匯入 ${summary.successful} 筆原料資料！`);
+              } else if (summary.successful > 0 && summary.failed > 0) {
+                toast.warning(`匯入完成：成功 ${summary.successful} 筆，失敗 ${summary.failed} 筆`);
+              } else if (summary.failed > 0) {
+                toast.error(`匯入失敗：共 ${summary.failed} 筆失敗`);
+              }
+            } else {
+              toast.error('匯入過程發生未知錯誤');
+            }
+
+            // 重新載入資料
+            await fetchMaterials();
+
+            // 關閉匯入對話框
+            setIsImportExportOpen(false);
+
+            // return result; // 不需要回傳結果
           } catch (error) {
             console.error('匯入原料失敗', error);
+            const errorMessage = error instanceof Error ? error.message : '匯入過程發生未知錯誤';
+            toast.error(`匯入失敗：${errorMessage}`);
             throw error;
           }
         }}
@@ -773,8 +799,8 @@ export default function MaterialsPage() {
           }
         ]}
         fields={[
-          { key: "code", label: "原料代號 (留空自動生成)", required: false, type: "string" },
-          { key: "name", label: "原料名稱", required: true, type: "string" },
+          { key: "code", label: "原料代號", required: false, type: "string" },
+          { key: "name", label: "原料名稱", required: false, type: "string" },
           { key: "categoryName", label: "主分類", required: false, type: "string" },
           { key: "subCategoryName", label: "細分分類", required: false, type: "string" },
           { key: "supplierName", label: "供應商", required: false, type: "string" },

@@ -326,3 +326,54 @@ export const getLowStockItems = onCall(async (request) => {
     throw new HttpsError("internal", "獲取低庫存項目失敗");
   }
 });
+
+/**
+ * 更新庫存記錄備註
+ */
+export const updateInventoryRecordRemarks = onCall(async (request) => {
+  const { auth: contextAuth, data } = request;
+
+  if (!contextAuth) {
+    throw new HttpsError("internal", "驗證檢查後 contextAuth 不應為空。");
+  }
+
+  const { recordId, remarks } = data;
+
+  if (!recordId) {
+    throw new HttpsError("invalid-argument", "缺少記錄ID。");
+  }
+
+  if (typeof remarks !== 'string') {
+    throw new HttpsError("invalid-argument", "備註必須是字串。");
+  }
+
+  try {
+    // 檢查記錄是否存在
+    const recordRef = db.collection("inventoryRecords").doc(recordId);
+    const recordDoc = await recordRef.get();
+
+    if (!recordDoc.exists) {
+      throw new HttpsError("not-found", "庫存記錄不存在");
+    }
+
+    // 更新備註
+    await recordRef.update({
+      remarks: remarks,
+      updatedAt: FieldValue.serverTimestamp(),
+      lastUpdatedBy: contextAuth.uid,
+      lastUpdatedByName: contextAuth.token?.name || '未知用戶'
+    });
+
+    logger.info(`使用者 ${contextAuth.uid} 更新了庫存記錄 ${recordId} 的備註`);
+
+    return {
+      success: true,
+      message: "備註更新成功"
+    };
+
+  } catch (error) {
+    logger.error(`更新庫存記錄備註時發生錯誤:`, error);
+    if (error instanceof HttpsError) { throw error; }
+    throw new HttpsError("internal", "更新備註時發生未知錯誤。");
+  }
+});

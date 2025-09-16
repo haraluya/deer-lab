@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { formatStock } from "@/utils/numberFormat"
 
 interface LowStockItem {
   id: string
@@ -203,10 +204,10 @@ export function LowStockNotification() {
                         </div>
                         <div className="text-right">
                           <div className="text-sm font-medium text-red-600">
-                            {item.currentStock} {item.unit}
+                            {formatStock(item.currentStock)} {item.unit}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            安全庫存: {item.safetyStockLevel} {item.unit}
+                            安全庫存: {formatStock(item.safetyStockLevel)} {item.unit}
                           </div>
                           <Badge variant="destructive" className="mt-1">
                             庫存不足

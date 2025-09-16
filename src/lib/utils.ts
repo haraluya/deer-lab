@@ -191,37 +191,6 @@ export function generateRandomBgColor(): string {
   return colors[Math.floor(Math.random() * colors.length)];
 }
 
-// 自動生成分類和子分類
-export async function autoGenerateCategories(materialData: any, db: any) {
-  const { collection: firestoreCollection, addDoc, getDocs, query, where } = await import('firebase/firestore');
-  
-  // 如果沒有分類，自動生成
-  if (!materialData.category) {
-    const categoryName = '自動分類_' + Math.floor(Math.random() * 1000);
-    const categoryDoc = await addDoc(firestoreCollection(db, 'materialCategories'), {
-      name: categoryName,
-      type: 'category',
-      createdAt: new Date()
-    });
-    materialData.category = categoryName;
-    console.log('自動生成主分類:', categoryName);
-  }
-  
-  // 如果沒有子分類，自動生成
-  if (!materialData.subCategory) {
-    const subCategoryName = '自動子分類_' + Math.floor(Math.random() * 1000);
-    const subCategoryDoc = await addDoc(firestoreCollection(db, 'materialSubCategories'), {
-      name: subCategoryName,
-      type: 'subCategory',
-      parentCategory: materialData.category,
-      createdAt: new Date()
-    });
-    materialData.subCategory = subCategoryName;
-    console.log('自動生成子分類:', subCategoryName);
-  }
-  
-  return materialData;
-}
 
 // 產品類型代號映射
 export const PRODUCT_TYPE_CODES = {

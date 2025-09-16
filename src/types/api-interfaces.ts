@@ -133,6 +133,23 @@ export namespace FragrancesApi {
     id: string;
   }
 
+  export interface ImportRequest {
+    fragrances: Array<{
+      code: string;
+      name: string;
+      fragranceType?: string;
+      fragranceStatus?: string;
+      supplierName?: string;
+      currentStock?: number;
+      safetyStockLevel?: number;
+      costPerUnit?: number;
+      percentage?: number;
+      pgRatio?: number;
+      vgRatio?: number;
+      unit?: string;
+    }>;
+  }
+
   export interface DiagnoseStatusResponse {
     issues: {
       fragranceId: string;
@@ -897,6 +914,10 @@ export interface ApiEndpoints {
   'deleteFragrance': {
     request: FragrancesApi.DeleteRequest;
     response: CrudResponse;
+  };
+  'importFragrances': {
+    request: FragrancesApi.ImportRequest;
+    response: BatchOperationResult;
   };
   'diagnoseFragranceStatus': {
     request: void;

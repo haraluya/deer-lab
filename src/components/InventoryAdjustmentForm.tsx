@@ -12,6 +12,7 @@ import { Package, FlaskConical, TrendingUp, TrendingDown, AlertTriangle } from '
 import { useApiClient } from '@/hooks/useApiClient';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
+import { formatStock, formatQuantity } from '@/utils/numberFormat';
 
 interface InventoryAdjustmentFormProps {
   itemId: string;
@@ -103,13 +104,20 @@ export function InventoryAdjustmentForm({
   };
 
   const getNewStock = () => {
+    if (!quantity || parseFloat(quantity) <= 0) return formatStock(currentStock);
+    const quantityNum = parseFloat(quantity);
+    const change = adjustmentType === 'increase' ? quantityNum : -quantityNum;
+    return formatStock(currentStock + change);
+  };
+
+  const getNewStockValue = () => {
     if (!quantity || parseFloat(quantity) <= 0) return currentStock;
     const quantityNum = parseFloat(quantity);
     const change = adjustmentType === 'increase' ? quantityNum : -quantityNum;
     return currentStock + change;
   };
 
-  const isStockNegative = getNewStock() < 0;
+  const isStockNegative = getNewStockValue() < 0;
 
   return (
     <Card className="border-l-4 border-l-orange-500">
@@ -200,7 +208,7 @@ export function InventoryAdjustmentForm({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label className="text-sm font-medium text-blue-700">當前庫存</Label>
-                <div className="mt-1 text-2xl font-bold text-blue-900">{currentStock}</div>
+                <div className="mt-1 text-2xl font-bold text-blue-900">{formatStock(currentStock)}</div>
               </div>
               <div>
                 <Label className="text-sm font-medium text-blue-700">調整變化</Label>

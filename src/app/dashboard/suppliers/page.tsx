@@ -111,12 +111,27 @@ export default function SuppliersPage() {
         getDocs(collection(db, "suppliers")),
         fetchSupplierStats()
       ]);
-      
+
+      // 載入人員資料以獲取聯絡人姓名
+      const personnelSnapshot = await getDocs(collection(db, "personnel"));
+      const personnelMap = new Map();
+      personnelSnapshot.docs.forEach(doc => {
+        personnelMap.set(doc.id, doc.data().name);
+      });
+
       const suppliersData: SupplierWithStats[] = suppliersSnapshot.docs.map((doc) => {
         const data = { id: doc.id, ...doc.data() } as SupplierData;
         const stats = statsMap.get(doc.id) || { materialsCount: 0, fragrancesCount: 0 };
+
+        // 如果有 liaisonPersonId 但沒有 liaisonPersonName，從人員資料中查找
+        let liaisonPersonName = data.liaisonPersonName;
+        if (!liaisonPersonName && data.liaisonPersonId) {
+          liaisonPersonName = personnelMap.get(data.liaisonPersonId);
+        }
+
         return {
           ...data,
+          liaisonPersonName,
           ...stats,
           type: 'supplier' as const
         };
@@ -224,9 +239,20 @@ export default function SuppliersPage() {
       title: '供應商名稱',
       sortable: true,
       priority: 5,
-      render: (value) => (
-        <span className="font-semibold">{value}</span>
-      )
+      render: (value, supplier) => {
+        const contactInfo = supplier?.liaisonPersonName || supplier?.contactWindow;
+        return (
+          <div>
+            <div className="font-semibold text-base">{value}</div>
+            {contactInfo && (
+              <div className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                <User className="h-3 w-3" />
+                {contactInfo}
+              </div>
+            )}
+          </div>
+        );
+      }
     },
     {
       key: 'products',
@@ -243,14 +269,14 @@ export default function SuppliersPage() {
       align: 'center',
       priority: 3,
       render: (value) => (
-        <Badge variant={value > 0 ? "default" : "secondary"} className="font-mono">
+        <Badge variant={value > 0 ? "default" : "secondary"} className="font-mono text-base px-3 py-1">
           {value || 0}
         </Badge>
       ),
       mobileRender: (value) => (
         <div className="flex items-center gap-1">
           <Package className="h-3 w-3 text-blue-600" />
-          <span className="font-semibold text-blue-600">{value || 0}</span>
+          <span className="font-semibold text-blue-600 text-lg">{value || 0}</span>
         </div>
       )
     },
@@ -261,14 +287,14 @@ export default function SuppliersPage() {
       align: 'center',
       priority: 3,
       render: (value) => (
-        <Badge variant={value > 0 ? "default" : "secondary"} className="font-mono bg-purple-100 text-purple-800">
+        <Badge variant={value > 0 ? "default" : "secondary"} className="font-mono bg-purple-100 text-purple-800 text-base px-3 py-1">
           {value || 0}
         </Badge>
       ),
       mobileRender: (value) => (
         <div className="flex items-center gap-1">
           <Package className="h-3 w-3 text-purple-600" />
-          <span className="font-semibold text-purple-600">{value || 0}</span>
+          <span className="font-semibold text-purple-600 text-lg">{value || 0}</span>
         </div>
       )
     },
@@ -278,26 +304,6 @@ export default function SuppliersPage() {
       priority: 2,
       render: (value) => value ? (
         <span className="text-sm">{value}</span>
-      ) : '-'
-    },
-    {
-      key: 'liaisonPersonName',
-      title: '對接人員',
-      priority: 2,
-      render: (value) => value ? (
-        <div className="flex items-center gap-1">
-          <User className="h-3 w-3 text-gray-400" />
-          <span className="text-sm">{value}</span>
-        </div>
-      ) : '-'
-    },
-    {
-      key: 'contactWindow',
-      title: '聯絡時間',
-      priority: 1,
-      hideOnMobile: true,
-      render: (value) => value ? (
-        <span className="text-sm text-gray-600">{value}</span>
       ) : '-'
     }
   ];
