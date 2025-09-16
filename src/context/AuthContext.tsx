@@ -32,17 +32,27 @@ const LEVEL_PERMISSIONS: Record<UserLevel, string[]> = {
     'workOrders.view', 'workOrders.manage', 'workOrders.create', 'workOrders.edit',
     'workOrders:view', 'workOrders:manage', 'workOrders:create', 'workOrders:edit', // 向後相容
 
-    // 採購權限
+    // 採購權限 (支援前後端格式)
     'purchase.view', 'purchase.manage', 'purchase.create', 'purchase.edit',
     'purchase:view', 'purchase:manage', 'purchase:create', 'purchase:edit', // 向後相容
+    'purchaseOrders.view', 'purchaseOrders.manage', 'purchaseOrders.create', 'purchaseOrders.edit', // 後端格式
 
-    // 庫存權限
-    'inventory.view', 'inventory.manage',
-    'inventory:view', 'inventory:manage', // 向後相容
+    // 庫存權限 (支援前後端格式)
+    'inventory.view', 'inventory.manage', 'inventory.adjust',
+    'inventory:view', 'inventory:manage', 'inventory:adjust', // 向後相容
 
-    // 時間權限
-    'time.view', 'time.manage',
-    'time:view', 'time:manage' // 向後相容
+    // 時間權限 (支援前後端格式)
+    'time.view', 'time.manage', 'time.create', 'time.edit',
+    'time:view', 'time:manage', 'time:create', 'time:edit', // 向後相容
+    'timeRecords.view', 'timeRecords.manage', 'timeRecords.own', // 後端格式
+
+    // 人員權限
+    'personnel.view', 'personnel.manage',
+    'personnel:view', 'personnel:manage', // 向後相容
+
+    // 角色與系統權限
+    'roles.manage', 'users.manage', 'system.config', 'system.settings',
+    'reports.view', 'reports.export'
   ],
   operator: [
     'materials.view', 'materials:view',
@@ -51,8 +61,10 @@ const LEVEL_PERMISSIONS: Record<UserLevel, string[]> = {
     'workOrders.view', 'workOrders:view',
     'inventory.view', 'inventory:view',
     'inventoryRecords.view', 'inventoryRecords:view',
+    'purchase.view', 'purchase:view', 'purchaseOrders.view', // 採購查看
     'time.view', 'time.create', 'time.edit',
-    'time:view', 'time:create', 'time:edit'
+    'time:view', 'time:create', 'time:edit',
+    'timeRecords.view', 'timeRecords.own' // 可查看和管理自己的時間記錄
   ],
   viewer: [
     'materials.view', 'materials:view',
@@ -60,7 +72,9 @@ const LEVEL_PERMISSIONS: Record<UserLevel, string[]> = {
     'fragrances.view', 'fragrances:view',
     'workOrders.view', 'workOrders:view',
     'inventory.view', 'inventory:view',
-    'inventoryRecords.view', 'inventoryRecords:view'
+    'inventoryRecords.view', 'inventoryRecords:view',
+    'purchase.view', 'purchase:view', 'purchaseOrders.view', // 採購查看
+    'time.view', 'time:view', 'timeRecords.view' // 時間記錄查看
   ]
 };
 
@@ -100,16 +114,30 @@ const getUserLevel = (employeeId: string, userData: any): UserLevel => {
     return 'admin';
   }
 
-  // 2. 根據角色名稱判斷級別
+  // 2. 根據角色名稱判斷級別 (支援多種角色名稱格式)
   const roleName = userData.roleName || userData.name || '';
-  if (roleName.includes('管理員') || roleName.includes('系統管理')) {
+  const roleNameLower = roleName.toLowerCase();
+
+  // 管理員級別匹配
+  if (roleName.includes('管理員') || roleName.includes('系統管理') || roleName.includes('admin')) {
     return 'admin';
   }
-  if (roleName.includes('領班') || roleName.includes('主管') || roleName.includes('管理')) {
+
+  // 管理階層匹配
+  if (roleName.includes('領班') || roleName.includes('主管') || roleName.includes('管理') ||
+      roleName.includes('supervisor') || roleNameLower.includes('manager')) {
     return 'manager';
   }
-  if (roleName.includes('計時') || roleName.includes('記錄')) {
+
+  // 操作員級別匹配
+  if (roleName.includes('計時') || roleName.includes('記錄') || roleName.includes('操作員') ||
+      roleName.includes('operator') || roleNameLower.includes('worker')) {
     return 'operator';
+  }
+
+  // 觀察者級別匹配
+  if (roleName.includes('觀察') || roleName.includes('查看') || roleName.includes('viewer')) {
+    return 'viewer';
   }
 
   // 3. 預設為 operator 級別
