@@ -83,8 +83,9 @@ export function NewReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrde
             } else if (item.itemRef.id) {
               // 只有 id 的情況，根據 unit 判斷類型
               const collection = item.unit ? 'materials' : 'fragrances';
-              itemRefPath = `${collection}/${item.itemRef.id}`;
-              console.log(`使用 id: ${itemRefPath}`);
+              const itemId = typeof item.itemRef.id === 'string' ? item.itemRef.id : String(item.itemRef.id);
+              itemRefPath = `${collection}/${itemId}`;
+              console.log(`使用 id: ${itemRefPath}`, { originalId: item.itemRef.id, type: typeof item.itemRef.id });
             }
           }
 
@@ -98,9 +99,14 @@ export function NewReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrde
             const collection = isFragrance ? 'fragrances' : 'materials';
 
             // 使用代號作為備用方案（後端會用代號查找實際ID）
-            itemRefPath = `${collection}/${item.code}`;
+            const itemCode = item.code || 'UNKNOWN';
+            itemRefPath = `${collection}/${itemCode}`;
 
-            console.warn(`使用備用路徑: ${itemRefPath}`);
+            console.warn(`使用備用路徑: ${itemRefPath}`, {
+              itemCode,
+              collection,
+              originalItem: item
+            });
             toast.warning(`項目 "${item.name}" 使用代號查找，建議更新採購單以包含正確的物料參考`);
           }
 
