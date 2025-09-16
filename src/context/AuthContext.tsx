@@ -9,6 +9,31 @@ import { toast } from 'sonner';
 import { debug, error, warn, info } from '@/utils/logger';
 import { FirebaseError } from '@/types';
 
+// 管理員員工ID白名單 (最後防線)
+const ADMIN_EMPLOYEE_IDS = ['052', 'admin', 'administrator'];
+
+// 級別權限對應
+const LEVEL_PERMISSIONS: Record<UserLevel, string[]> = {
+  admin: ['*'], // 所有權限
+  manager: [
+    'materials.view', 'materials.manage', 'materials.create', 'materials.edit',
+    'products.view', 'products.manage', 'products.create', 'products.edit',
+    'workOrders.view', 'workOrders.manage', 'workOrders.create', 'workOrders.edit',
+    'inventory.view', 'inventory.manage',
+    'time.view', 'time.manage'
+  ],
+  operator: [
+    'materials.view', 'products.view', 'workOrders.view', 'inventory.view',
+    'time.view', 'time.create', 'time.edit'
+  ],
+  viewer: [
+    'materials.view', 'products.view', 'workOrders.view', 'inventory.view'
+  ]
+};
+
+// 用戶級別類型定義
+export type UserLevel = 'admin' | 'manager' | 'operator' | 'viewer';
+
 export interface AppUser {
   uid: string;
   name: string;
@@ -18,7 +43,8 @@ export interface AppUser {
   status: 'active' | 'inactive';
   roleRef?: DocumentReference;
   roleName?: string;
-  permissions?: string[]; // 新增權限陣列
+  permissions?: string[]; // 權限陣列
+  userLevel?: UserLevel; // 新增用戶級別
 }
 
 interface AuthContextType {
@@ -32,6 +58,35 @@ interface AuthContextType {
   hasAnyPermission: (permissions: string[]) => boolean;
   hasAllPermissions: (permissions: string[]) => boolean;
 }
+
+// 簡化的用戶級別判斷函數
+const getUserLevel = (employeeId: string, userData: any): UserLevel => {
+  // 1. 白名單管理員檢查 (最高優先級)
+  if (ADMIN_EMPLOYEE_IDS.includes(employeeId)) {
+    debug('🔑 員工ID在管理員白名單中，設定為 admin 級別', { employeeId });
+    return 'admin';
+  }
+
+  // 2. 根據角色名稱判斷級別
+  const roleName = userData.roleName || userData.name || '';
+  if (roleName.includes('管理員') || roleName.includes('系統管理')) {
+    return 'admin';
+  }
+  if (roleName.includes('領班') || roleName.includes('主管') || roleName.includes('管理')) {
+    return 'manager';
+  }
+  if (roleName.includes('計時') || roleName.includes('記錄')) {
+    return 'operator';
+  }
+
+  // 3. 預設為 operator 級別
+  return 'operator';
+};
+
+// 根據級別生成權限陣列
+const getUserPermissions = (userLevel: UserLevel): string[] => {
+  return LEVEL_PERMISSIONS[userLevel] || LEVEL_PERMISSIONS.viewer;
+};
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
@@ -79,70 +134,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         debug('用戶資料', userData);
         
-        // 保留現有的權限設定，如果沒有則初始化為空陣列
-        if (!userData.permissions || !Array.isArray(userData.permissions)) {
-          userData.permissions = [];
-        }
+        // 🚀 簡化權限載入邏輯：直接根據用戶級別分配權限
+
+        // 1. 確定用戶級別
+        const userLevel = getUserLevel(userData.employeeId, userData);
+        userData.userLevel = userLevel;
+
+        // 2. 根據級別生成權限陣列
+        userData.permissions = getUserPermissions(userLevel);
+
+        // 3. 保留原有角色名稱顯示 (向後相容)
         if (!userData.roleName || typeof userData.roleName !== 'string') {
           userData.roleName = '未設定';
         }
-        
-        debug('保留現有權限設定', { 
-          existingRole: userData.roleName,
-          existingPermissions: userData.permissions?.length || 0
+
+        debug('✅ 簡化權限載入完成', {
+          employeeId: userData.employeeId,
+          userLevel: userData.userLevel,
+          roleName: userData.roleName,
+          permissionCount: userData.permissions.length
         });
         
-        // 如果沒有直接設定的權限且有角色引用，則從角色引用獲取權限
-        if (userData.permissions.length === 0 && userData.roleRef) {
-          debug('用戶沒有直接權限設定，嘗試從角色引用獲取');
-          try {
-            const roleDoc = await getDoc(userData.roleRef);
-            if (roleDoc.exists()) {
-              const roleData = roleDoc.data();
-              userData.roleName = roleData.displayName || roleData.name || '未設定';
-              userData.permissions = Array.isArray(roleData.permissions) ? roleData.permissions : [];
-              debug('✅ 從角色引用載入權限', { 
-                role: userData.roleName, 
-                permissions: userData.permissions,
-                permissionCount: userData.permissions.length 
-              });
-            } else {
-              warn('角色文檔不存在，保持現有設定');
-            }
-          } catch (err) {
-            error('載入角色資料失敗，保持現有設定', err as Error);
+        // 🛡️ 備用權限檢查：白名單管理員確保有完整權限
+        if (ADMIN_EMPLOYEE_IDS.includes(userData.employeeId)) {
+          if (userData.userLevel !== 'admin') {
+            debug('⚠️ 白名單管理員級別不正確，強制提升為 admin');
+            userData.userLevel = 'admin';
+            userData.permissions = getUserPermissions('admin');
+            userData.roleName = '系統管理員';
           }
-        } else if (userData.permissions.length > 0) {
-          debug('✅ 使用現有的直接權限設定', {
-            role: userData.roleName,
-            permissionCount: userData.permissions.length
-          });
-        } else {
-          debug('用戶沒有角色引用也沒有直接權限，可能是新用戶');
-        }
-        
-        // 最終權限檢查：為特定管理員帳號提供備用權限
-        const isSpecificAdminAccount = (
-          userData.employeeId === '052' ||
-          userData.employeeId === 'admin' ||
-          userData.name === '系統管理員' ||
-          userData.employeeId === 'administrator' ||
-          userData.email?.includes('admin') ||
-          userData.name?.includes('管理員')
-        );
-        
-        // 只有在完全沒有權限的情況下才給予臨時權限
-        if (isSpecificAdminAccount && (!userData.permissions || userData.permissions.length === 0)) {
-          debug('⚠️  管理員帳號沒有權限，給予完整臨時權限');
-          userData.roleName = '系統管理員';
-          userData.permissions = [
-            'personnel.view', 'personnel.manage', 'time.view', 'time.manage',
-            'suppliers.view', 'suppliers.manage', 'purchase.view', 'purchase.manage',
-            'materials.view', 'materials.manage', 'fragrances.view', 'fragrances.manage',
-            'products.view', 'products.manage', 'workOrders.view', 'workOrders.manage',
-            'inventory.view', 'inventory.manage', 'inventoryRecords.view', 'cost.view',
-            'timeReports.view', 'roles.manage', 'system.settings'
-          ];
         }
         
         debug('最終用戶資料', { 

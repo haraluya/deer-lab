@@ -3,8 +3,20 @@
  * 權限檢查相關 Hook
  */
 
-import { useAuth } from '@/context/AuthContext';
+import { useAuth, UserLevel } from '@/context/AuthContext';
 import { canAccessPage, canManagePage } from '@/utils/permissions';
+
+// 管理員員工ID白名單 (與 AuthContext 保持一致)
+const ADMIN_EMPLOYEE_IDS = ['052', 'admin', 'administrator'];
+
+// 簡化的級別檢查函數
+const hasAccess = (userLevel: UserLevel | undefined, requiredLevel: UserLevel): boolean => {
+  if (!userLevel) return false;
+  const hierarchy = ['viewer', 'operator', 'manager', 'admin'];
+  const userIndex = hierarchy.indexOf(userLevel);
+  const requiredIndex = hierarchy.indexOf(requiredLevel);
+  return userIndex >= requiredIndex;
+};
 
 /**
  * 權限檢查 Hook
@@ -45,43 +57,42 @@ export function usePermission() {
   };
 
   /**
-   * 檢查是否為系統管理員
+   * 檢查是否為系統管理員 (簡化版)
    * @returns 是否為管理員
    */
   const isAdmin = (): boolean => {
-    // 檢查多種可能的管理員角色名稱
-    const adminRoleNames = ['系統管理員', '管理員', 'admin', 'Admin', 'ADMIN'];
-    const currentRole = appUser?.roleName || '';
-    
-    // 支援新舊權限格式
-    const hasRoleManagePermission = hasPermission('roles.manage') || 
-                                   hasPermission('roles:manage') ||
-                                   hasPermission('roles:create') ||
-                                   hasPermission('roles:edit') ||
-                                   hasPermission('roles:delete');
-    
-    return adminRoleNames.includes(currentRole) || hasRoleManagePermission;
+    // 1. 白名單檢查 (最高優先級)
+    if (appUser?.employeeId && ADMIN_EMPLOYEE_IDS.includes(appUser.employeeId)) {
+      return true;
+    }
+
+    // 2. 用戶級別檢查
+    if (appUser?.userLevel === 'admin') {
+      return true;
+    }
+
+    // 3. 備用權限檢查
+    if (hasPermission('*') || hasPermission('roles.manage')) {
+      return true;
+    }
+
+    return false;
   };
 
   /**
-   * 檢查是否為生產領班
+   * 檢查是否為生產領班 (簡化版)
    * @returns 是否為領班
    */
   const isForeman = (): boolean => {
-    const foremanRoleNames = ['生產領班', '領班', 'foreman', 'Foreman', '主管'];
-    const currentRole = appUser?.roleName || '';
-    return foremanRoleNames.includes(currentRole) || hasPermission('workOrders.manage');
+    return hasAccess(appUser?.userLevel, 'manager') || hasPermission('workOrders.manage');
   };
 
   /**
-   * 檢查是否為計時人員
+   * 檢查是否為計時人員 (簡化版)
    * @returns 是否為計時人員
    */
   const isTimekeeper = (): boolean => {
-    const timekeeperRoleNames = ['計時人員', '時間記錄員', 'timekeeper', 'Timekeeper'];
-    const currentRole = appUser?.roleName || '';
-    return timekeeperRoleNames.includes(currentRole) || 
-           (hasPermission('time.manage') && !hasPermission('personnel.manage'));
+    return appUser?.userLevel === 'operator' || hasPermission('time.manage');
   };
 
   return {
@@ -99,8 +110,12 @@ export function usePermission() {
     isForeman,
     isTimekeeper,
     
+    // 級別檢查函數
+    hasAccess: (requiredLevel: UserLevel) => hasAccess(appUser?.userLevel, requiredLevel),
+
     // 用戶資訊
     userRole: appUser?.roleName || '未設定',
+    userLevel: appUser?.userLevel || 'viewer',
     userPermissions: appUser?.permissions || [],
   };
 }

@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { usePermission } from '@/hooks/usePermission';
+import { UserLevel } from '@/context/AuthContext';
 
 interface PermissionGateProps {
   /** 子元件 */
@@ -120,33 +121,54 @@ export const RoleGate: React.FC<{
   return <>{fallback}</>;
 };
 
-// 便捷的角色檢查元件
-export const AdminOnly: React.FC<{ children: React.ReactNode; fallback?: React.ReactNode }> = ({ children, fallback = null }) => {
-  const { isAdmin } = usePermission();
-  
-  if (isAdmin()) {
+/**
+ * 級別控制元件 (新增)
+ * 根據用戶級別決定是否渲染子元件
+ */
+export const LevelGate: React.FC<{
+  children: React.ReactNode;
+  requiredLevel: UserLevel;
+  fallback?: React.ReactNode;
+}> = ({ children, requiredLevel, fallback = null }) => {
+  const { hasAccess } = usePermission();
+
+  if (hasAccess(requiredLevel)) {
     return <>{children}</>;
   }
-  
+
   return <>{fallback}</>;
 };
 
-export const ForemanOnly: React.FC<{ children: React.ReactNode; fallback?: React.ReactNode }> = ({ children, fallback = null }) => (
-  <RoleGate roles={['生產領班']} fallback={fallback}>
+// 便捷的角色檢查元件 (簡化版)
+export const AdminOnly: React.FC<{ children: React.ReactNode; fallback?: React.ReactNode }> = ({ children, fallback = null }) => {
+  const { isAdmin } = usePermission();
+
+  if (isAdmin()) {
+    return <>{children}</>;
+  }
+
+  return <>{fallback}</>;
+};
+
+export const ManagerOnly: React.FC<{ children: React.ReactNode; fallback?: React.ReactNode }> = ({ children, fallback = null }) => (
+  <LevelGate requiredLevel="manager" fallback={fallback}>
     {children}
-  </RoleGate>
+  </LevelGate>
 );
 
-export const TimekeeperOnly: React.FC<{ children: React.ReactNode; fallback?: React.ReactNode }> = ({ children, fallback = null }) => (
-  <RoleGate roles={['計時人員']} fallback={fallback}>
+export const OperatorOnly: React.FC<{ children: React.ReactNode; fallback?: React.ReactNode }> = ({ children, fallback = null }) => (
+  <LevelGate requiredLevel="operator" fallback={fallback}>
     {children}
-  </RoleGate>
+  </LevelGate>
 );
 
+// 向後相容的別名
+export const ForemanOnly = ManagerOnly;
+export const TimekeeperOnly = OperatorOnly;
 export const AdminOrForeman: React.FC<{ children: React.ReactNode; fallback?: React.ReactNode }> = ({ children, fallback = null }) => (
-  <RoleGate roles={['系統管理員', '生產領班']} fallback={fallback}>
+  <LevelGate requiredLevel="manager" fallback={fallback}>
     {children}
-  </RoleGate>
+  </LevelGate>
 );
 
 export default PermissionGate;
