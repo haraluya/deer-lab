@@ -76,15 +76,36 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
 
       const payload = {
         purchaseOrderId: purchaseOrder.id,
-        items: data.items.map(item => {
-          // 🎯 簡化：直接使用 code 作為 ID，配合後端修復
+        items: data.items.map((item, index) => {
+          // 🔧 修復：優先使用 itemRef，備用代號查找
           let itemRefPath = '';
 
-          if (item.itemRef && item.itemRef.path) {
-            itemRefPath = item.itemRef.path;
-          } else if (item.code) {
-            // 使用 code 作為文檔 ID
-            itemRefPath = item.unit ? `materials/${item.code}` : `fragrances/${item.code}`;
+          // 處理各種可能的 itemRef 格式
+          if (item.itemRef) {
+            // Firebase DocumentReference 會有 _key 屬性
+            if (item.itemRef._key && item.itemRef._key.path && item.itemRef._key.path.segments) {
+              const segments = item.itemRef._key.path.segments;
+              itemRefPath = segments.join('/');
+              console.log(`項目 ${index} 使用 _key.path.segments: ${itemRefPath}`);
+            } else if (item.itemRef.path) {
+              itemRefPath = item.itemRef.path;
+              console.log(`項目 ${index} 使用 path: ${itemRefPath}`);
+            } else if (item.itemRef.id) {
+              // 只有 id 的情況，根據 unit 判斷類型
+              const collection = item.unit ? 'materials' : 'fragrances';
+              itemRefPath = `${collection}/${item.itemRef.id}`;
+              console.log(`項目 ${index} 使用 id: ${itemRefPath}`);
+            }
+          }
+
+          // 如果沒有 itemRefPath，使用備用方案
+          if (!itemRefPath && item.code) {
+            console.warn(`項目 ${index} "${item.name}" 缺少 itemRef，使用代號查找`);
+            // 根據單位判斷是材料還是香精
+            const isFragrance = !item.unit || item.unit === 'KG' || item.unit === 'kg';
+            const collection = isFragrance ? 'fragrances' : 'materials';
+            itemRefPath = `${collection}/${item.code}`;
+            toast.warning(`項目 "${item.name}" 使用代號查找，建議更新採購單`);
           }
 
           return {

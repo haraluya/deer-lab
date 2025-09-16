@@ -39,8 +39,10 @@ interface Product {
   }
   specificMaterials?: DocumentReference[]
   specificMaterialNames?: string[]
+  specificMaterialCodes?: string[]
   commonMaterials?: DocumentReference[]
   commonMaterialNames?: string[]
+  commonMaterialCodes?: string[]
 }
 
 interface ProductionPlan {
@@ -157,26 +159,29 @@ export function ProductionCapacityDialog({ isOpen, onClose }: ProductionCapacity
           }
         }
 
-        // 獲取專屬材料名稱
+        // 獲取專屬材料名稱和代號
         let specificMaterialNames: string[] = []
+        let specificMaterialCodes: string[] = []
         if (data.specificMaterials && data.specificMaterials.length > 0) {
           try {
             const materialDocs = await Promise.all(
               data.specificMaterials.map((ref: DocumentReference) => getDoc(ref))
             )
-            specificMaterialNames = materialDocs
-              .filter(doc => doc.exists())
-              .map(doc => {
+            materialDocs.forEach(doc => {
+              if (doc.exists()) {
                 const materialData = doc.data() as any
-                return materialData?.name || '未知材料'
-              })
+                specificMaterialNames.push(materialData?.name || '未知材料')
+                specificMaterialCodes.push(materialData?.code || doc.id)
+              }
+            })
           } catch (error) {
             console.error('獲取專屬材料失敗:', error)
           }
         }
 
-        // 獲取通用材料名稱
+        // 獲取通用材料名稱和代號
         let commonMaterialNames: string[] = []
+        let commonMaterialCodes: string[] = []
         let commonMaterialRefs: DocumentReference[] = []
         if (data.seriesRef) {
           try {
@@ -188,12 +193,13 @@ export function ProductionCapacityDialog({ isOpen, onClose }: ProductionCapacity
                 const materialDocs = await Promise.all(
                   seriesData.commonMaterials.map((ref: DocumentReference) => getDoc(ref))
                 )
-                commonMaterialNames = materialDocs
-                  .filter(doc => doc.exists())
-                  .map(doc => {
+                materialDocs.forEach(doc => {
+                  if (doc.exists()) {
                     const materialData = doc.data() as any
-                    return materialData?.name || '未知材料'
-                  })
+                    commonMaterialNames.push(materialData?.name || '未知材料')
+                    commonMaterialCodes.push(materialData?.code || doc.id)
+                  }
+                })
               }
             }
           } catch (error) {
@@ -214,8 +220,10 @@ export function ProductionCapacityDialog({ isOpen, onClose }: ProductionCapacity
           nicotineMg: data.nicotineMg || 0,
           specificMaterials: data.specificMaterials || [],
           specificMaterialNames: specificMaterialNames,
+          specificMaterialCodes: specificMaterialCodes,
           commonMaterials: commonMaterialRefs,
-          commonMaterialNames: commonMaterialNames
+          commonMaterialNames: commonMaterialNames,
+          commonMaterialCodes: commonMaterialCodes
         }
       }))
 
@@ -444,11 +452,20 @@ export function ProductionCapacityDialog({ isOpen, onClose }: ProductionCapacity
           }
 
           // 3. 其他材料（專屬材料和通用材料）
-          // 專屬材料
-          if (product.specificMaterialNames && product.specificMaterialNames.length > 0) {
-            product.specificMaterialNames.forEach(materialName => {
-              // ⚠️ 警告：使用名稱匹配可能不準確！建議改為儲存材料代號
-              const material = materials.find(m => m.name === materialName)
+          // 專屬材料 - 優先使用代號，備用名稱
+          const specificMaterialsToProcess = (product.specificMaterialCodes && product.specificMaterialCodes.length > 0)
+            ? product.specificMaterialCodes
+            : product.specificMaterialNames || []
+
+          if (specificMaterialsToProcess.length > 0) {
+            specificMaterialsToProcess.forEach((materialIdentifier, index) => {
+              // 優先使用代號匹配，備用名稱匹配
+              const material = materials.find(m => {
+                if (product.specificMaterialCodes && product.specificMaterialCodes.length > 0) {
+                  return m.code === materialIdentifier
+                }
+                return m.name === materialIdentifier || m.code === materialIdentifier
+              })
               if (material) {
                 let requiredQuantity = plan.targetQuantity
                 const key = `material-${material.id}`
@@ -475,11 +492,20 @@ export function ProductionCapacityDialog({ isOpen, onClose }: ProductionCapacity
             })
           }
 
-          // 通用材料
-          if (product.commonMaterialNames && product.commonMaterialNames.length > 0) {
-            product.commonMaterialNames.forEach(materialName => {
-              // ⚠️ 警告：使用名稱匹配可能不準確！建議改為儲存材料代號
-              const material = materials.find(m => m.name === materialName)
+          // 通用材料 - 優先使用代號，備用名稱
+          const commonMaterialsToProcess = (product.commonMaterialCodes && product.commonMaterialCodes.length > 0)
+            ? product.commonMaterialCodes
+            : product.commonMaterialNames || []
+
+          if (commonMaterialsToProcess.length > 0) {
+            commonMaterialsToProcess.forEach((materialIdentifier, index) => {
+              // 優先使用代號匹配，備用名稱匹配
+              const material = materials.find(m => {
+                if (product.commonMaterialCodes && product.commonMaterialCodes.length > 0) {
+                  return m.code === materialIdentifier
+                }
+                return m.name === materialIdentifier || m.code === materialIdentifier
+              })
               if (material) {
                 let requiredQuantity = plan.targetQuantity
                 const key = `material-${material.id}`

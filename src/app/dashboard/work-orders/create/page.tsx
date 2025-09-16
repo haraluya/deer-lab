@@ -34,8 +34,10 @@ interface Product {
   }
   specificMaterials?: DocumentReference[] // 專屬材料參考
   specificMaterialNames?: string[] // 專屬材料名稱
+  specificMaterialCodes?: string[] // 專屬材料代號
   commonMaterials?: DocumentReference[] // 通用材料參考
   commonMaterialNames?: string[] // 通用材料名稱
+  commonMaterialCodes?: string[] // 通用材料代號
 }
 
 interface Material {
@@ -134,26 +136,29 @@ export default function CreateWorkOrderPage() {
             }
           }
 
-          // 獲取專屬材料名稱
+          // 獲取專屬材料名稱和代號
           let specificMaterialNames: string[] = []
+          let specificMaterialCodes: string[] = []
           if (data.specificMaterials && data.specificMaterials.length > 0) {
             try {
               const materialDocs = await Promise.all(
                 data.specificMaterials.map((ref: DocumentReference) => getDoc(ref))
               )
-              specificMaterialNames = materialDocs
-                .filter(doc => doc.exists())
-                .map(doc => {
+              materialDocs.forEach(doc => {
+                if (doc.exists()) {
                   const materialData = doc.data() as any
-                  return materialData?.name || '未知材料'
-                })
+                  specificMaterialNames.push(materialData?.name || '未知材料')
+                  specificMaterialCodes.push(materialData?.code || doc.id)
+                }
+              })
             } catch (error) {
               console.error('獲取專屬材料失敗:', error)
             }
           }
 
-          // 獲取通用材料名稱
+          // 獲取通用材料名稱和代號
           let commonMaterialNames: string[] = []
+          let commonMaterialCodes: string[] = []
           let commonMaterialRefs: DocumentReference[] = []
           if (data.seriesRef) {
             try {
@@ -165,12 +170,13 @@ export default function CreateWorkOrderPage() {
                   const materialDocs = await Promise.all(
                     seriesData.commonMaterials.map((ref: DocumentReference) => getDoc(ref))
                   )
-                  commonMaterialNames = materialDocs
-                    .filter(doc => doc.exists())
-                    .map(doc => {
+                  materialDocs.forEach(doc => {
+                    if (doc.exists()) {
                       const materialData = doc.data() as any
-                      return materialData?.name || '未知材料'
-                    })
+                      commonMaterialNames.push(materialData?.name || '未知材料')
+                      commonMaterialCodes.push(materialData?.code || doc.id)
+                    }
+                  })
                 }
               }
             } catch (error) {
@@ -191,8 +197,10 @@ export default function CreateWorkOrderPage() {
             nicotineMg: data.nicotineMg || 0,
             specificMaterials: data.specificMaterials || [],
             specificMaterialNames: specificMaterialNames,
+            specificMaterialCodes: specificMaterialCodes,
             commonMaterials: commonMaterialRefs,
-            commonMaterialNames: commonMaterialNames
+            commonMaterialNames: commonMaterialNames,
+            commonMaterialCodes: commonMaterialCodes
           }
         }))
         setProducts(productsList)
@@ -253,7 +261,9 @@ export default function CreateWorkOrderPage() {
         fragranceName: selectedProduct.fragranceName,
         fragranceCode: selectedProduct.fragranceCode,
         specificMaterialNames: selectedProduct.specificMaterialNames,
-        commonMaterialNames: selectedProduct.commonMaterialNames
+        specificMaterialCodes: selectedProduct.specificMaterialCodes,
+        commonMaterialNames: selectedProduct.commonMaterialNames,
+        commonMaterialCodes: selectedProduct.commonMaterialCodes
       }, 
       materialsCount: materials.length,
       fragrancesCount: fragrances.length,
@@ -409,23 +419,33 @@ export default function CreateWorkOrderPage() {
 
     // 3. 其他材料（專屬材料和通用材料）- 根據實際需求計算
     // 專屬材料
+    console.log('專屬材料代號:', selectedProduct.specificMaterialCodes)
     console.log('專屬材料名稱:', selectedProduct.specificMaterialNames)
-    if (selectedProduct.specificMaterialNames && selectedProduct.specificMaterialNames.length > 0) {
-      selectedProduct.specificMaterialNames.forEach(materialName => {
-        // 🔧 修復：多重匹配策略，因為 materialName 實際上是材料的「名稱」而非代號
-        const material = materials.find(m =>
-          m.name === materialName ||  // 優先匹配名稱（當前實際儲存的內容）
-          m.code === materialName ||  // 備用：代號匹配
-          m.id === materialName       // 備用：ID匹配
-        )
+
+    // 優先使用代號，備用名稱
+    const specificMaterialsToProcess = (selectedProduct.specificMaterialCodes && selectedProduct.specificMaterialCodes.length > 0)
+      ? selectedProduct.specificMaterialCodes
+      : selectedProduct.specificMaterialNames || []
+
+    if (specificMaterialsToProcess.length > 0) {
+      specificMaterialsToProcess.forEach((materialIdentifier, index) => {
+        // 🔧 優先使用代號匹配，備用名稱匹配
+        const material = materials.find(m => {
+          // 如果有代號，優先用代號匹配
+          if (selectedProduct.specificMaterialCodes && selectedProduct.specificMaterialCodes.length > 0) {
+            return m.code === materialIdentifier
+          }
+          // 否則用名稱匹配（向後相容）
+          return m.name === materialIdentifier || m.code === materialIdentifier || m.id === materialIdentifier
+        })
         console.log('專屬材料匹配:', {
-          materialName,
+          materialIdentifier,
           foundMaterial: material ? {
             id: material.id,
             code: material.code,
             name: material.name
           } : null,
-          allMaterialNames: materials.map(m => m.name).slice(0, 5) // 顯示前5個材料名稱供除錯
+          usingCode: !!(selectedProduct.specificMaterialCodes && selectedProduct.specificMaterialCodes.length > 0)
         })
         if (material) {
           // 根據物料類型計算需求量
@@ -457,28 +477,39 @@ export default function CreateWorkOrderPage() {
           })
           console.log('添加專屬材料:', material.name, requiredQuantity, unit)
         } else {
-          console.log('找不到專屬材料:', materialName)
+          console.log('找不到專屬材料:', materialIdentifier)
         }
       })
     }
 
     // 通用材料
+    console.log('通用材料代號:', selectedProduct.commonMaterialCodes)
     console.log('通用材料名稱:', selectedProduct.commonMaterialNames)
-    if (selectedProduct.commonMaterialNames && selectedProduct.commonMaterialNames.length > 0) {
-      selectedProduct.commonMaterialNames.forEach(materialName => {
-        // 🔧 修復：多重匹配策略，因為 materialName 實際上是材料的「名稱」而非代號
-        const material = materials.find(m =>
-          m.name === materialName ||  // 優先匹配名稱（當前實際儲存的內容）
-          m.code === materialName ||  // 備用：代號匹配
-          m.id === materialName       // 備用：ID匹配
-        )
+
+    // 優先使用代號，備用名稱
+    const commonMaterialsToProcess = (selectedProduct.commonMaterialCodes && selectedProduct.commonMaterialCodes.length > 0)
+      ? selectedProduct.commonMaterialCodes
+      : selectedProduct.commonMaterialNames || []
+
+    if (commonMaterialsToProcess.length > 0) {
+      commonMaterialsToProcess.forEach((materialIdentifier, index) => {
+        // 🔧 優先使用代號匹配，備用名稱匹配
+        const material = materials.find(m => {
+          // 如果有代號，優先用代號匹配
+          if (selectedProduct.commonMaterialCodes && selectedProduct.commonMaterialCodes.length > 0) {
+            return m.code === materialIdentifier
+          }
+          // 否則用名稱匹配（向後相容）
+          return m.name === materialIdentifier || m.code === materialIdentifier || m.id === materialIdentifier
+        })
         console.log('通用材料匹配:', {
-          materialName,
+          materialIdentifier,
           foundMaterial: material ? {
             id: material.id,
             code: material.code,
             name: material.name
-          } : null
+          } : null,
+          usingCode: !!(selectedProduct.commonMaterialCodes && selectedProduct.commonMaterialCodes.length > 0)
         })
         if (material) {
           // 根據物料類型計算需求量
@@ -510,7 +541,7 @@ export default function CreateWorkOrderPage() {
           })
           console.log('添加通用材料:', material.name, requiredQuantity, unit)
         } else {
-          console.log('找不到通用材料:', materialName)
+          console.log('找不到通用材料:', materialIdentifier)
         }
       })
     }

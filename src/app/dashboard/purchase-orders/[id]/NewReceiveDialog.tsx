@@ -88,12 +88,20 @@ export function NewReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrde
             }
           }
 
-          // 如果還是沒有 itemRefPath，記錄警告
+          // 🔧 修復：如果沒有 itemRefPath，根據類型和代號建構路徑
           if (!itemRefPath) {
-            console.error('⚠️ 無法從項目生成 itemRefPath:', item);
-            // 不應該使用代號作為ID - 這會導致查找失敗
-            // 如果沒有 itemRef，這個項目可能有問題
-            toast.error(`項目 "${item.name}" 缺少有效的物料/香精參考`);
+            console.error('⚠️ 無法從項目生成 itemRefPath，嘗試使用備用方案:', item);
+
+            // 根據單位判斷是材料還是香精
+            // 香精通常沒有單位或單位為 KG，材料有各種單位
+            const isFragrance = !item.unit || item.unit === 'KG' || item.unit === 'kg';
+            const collection = isFragrance ? 'fragrances' : 'materials';
+
+            // 使用代號作為備用方案（後端會用代號查找實際ID）
+            itemRefPath = `${collection}/${item.code}`;
+
+            console.warn(`使用備用路徑: ${itemRefPath}`);
+            toast.warning(`項目 "${item.name}" 使用代號查找，建議更新採購單以包含正確的物料參考`);
           }
 
           return {

@@ -36,10 +36,12 @@ interface Product {
   targetProduction?: number;
   specificMaterials?: DocumentReference[];
   specificMaterialNames?: string[];
+  specificMaterialCodes?: string[];  // 新增：專屬材料代號
   specificMaterialStocks?: { [key: string]: number };
   specificMaterialUnits?: { [key: string]: string };
   commonMaterials?: DocumentReference[];
   commonMaterialNames?: string[];
+  commonMaterialCodes?: string[];  // 新增：通用材料代號
   commonMaterialStocks?: { [key: string]: number };
   commonMaterialUnits?: { [key: string]: string };
   description?: string;
@@ -200,8 +202,9 @@ export default function ProductDetailPage() {
           }
         }
 
-        // 獲取專屬材料名稱、庫存和單位
+        // 獲取專屬材料名稱、代號、庫存和單位
         let specificMaterialNames: string[] = [];
+        let specificMaterialCodes: string[] = [];
         let specificMaterialStocks: { [key: string]: number } = {};
         let specificMaterialUnits: { [key: string]: string } = {};
         if (data.specificMaterials && data.specificMaterials.length > 0) {
@@ -209,21 +212,23 @@ export default function ProductDetailPage() {
             const materialDocs = await Promise.all(
               data.specificMaterials.map((ref: DocumentReference) => getDoc(ref))
             );
-            specificMaterialNames = materialDocs
-              .filter(doc => doc.exists())
-              .map(doc => {
+            materialDocs.forEach(doc => {
+              if (doc.exists()) {
                 const materialData = doc.data() as any;
+                specificMaterialNames.push(materialData?.name || '未知材料');
+                specificMaterialCodes.push(materialData?.code || doc.id);
                 specificMaterialStocks[doc.id] = materialData?.currentStock || 0;
                 specificMaterialUnits[doc.id] = materialData?.unit || '個';
-                return materialData?.name || '未知材料';
-              });
+              }
+            });
           } catch (error) {
             console.error('Failed to fetch specific materials:', error);
           }
         }
 
-        // 獲取通用材料名稱、庫存和單位
+        // 獲取通用材料名稱、代號、庫存和單位
         let commonMaterialNames: string[] = [];
+        let commonMaterialCodes: string[] = [];
         let commonMaterialStocks: { [key: string]: number } = {};
         let commonMaterialUnits: { [key: string]: string } = {};
         let commonMaterialRefs: DocumentReference[] = [];
@@ -237,14 +242,15 @@ export default function ProductDetailPage() {
                 const materialDocs = await Promise.all(
                   seriesData.commonMaterials.map((ref: DocumentReference) => getDoc(ref))
                 );
-                commonMaterialNames = materialDocs
-                  .filter(doc => doc.exists())
-                  .map(doc => {
+                materialDocs.forEach(doc => {
+                  if (doc.exists()) {
                     const materialData = doc.data() as any;
+                    commonMaterialNames.push(materialData?.name || '未知材料');
+                    commonMaterialCodes.push(materialData?.code || doc.id);
                     commonMaterialStocks[doc.id] = materialData?.currentStock || 0;
                     commonMaterialUnits[doc.id] = materialData?.unit || '個';
-                    return materialData?.name || '未知材料';
-                  });
+                  }
+                });
               }
             }
           } catch (error) {
@@ -283,10 +289,12 @@ export default function ProductDetailPage() {
           targetProduction: data.targetProduction || 1,
           specificMaterials: data.specificMaterials || [],
           specificMaterialNames,
+          specificMaterialCodes,
           specificMaterialStocks,
           specificMaterialUnits,
           commonMaterials: commonMaterialRefs,
           commonMaterialNames,
+          commonMaterialCodes,
           commonMaterialStocks,
           commonMaterialUnits,
           description: data.description,

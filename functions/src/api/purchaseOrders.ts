@@ -159,30 +159,34 @@ export const receivePurchaseOrderItems = onCall(async (request) => {
     for (const item of validItems) {
       logger.info(`預處理項目：${item.code} - itemRefPath: ${item.itemRefPath}`);
 
+      // 🔧 修復：強制要求有效的 itemRefPath
+      if (!item.itemRefPath || !item.itemRefPath.includes('/')) {
+        throw new HttpsError(
+          "invalid-argument",
+          `項目 "${item.name || item.code}" 缺少有效的物料參考路徑。請確認採購單項目包含正確的 itemRef。`
+        );
+      }
+
       // 根據 itemRefPath 確定物料類型
       const itemType = item.itemRefPath.includes('materials') ? 'material' : 'fragrance';
       const collection = itemType === 'material' ? 'materials' : 'fragrances';
 
-      let itemId = '';
+      // 從 itemRefPath 中提取 ID
+      const pathParts = item.itemRefPath.split('/');
+      const itemId = pathParts[pathParts.length - 1];
 
-      // 先嘗試從 itemRefPath 中提取 ID
-      if (item.itemRefPath && item.itemRefPath.includes('/')) {
-        const pathParts = item.itemRefPath.split('/');
-        const potentialId = pathParts[pathParts.length - 1];
-
-        // 檢查這個 ID 是否存在
-        if (potentialId && potentialId !== item.code) {
-          const testDoc = await db.doc(`${collection}/${potentialId}`).get();
-          if (testDoc.exists) {
-            itemId = potentialId;
-            logger.info(`✅ 使用路徑 ID: ${collection}/${itemId}`);
-          }
-        }
+      if (!itemId) {
+        throw new HttpsError(
+          "invalid-argument",
+          `無法從路徑 "${item.itemRefPath}" 提取有效的項目 ID`
+        );
       }
 
-      // 如果沒有找到有效的 ID，使用代號查找
-      if (!itemId) {
-        logger.info(`使用代號 ${item.code} 在 ${collection} 中查找...`);
+      // 驗證這個 ID 是否存在
+      const testDoc = await db.doc(`${collection}/${itemId}`).get();
+      if (!testDoc.exists) {
+        // 🔧 優先使用代號查找作為備用方案
+        logger.warn(`路徑 ID ${itemId} 不存在，嘗試使用代號 ${item.code} 查找...`);
 
         const querySnapshot = await db.collection(collection)
           .where('code', '==', item.code)
@@ -190,19 +194,29 @@ export const receivePurchaseOrderItems = onCall(async (request) => {
           .get();
 
         if (!querySnapshot.empty) {
-          itemId = querySnapshot.docs[0].id;
-          logger.info(`✅ 使用代號找到: ${collection}/${itemId}`);
+          const foundId = querySnapshot.docs[0].id;
+          logger.info(`✅ 使用代號找到: ${collection}/${foundId}`);
+          itemRefsMap.set(item.code, {
+            itemId: foundId,
+            collection,
+            itemType,
+            receivedQuantity: Number(item.receivedQuantity)
+          });
         } else {
-          logger.warn(`❌ 找不到項目 - 代號: ${item.code}, 集合: ${collection}`);
+          throw new HttpsError(
+            "not-found",
+            `找不到項目：代號 "${item.code}"，路徑 "${item.itemRefPath}"`
+          );
         }
+      } else {
+        logger.info(`✅ 使用路徑 ID: ${collection}/${itemId}`);
+        itemRefsMap.set(item.code, {
+          itemId,
+          collection,
+          itemType,
+          receivedQuantity: Number(item.receivedQuantity)
+        });
       }
-
-      itemRefsMap.set(item.code, {
-        itemId,
-        collection,
-        itemType,
-        receivedQuantity: Number(item.receivedQuantity)
-      });
     }
 
     // 🔧 修復：使用單一事務處理所有操作，嚴格遵循 Firestore 事務規則（先讀後寫）
