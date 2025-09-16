@@ -324,6 +324,15 @@ export function hasPermission(permissions: string[], requiredPermission: string)
 }
 
 /**
+ * 根據角色ID取得預設角色
+ * @param roleId 角色ID
+ * @returns Role | undefined
+ */
+export function getDefaultRoleById(roleId: string): Role | undefined {
+  return DEFAULT_ROLES.find(role => role.id === roleId);
+}
+
+/**
  * 根據角色名稱取得預設角色
  * @param roleName 角色名稱
  * @returns Role | undefined
@@ -334,11 +343,12 @@ export function getDefaultRoleByName(roleName: string): Role | undefined {
 
 /**
  * 取得角色的顏色類別
- * @param roleName 角色名稱
+ * @param roleIdentifier 角色ID或角色名稱
  * @returns string
  */
-export function getRoleColor(roleName: string): string {
-  const role = getDefaultRoleByName(roleName);
+export function getRoleColor(roleIdentifier: string): string {
+  // 優先使用ID查找，備用名稱查找
+  const role = getDefaultRoleById(roleIdentifier) || getDefaultRoleByName(roleIdentifier);
   return role?.color || '#6b7280'; // 預設為 gray-500
 }
 

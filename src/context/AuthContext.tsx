@@ -123,9 +123,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         // 最終權限檢查：為特定管理員帳號提供備用權限
         const isSpecificAdminAccount = (
-          userData.employeeId === '052' || 
-          userData.employeeId === 'admin' || 
-          userData.name === '系統管理員' || 
+          userData.employeeId === '052' ||
+          userData.employeeId === 'admin' ||
+          userData.name === '系統管理員' ||
           userData.employeeId === 'administrator' ||
           userData.email?.includes('admin') ||
           userData.name?.includes('管理員')

@@ -85,10 +85,38 @@ export function ReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrder }
             // Firebase DocumentReference 會有 _key 屬性
             if (item.itemRef._key && item.itemRef._key.path && item.itemRef._key.path.segments) {
               const segments = item.itemRef._key.path.segments;
-              itemRefPath = segments.join('/');
-              console.log(`項目 ${index} 使用 _key.path.segments: ${itemRefPath}`);
+
+              // 🔧 修復：從完整路徑中提取相對路徑 (collection/documentId)
+              // 完整路徑格式: projects/PROJECT_ID/databases/(default)/documents/COLLECTION/DOCUMENT_ID
+              // 我們需要: COLLECTION/DOCUMENT_ID
+              const fullPath = segments.join('/');
+              console.log(`項目 ${index} 完整路徑: ${fullPath}`);
+
+              // 查找 "documents/" 之後的部分
+              const documentsIndex = segments.indexOf('documents');
+              if (documentsIndex !== -1 && documentsIndex + 2 < segments.length) {
+                const collection = segments[documentsIndex + 1];
+                const documentId = segments[documentsIndex + 2];
+                itemRefPath = `${collection}/${documentId}`;
+                console.log(`項目 ${index} ✅ 提取相對路徑: ${itemRefPath}`);
+              } else {
+                console.warn(`項目 ${index} 無法從 segments 提取相對路徑:`, segments);
+                itemRefPath = fullPath; // 備用方案
+              }
             } else if (item.itemRef.path) {
-              itemRefPath = item.itemRef.path;
+              // 標準 path 屬性 - 檢查是否為完整路徑
+              let path = item.itemRef.path;
+
+              // 🔧 修復：如果是完整路徑，提取相對部分
+              if (path.includes('projects/') && path.includes('/documents/')) {
+                const documentsIndex = path.indexOf('/documents/');
+                if (documentsIndex !== -1) {
+                  path = path.substring(documentsIndex + 11); // "/documents/".length = 11
+                  console.log(`項目 ${index} ✅ 從 path 提取相對路徑: ${path}`);
+                }
+              }
+
+              itemRefPath = path;
               console.log(`項目 ${index} 使用 path: ${itemRefPath}`);
             } else if (item.itemRef.id) {
               // 只有 id 的情況，根據 unit 判斷類型

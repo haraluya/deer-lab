@@ -839,19 +839,49 @@ export default function WorkOrderDetailPage() {
       console.log('重新載入BOM表 - 工單中的產品快照:', productSnapshotData);
       
       // 2. 從香精集合中獲取完整的香精配方資料
+      // 🔧 修復：優先使用 fragranceId，備用 fragranceCode
       let fragranceFormulaData = null;
-      if (productSnapshotData.fragranceCode && productSnapshotData.fragranceCode !== '未指定') {
-        console.log('重新載入BOM表 - 開始查詢香精:', productSnapshotData.fragranceCode);
-        
+
+      // 第一優先：使用香精ID查找
+      // 🔧 使用安全的屬性存取，因為舊的工單可能沒有 fragranceId
+      if ((productSnapshotData as any).fragranceId) {
+        console.log('重新載入BOM表 - 使用香精ID查詢:', (productSnapshotData as any).fragranceId);
+
+        try {
+          const fragranceDocRef = doc(db, "fragrances", (productSnapshotData as any).fragranceId);
+          const fragranceDocSnap = await getDoc(fragranceDocRef);
+
+          if (fragranceDocSnap.exists()) {
+            fragranceFormulaData = fragranceDocSnap.data();
+            console.log('重新載入BOM表 - 通過ID成功獲取香精配方資料:', {
+              id: fragranceDocSnap.id,
+              code: fragranceFormulaData.code,
+              name: fragranceFormulaData.name,
+              percentage: fragranceFormulaData.percentage,
+              pgRatio: fragranceFormulaData.pgRatio,
+              vgRatio: fragranceFormulaData.vgRatio
+            });
+          } else {
+            console.warn('重新載入BOM表 - 香精ID不存在:', (productSnapshotData as any).fragranceId);
+          }
+        } catch (error) {
+          console.error('重新載入BOM表 - 通過ID查詢香精失敗:', error);
+        }
+      }
+
+      // 第二優先：使用香精代號查找（備用方案）
+      if (!fragranceFormulaData && productSnapshotData.fragranceCode && productSnapshotData.fragranceCode !== '未指定') {
+        console.log('重新載入BOM表 - 使用香精代號查詢:', productSnapshotData.fragranceCode);
+
         const fragranceQuery = query(
           collection(db, "fragrances"),
           where("code", "==", productSnapshotData.fragranceCode)
         );
         const fragranceSnapshot = await getDocs(fragranceQuery);
-        
+
         if (!fragranceSnapshot.empty) {
           fragranceFormulaData = fragranceSnapshot.docs[0].data();
-          console.log('重新載入BOM表 - 成功獲取香精配方資料:', {
+          console.log('重新載入BOM表 - 通過代號成功獲取香精配方資料:', {
             code: fragranceFormulaData.code,
             name: fragranceFormulaData.name,
             percentage: fragranceFormulaData.percentage,
@@ -861,14 +891,18 @@ export default function WorkOrderDetailPage() {
         } else {
           console.log('重新載入BOM表 - 在香精集合中找不到對應的香精:', productSnapshotData.fragranceCode);
         }
-      } else {
-        console.log('重新載入BOM表 - 香精代號未指定或為空');
+      }
+
+      if (!fragranceFormulaData) {
+        console.log('重新載入BOM表 - 無法找到香精資料，ID:', (productSnapshotData as any).fragranceId, '代號:', productSnapshotData.fragranceCode);
       }
       
       // 3. 構建完整的產品資料
+      // 🔧 修復：加入 fragranceId，優先使用ID進行香精匹配
       const productData = {
         name: productSnapshotData.name,
-        fragranceName: productSnapshotData.fragranceName,
+        fragranceId: (productSnapshotData as any).fragranceId, // 新增（安全存取）
+        fragranceName: productSnapshotData.fragranceName, // 保留供顯示
         fragranceCode: productSnapshotData.fragranceCode,
         nicotineMg: productSnapshotData.nicotineMg,
         fragranceFormula: fragranceFormulaData || null
@@ -954,9 +988,11 @@ export default function WorkOrderDetailPage() {
   }, [workOrder, workOrderId, fetchWorkOrder]);
 
   // 計算物料需求的輔助函數 - 完全重新計算，如同建立工單時一樣
+  // 🔧 修復：加入 fragranceId 支援
   const calculateMaterialRequirements = async (productData: {
     name: string;
-    fragranceName: string;
+    fragranceId?: string; // 新增
+    fragranceName: string; // 保留供顯示
     fragranceCode: string;
     nicotineMg: number;
     fragranceFormula?: any;

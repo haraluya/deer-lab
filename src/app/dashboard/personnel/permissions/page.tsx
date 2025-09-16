@@ -185,17 +185,90 @@ function PermissionsPageContent() {
 
   // 初始化預設角色
   const initializeRoles = async () => {
+    console.log('🚀 開始初始化預設角色');
+
+    // 直接使用本地 Firestore 初始化，不依賴 Functions
     try {
-      const result = await apiClient.call('initializeDefaultRoles');
-      
-      if (result.success && result.data) {
-        if (result.data.status === 'success') {
-          toast.success(`成功初始化 ${result.data.roles?.length || 0} 個預設角色`);
-          await fetchRoles();
-        } else if (result.data.status === 'skipped') {
-          toast.info('系統已有角色，跳過初始化');
-        }
+      const { getFirestore, collection, doc, setDoc, getDocs, serverTimestamp } = await import('firebase/firestore');
+      const db = getFirestore();
+
+      // 檢查是否已有角色
+      const rolesCollection = collection(db, 'roles');
+      const existingRoles = await getDocs(rolesCollection);
+
+      if (!existingRoles.empty) {
+        toast.info('系統已有角色，跳過初始化');
+        return;
       }
+
+      console.log('📋 開始建立預設角色（本地模式）');
+
+      // 定義預設角色
+      const defaultRoles = [
+        {
+          name: "admin",
+          displayName: "系統管理員",
+          description: "擁有系統全部權限，可管理所有功能和用戶",
+          permissions: [
+            "personnel.view", "personnel.manage", "personnel.create", "personnel.edit", "personnel.delete",
+            "roles.view", "roles.manage", "roles.create", "roles.edit", "roles.delete",
+            "time.view", "time.manage", "time.create", "time.edit", "time.delete",
+            "materials.view", "materials.manage", "materials.create", "materials.edit", "materials.delete",
+            "products.view", "products.manage", "products.create", "products.edit", "products.delete",
+            "suppliers.view", "suppliers.manage", "suppliers.create", "suppliers.edit", "suppliers.delete",
+            "workOrders.view", "workOrders.manage", "workOrders.create", "workOrders.edit", "workOrders.delete",
+            "purchaseOrders.view", "purchaseOrders.manage", "purchaseOrders.create", "purchaseOrders.edit", "purchaseOrders.delete",
+            "inventory.view", "inventory.manage",
+            "system.settings", "system.admin"
+          ],
+          color: "#dc2626",
+          isDefault: true,
+          createdAt: serverTimestamp()
+        },
+        {
+          name: "foreman",
+          displayName: "生產領班",
+          description: "負責生產管理，可管理工單、物料、產品",
+          permissions: [
+            "workOrders.view", "workOrders.manage", "workOrders.create", "workOrders.edit",
+            "materials.view", "materials.manage", "materials.create", "materials.edit",
+            "products.view", "products.manage", "products.create", "products.edit",
+            "inventory.view", "inventory.manage",
+            "time.view", "time.manage"
+          ],
+          color: "#2563eb",
+          isDefault: true,
+          createdAt: serverTimestamp()
+        },
+        {
+          name: "timekeeper",
+          displayName: "計時人員",
+          description: "主要負責工時記錄，可查看生產資料",
+          permissions: [
+            "time.view", "time.manage", "time.create", "time.edit",
+            "workOrders.view",
+            "materials.view",
+            "products.view",
+            "inventory.view"
+          ],
+          color: "#059669",
+          isDefault: true,
+          createdAt: serverTimestamp()
+        }
+      ];
+
+      // 批次建立角色
+      let createdCount = 0;
+      for (const role of defaultRoles) {
+        const roleRef = doc(rolesCollection);
+        await setDoc(roleRef, role);
+        createdCount++;
+        console.log(`✅ 建立角色: ${role.displayName}`);
+      }
+
+      toast.success(`成功初始化 ${createdCount} 個預設角色`);
+      await fetchRoles(); // 重新載入角色列表
+
     } catch (error) {
       console.error('初始化角色錯誤:', error);
       
@@ -880,6 +953,113 @@ function PermissionsPageContent() {
 }
 
 export default function PermissionsPage() {
+  const { isAdmin } = usePermission();
+  const [roles, setRoles] = useState<Role[]>([]);
+  const apiClient = useApiForm();
+
+  // 檢查角色列表
+  useEffect(() => {
+    const checkRoles = async () => {
+      try {
+        const { getFirestore, collection, getDocs } = await import('firebase/firestore');
+        const db = getFirestore();
+        const rolesSnapshot = await getDocs(collection(db, 'roles'));
+        setRoles(rolesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Role)));
+      } catch (error) {
+        console.error('檢查角色失敗:', error);
+      }
+    };
+    checkRoles();
+  }, []);
+
+  // 緊急初始化角色功能
+  const emergencyInitializeRoles = async () => {
+    try {
+      const { getFirestore, collection, doc, setDoc, serverTimestamp } = await import('firebase/firestore');
+      const db = getFirestore();
+
+      const defaultRoles = [
+        {
+          name: "admin",
+          displayName: "系統管理員",
+          description: "擁有系統全部權限，可管理所有功能和用戶",
+          permissions: [
+            "personnel.view", "personnel.manage", "personnel.create", "personnel.edit", "personnel.delete",
+            "roles.view", "roles.manage", "roles.create", "roles.edit", "roles.delete",
+            "time.view", "time.manage", "time.create", "time.edit", "time.delete",
+            "materials.view", "materials.manage", "materials.create", "materials.edit", "materials.delete",
+            "products.view", "products.manage", "products.create", "products.edit", "products.delete",
+            "suppliers.view", "suppliers.manage", "suppliers.create", "suppliers.edit", "suppliers.delete",
+            "workOrders.view", "workOrders.manage", "workOrders.create", "workOrders.edit", "workOrders.delete",
+            "purchaseOrders.view", "purchaseOrders.manage", "purchaseOrders.create", "purchaseOrders.edit", "purchaseOrders.delete",
+            "inventory.view", "inventory.manage", "system.settings", "system.admin"
+          ],
+          color: "#dc2626",
+          isDefault: true,
+          createdAt: serverTimestamp()
+        },
+        {
+          name: "foreman",
+          displayName: "生產領班",
+          description: "負責生產管理，可管理工單、物料、產品",
+          permissions: [
+            "workOrders.view", "workOrders.manage", "workOrders.create", "workOrders.edit",
+            "materials.view", "materials.manage", "materials.create", "materials.edit",
+            "products.view", "products.manage", "products.create", "products.edit",
+            "inventory.view", "inventory.manage", "time.view", "time.manage"
+          ],
+          color: "#2563eb",
+          isDefault: true,
+          createdAt: serverTimestamp()
+        },
+        {
+          name: "timekeeper",
+          displayName: "計時人員",
+          description: "主要負責工時記錄，可查看生產資料",
+          permissions: [
+            "time.view", "time.manage", "time.create", "time.edit",
+            "workOrders.view", "materials.view", "products.view", "inventory.view"
+          ],
+          color: "#059669",
+          isDefault: true,
+          createdAt: serverTimestamp()
+        }
+      ];
+
+      for (const role of defaultRoles) {
+        const roleRef = doc(collection(db, 'roles'));
+        await setDoc(roleRef, role);
+      }
+
+      toast.success('緊急初始化完成！請刷新頁面。');
+      setTimeout(() => window.location.reload(), 2000);
+    } catch (error) {
+      console.error('緊急初始化失敗:', error);
+      toast.error('緊急初始化失敗');
+    }
+  };
+
+  // 如果沒有角色且用戶不是管理員，顯示緊急初始化界面
+  if (roles.length === 0 && !isAdmin()) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-6 p-8">
+        <AlertTriangle className="h-16 w-16 text-orange-500" />
+        <div className="text-center space-y-4">
+          <h2 className="text-xl font-semibold text-foreground">系統需要初始化</h2>
+          <p className="text-muted-foreground">檢測到系統尚未配置角色，需要進行初始化設定。</p>
+          <Button
+            onClick={emergencyInitializeRoles}
+            disabled={apiClient.loading}
+            className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            緊急初始化系統角色
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <AdminOnly fallback={
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">

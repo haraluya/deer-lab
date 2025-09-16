@@ -134,6 +134,18 @@ export const receivePurchaseOrderItems = onCall(async (request) => {
 
   const { purchaseOrderId, items } = data;
 
+  // 🔍 調試：記錄收到的資料
+  logger.info(`收到收貨請求:`, {
+    purchaseOrderId,
+    itemsCount: Array.isArray(items) ? items.length : 'not-array',
+    items: items ? items.map(item => ({
+      itemRefPath: item.itemRefPath,
+      code: item.code,
+      name: item.name,
+      receivedQuantity: item.receivedQuantity
+    })) : 'no-items'
+  });
+
   if (!purchaseOrderId || !Array.isArray(items)) {
     throw new HttpsError("invalid-argument", "缺少或無效的參數。");
   }
@@ -147,6 +159,17 @@ export const receivePurchaseOrderItems = onCall(async (request) => {
   try {
     // 🎯 準備庫存更新項目
     const validItems = items.filter(item => item.itemRefPath && Number(item.receivedQuantity) > 0);
+
+    // 🔍 調試：記錄有效項目
+    logger.info(`有效項目篩選結果:`, {
+      totalItems: items.length,
+      validItems: validItems.length,
+      invalidItems: items.filter(item => !item.itemRefPath || Number(item.receivedQuantity) <= 0).map(item => ({
+        itemRefPath: item.itemRefPath,
+        receivedQuantity: item.receivedQuantity,
+        reason: !item.itemRefPath ? 'missing-itemRefPath' : 'invalid-quantity'
+      }))
+    });
 
     if (validItems.length === 0) {
       throw new HttpsError("invalid-argument", "沒有有效的入庫項目。");
@@ -369,7 +392,19 @@ export const receivePurchaseOrderItems = onCall(async (request) => {
       }))
     });
   } catch (error) {
-    logger.error(`採購單 ${purchaseOrderId} 入庫操作失敗:`, error);
-    throw new HttpsError("internal", "入庫操作失敗");
+    logger.error(`採購單 ${purchaseOrderId} 入庫操作失敗:`, {
+      error: error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : 'no-stack',
+      purchaseOrderId,
+      itemsCount: items.length
+    });
+
+    // 提供更詳細的錯誤訊息
+    const errorMessage = error instanceof Error ?
+      `入庫操作失敗: ${error.message}` :
+      "入庫操作失敗，請檢查日誌";
+
+    throw new HttpsError("internal", errorMessage);
   }
 });

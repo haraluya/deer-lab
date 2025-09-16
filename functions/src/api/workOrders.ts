@@ -146,7 +146,10 @@ export const createWorkOrder = onCall(async (request) => {
         code: productData.code,
         name: productData.name,
         seriesName: seriesName,
-        fragranceName: fragranceData?.name || productData.fragranceName || '未指定',
+        // 🔧 修復：新增香精ID和Ref，優先使用ID而非名稱
+        fragranceId: fragranceData?.id || fragranceId || null,
+        fragranceRef: fragranceRef,
+        fragranceName: fragranceData?.name || productData.fragranceName || '未指定', // 保留供顯示
         fragranceCode: fragranceData?.code || productData.fragranceCode || '未指定',
         nicotineMg: nicotineMg || productData.nicotineMg || 0,
       },

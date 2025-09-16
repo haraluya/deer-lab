@@ -305,22 +305,34 @@ export default function CreateWorkOrderPage() {
 
     // 2. 核心液體 (香精、PG、VG、尼古丁) - 總是添加所有核心液體
     // 香精 - 從香精集合中獨立查找
-    if (selectedProduct.fragranceName && selectedProduct.fragranceName !== '未指定') {
-      const fragranceQuantity = targetQuantity * (fragranceRatios.fragrance / 100) 
-      
+    // 🔧 修復：優先使用 fragranceId 和 fragranceCode，完全移除 fragranceName 依賴
+    // 使用安全的屬性存取，因為產品類型可能沒有 fragranceId
+    const hasFragrance = ((selectedProduct as any).fragranceId && (selectedProduct as any).fragranceId !== 'none') ||
+                        (selectedProduct.fragranceCode && selectedProduct.fragranceCode !== '未指定');
+
+    if (hasFragrance) {
+      const fragranceQuantity = targetQuantity * (fragranceRatios.fragrance / 100)
+
       // 查找香精的實際庫存 - 從香精集合中查找，使用更精確的匹配邏輯
       let fragranceMaterial = null
-      
-      // 第一優先：精確匹配香精代號
-      if (selectedProduct.fragranceCode && selectedProduct.fragranceCode !== '未指定') {
-        fragranceMaterial = fragrances.find(f => f.code === selectedProduct.fragranceCode)
+
+      // 🔧 第一優先：使用香精ID匹配（最精確）
+      if ((selectedProduct as any).fragranceId && (selectedProduct as any).fragranceId !== 'none') {
+        fragranceMaterial = fragrances.find(f => f.id === (selectedProduct as any).fragranceId)
+        console.log(`🔍 使用香精ID匹配: ${(selectedProduct as any).fragranceId} -> ${fragranceMaterial?.name}`)
       }
-      
-      // 🚨 移除名稱匹配！名稱可能重複，只能使用精確的代號匹配
-      
-      // 第四優先：模糊匹配代號
+
+      // 第二優先：精確匹配香精代號
       if (!fragranceMaterial && selectedProduct.fragranceCode && selectedProduct.fragranceCode !== '未指定') {
-        fragranceMaterial = fragrances.find(f => 
+        fragranceMaterial = fragrances.find(f => f.code === selectedProduct.fragranceCode)
+        console.log(`🔍 使用香精代號匹配: ${selectedProduct.fragranceCode} -> ${fragranceMaterial?.name}`)
+      }
+
+      // 🚨 完全移除名稱匹配！名稱可能重複，只能使用精確的ID和代號匹配
+
+      // 第三優先：模糊匹配代號（僅作為最後手段）
+      if (!fragranceMaterial && selectedProduct.fragranceCode && selectedProduct.fragranceCode !== '未指定') {
+        fragranceMaterial = fragrances.find(f =>
           f.code.includes(selectedProduct.fragranceCode!) ||
           selectedProduct.fragranceCode!.includes(f.code)
         )
