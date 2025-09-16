@@ -57,26 +57,57 @@ export function usePermission() {
   };
 
   /**
-   * 檢查是否為系統管理員 (簡化版)
+   * 檢查是否為系統管理員 (優化版，明確優先順序)
    * @returns 是否為管理員
    */
   const isAdmin = (): boolean => {
-    // 1. 白名單檢查 (最高優先級)
-    if (appUser?.employeeId && ADMIN_EMPLOYEE_IDS.includes(appUser.employeeId)) {
+    if (!appUser) {
+      console.log('🔍 isAdmin: 無用戶資料');
+      return false;
+    }
+
+    // 🥇 最高優先級：白名單檢查
+    if (appUser.employeeId && ADMIN_EMPLOYEE_IDS.includes(appUser.employeeId)) {
+      console.log('🔑 isAdmin: 白名單管理員', { employeeId: appUser.employeeId });
       return true;
     }
 
-    // 2. 用戶級別檢查
-    if (appUser?.userLevel === 'admin') {
+    // 🥈 第二優先級：萬用字元權限檢查
+    if (hasPermission('*')) {
+      console.log('🌟 isAdmin: 萬用字元權限');
       return true;
     }
 
-    // 3. 備用權限檢查
-    if (hasPermission('*') || hasPermission('roles.manage')) {
+    // 🥉 第三優先級：用戶級別檢查
+    if (appUser.userLevel === 'admin') {
+      console.log('👑 isAdmin: admin 級別');
       return true;
     }
 
+    // 🏅 第四優先級：特定權限檢查
+    if (hasPermission('roles.manage')) {
+      console.log('🔧 isAdmin: 角色管理權限');
+      return true;
+    }
+
+    console.log('❌ isAdmin: 無管理員權限', {
+      employeeId: appUser.employeeId,
+      userLevel: appUser.userLevel,
+      permissions: appUser.permissions?.slice(0, 5) // 只顯示前5個權限
+    });
     return false;
+  };
+
+  /**
+   * 檢查是否為管理階層 (manager 以上)
+   * @returns 是否為管理階層
+   */
+  const isManager = (): boolean => {
+    // 管理員也是管理階層
+    if (isAdmin()) return true;
+
+    // 級別檢查
+    return hasAccess(appUser?.userLevel, 'manager');
   };
 
   /**
@@ -84,7 +115,7 @@ export function usePermission() {
    * @returns 是否為領班
    */
   const isForeman = (): boolean => {
-    return hasAccess(appUser?.userLevel, 'manager') || hasPermission('workOrders.manage');
+    return isManager() || hasPermission('workOrders.manage') || hasPermission('workOrders:manage');
   };
 
   /**
@@ -92,7 +123,8 @@ export function usePermission() {
    * @returns 是否為計時人員
    */
   const isTimekeeper = (): boolean => {
-    return appUser?.userLevel === 'operator' || hasPermission('time.manage');
+    return hasAccess(appUser?.userLevel, 'operator') ||
+           hasPermission('time.manage') || hasPermission('time:manage');
   };
 
   return {
@@ -107,6 +139,7 @@ export function usePermission() {
     
     // 角色檢查
     isAdmin,
+    isManager,
     isForeman,
     isTimekeeper,
     

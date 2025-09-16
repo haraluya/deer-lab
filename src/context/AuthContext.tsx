@@ -12,22 +12,55 @@ import { FirebaseError } from '@/types';
 // 管理員員工ID白名單 (最後防線)
 const ADMIN_EMPLOYEE_IDS = ['052', 'admin', 'administrator'];
 
-// 級別權限對應
+// 級別權限對應 (統一格式，兼容舊格式)
 const LEVEL_PERMISSIONS: Record<UserLevel, string[]> = {
   admin: ['*'], // 所有權限
   manager: [
+    // 原物料權限
     'materials.view', 'materials.manage', 'materials.create', 'materials.edit',
+    'materials:view', 'materials:manage', 'materials:create', 'materials:edit', // 向後相容
+
+    // 產品權限
     'products.view', 'products.manage', 'products.create', 'products.edit',
+    'products:view', 'products:manage', 'products:create', 'products:edit', // 向後相容
+
+    // 香精權限
+    'fragrances.view', 'fragrances.manage', 'fragrances.create', 'fragrances.edit',
+    'fragrances:view', 'fragrances:manage', 'fragrances:create', 'fragrances:edit', // 向後相容
+
+    // 工單權限
     'workOrders.view', 'workOrders.manage', 'workOrders.create', 'workOrders.edit',
+    'workOrders:view', 'workOrders:manage', 'workOrders:create', 'workOrders:edit', // 向後相容
+
+    // 採購權限
+    'purchase.view', 'purchase.manage', 'purchase.create', 'purchase.edit',
+    'purchase:view', 'purchase:manage', 'purchase:create', 'purchase:edit', // 向後相容
+
+    // 庫存權限
     'inventory.view', 'inventory.manage',
-    'time.view', 'time.manage'
+    'inventory:view', 'inventory:manage', // 向後相容
+
+    // 時間權限
+    'time.view', 'time.manage',
+    'time:view', 'time:manage' // 向後相容
   ],
   operator: [
-    'materials.view', 'products.view', 'workOrders.view', 'inventory.view',
-    'time.view', 'time.create', 'time.edit'
+    'materials.view', 'materials:view',
+    'products.view', 'products:view',
+    'fragrances.view', 'fragrances:view',
+    'workOrders.view', 'workOrders:view',
+    'inventory.view', 'inventory:view',
+    'inventoryRecords.view', 'inventoryRecords:view',
+    'time.view', 'time.create', 'time.edit',
+    'time:view', 'time:create', 'time:edit'
   ],
   viewer: [
-    'materials.view', 'products.view', 'workOrders.view', 'inventory.view'
+    'materials.view', 'materials:view',
+    'products.view', 'products:view',
+    'fragrances.view', 'fragrances:view',
+    'workOrders.view', 'workOrders:view',
+    'inventory.view', 'inventory:view',
+    'inventoryRecords.view', 'inventoryRecords:view'
   ]
 };
 
@@ -268,19 +301,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // 權限檢查函數
+  // 權限檢查函數 (支援萬用字元)
   const hasPermission = (permission: string): boolean => {
     if (!appUser?.permissions) return false;
+
+    // 🔑 萬用字元檢查：如果用戶有 '*' 權限，自動允許所有操作
+    if (appUser.permissions.includes('*')) {
+      return true;
+    }
+
+    // 具體權限檢查
     return appUser.permissions.includes(permission);
   };
 
   const hasAnyPermission = (permissions: string[]): boolean => {
     if (!appUser?.permissions) return false;
+
+    // 萬用字元檢查
+    if (appUser.permissions.includes('*')) {
+      return true;
+    }
+
     return permissions.some(permission => appUser.permissions!.includes(permission));
   };
 
   const hasAllPermissions = (permissions: string[]): boolean => {
     if (!appUser?.permissions) return false;
+
+    // 萬用字元檢查
+    if (appUser.permissions.includes('*')) {
+      return true;
+    }
+
     return permissions.every(permission => appUser.permissions!.includes(permission));
   };
 
