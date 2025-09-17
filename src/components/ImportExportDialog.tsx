@@ -247,11 +247,11 @@ export function ImportExportDialog({
     }
   }
 
-  const handleExport = async () => {
+  const handleExportCSV = async () => {
     setIsExporting(true)
     try {
       const data = await onExport()
-      
+
       // 建立 CSV 內容 (加入 BOM 解決中文亂碼問題)
       const headers = fields.map(f => f.label).join(',')
       const rows = data.map(row =>
@@ -275,11 +275,11 @@ export function ImportExportDialog({
         }).join(',')
       ).join('\n')
       const csvContent = `${headers}\n${rows}`
-      
+
       // 加入 BOM (Byte Order Mark) 解決中文亂碼
       const BOM = '\uFEFF'
       const csvWithBOM = BOM + csvContent
-      
+
       // 下載檔案
       const blob = new Blob([csvWithBOM], { type: 'text/csv;charset=utf-8;' })
       const link = document.createElement('a')
@@ -290,11 +290,83 @@ export function ImportExportDialog({
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-      
-      toast.success("資料匯出成功")
+
+      toast.success("CSV 匯出成功")
     } catch (error) {
-      console.error("匯出失敗:", error)
-      toast.error("資料匯出失敗")
+      console.error("CSV 匯出失敗:", error)
+      toast.error("CSV 匯出失敗")
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const handleExportExcel = async () => {
+    setIsExporting(true)
+    try {
+      const data = await onExport()
+
+      // 建立工作簿
+      const wb = XLSX.utils.book_new()
+
+      // 準備資料：標題行 + 資料行
+      const headers = fields.map(f => f.label)
+      const rows = data.map(row =>
+        fields.map(f => {
+          let value = row[f.key] || ''
+          // 如果是百分比格式，保持原始數值（Excel 會自動處理百分比顯示）
+          if (f.format === 'percentage' && typeof value === 'number') {
+            value = value / 100 // 轉換為小數，Excel 可以正確顯示為百分比
+          }
+          // 保持數值型態
+          if (f.type === 'number' && typeof value === 'string' && !isNaN(Number(value))) {
+            value = Number(value)
+          }
+          return value
+        })
+      )
+
+      // 建立工作表資料（二維陣列格式）
+      const wsData = [headers, ...rows]
+
+      // 建立工作表
+      const ws = XLSX.utils.aoa_to_sheet(wsData)
+
+      // 設定欄位寬度（自動調整）
+      const colWidths = headers.map((header, i) => {
+        const maxLength = Math.max(
+          header.length,
+          ...rows.map(row => String(row[i] || '').length)
+        )
+        return { wch: Math.min(maxLength + 2, 30) } // 最大寬度限制為30
+      })
+      ws['!cols'] = colWidths
+
+      // 設定百分比格式的欄位
+      fields.forEach((field, colIndex) => {
+        if (field.format === 'percentage') {
+          // 設定該欄位為百分比格式
+          for (let rowIndex = 1; rowIndex <= rows.length; rowIndex++) {
+            const cellRef = XLSX.utils.encode_cell({ r: rowIndex, c: colIndex })
+            if (ws[cellRef]) {
+              ws[cellRef].z = '0.00%' // 百分比格式，保留兩位小數
+            }
+          }
+        }
+      })
+
+      // 將工作表加入工作簿
+      XLSX.utils.book_append_sheet(wb, ws, title)
+
+      // 產生檔案名稱
+      const fileName = `${title}_${new Date().toISOString().split('T')[0]}.xlsx`
+
+      // 下載檔案
+      XLSX.writeFile(wb, fileName)
+
+      toast.success("Excel 匯出成功")
+    } catch (error) {
+      console.error("Excel 匯出失敗:", error)
+      toast.error("Excel 匯出失敗")
     } finally {
       setIsExporting(false)
     }
@@ -558,7 +630,7 @@ export function ImportExportDialog({
                 資料匯出
               </CardTitle>
               <CardDescription className="text-muted-foreground">
-                將現有資料匯出為 CSV 格式
+                將現有資料匯出為 Excel 或 CSV 格式
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -569,18 +641,30 @@ export function ImportExportDialog({
                     <div key={field.key} className="flex items-center gap-2 text-sm">
                       <span>{field.label}</span>
                       {field.required && <Badge variant="secondary" className="text-xs">必填</Badge>}
+                      {field.format === 'percentage' && <Badge variant="outline" className="text-xs">百分比</Badge>}
                     </div>
                   ))}
                 </div>
               </div>
 
-              <Button 
-                onClick={handleExport} 
-                disabled={isExporting}
-                className={`w-full ${colorClasses.button}`}
-              >
-                {isExporting ? "匯出中..." : "匯出 CSV"}
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  onClick={handleExportExcel}
+                  disabled={isExporting}
+                  className={`w-full ${colorClasses.button}`}
+                >
+                  {isExporting ? "匯出中..." : "匯出 Excel (.xlsx)"}
+                </Button>
+
+                <Button
+                  onClick={handleExportCSV}
+                  disabled={isExporting}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {isExporting ? "匯出中..." : "匯出 CSV"}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
