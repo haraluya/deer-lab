@@ -409,12 +409,15 @@ export default function CreateWorkOrderPage() {
       console.warn('找不到VG物料')
     }
 
-    // 尼古丁 - 使用系統配置查找
+    // 尼古丁 - 使用系統配置查找，無論濃度多少都要添加
     const nicotineMaterial = findMaterialByCategory(materials, 'nicotine')
     if (nicotineMaterial) {
-      const nicotineQuantity = selectedProduct.nicotineMg && selectedProduct.nicotineMg > 0 
-        ? (targetQuantity * selectedProduct.nicotineMg) / 250 
-        : 0
+      // 修復：即使濃度為0也要計算和添加尼古丁，確保正常顯示
+      const nicotineConcentration = selectedProduct.nicotineMg || 0 // 確保數值存在，默認為0
+      const nicotineQuantity = nicotineConcentration > 0
+        ? (targetQuantity * nicotineConcentration) / 250
+        : 0 // 0mg 時數量為0，但仍然要添加到BOM表中
+
       materialRequirementsMap.set(nicotineMaterial.id, {
         materialId: nicotineMaterial.id,
         materialCode: nicotineMaterial.code,
@@ -426,7 +429,7 @@ export default function CreateWorkOrderPage() {
         category: 'nicotine',
         ratio: 0 // 尼古丁鹽不算在比例裡面
       })
-      console.log('添加尼古丁:', nicotineMaterial.name, nicotineQuantity, '濃度:', selectedProduct.nicotineMg)
+      console.log('添加尼古丁:', nicotineMaterial.name, nicotineQuantity, '濃度:', nicotineConcentration, 'mg/ml', '庫存:', nicotineMaterial.currentStock)
     }
 
     // 3. 其他材料（專屬材料和通用材料）- 根據實際需求計算
