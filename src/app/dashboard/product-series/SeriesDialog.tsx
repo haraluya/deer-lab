@@ -37,6 +37,7 @@ export interface SeriesData extends DocumentData {
   id: string;
   name: string;
   code: string;
+  typeCode?: string;
   productType: string;
   commonMaterials: DocumentReference[];
 }

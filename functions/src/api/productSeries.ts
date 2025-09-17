@@ -82,7 +82,8 @@ export const createProductSeries = CrudApiHandlers.createCreateHandler<CreatePro
       const newSeriesData: any = {
         id: newSeriesRef.id,
         name,
-        typeCode,
+        code: typeCode,        // 前端期望的欄位名稱
+        typeCode,             // API 標準欄位名稱
         productType: productType || '其他(ETC)',
         description: description || '',
         commonMaterials,
@@ -173,7 +174,10 @@ export const updateProductSeries = CrudApiHandlers.createUpdateHandler<UpdatePro
       };
 
       if (name !== undefined) updateData.name = name;
-      if (typeCode !== undefined) updateData.typeCode = typeCode;
+      if (typeCode !== undefined) {
+        updateData.typeCode = typeCode;
+        updateData.code = typeCode;  // 同時更新兩個欄位保持相容
+      }
       if (productType !== undefined) updateData.productType = productType;
       if (description !== undefined) updateData.description = description;
       if (commonMaterials !== undefined) updateData.commonMaterials = commonMaterials;

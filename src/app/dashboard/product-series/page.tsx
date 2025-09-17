@@ -86,7 +86,8 @@ function ProductSeriesPageContent() {
         return {
           id: doc.id,
           name: data.name,
-          code: data.code,
+          code: data.code || data.typeCode,
+          typeCode: data.typeCode || data.code,
           productType: data.productType || '其他(ETC)',
           commonMaterials: data.commonMaterials,
           materialNames,
