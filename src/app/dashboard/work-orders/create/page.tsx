@@ -283,15 +283,15 @@ export default function CreateWorkOrderPage() {
       const { percentage, pgRatio, vgRatio } = selectedProduct.fragranceFormula;
       console.log('香精配方資料:', { percentage, pgRatio, vgRatio });
 
-      if (percentage && percentage > 0) {
-        // 有效的香精配方
-        fragranceRatios = {
-          fragrance: percentage,
-          pg: pgRatio || 0,
-          vg: vgRatio || 0
-        };
-      } else {
-        console.warn('香精比例為0或無效，但仍然繼續計算尼古丁');
+      // 修復：即使香精比例為0，也要保留PG和VG比例
+      fragranceRatios = {
+        fragrance: percentage || 0,
+        pg: pgRatio || 0,
+        vg: vgRatio || 0
+      };
+
+      if (!percentage || percentage <= 0) {
+        console.warn('香精比例為0或無效，但保留PG/VG比例：', { pgRatio, vgRatio });
       }
     } else {
       console.warn('沒有香精配方資料，但仍然繼續計算尼古丁');
