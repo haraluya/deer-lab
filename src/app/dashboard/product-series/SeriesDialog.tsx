@@ -108,9 +108,9 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
     if (isOpen && seriesData) {
       form.reset({
         name: seriesData.name || '',
-        code: seriesData.code || '',
+        code: seriesData.code || seriesData.typeCode || '',
         productType: seriesData.productType || '其他(ETC)',
-        commonMaterialIds: seriesData.commonMaterials.map(ref => ref.id),
+        commonMaterialIds: seriesData.commonMaterials?.map(ref => ref.id) || [],
       });
     } else if (isOpen && !seriesData) {
       form.reset({ name: '', code: '', productType: '其他(ETC)', commonMaterialIds: [] });
@@ -123,6 +123,7 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
         id: seriesData.id,
         name: values.name,
         typeCode: values.code,
+        productType: values.productType,
         description: `${values.name} 系列`,
         defaultMaterials: values.commonMaterialIds?.map(materialId => ({
           materialId,
@@ -140,6 +141,7 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
       const result = await apiClient.call('createProductSeries', {
         name: values.name,
         typeCode: values.code,
+        productType: values.productType,
         description: `${values.name} 系列`,
         defaultMaterials: values.commonMaterialIds?.map(materialId => ({
           materialId,

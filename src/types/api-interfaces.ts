@@ -826,6 +826,7 @@ export namespace ProductSeriesApi {
     name: string;
     description?: string;
     typeCode: string;
+    productType?: string;
     defaultMaterials?: {
       materialId: string;
       quantity: number;

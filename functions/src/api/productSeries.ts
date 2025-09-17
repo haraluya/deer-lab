@@ -19,7 +19,13 @@ const db = getFirestore();
 interface CreateProductSeriesRequest {
   name: string;
   typeCode: string;
+  productType?: string;
   description?: string;
+  defaultMaterials?: {
+    materialId: string;
+    quantity: number;
+  }[];
+  isActive?: boolean;
 }
 
 /**
@@ -29,7 +35,13 @@ interface UpdateProductSeriesRequest {
   id: string;
   name?: string;
   typeCode?: string;
+  productType?: string;
   description?: string;
+  defaultMaterials?: {
+    materialId: string;
+    quantity: number;
+  }[];
+  isActive?: boolean;
 }
 
 /**
@@ -41,7 +53,7 @@ export const createProductSeries = CrudApiHandlers.createCreateHandler<CreatePro
     // 1. 驗證必填欄位
     ErrorHandler.validateRequired(data, ['name', 'typeCode']);
 
-    const { name, typeCode, description } = data;
+    const { name, typeCode, productType, description, defaultMaterials, isActive } = data;
 
     try {
       // 2. 檢查系列代碼是否已存在
@@ -57,13 +69,24 @@ export const createProductSeries = CrudApiHandlers.createCreateHandler<CreatePro
         );
       }
 
-      // 3. 建立新系列
+      // 3. 處理預設物料（轉換為 DocumentReference 陣列）
+      let commonMaterials: any[] = [];
+      if (defaultMaterials && defaultMaterials.length > 0) {
+        commonMaterials = defaultMaterials.map(item =>
+          db.collection('materials').doc(item.materialId)
+        );
+      }
+
+      // 4. 建立新系列
       const newSeriesRef = db.collection('productSeries').doc();
-      const newSeriesData = {
+      const newSeriesData: any = {
         id: newSeriesRef.id,
         name,
         typeCode,
+        productType: productType || '其他(ETC)',
         description: description || '',
+        commonMaterials,
+        isActive: isActive !== false,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
         createdBy: context.auth?.uid || 'system',
@@ -105,7 +128,7 @@ export const updateProductSeries = CrudApiHandlers.createUpdateHandler<UpdatePro
     // 1. 驗證必填欄位
     ErrorHandler.validateRequired(data, ['id']);
 
-    const { id, name, typeCode, description } = data;
+    const { id, name, typeCode, productType, description, defaultMaterials, isActive } = data;
 
     try {
       // 2. 檢查系列是否存在
@@ -135,7 +158,15 @@ export const updateProductSeries = CrudApiHandlers.createUpdateHandler<UpdatePro
         }
       }
 
-      // 4. 準備更新資料
+      // 4. 處理預設物料（轉換為 DocumentReference 陣列）
+      let commonMaterials: any[] | undefined;
+      if (defaultMaterials !== undefined) {
+        commonMaterials = defaultMaterials.map(item =>
+          db.collection('materials').doc(item.materialId)
+        );
+      }
+
+      // 5. 準備更新資料
       const updateData: any = {
         updatedAt: FieldValue.serverTimestamp(),
         updatedBy: context.auth?.uid || 'system'
@@ -143,9 +174,12 @@ export const updateProductSeries = CrudApiHandlers.createUpdateHandler<UpdatePro
 
       if (name !== undefined) updateData.name = name;
       if (typeCode !== undefined) updateData.typeCode = typeCode;
+      if (productType !== undefined) updateData.productType = productType;
       if (description !== undefined) updateData.description = description;
+      if (commonMaterials !== undefined) updateData.commonMaterials = commonMaterials;
+      if (isActive !== undefined) updateData.isActive = isActive;
 
-      // 5. 更新系列
+      // 6. 更新系列
       await seriesRef.update(updateData);
 
       return {
