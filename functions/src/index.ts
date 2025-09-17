@@ -77,7 +77,6 @@ export * from "./api/suppliers";
 export * from "./api/materials";
 export * from "./api/fragrances";
 export * from "./api/products";
-export * from "./api/productSeries";
 export * from "./api/purchaseOrders";
 export * from "./api/inventory";
 export * from "./api/workOrders";
@@ -86,6 +85,3 @@ export * from "./api/personnel";
 export * from "./api/timeRecords";
 export * from "./api/globalCart";
 
-// 維護工具函數 - 查詢自動分類
-import { queryAutoCategories } from "./api/maintenance/queryAutoCategories";
-export const checkAutoCategories = onRequest(queryAutoCategories);

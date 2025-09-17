@@ -18,19 +18,20 @@ const firestore_1 = require("firebase-admin/firestore");
 const apiWrapper_1 = require("../utils/apiWrapper");
 const errorHandler_1 = require("../utils/errorHandler");
 const fragranceCalculations_1 = require("../utils/fragranceCalculations");
+const numberValidation_1 = require("../utils/numberValidation");
 const db = (0, firestore_1.getFirestore)();
 /**
  * 庫存記錄管理器
  */
 class InventoryRecordManager {
-    static async createInventoryRecord(itemId, itemType, quantityChange, operatorId, remarks = '庫存異動') {
+    static async createInventoryRecord(itemId, itemType, quantityChange, operatorId, operatorName, remarks = '庫存異動') {
         try {
             const inventoryRecordRef = db.collection('inventory_records').doc();
             await inventoryRecordRef.set({
                 changeDate: firestore_1.FieldValue.serverTimestamp(),
-                changeReason: 'import_operation',
+                changeReason: 'import',
                 operatorId,
-                operatorName: '系統匯入',
+                operatorName,
                 remarks,
                 relatedDocumentId: itemId,
                 relatedDocumentType: itemType,
@@ -67,7 +68,7 @@ exports.createFragrance = apiWrapper_1.CrudApiHandlers.createCreateHandler('Frag
         const finalStatus = status || fragranceType || 'standby';
         const finalFragranceStatus = fragranceStatus || '備用';
         // 4. 建立香精資料
-        const fragranceData = {
+        const rawFragranceData = {
             code: code.trim(),
             name: name.trim(),
             fragranceType: finalFragranceType,
@@ -88,6 +89,8 @@ exports.createFragrance = apiWrapper_1.CrudApiHandlers.createCreateHandler('Frag
             createdAt: firestore_1.FieldValue.serverTimestamp(),
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
         };
+        // 限制數值最多三位小數
+        const fragranceData = (0, numberValidation_1.formatFragranceNumbers)(rawFragranceData);
         // 5. 儲存到資料庫
         const docRef = await db.collection('fragrances').add(fragranceData);
         // 6. 返回標準化回應
@@ -139,7 +142,7 @@ exports.updateFragrance = apiWrapper_1.CrudApiHandlers.createUpdateHandler('Frag
         const newStock = Number(currentStock) || 0;
         const stockChanged = oldStock !== newStock;
         // 6. 準備更新資料
-        const updateData = {
+        const rawUpdateData = {
             code: code.trim(),
             name: name.trim(),
             status: finalStatus,
@@ -154,6 +157,8 @@ exports.updateFragrance = apiWrapper_1.CrudApiHandlers.createUpdateHandler('Frag
             unit: unit || 'KG',
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
         };
+        // 限制數值最多三位小數
+        const updateData = (0, numberValidation_1.formatFragranceNumbers)(rawUpdateData);
         // 7. 處理供應商參照
         if (supplierId) {
             updateData.supplierRef = db.collection('suppliers').doc(supplierId);
@@ -262,7 +267,7 @@ exports.deleteFragrance = apiWrapper_1.CrudApiHandlers.createDeleteHandler('Frag
  * 批量匯入香精
  */
 exports.importFragrances = apiWrapper_1.CrudApiHandlers.createCreateHandler('ImportFragrances', async (data, context, requestId) => {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
     // 1. 驗證必填欄位
     errorHandler_1.ErrorHandler.validateRequired(data, ['fragrances']);
     const { fragrances } = data;
@@ -453,7 +458,7 @@ exports.importFragrances = apiWrapper_1.CrudApiHandlers.createCreateHandler('Imp
                     // 如果庫存有變更，建立庫存紀錄
                     const oldStock = existing.data.currentStock || 0;
                     if (oldStock !== currentStock && ((_j = context.auth) === null || _j === void 0 ? void 0 : _j.uid)) {
-                        await InventoryRecordManager.createInventoryRecord(fragranceId, 'fragrances', currentStock - oldStock, context.auth.uid, `批量匯入更新 - 從 ${oldStock} 更新為 ${currentStock}`);
+                        await InventoryRecordManager.createInventoryRecord(fragranceId, 'fragrances', currentStock - oldStock, context.auth.uid, ((_k = context.auth.token) === null || _k === void 0 ? void 0 : _k.name) || '未知用戶', `批量匯入更新 - 從 ${oldStock} 更新為 ${currentStock}`);
                     }
                     if (hasChanges) {
                         results.successful.push({
@@ -496,8 +501,8 @@ exports.importFragrances = apiWrapper_1.CrudApiHandlers.createCreateHandler('Imp
                     const docRef = await db.collection('fragrances').add(fragranceData);
                     fragranceId = docRef.id;
                     // 建立初始庫存記錄
-                    if (currentStock > 0 && ((_k = context.auth) === null || _k === void 0 ? void 0 : _k.uid)) {
-                        await InventoryRecordManager.createInventoryRecord(fragranceId, 'fragrances', currentStock, context.auth.uid, `批量匯入初始庫存`);
+                    if (currentStock > 0 && ((_l = context.auth) === null || _l === void 0 ? void 0 : _l.uid)) {
+                        await InventoryRecordManager.createInventoryRecord(fragranceId, 'fragrances', currentStock, context.auth.uid, ((_m = context.auth.token) === null || _m === void 0 ? void 0 : _m.name) || '未知用戶', `批量匯入初始庫存`);
                     }
                     // 更新本地快取
                     existingFragrancesMap.set(code, { id: fragranceId, data: fragranceData });

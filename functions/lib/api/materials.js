@@ -17,6 +17,7 @@ const firebase_functions_1 = require("firebase-functions");
 const firestore_1 = require("firebase-admin/firestore");
 const apiWrapper_1 = require("../utils/apiWrapper");
 const errorHandler_1 = require("../utils/errorHandler");
+const numberValidation_1 = require("../utils/numberValidation");
 const db = (0, firestore_1.getFirestore)();
 /**
  * ===============================
@@ -251,7 +252,7 @@ exports.createMaterial = apiWrapper_1.CrudApiHandlers.createCreateHandler('Mater
         errorHandler_1.ErrorHandler.validateRange(safetyStockLevel || 0, 0, undefined, '安全庫存');
         errorHandler_1.ErrorHandler.validateRange(costPerUnit || 0, 0, undefined, '單位成本');
         // 7. 建立物料資料
-        const newMaterial = {
+        const rawMaterial = {
             code: finalCode,
             name: name.trim(),
             category: category || '',
@@ -266,6 +267,8 @@ exports.createMaterial = apiWrapper_1.CrudApiHandlers.createCreateHandler('Mater
             createdAt: firestore_1.FieldValue.serverTimestamp(),
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
         };
+        // 限制數值最多三位小數
+        const newMaterial = (0, numberValidation_1.formatMaterialNumbers)(rawMaterial);
         // 8. 處理供應商關聯
         if (supplierId) {
             // 檢查供應商是否存在
@@ -337,7 +340,7 @@ exports.updateMaterial = apiWrapper_1.CrudApiHandlers.createUpdateHandler('Mater
         const newStock = Number(currentStock) || 0;
         const stockChanged = oldStock !== newStock;
         // 7. 準備更新資料
-        const updateData = {
+        const rawUpdateData = {
             name: name.trim(),
             category: (category === null || category === void 0 ? void 0 : category.trim()) || '',
             subCategory: (subCategory === null || subCategory === void 0 ? void 0 : subCategory.trim()) || '',
@@ -349,6 +352,8 @@ exports.updateMaterial = apiWrapper_1.CrudApiHandlers.createUpdateHandler('Mater
             notes: (notes === null || notes === void 0 ? void 0 : notes.trim()) || '',
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
         };
+        // 限制數值最多三位小數
+        const updateData = (0, numberValidation_1.formatMaterialNumbers)(rawUpdateData);
         // 8. 處理供應商關聯
         if (supplierId) {
             // 檢查供應商是否存在
@@ -434,7 +439,7 @@ exports.deleteMaterial = apiWrapper_1.CrudApiHandlers.createDeleteHandler('Mater
  * 批量匯入原料
  */
 exports.importMaterials = apiWrapper_1.CrudApiHandlers.createCreateHandler('ImportMaterials', async (data, context, requestId) => {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
     // 1. 驗證必填欄位
     errorHandler_1.ErrorHandler.validateRequired(data, ['materials']);
     const { materials } = data;
@@ -635,7 +640,7 @@ exports.importMaterials = apiWrapper_1.CrudApiHandlers.createCreateHandler('Impo
                     // 如果庫存有變更，建立庫存紀錄
                     const oldStock = existing.data.currentStock || 0;
                     if (oldStock !== currentStock && ((_m = context.auth) === null || _m === void 0 ? void 0 : _m.uid)) {
-                        await InventoryRecordManager.createInventoryRecord(materialId, existing.data.name, existing.data.code, oldStock, currentStock, context.auth.uid, undefined, 'import_update', `批量匯入更新 - 從 ${oldStock} 更新為 ${currentStock}`);
+                        await InventoryRecordManager.createInventoryRecord(materialId, existing.data.name, existing.data.code, oldStock, currentStock, context.auth.uid, ((_o = context.auth.token) === null || _o === void 0 ? void 0 : _o.name) || '未知用戶', 'import', `批量匯入更新 - 從 ${oldStock} 更新為 ${currentStock}`);
                     }
                     if (hasChanges) {
                         results.successful.push({
@@ -730,8 +735,8 @@ exports.importMaterials = apiWrapper_1.CrudApiHandlers.createCreateHandler('Impo
                     const docRef = await db.collection('materials').add(materialData);
                     materialId = docRef.id;
                     // 建立初始庫存記錄
-                    if (currentStock > 0 && ((_o = context.auth) === null || _o === void 0 ? void 0 : _o.uid)) {
-                        await InventoryRecordManager.createInventoryRecord(materialId, name, materialData.code, 0, currentStock, context.auth.uid, undefined, 'import_initial', `批量匯入初始庫存`);
+                    if (currentStock > 0 && ((_p = context.auth) === null || _p === void 0 ? void 0 : _p.uid)) {
+                        await InventoryRecordManager.createInventoryRecord(materialId, name, materialData.code, 0, currentStock, context.auth.uid, ((_q = context.auth.token) === null || _q === void 0 ? void 0 : _q.name) || '未知用戶', 'import', `批量匯入初始庫存`);
                     }
                     // 更新本地快取
                     existingMaterialsMap.set(materialCode, { id: materialId, data: materialData });

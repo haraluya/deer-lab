@@ -17,7 +17,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkAutoCategories = exports.healthCheck = exports.nextServer = void 0;
+exports.healthCheck = exports.nextServer = void 0;
 // functions/src/index.ts
 const app_1 = require("firebase-admin/app");
 const https_1 = require("firebase-functions/v2/https");
@@ -94,7 +94,4 @@ __exportStar(require("./api/roles"), exports);
 __exportStar(require("./api/personnel"), exports);
 __exportStar(require("./api/timeRecords"), exports);
 __exportStar(require("./api/globalCart"), exports);
-// 維護工具函數 - 查詢自動分類
-const queryAutoCategories_1 = require("./api/maintenance/queryAutoCategories");
-exports.checkAutoCategories = (0, https_1.onRequest)(queryAutoCategories_1.queryAutoCategories);
 //# sourceMappingURL=index.js.map
