@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useApiClient } from '@/hooks/useApiClient';
+import { useApiForm } from '@/hooks/useApiClient';
 import { collection, getDocs, DocumentReference, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
@@ -59,7 +59,7 @@ const PRODUCT_TYPES = [
 
 export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData }: SeriesDialogProps) {
   const [materialOptions, setMaterialOptions] = useState<OptionType[]>([]);
-  const apiClient = useApiClient();
+  const apiClient = useApiForm();
   const isEditMode = !!seriesData;
 
   const form = useForm<FormData>({
@@ -119,43 +119,52 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
   }, [isOpen, seriesData, form]);
 
   async function onSubmit(values: FormData) {
-    if (isEditMode && seriesData) {
-      const result = await apiClient.call('updateProductSeries', {
-        id: seriesData.id,
-        name: values.name,
-        typeCode: values.code,
-        productType: values.productType,
-        description: `${values.name} 系列`,
-        defaultMaterials: values.commonMaterialIds?.map(materialId => ({
-          materialId,
-          quantity: 1
-        })),
-        isActive: true
-      });
+    try {
+      if (isEditMode && seriesData) {
+        const result = await apiClient.call('updateProductSeries', {
+          id: seriesData.id,
+          name: values.name,
+          typeCode: values.code,
+          productType: values.productType,
+          description: `${values.name} 系列`,
+          defaultMaterials: values.commonMaterialIds?.map(materialId => ({
+            materialId,
+            quantity: 1
+          })),
+          isActive: true
+        });
 
-      if (result.success) {
-        toast.success(`系列 ${values.name} 已更新。`);
-        onSeriesUpdate();
-        onOpenChange(false);
-      }
-    } else {
-      const result = await apiClient.call('createProductSeries', {
-        name: values.name,
-        typeCode: values.code,
-        productType: values.productType,
-        description: `${values.name} 系列`,
-        defaultMaterials: values.commonMaterialIds?.map(materialId => ({
-          materialId,
-          quantity: 1
-        })),
-        isActive: true
-      });
+        if (result.success) {
+          toast.success(`系列 ${values.name} 已更新。`);
+          onSeriesUpdate();
+          onOpenChange(false);
+        } else {
+          toast.error(result.error?.message || '更新產品系列發生錯誤');
+        }
+      } else {
+        const result = await apiClient.call('createProductSeries', {
+          name: values.name,
+          typeCode: values.code,
+          productType: values.productType,
+          description: `${values.name} 系列`,
+          defaultMaterials: values.commonMaterialIds?.map(materialId => ({
+            materialId,
+            quantity: 1
+          })),
+          isActive: true
+        });
 
-      if (result.success) {
-        toast.success(`系列 ${values.name} 已建立。`);
-        onSeriesUpdate();
-        onOpenChange(false);
+        if (result.success) {
+          toast.success(`系列 ${values.name} 已建立。`);
+          onSeriesUpdate();
+          onOpenChange(false);
+        } else {
+          toast.error(result.error?.message || '建立產品系列發生錯誤');
+        }
       }
+    } catch (error: any) {
+      console.error('產品系列操作錯誤:', error);
+      toast.error(error.message || '系統發生錯誤，請稍後再試');
     }
   }
 
