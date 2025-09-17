@@ -1509,147 +1509,125 @@ export default function WorkOrderDetailPage() {
           @media print {
             @page {
               size: A4;
-              margin: 0.5cm;
+              margin: 0.3cm;
             }
           }
-          
+
                      body {
              font-family: 'Microsoft JhengHei', Arial, sans-serif;
              margin: 0;
-             padding: 20px;
-             font-size: 20px;
-             line-height: 1.4;
+             padding: 8px;
+             font-size: 12px;
+             line-height: 1.2;
              color: #000;
            }
-          
+
           .header {
             text-align: center;
-            margin-bottom: 15px;
-            border-bottom: 3px solid #000;
-            padding-bottom: 8px;
+            margin-bottom: 8px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 4px;
           }
-          
+
                      .title {
-             font-size: 36px;
+             font-size: 20px;
              font-weight: bold;
-             margin-bottom: 10px;
+             margin-bottom: 4px;
            }
-           
+
            .subtitle {
-             font-size: 28px;
+             font-size: 16px;
              font-weight: bold;
-             margin-bottom: 15px;
+             margin-bottom: 6px;
            }
           
                                 .top-info {
              display: grid;
              grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
-             gap: 8px;
-             margin-bottom: 12px;
+             gap: 4px;
+             margin-bottom: 6px;
            }
-           
+
            .top-info-item {
-             border: 3px solid #000;
-             padding: 12px;
+             border: 2px solid #000;
+             padding: 6px;
              text-align: center;
-             border-radius: 5px;
+             border-radius: 3px;
              background-color: #f8f8f8;
            }
-           
+
            .top-info-label {
-             font-size: 18px;
+             font-size: 10px;
              font-weight: bold;
-             margin-bottom: 8px;
+             margin-bottom: 3px;
              color: #333;
            }
-           
+
            .top-info-value {
-             font-size: 22px;
+             font-size: 12px;
              font-weight: bold;
              color: #000;
            }
            
            .main-content {
              display: block;
-             margin-bottom: 15px;
+             margin-bottom: 8px;
            }
-           
+
            .materials-section {
-             margin-bottom: 15px;
+             margin-bottom: 8px;
            }
-           
+
            .materials-section h3 {
-             font-size: 44px;
+             font-size: 16px;
              font-weight: bold;
-             margin: 0 0 12px 0;
+             margin: 0 0 4px 0;
              text-align: center;
              background-color: #f0f0f0;
-             padding: 10px;
+             padding: 4px;
              border-radius: 3px;
            }
            
-          
-                     .materials-section {
-             margin-bottom: 15px;
-           }
-           
-           .materials-section h3 {
-             font-size: 44px;
-             font-weight: bold;
-             margin: 0 0 12px 0;
-             text-align: center;
-             background-color: #f0f0f0;
-             padding: 10px;
-             border-radius: 3px;
-           }
-          
                      table {
              width: 100%;
              border-collapse: collapse;
-             margin-bottom: 15px;
-             font-size: 36px;
+             margin-bottom: 8px;
+             font-size: 11px;
            }
-           
+
            th, td {
-             border: 4px solid #000;
-             padding: 15px 10px;
+             border: 1.5px solid #000;
+             padding: 4px 3px;
              text-align: center;
-             line-height: 1.6;
+             line-height: 1.3;
            }
-           
+
            th {
              background-color: #f0f0f0;
              font-weight: bold;
-             font-size: 40px;
+             font-size: 12px;
            }
           
                      .time-section {
-             margin-bottom: 15px;
+             margin-bottom: 8px;
            }
-           
+
            .time-section h3 {
-             font-size: 48px;
+             font-size: 16px;
              font-weight: bold;
-             margin: 0 0 12px 0;
+             margin: 0 0 4px 0;
              text-align: center;
              background-color: #f0f0f0;
-             padding: 10px;
+             padding: 4px;
              border-radius: 3px;
            }
-           
+
            .memo-writing-box {
-             border: 4px solid #000;
+             border: 2px solid #000;
              background-color: #f9f9f9;
-             min-height: 280px;
-             margin-top: 12px;
+             min-height: 120px;
+             margin-top: 6px;
            }
-          
-          
-          
-          .page-break {
-            page-break-before: always;
-          }
-          
           @media print {
             .no-print {
               display: none;
@@ -1708,12 +1686,12 @@ export default function WorkOrderDetailPage() {
                <tbody>
                  ${coreMaterials.map(item => `
                    <tr>
-                                        <td style="font-weight: bold; font-size: 36px;">${item.name}</td>
+                                        <td style="font-weight: bold;">${item.name}</td>
                    <td style="font-weight: bold; font-size: 36px;">${item.code}</td>
                    <td style="font-size: 36px;">${item.ratio ? item.ratio + '%' : '-'}</td>
                    <td style="font-weight: bold; font-size: 36px;">${formatQuantity(item.quantity)}</td>
-                   <td style="border: 2px solid #000; background-color: #f9f9f9; min-width: 120px; height: 60px;"></td>
-                   <td style="font-size: 36px;">${item.unit}</td>
+                   <td style="border: 1px solid #000; background-color: #f9f9f9; min-width: 60px; height: 30px;"></td>
+                   <td>${item.unit}</td>
                    </tr>
                  `).join('')}
                </tbody>
@@ -1733,10 +1711,10 @@ export default function WorkOrderDetailPage() {
                <tbody>
                  ${specificMaterials.map(item => `
                    <tr>
-                     <td style="font-weight: bold; font-size: 36px;">${item.name}</td>
-                     <td style="font-weight: bold; font-size: 36px;">${item.code}</td>
-                     <td style="border: 2px solid #000; background-color: #f9f9f9; min-width: 120px; height: 60px;"></td>
-                     <td style="font-size: 36px;">${item.unit}</td>
+                     <td style="font-weight: bold;">${item.name}</td>
+                     <td style="font-weight: bold;">${item.code}</td>
+                     <td style="border: 1px solid #000; background-color: #f9f9f9; min-width: 60px; height: 30px;"></td>
+                     <td>${item.unit}</td>
                    </tr>
                  `).join('')}
                </tbody>
@@ -1757,10 +1735,10 @@ export default function WorkOrderDetailPage() {
                <tbody>
                  ${commonMaterials.map(item => `
                    <tr>
-                     <td style="font-weight: bold; font-size: 36px;">${item.name}</td>
-                     <td style="font-weight: bold; font-size: 36px;">${item.code}</td>
-                     <td style="border: 2px solid #000; background-color: #f9f9f9; min-width: 120px; height: 60px;"></td>
-                     <td style="font-size: 36px;">${item.unit}</td>
+                     <td style="font-weight: bold;">${item.name}</td>
+                     <td style="font-weight: bold;">${item.code}</td>
+                     <td style="border: 1px solid #000; background-color: #f9f9f9; min-width: 60px; height: 30px;"></td>
+                     <td>${item.unit}</td>
                    </tr>
                  `).join('')}
                </tbody>
