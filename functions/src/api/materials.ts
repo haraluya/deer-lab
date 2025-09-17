@@ -17,6 +17,7 @@ import { createApiHandler, CrudApiHandlers } from "../utils/apiWrapper";
 import { BusinessError, ApiErrorCode, ErrorHandler } from "../utils/errorHandler";
 import { Permission, UserRole } from "../middleware/auth";
 import { StandardResponses, BatchOperationResult } from "../types/api";
+import { formatMaterialNumbers } from '../utils/numberValidation';
 
 const db = getFirestore();
 
@@ -390,21 +391,24 @@ export const createMaterial = CrudApiHandlers.createCreateHandler<CreateMaterial
       ErrorHandler.validateRange(costPerUnit || 0, 0, undefined, '單位成本');
 
       // 7. 建立物料資料
-      const newMaterial: MaterialData = { 
-        code: finalCode, 
-        name: name.trim(), 
+      const rawMaterial: MaterialData = {
+        code: finalCode,
+        name: name.trim(),
         category: category || '',
-        subCategory: subCategory || '', 
+        subCategory: subCategory || '',
         mainCategoryId,
         subCategoryId,
-        safetyStockLevel: Number(safetyStockLevel) || 0, 
-        costPerUnit: Number(costPerUnit) || 0, 
-        unit: unit?.trim() || 'KG', 
-        currentStock: 0, 
+        safetyStockLevel: Number(safetyStockLevel) || 0,
+        costPerUnit: Number(costPerUnit) || 0,
+        unit: unit?.trim() || 'KG',
+        currentStock: 0,
         notes: notes?.trim() || '',
-        createdAt: FieldValue.serverTimestamp(), 
-        updatedAt: FieldValue.serverTimestamp(), 
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       };
+
+      // 限制數值最多三位小數
+      const newMaterial = formatMaterialNumbers(rawMaterial) as MaterialData;
       
       // 8. 處理供應商關聯
       if (supplierId) {
@@ -503,7 +507,7 @@ export const updateMaterial = CrudApiHandlers.createUpdateHandler<UpdateMaterial
       const stockChanged = oldStock !== newStock;
 
       // 7. 準備更新資料
-      const updateData: Partial<MaterialData> = {
+      const rawUpdateData: Partial<MaterialData> = {
         name: name.trim(),
         category: category?.trim() || '',
         subCategory: subCategory?.trim() || '',
@@ -515,6 +519,9 @@ export const updateMaterial = CrudApiHandlers.createUpdateHandler<UpdateMaterial
         notes: notes?.trim() || '',
         updatedAt: FieldValue.serverTimestamp(),
       };
+
+      // 限制數值最多三位小數
+      const updateData = formatMaterialNumbers(rawUpdateData) as Partial<MaterialData>;
 
       // 8. 處理供應商關聯
       if (supplierId) {
@@ -696,6 +703,10 @@ export const importMaterials = CrudApiHandlers.createCreateHandler<ImportMateria
           // 對於更新操作，原料名稱可以為空（保持原有）
           // 對於新增操作，原料名稱必填
           let materialCode = materialItem.code?.trim();
+          // 移除CSV匯出時為保護前置0而添加的引號
+          if (materialCode && materialCode.startsWith("'")) {
+            materialCode = materialCode.substring(1);
+          }
           const isUpdating = materialCode && existingMaterialsMap.has(materialCode);
 
           if (!isUpdating && !materialItem.name?.trim()) {
@@ -706,9 +717,16 @@ export const importMaterials = CrudApiHandlers.createCreateHandler<ImportMateria
           const category = materialItem.categoryName?.trim() || materialItem.category?.trim() || '';
           const subCategory = materialItem.subCategoryName?.trim() || materialItem.subCategory?.trim() || '';
           const unit = materialItem.unit?.trim() || 'KG';
-          const currentStock = Number(materialItem.currentStock) || 0;
-          const safetyStockLevel = Number(materialItem.safetyStockLevel) || 0;
-          const costPerUnit = Number(materialItem.costPerUnit) || 0;
+          // 安全的數值轉換，處理字串和數字
+          const parseNumber = (value: any, defaultValue: number = 0): number => {
+            if (value === null || value === undefined || value === '') return defaultValue;
+            const num = Number(String(value).replace(/['"]/g, '').trim());
+            return isNaN(num) ? defaultValue : num;
+          };
+
+          const currentStock = parseNumber(materialItem.currentStock, 0);
+          const safetyStockLevel = parseNumber(materialItem.safetyStockLevel, 0);
+          const costPerUnit = parseNumber(materialItem.costPerUnit, 0);
 
           // 數值驗證
           if (currentStock < 0) throw new Error('庫存數量不能為負數');
@@ -770,7 +788,7 @@ export const importMaterials = CrudApiHandlers.createCreateHandler<ImportMateria
                 if (!categoryQuery.empty) {
                   // 分類存在，更新名稱和ID
                   updateData.category = importCategoryName;
-                  updateData.mainCategoryId = categoryQuery.docs[0].data().id;
+                  updateData.mainCategoryId = categoryQuery.docs[0].id;
                   hasChanges = true;
                   logger.info(`更新分類: ${currentCategoryName} → ${importCategoryName}`);
                 } else {
@@ -794,7 +812,7 @@ export const importMaterials = CrudApiHandlers.createCreateHandler<ImportMateria
                 if (!subCategoryQuery.empty) {
                   // 子分類存在，更新名稱和ID
                   updateData.subCategory = importSubCategoryName;
-                  updateData.subCategoryId = subCategoryQuery.docs[0].data().id;
+                  updateData.subCategoryId = subCategoryQuery.docs[0].id;
                   hasChanges = true;
                   logger.info(`更新子分類: ${currentSubCategoryName} → ${importSubCategoryName}`);
                 } else {
@@ -808,9 +826,15 @@ export const importMaterials = CrudApiHandlers.createCreateHandler<ImportMateria
               hasChanges = true;
             }
 
-            // 數值欄位比對（包括0值）
+            // 數值欄位比對（包括0值）- 使用安全轉換
+            const parseNumberSafe = (value: any, defaultValue: number = 0): number => {
+              if (value === null || value === undefined || value === '') return defaultValue;
+              const num = Number(String(value).replace(/['"]/g, '').trim());
+              return isNaN(num) ? defaultValue : num;
+            };
+
             if (materialItem.currentStock !== undefined && materialItem.currentStock !== null && String(materialItem.currentStock) !== '') {
-              const newStock = Number(materialItem.currentStock);
+              const newStock = parseNumberSafe(materialItem.currentStock);
               if (newStock !== (existingData.currentStock || 0)) {
                 updateData.currentStock = newStock;
                 hasChanges = true;
@@ -818,7 +842,7 @@ export const importMaterials = CrudApiHandlers.createCreateHandler<ImportMateria
             }
 
             if (materialItem.safetyStockLevel !== undefined && materialItem.safetyStockLevel !== null && String(materialItem.safetyStockLevel) !== '') {
-              const newSafetyLevel = Number(materialItem.safetyStockLevel);
+              const newSafetyLevel = parseNumberSafe(materialItem.safetyStockLevel);
               if (newSafetyLevel !== (existingData.safetyStockLevel || 0)) {
                 updateData.safetyStockLevel = newSafetyLevel;
                 hasChanges = true;
@@ -826,7 +850,7 @@ export const importMaterials = CrudApiHandlers.createCreateHandler<ImportMateria
             }
 
             if (materialItem.costPerUnit !== undefined && materialItem.costPerUnit !== null && String(materialItem.costPerUnit) !== '') {
-              const newCost = Number(materialItem.costPerUnit);
+              const newCost = parseNumberSafe(materialItem.costPerUnit);
               if (newCost !== (existingData.costPerUnit || 0)) {
                 updateData.costPerUnit = newCost;
                 hasChanges = true;
@@ -937,7 +961,12 @@ export const importMaterials = CrudApiHandlers.createCreateHandler<ImportMateria
                 .get();
 
               if (!categoryQuery.empty) {
-                materialData.mainCategoryId = categoryQuery.docs[0].data().id;
+                materialData.mainCategoryId = categoryQuery.docs[0].id;
+                console.log(`找到主分類「${category}」，ID: ${categoryQuery.docs[0].id}`);
+              } else {
+                // 如果分類不存在，清空分類欄位
+                materialData.category = '';
+                console.warn(`主分類「${category}」不存在，已清空`);
               }
             }
 
@@ -948,7 +977,12 @@ export const importMaterials = CrudApiHandlers.createCreateHandler<ImportMateria
                 .get();
 
               if (!subCategoryQuery.empty) {
-                materialData.subCategoryId = subCategoryQuery.docs[0].data().id;
+                materialData.subCategoryId = subCategoryQuery.docs[0].id;
+                console.log(`找到子分類「${subCategory}」，ID: ${subCategoryQuery.docs[0].id}`);
+              } else {
+                // 如果子分類不存在，清空子分類欄位
+                materialData.subCategory = '';
+                console.warn(`子分類「${subCategory}」不存在，已清空`);
               }
             }
 

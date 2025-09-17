@@ -476,6 +476,10 @@ exports.importMaterials = apiWrapper_1.CrudApiHandlers.createCreateHandler('Impo
                 // 對於更新操作，原料名稱可以為空（保持原有）
                 // 對於新增操作，原料名稱必填
                 let materialCode = (_a = materialItem.code) === null || _a === void 0 ? void 0 : _a.trim();
+                // 移除CSV匯出時為保護前置0而添加的引號
+                if (materialCode && materialCode.startsWith("'")) {
+                    materialCode = materialCode.substring(1);
+                }
                 const isUpdating = materialCode && existingMaterialsMap.has(materialCode);
                 if (!isUpdating && !((_b = materialItem.name) === null || _b === void 0 ? void 0 : _b.trim())) {
                     throw new Error('新增原料時，原料名稱為必填欄位');
@@ -484,9 +488,16 @@ exports.importMaterials = apiWrapper_1.CrudApiHandlers.createCreateHandler('Impo
                 const category = ((_e = materialItem.categoryName) === null || _e === void 0 ? void 0 : _e.trim()) || ((_f = materialItem.category) === null || _f === void 0 ? void 0 : _f.trim()) || '';
                 const subCategory = ((_g = materialItem.subCategoryName) === null || _g === void 0 ? void 0 : _g.trim()) || ((_h = materialItem.subCategory) === null || _h === void 0 ? void 0 : _h.trim()) || '';
                 const unit = ((_j = materialItem.unit) === null || _j === void 0 ? void 0 : _j.trim()) || 'KG';
-                const currentStock = Number(materialItem.currentStock) || 0;
-                const safetyStockLevel = Number(materialItem.safetyStockLevel) || 0;
-                const costPerUnit = Number(materialItem.costPerUnit) || 0;
+                // 安全的數值轉換，處理字串和數字
+                const parseNumber = (value, defaultValue = 0) => {
+                    if (value === null || value === undefined || value === '')
+                        return defaultValue;
+                    const num = Number(String(value).replace(/['"]/g, '').trim());
+                    return isNaN(num) ? defaultValue : num;
+                };
+                const currentStock = parseNumber(materialItem.currentStock, 0);
+                const safetyStockLevel = parseNumber(materialItem.safetyStockLevel, 0);
+                const costPerUnit = parseNumber(materialItem.costPerUnit, 0);
                 // 數值驗證
                 if (currentStock < 0)
                     throw new Error('庫存數量不能為負數');
@@ -540,7 +551,7 @@ exports.importMaterials = apiWrapper_1.CrudApiHandlers.createCreateHandler('Impo
                             if (!categoryQuery.empty) {
                                 // 分類存在，更新名稱和ID
                                 updateData.category = importCategoryName;
-                                updateData.mainCategoryId = categoryQuery.docs[0].data().id;
+                                updateData.mainCategoryId = categoryQuery.docs[0].id;
                                 hasChanges = true;
                                 firebase_functions_1.logger.info(`更新分類: ${currentCategoryName} → ${importCategoryName}`);
                             }
@@ -562,7 +573,7 @@ exports.importMaterials = apiWrapper_1.CrudApiHandlers.createCreateHandler('Impo
                             if (!subCategoryQuery.empty) {
                                 // 子分類存在，更新名稱和ID
                                 updateData.subCategory = importSubCategoryName;
-                                updateData.subCategoryId = subCategoryQuery.docs[0].data().id;
+                                updateData.subCategoryId = subCategoryQuery.docs[0].id;
                                 hasChanges = true;
                                 firebase_functions_1.logger.info(`更新子分類: ${currentSubCategoryName} → ${importSubCategoryName}`);
                             }
@@ -575,23 +586,29 @@ exports.importMaterials = apiWrapper_1.CrudApiHandlers.createCreateHandler('Impo
                         updateData.unit = materialItem.unit.trim();
                         hasChanges = true;
                     }
-                    // 數值欄位比對（包括0值）
+                    // 數值欄位比對（包括0值）- 使用安全轉換
+                    const parseNumberSafe = (value, defaultValue = 0) => {
+                        if (value === null || value === undefined || value === '')
+                            return defaultValue;
+                        const num = Number(String(value).replace(/['"]/g, '').trim());
+                        return isNaN(num) ? defaultValue : num;
+                    };
                     if (materialItem.currentStock !== undefined && materialItem.currentStock !== null && String(materialItem.currentStock) !== '') {
-                        const newStock = Number(materialItem.currentStock);
+                        const newStock = parseNumberSafe(materialItem.currentStock);
                         if (newStock !== (existingData.currentStock || 0)) {
                             updateData.currentStock = newStock;
                             hasChanges = true;
                         }
                     }
                     if (materialItem.safetyStockLevel !== undefined && materialItem.safetyStockLevel !== null && String(materialItem.safetyStockLevel) !== '') {
-                        const newSafetyLevel = Number(materialItem.safetyStockLevel);
+                        const newSafetyLevel = parseNumberSafe(materialItem.safetyStockLevel);
                         if (newSafetyLevel !== (existingData.safetyStockLevel || 0)) {
                             updateData.safetyStockLevel = newSafetyLevel;
                             hasChanges = true;
                         }
                     }
                     if (materialItem.costPerUnit !== undefined && materialItem.costPerUnit !== null && String(materialItem.costPerUnit) !== '') {
-                        const newCost = Number(materialItem.costPerUnit);
+                        const newCost = parseNumberSafe(materialItem.costPerUnit);
                         if (newCost !== (existingData.costPerUnit || 0)) {
                             updateData.costPerUnit = newCost;
                             hasChanges = true;
@@ -683,7 +700,13 @@ exports.importMaterials = apiWrapper_1.CrudApiHandlers.createCreateHandler('Impo
                             .limit(1)
                             .get();
                         if (!categoryQuery.empty) {
-                            materialData.mainCategoryId = categoryQuery.docs[0].data().id;
+                            materialData.mainCategoryId = categoryQuery.docs[0].id;
+                            console.log(`找到主分類「${category}」，ID: ${categoryQuery.docs[0].id}`);
+                        }
+                        else {
+                            // 如果分類不存在，清空分類欄位
+                            materialData.category = '';
+                            console.warn(`主分類「${category}」不存在，已清空`);
                         }
                     }
                     if (subCategory) {
@@ -692,7 +715,13 @@ exports.importMaterials = apiWrapper_1.CrudApiHandlers.createCreateHandler('Impo
                             .limit(1)
                             .get();
                         if (!subCategoryQuery.empty) {
-                            materialData.subCategoryId = subCategoryQuery.docs[0].data().id;
+                            materialData.subCategoryId = subCategoryQuery.docs[0].id;
+                            console.log(`找到子分類「${subCategory}」，ID: ${subCategoryQuery.docs[0].id}`);
+                        }
+                        else {
+                            // 如果子分類不存在，清空子分類欄位
+                            materialData.subCategory = '';
+                            console.warn(`子分類「${subCategory}」不存在，已清空`);
                         }
                     }
                     if (supplierRef) {

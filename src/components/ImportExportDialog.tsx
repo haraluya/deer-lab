@@ -254,12 +254,22 @@ export function ImportExportDialog({
       
       // 建立 CSV 內容 (加入 BOM 解決中文亂碼問題)
       const headers = fields.map(f => f.label).join(',')
-      const rows = data.map(row => 
+      const rows = data.map(row =>
         fields.map(f => {
           let value = row[f.key] || ''
           // 如果是百分比格式，轉換為小數
           if (f.format === 'percentage' && typeof value === 'number') {
             value = (value / 100).toFixed(2)
+          }
+          // 針對代碼欄位（可能包含前置0）做特殊處理
+          if (f.key === 'code' && typeof value === 'string' && /^\d+$/.test(value)) {
+            // 如果是純數字字串，在前面加上引號強制Excel視為文字
+            value = `'${value}`
+          }
+          // 針對數值型欄位保護小數點格式
+          if (f.type === 'number' && typeof value === 'number') {
+            // 保持數值精度，避免科學記號
+            value = value.toString()
           }
           return `"${value}"`
         }).join(',')

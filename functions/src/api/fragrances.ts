@@ -18,6 +18,7 @@ import { BusinessError, ApiErrorCode, ErrorHandler } from "../utils/errorHandler
 import { Permission, UserRole } from "../middleware/auth";
 import { StandardResponses, BatchOperationResult } from "../types/api";
 import FragranceCalculations, { calculateCorrectRatios } from '../utils/fragranceCalculations';
+import { formatFragranceNumbers } from '../utils/numberValidation';
 
 const db = getFirestore();
 
@@ -163,7 +164,7 @@ export const createFragrance = CrudApiHandlers.createCreateHandler<CreateFragran
       const finalFragranceStatus = fragranceStatus || '備用';
       
       // 4. 建立香精資料
-      const fragranceData = {
+      const rawFragranceData = {
         code: code.trim(),
         name: name.trim(),
         fragranceType: finalFragranceType,
@@ -184,6 +185,9 @@ export const createFragrance = CrudApiHandlers.createCreateHandler<CreateFragran
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       };
+
+      // 限制數值最多三位小數
+      const fragranceData = formatFragranceNumbers(rawFragranceData);
       
       // 5. 儲存到資料庫
       const docRef = await db.collection('fragrances').add(fragranceData);
@@ -253,7 +257,7 @@ export const updateFragrance = CrudApiHandlers.createUpdateHandler<UpdateFragran
       const stockChanged = oldStock !== newStock;
       
       // 6. 準備更新資料
-      const updateData: any = {
+      const rawUpdateData: any = {
         code: code.trim(),
         name: name.trim(),
         status: finalStatus,
@@ -268,6 +272,9 @@ export const updateFragrance = CrudApiHandlers.createUpdateHandler<UpdateFragran
         unit: unit || 'KG',
         updatedAt: FieldValue.serverTimestamp(),
       };
+
+      // 限制數值最多三位小數
+      const updateData = formatFragranceNumbers(rawUpdateData);
       
       // 7. 處理供應商參照
       if (supplierId) {
@@ -481,17 +488,28 @@ export const importFragrances = CrudApiHandlers.createCreateHandler<ImportFragra
             throw new Error('香精名稱為必填欄位');
           }
 
-          const code = fragranceItem.code.trim();
+          let code = fragranceItem.code.trim();
+          // 移除CSV匯出時為保護前置0而添加的引號
+          if (code.startsWith("'")) {
+            code = code.substring(1);
+          }
           const name = fragranceItem.name.trim();
           const fragranceType = (fragranceItem as any).fragranceCategory?.trim() || (fragranceItem as any).fragranceType?.trim() || '';
           const fragranceStatus = fragranceItem.fragranceStatus?.trim() || '啟用';
           const unit = fragranceItem.unit?.trim() || 'KG';
-          const currentStock = Number(fragranceItem.currentStock) || 0;
-          const safetyStockLevel = Number(fragranceItem.safetyStockLevel) || 0;
-          const costPerUnit = Number(fragranceItem.costPerUnit) || 0;
-          const percentage = Number(fragranceItem.percentage) || 0;
-          let pgRatio = Number(fragranceItem.pgRatio) || 50;
-          let vgRatio = Number(fragranceItem.vgRatio) || 50;
+          // 安全的數值轉換，處理字串和數字
+          const parseNumber = (value: any, defaultValue: number = 0): number => {
+            if (value === null || value === undefined || value === '') return defaultValue;
+            const num = Number(String(value).replace(/['"]/g, '').trim());
+            return isNaN(num) ? defaultValue : num;
+          };
+
+          const currentStock = parseNumber(fragranceItem.currentStock, 0);
+          const safetyStockLevel = parseNumber(fragranceItem.safetyStockLevel, 0);
+          const costPerUnit = parseNumber(fragranceItem.costPerUnit, 0);
+          const percentage = parseNumber(fragranceItem.percentage, 0);
+          let pgRatio = parseNumber(fragranceItem.pgRatio, 50);
+          let vgRatio = parseNumber(fragranceItem.vgRatio, 50);
 
           // 數值驗證
           if (currentStock < 0) throw new Error('庫存數量不能為負數');
@@ -517,12 +535,36 @@ export const importFragrances = CrudApiHandlers.createCreateHandler<ImportFragra
             supplierRef = db.collection('suppliers').doc(supplierId);
           }
 
-          // 檢查是否已存在相同代號的香精
+          // 檢查是否已存在相同代號的香精 - 支援模糊查詢
           let fragranceId: string;
+          let matchedCode = code;
+          let existing = existingFragrancesMap.get(code);
 
-          if (existingFragrancesMap.has(code)) {
+          // 如果精確匹配失敗，嘗試模糊查詢（處理前置0問題）
+          if (!existing) {
+            // 嘗試移除前置0
+            const codeWithoutLeadingZeros = code.replace(/^0+/, '');
+            if (codeWithoutLeadingZeros !== code && existingFragrancesMap.has(codeWithoutLeadingZeros)) {
+              existing = existingFragrancesMap.get(codeWithoutLeadingZeros);
+              matchedCode = codeWithoutLeadingZeros;
+              logger.info(`香精代號模糊匹配：${code} → ${codeWithoutLeadingZeros}`);
+            }
+            // 嘗試添加前置0（一位到三位）
+            else {
+              for (let zeros = 1; zeros <= 3; zeros++) {
+                const codeWithLeadingZeros = '0'.repeat(zeros) + code;
+                if (existingFragrancesMap.has(codeWithLeadingZeros)) {
+                  existing = existingFragrancesMap.get(codeWithLeadingZeros);
+                  matchedCode = codeWithLeadingZeros;
+                  logger.info(`香精代號模糊匹配：${code} → ${codeWithLeadingZeros}`);
+                  break;
+                }
+              }
+            }
+          }
+
+          if (existing) {
             // 更新現有香精 - 智能差異比對
-            const existing = existingFragrancesMap.get(code)!;
             fragranceId = existing.id;
             const existingData = existing.data;
 
@@ -617,17 +659,17 @@ export const importFragrances = CrudApiHandlers.createCreateHandler<ImportFragra
 
             if (hasChanges) {
               results.successful.push({
-                code: code,
+                code: matchedCode,
                 name: updateData.name || existing.data.name,
                 operation: 'updated',
-                message: `香精「${updateData.name || existing.data.name}」已更新 (${Object.keys(updateData).filter(k => k !== 'updatedAt').join(', ')})`
+                message: `香精「${updateData.name || existing.data.name}」已更新 (${Object.keys(updateData).filter(k => k !== 'updatedAt').join(', ')})${matchedCode !== code ? ` [代號匹配: ${code} → ${matchedCode}]` : ''}`
               });
             } else {
               results.successful.push({
-                code: code,
+                code: matchedCode,
                 name: existing.data.name,
                 operation: 'skipped',
-                message: `香精「${existing.data.name}」無變更，跳過更新`
+                message: `香精「${existing.data.name}」無變更，跳過更新${matchedCode !== code ? ` [代號匹配: ${code} → ${matchedCode}]` : ''}`
               });
             }
 

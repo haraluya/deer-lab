@@ -159,7 +159,8 @@ export default function MaterialsPage() {
         // 簡化分類處理 - 直接使用標準欄位
         const categoryName = data.category || '未分類';
         const subCategoryName = data.subCategory || '';
-        
+
+
         return {
           ...data,
           supplierName: supplierName,

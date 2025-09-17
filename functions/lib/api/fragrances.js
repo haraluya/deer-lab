@@ -308,17 +308,28 @@ exports.importFragrances = apiWrapper_1.CrudApiHandlers.createCreateHandler('Imp
                 if (!((_b = fragranceItem.name) === null || _b === void 0 ? void 0 : _b.trim())) {
                     throw new Error('香精名稱為必填欄位');
                 }
-                const code = fragranceItem.code.trim();
+                let code = fragranceItem.code.trim();
+                // 移除CSV匯出時為保護前置0而添加的引號
+                if (code.startsWith("'")) {
+                    code = code.substring(1);
+                }
                 const name = fragranceItem.name.trim();
                 const fragranceType = ((_c = fragranceItem.fragranceCategory) === null || _c === void 0 ? void 0 : _c.trim()) || ((_d = fragranceItem.fragranceType) === null || _d === void 0 ? void 0 : _d.trim()) || '';
                 const fragranceStatus = ((_e = fragranceItem.fragranceStatus) === null || _e === void 0 ? void 0 : _e.trim()) || '啟用';
                 const unit = ((_f = fragranceItem.unit) === null || _f === void 0 ? void 0 : _f.trim()) || 'KG';
-                const currentStock = Number(fragranceItem.currentStock) || 0;
-                const safetyStockLevel = Number(fragranceItem.safetyStockLevel) || 0;
-                const costPerUnit = Number(fragranceItem.costPerUnit) || 0;
-                const percentage = Number(fragranceItem.percentage) || 0;
-                let pgRatio = Number(fragranceItem.pgRatio) || 50;
-                let vgRatio = Number(fragranceItem.vgRatio) || 50;
+                // 安全的數值轉換，處理字串和數字
+                const parseNumber = (value, defaultValue = 0) => {
+                    if (value === null || value === undefined || value === '')
+                        return defaultValue;
+                    const num = Number(String(value).replace(/['"]/g, '').trim());
+                    return isNaN(num) ? defaultValue : num;
+                };
+                const currentStock = parseNumber(fragranceItem.currentStock, 0);
+                const safetyStockLevel = parseNumber(fragranceItem.safetyStockLevel, 0);
+                const costPerUnit = parseNumber(fragranceItem.costPerUnit, 0);
+                const percentage = parseNumber(fragranceItem.percentage, 0);
+                let pgRatio = parseNumber(fragranceItem.pgRatio, 50);
+                let vgRatio = parseNumber(fragranceItem.vgRatio, 50);
                 // 數值驗證
                 if (currentStock < 0)
                     throw new Error('庫存數量不能為負數');
@@ -346,11 +357,34 @@ exports.importFragrances = apiWrapper_1.CrudApiHandlers.createCreateHandler('Imp
                     }
                     supplierRef = db.collection('suppliers').doc(supplierId);
                 }
-                // 檢查是否已存在相同代號的香精
+                // 檢查是否已存在相同代號的香精 - 支援模糊查詢
                 let fragranceId;
-                if (existingFragrancesMap.has(code)) {
+                let matchedCode = code;
+                let existing = existingFragrancesMap.get(code);
+                // 如果精確匹配失敗，嘗試模糊查詢（處理前置0問題）
+                if (!existing) {
+                    // 嘗試移除前置0
+                    const codeWithoutLeadingZeros = code.replace(/^0+/, '');
+                    if (codeWithoutLeadingZeros !== code && existingFragrancesMap.has(codeWithoutLeadingZeros)) {
+                        existing = existingFragrancesMap.get(codeWithoutLeadingZeros);
+                        matchedCode = codeWithoutLeadingZeros;
+                        firebase_functions_1.logger.info(`香精代號模糊匹配：${code} → ${codeWithoutLeadingZeros}`);
+                    }
+                    // 嘗試添加前置0（一位到三位）
+                    else {
+                        for (let zeros = 1; zeros <= 3; zeros++) {
+                            const codeWithLeadingZeros = '0'.repeat(zeros) + code;
+                            if (existingFragrancesMap.has(codeWithLeadingZeros)) {
+                                existing = existingFragrancesMap.get(codeWithLeadingZeros);
+                                matchedCode = codeWithLeadingZeros;
+                                firebase_functions_1.logger.info(`香精代號模糊匹配：${code} → ${codeWithLeadingZeros}`);
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (existing) {
                     // 更新現有香精 - 智能差異比對
-                    const existing = existingFragrancesMap.get(code);
                     fragranceId = existing.id;
                     const existingData = existing.data;
                     const updateData = {};
@@ -423,18 +457,18 @@ exports.importFragrances = apiWrapper_1.CrudApiHandlers.createCreateHandler('Imp
                     }
                     if (hasChanges) {
                         results.successful.push({
-                            code: code,
+                            code: matchedCode,
                             name: updateData.name || existing.data.name,
                             operation: 'updated',
-                            message: `香精「${updateData.name || existing.data.name}」已更新 (${Object.keys(updateData).filter(k => k !== 'updatedAt').join(', ')})`
+                            message: `香精「${updateData.name || existing.data.name}」已更新 (${Object.keys(updateData).filter(k => k !== 'updatedAt').join(', ')})${matchedCode !== code ? ` [代號匹配: ${code} → ${matchedCode}]` : ''}`
                         });
                     }
                     else {
                         results.successful.push({
-                            code: code,
+                            code: matchedCode,
                             name: existing.data.name,
                             operation: 'skipped',
-                            message: `香精「${existing.data.name}」無變更，跳過更新`
+                            message: `香精「${existing.data.name}」無變更，跳過更新${matchedCode !== code ? ` [代號匹配: ${code} → ${matchedCode}]` : ''}`
                         });
                     }
                 }

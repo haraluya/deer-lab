@@ -30,7 +30,7 @@ export interface InventoryRecordDetail {
 export interface InventoryRecord {
   id?: string;
   changeDate: Date;
-  changeReason: 'purchase' | 'workorder' | 'inventory_check' | 'manual_adjustment';
+  changeReason: 'purchase' | 'workorder' | 'inventory_check' | 'manual_adjustment' | 'import';
   operatorId: string;
   operatorName: string;
   remarks?: string;
@@ -217,7 +217,7 @@ export async function getItemInventoryHistory(
  * 根據變動原因建立庫存紀錄的輔助函數（支援批量操作）
  */
 export async function createInventoryRecordByReason(
-  reason: 'purchase' | 'workorder' | 'inventory_check' | 'manual_adjustment',
+  reason: 'purchase' | 'workorder' | 'inventory_check' | 'manual_adjustment' | 'import',
   actionData: {
     operatorId: string;
     operatorName: string;
@@ -240,7 +240,7 @@ export async function createInventoryRecordByReason(
  * 建立單項庫存變動紀錄（用於直接修改等單項操作）
  */
 export async function createSingleItemInventoryRecord(
-  reason: 'manual_adjustment',
+  reason: 'manual_adjustment' | 'import',
   itemData: {
     itemType: 'material' | 'fragrance';
     itemId: string;
@@ -278,7 +278,8 @@ export function getChangeReasonLabel(reason: string): string {
     purchase: '採購購入',
     workorder: '工單領料',
     inventory_check: '庫存盤點',
-    manual_adjustment: '直接修改'
+    manual_adjustment: '直接修改',
+    import: '批次匯入'
   };
   return reasonLabels[reason] || reason;
 }

@@ -204,12 +204,13 @@ export function InventoryHistorySection({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge 
-                          variant="outline" 
+                        <Badge
+                          variant="outline"
                           className={`text-xs ${
                             record.changeReason === 'purchase' ? 'border-green-200 text-green-700 bg-green-50' :
                             record.changeReason === 'workorder' ? 'border-orange-200 text-orange-700 bg-orange-50' :
                             record.changeReason === 'inventory_check' ? 'border-blue-200 text-blue-700 bg-blue-50' :
+                            record.changeReason === 'import' ? 'border-purple-200 text-purple-700 bg-purple-50' :
                             'border-gray-200 text-gray-700 bg-gray-50'
                           }`}
                         >

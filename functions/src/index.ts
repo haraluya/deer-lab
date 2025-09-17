@@ -85,3 +85,6 @@ export * from "./api/personnel";
 export * from "./api/timeRecords";
 export * from "./api/globalCart";
 
+// 維護工具函數 - 查詢自動分類
+import { queryAutoCategories } from "./api/maintenance/queryAutoCategories";
+export const checkAutoCategories = onRequest(queryAutoCategories);

@@ -905,7 +905,7 @@ export default function FragrancesPage() {
           return fragrances.map(fragrance => ({
             code: fragrance.code,
             name: fragrance.name,
-            fragranceCategory: fragrance.fragranceCategory || '未指定',
+            fragranceType: fragrance.fragranceType || '未指定',
             fragranceStatus: fragrance.fragranceStatus || '未指定',
             supplierName: fragrance.supplierName,
             currentStock: fragrance.currentStock,
@@ -926,7 +926,7 @@ export default function FragrancesPage() {
           {
             code: "FRAG001",
             name: "示例香精",
-            fragranceCategory: "棉芯",
+            fragranceType: "棉芯",
             fragranceStatus: "啟用",
             supplierName: "示例供應商",
             currentStock: 500,
@@ -941,7 +941,7 @@ export default function FragrancesPage() {
         fields={[
           { key: "code", label: "香精代號", required: true, type: "string" },
           { key: "name", label: "香精名稱", required: true, type: "string" },
-          { key: "fragranceCategory", label: "香精種類", required: false, type: "string" },
+          { key: "fragranceType", label: "香精種類", required: false, type: "string" },
           { key: "fragranceStatus", label: "啟用狀態", required: false, type: "string" },
           { key: "supplierName", label: "供應商", required: false, type: "string" },
           { key: "currentStock", label: "目前庫存", required: false, type: "number" },

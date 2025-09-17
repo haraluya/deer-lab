@@ -10,6 +10,7 @@ import { collection, getDocs, DocumentReference, DocumentData } from 'firebase/f
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
 import FragranceCalculations from '@/utils/fragranceCalculations';
+import { validateStock, validatePercentage, limitToThreeDecimals, validateRatioSum } from '@/utils/numberValidation';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -24,7 +25,7 @@ const formSchema = z.object({
   code: z.string().min(1, { message: '香精代號為必填欄位' }),
   name: z.string().min(2, { message: '香精名稱至少需要 2 個字元' }),
   fragranceType: z.string().min(1, { message: '必須選擇香精種類' }),
-  fragranceStatus: z.string().default('standby'), // 預設為備用，不再是必填
+  fragranceStatus: z.string().default('備用'), // 預設為備用，不再是必填
   supplierId: z.string().optional(),
   currentStock: z.coerce.number().min(0, { message: '現有庫存不能為負數' }).default(0),
   safetyStockLevel: z.coerce.number().min(0).default(0),
@@ -34,11 +35,8 @@ const formSchema = z.object({
   vgRatio: z.coerce.number().min(0).max(100, { message: 'VG比例不能超過100%' }).default(0),
   remarks: z.string().optional(),
 }).refine((data) => {
-  const total = (data.percentage || 0) + (data.pgRatio || 0) + (data.vgRatio || 0);
-  // 如果所有比例都為0，則跳過驗證（允許新增時不設定比例）
-  if (total === 0) return true;
-  // 允許小數精度誤差，總和在99.99%到100.01%之間都是合法的
-  return total >= 99.99 && total <= 100.01;
+  // 使用統一的驗證函數
+  return validateRatioSum(data.percentage || 0, data.pgRatio || 0, data.vgRatio || 0);
 }, {
   message: "香精、PG、VG比例總和必須等於100%（或全部為0）",
   path: ["percentage"],
@@ -90,7 +88,7 @@ export function FragranceDialog({
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      code: '', name: '', fragranceType: '', fragranceStatus: 'standby', supplierId: '',
+      code: '', name: '', fragranceType: '', fragranceStatus: '備用', supplierId: '',
       currentStock: 0, safetyStockLevel: 0, costPerUnit: 0, percentage: 0, pgRatio: 0, vgRatio: 0, remarks: '',
     },
   });
@@ -187,14 +185,16 @@ export function FragranceDialog({
 
   async function onSubmit(values: FormData) {
     let finalValues;
-      
-      // 儲存實際計算出的PG和VG數值，而不是用運算的
-      // 這樣可以避免數字處理問題
+
+      // 限制所有數值最多三位小數
       finalValues = {
         ...values,
-        // 使用表單中實際顯示的PG和VG比例（已經過自動計算）
-        pgRatio: values.pgRatio || 0,
-        vgRatio: values.vgRatio || 0,
+        currentStock: validateStock(values.currentStock),
+        safetyStockLevel: validateStock(values.safetyStockLevel),
+        costPerUnit: limitToThreeDecimals(values.costPerUnit),
+        percentage: validatePercentage(values.percentage || 0),
+        pgRatio: validatePercentage(values.pgRatio || 0),
+        vgRatio: validatePercentage(values.vgRatio || 0),
         unit: 'KG', // 固定單位為KG
         category: '香精', // 統一設定為香精分類
       };
