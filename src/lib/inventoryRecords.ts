@@ -279,7 +279,9 @@ export function getChangeReasonLabel(reason: string): string {
     workorder: '工單領料',
     inventory_check: '庫存盤點',
     manual_adjustment: '直接修改',
-    import: '批次匯入'
+    import: '批次匯入',
+    import_operation: '批次匯入',
+    import_update: '批次匯入'
   };
   return reasonLabels[reason] || reason;
 }

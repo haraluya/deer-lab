@@ -31,15 +31,16 @@ class InventoryRecordManager {
     itemType: string,
     quantityChange: number,
     operatorId: string,
+    operatorName: string,
     remarks: string = '庫存異動'
   ): Promise<void> {
     try {
       const inventoryRecordRef = db.collection('inventory_records').doc();
       await inventoryRecordRef.set({
         changeDate: FieldValue.serverTimestamp(),
-        changeReason: 'import_operation',
+        changeReason: 'import',
         operatorId,
-        operatorName: '系統匯入',
+        operatorName,
         remarks,
         relatedDocumentId: itemId,
         relatedDocumentType: itemType,
@@ -653,6 +654,7 @@ export const importFragrances = CrudApiHandlers.createCreateHandler<ImportFragra
                 'fragrances',
                 currentStock - oldStock,
                 context.auth.uid,
+                context.auth.token?.name || '未知用戶',
                 `批量匯入更新 - 從 ${oldStock} 更新為 ${currentStock}`
               );
             }
@@ -706,6 +708,7 @@ export const importFragrances = CrudApiHandlers.createCreateHandler<ImportFragra
                 'fragrances',
                 currentStock,
                 context.auth.uid,
+                context.auth.token?.name || '未知用戶',
                 `批量匯入初始庫存`
               );
             }

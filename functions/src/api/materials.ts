@@ -887,8 +887,8 @@ export const importMaterials = CrudApiHandlers.createCreateHandler<ImportMateria
                 oldStock,
                 currentStock,
                 context.auth.uid,
-                undefined,
-                'import_update',
+                context.auth.token?.name || '未知用戶',
+                'import',
                 `批量匯入更新 - 從 ${oldStock} 更新為 ${currentStock}`
               );
             }
@@ -1002,8 +1002,8 @@ export const importMaterials = CrudApiHandlers.createCreateHandler<ImportMateria
                 0,
                 currentStock,
                 context.auth.uid,
-                undefined,
-                'import_initial',
+                context.auth.token?.name || '未知用戶',
+                'import',
                 `批量匯入初始庫存`
               );
             }
