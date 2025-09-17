@@ -300,77 +300,6 @@ export function ImportExportDialog({
     }
   }
 
-  const handleExportExcel = async () => {
-    setIsExporting(true)
-    try {
-      const data = await onExport()
-
-      // 建立工作簿
-      const wb = XLSX.utils.book_new()
-
-      // 準備資料：標題行 + 資料行
-      const headers = fields.map(f => f.label)
-      const rows = data.map(row =>
-        fields.map(f => {
-          let value = row[f.key] || ''
-          // 如果是百分比格式，保持原始數值（Excel 會自動處理百分比顯示）
-          if (f.format === 'percentage' && typeof value === 'number') {
-            value = value / 100 // 轉換為小數，Excel 可以正確顯示為百分比
-          }
-          // 保持數值型態
-          if (f.type === 'number' && typeof value === 'string' && !isNaN(Number(value))) {
-            value = Number(value)
-          }
-          return value
-        })
-      )
-
-      // 建立工作表資料（二維陣列格式）
-      const wsData = [headers, ...rows]
-
-      // 建立工作表
-      const ws = XLSX.utils.aoa_to_sheet(wsData)
-
-      // 設定欄位寬度（自動調整）
-      const colWidths = headers.map((header, i) => {
-        const maxLength = Math.max(
-          header.length,
-          ...rows.map(row => String(row[i] || '').length)
-        )
-        return { wch: Math.min(maxLength + 2, 30) } // 最大寬度限制為30
-      })
-      ws['!cols'] = colWidths
-
-      // 設定百分比格式的欄位
-      fields.forEach((field, colIndex) => {
-        if (field.format === 'percentage') {
-          // 設定該欄位為百分比格式
-          for (let rowIndex = 1; rowIndex <= rows.length; rowIndex++) {
-            const cellRef = XLSX.utils.encode_cell({ r: rowIndex, c: colIndex })
-            if (ws[cellRef]) {
-              ws[cellRef].z = '0.00%' // 百分比格式，保留兩位小數
-            }
-          }
-        }
-      })
-
-      // 將工作表加入工作簿
-      XLSX.utils.book_append_sheet(wb, ws, title)
-
-      // 產生檔案名稱
-      const fileName = `${title}_${new Date().toISOString().split('T')[0]}.xlsx`
-
-      // 下載檔案
-      XLSX.writeFile(wb, fileName)
-
-      toast.success("Excel 匯出成功")
-    } catch (error) {
-      console.error("Excel 匯出失敗:", error)
-      toast.error("Excel 匯出失敗")
-    } finally {
-      setIsExporting(false)
-    }
-  }
 
   const getColorClasses = (color: string) => {
     switch (color) {
@@ -630,7 +559,7 @@ export function ImportExportDialog({
                 資料匯出
               </CardTitle>
               <CardDescription className="text-muted-foreground">
-                將現有資料匯出為 Excel 或 CSV 格式
+                將現有資料匯出為 CSV 格式
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -641,30 +570,18 @@ export function ImportExportDialog({
                     <div key={field.key} className="flex items-center gap-2 text-sm">
                       <span>{field.label}</span>
                       {field.required && <Badge variant="secondary" className="text-xs">必填</Badge>}
-                      {field.format === 'percentage' && <Badge variant="outline" className="text-xs">百分比</Badge>}
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Button
-                  onClick={handleExportExcel}
-                  disabled={isExporting}
-                  className={`w-full ${colorClasses.button}`}
-                >
-                  {isExporting ? "匯出中..." : "匯出 Excel (.xlsx)"}
-                </Button>
-
-                <Button
-                  onClick={handleExportCSV}
-                  disabled={isExporting}
-                  variant="outline"
-                  className="w-full"
-                >
-                  {isExporting ? "匯出中..." : "匯出 CSV"}
-                </Button>
-              </div>
+              <Button
+                onClick={handleExportCSV}
+                disabled={isExporting}
+                className={`w-full ${colorClasses.button}`}
+              >
+                {isExporting ? "匯出中..." : "匯出 CSV"}
+              </Button>
             </CardContent>
           </Card>
         </div>

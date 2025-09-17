@@ -7,10 +7,10 @@ import { collection, getDocs, query, orderBy, where, doc, getDoc, Timestamp } fr
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
 import { TimeEntry as TimeEntryType } from '@/types';
-import { 
-  Clock, Users, Factory, Calendar, Filter, Search, 
+import {
+  Clock, Users, Factory, Calendar, Filter, Search,
   ChevronDown, ChevronUp, FileText, BarChart3, TrendingUp,
-  Activity, Timer, AlertCircle, CheckCircle, Eye, ExternalLink
+  Activity, Timer, AlertCircle, CheckCircle, Eye, ExternalLink, FileBarChart
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +23,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StandardStatsCard, StandardStats } from '@/components/StandardStatsCard';
+import { TimeRecordsReportDialog } from '@/components/TimeRecordsReportDialog';
 
 // 擴展 TimeEntry 類型以適應此頁面
 interface LocalTimeEntry extends TimeEntryType {
@@ -63,37 +64,20 @@ export default function TimeReportsPage() {
     avgHoursPerOrder: 0
   });
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [selectedOrder, setSelectedOrder] = useState<WorkOrderSummary | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
 
   // 載入資料
   useEffect(() => {
     loadTimeReports();
   }, []);
 
-  // 篩選邏輯
+  // 設定篩選結果（直接顯示所有工單）
   useEffect(() => {
-    let filtered = workOrderSummaries;
-    
-    if (searchTerm) {
-      filtered = filtered.filter(order => 
-        order.workOrderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.timeEntries.some(entry => 
-          entry.personnelName.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      );
-    }
-    
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(order => order.status === statusFilter);
-    }
-    
-    setFilteredSummaries(filtered);
-  }, [workOrderSummaries, searchTerm, statusFilter]);
+    setFilteredSummaries(workOrderSummaries);
+  }, [workOrderSummaries]);
 
   const loadTimeReports = async () => {
     try {
@@ -311,32 +295,15 @@ export default function TimeReportsPage() {
       {/* 統計卡片 */}
       <StandardStatsCard stats={statsCards} />
 
-      {/* 搜尋和篩選 */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="搜尋工單號碼、產品名稱或人員姓名..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-48">
-            <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="篩選狀態" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">全部狀態</SelectItem>
-            <SelectItem value="預報">預報</SelectItem>
-            <SelectItem value="進行">進行中</SelectItem>
-            <SelectItem value="完工">完工</SelectItem>
-            <SelectItem value="入庫">已入庫</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* 統計報表按鈕 */}
+      <div className="flex justify-end mb-6">
+        <Button
+          onClick={() => setIsReportDialogOpen(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white"
+        >
+          <FileBarChart className="h-4 w-4 mr-2" />
+          工時統計報表
+        </Button>
       </div>
 
       {/* 工單工時列表 */}
@@ -602,6 +569,12 @@ export default function TimeReportsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* 工時統計報表對話框 */}
+      <TimeRecordsReportDialog
+        open={isReportDialogOpen}
+        onOpenChange={setIsReportDialogOpen}
+      />
     </div>
   );
 }
