@@ -272,34 +272,36 @@ export default function CreateWorkOrderPage() {
 
     const materialRequirementsMap = new Map<string, any>()
 
-    // 1. 檢查香精配方資料
-    if (!selectedProduct.fragranceFormula) {
-      console.error('錯誤：沒有香精配方資料');
-      toast.error("抓取錯誤：沒有香精配方資料");
-      return [];
-    }
-    
-    const { percentage, pgRatio, vgRatio } = selectedProduct.fragranceFormula;
-    console.log('香精配方資料:', { percentage, pgRatio, vgRatio });
-    
-    if (!percentage || percentage <= 0) {
-      console.error('錯誤：香精比例為0或無效');
-      toast.error("抓取錯誤：香精比例為0或無效");
-      return [];
-    }
-    
-    // 直接使用香精詳情中的原始比例，避免浮點數精度問題
-    const fragranceRatios = {
-      fragrance: percentage, // 直接使用香精詳情中的percentage（如15.76）
-      pg: pgRatio,          // 直接使用香精詳情中的pgRatio（如44.2）
-      vg: vgRatio           // 直接使用香精詳情中的vgRatio（如40）
+    // 1. 檢查香精配方資料，但不因為缺少配方就停止計算
+    let fragranceRatios = {
+      fragrance: 0,
+      pg: 0,
+      vg: 0
     };
-    
-    console.log('直接使用香精詳情中的配方比例（避免浮點數精度問題）:', {
-      香精: percentage + '%',
-      PG: pgRatio + '%',
-      VG: vgRatio + '%',
-      總計: (percentage + pgRatio + vgRatio) + '%'
+
+    if (selectedProduct.fragranceFormula) {
+      const { percentage, pgRatio, vgRatio } = selectedProduct.fragranceFormula;
+      console.log('香精配方資料:', { percentage, pgRatio, vgRatio });
+
+      if (percentage && percentage > 0) {
+        // 有效的香精配方
+        fragranceRatios = {
+          fragrance: percentage,
+          pg: pgRatio || 0,
+          vg: vgRatio || 0
+        };
+      } else {
+        console.warn('香精比例為0或無效，但仍然繼續計算尼古丁');
+      }
+    } else {
+      console.warn('沒有香精配方資料，但仍然繼續計算尼古丁');
+    }
+
+    console.log('最終使用的配方比例:', {
+      香精: fragranceRatios.fragrance + '%',
+      PG: fragranceRatios.pg + '%',
+      VG: fragranceRatios.vg + '%',
+      總計: (fragranceRatios.fragrance + fragranceRatios.pg + fragranceRatios.vg) + '%'
     });
     console.log('使用香精比例:', fragranceRatios);
 
