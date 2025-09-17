@@ -87,6 +87,7 @@ __exportStar(require("./api/suppliers"), exports);
 __exportStar(require("./api/materials"), exports);
 __exportStar(require("./api/fragrances"), exports);
 __exportStar(require("./api/products"), exports);
+__exportStar(require("./api/productSeries"), exports);
 __exportStar(require("./api/purchaseOrders"), exports);
 __exportStar(require("./api/inventory"), exports);
 __exportStar(require("./api/workOrders"), exports);
