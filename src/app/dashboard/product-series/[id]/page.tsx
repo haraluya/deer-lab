@@ -49,7 +49,7 @@ interface Product {
   id: string;
   name: string;
   code: string;
-  status: 'active' | 'inactive';
+  status: '啟用' | '備用' | '棄用';
   nicotineMg: number;
   fragranceName?: string;
   createdAt: Date;
@@ -128,7 +128,7 @@ export default function ProductSeriesDetailPage() {
             id: productDoc.id,
             name: productData.name,
             code: productData.code,
-            status: productData.status || 'active',
+            status: productData.status || '啟用',
             nicotineMg: productData.nicotineMg || 0,
             fragranceName,
             createdAt: productData.createdAt?.toDate() || new Date(),
@@ -488,11 +488,15 @@ export default function ProductSeriesDetailPage() {
                       <TableCell>{product.fragranceName}</TableCell>
                       <TableCell>{product.nicotineMg}mg</TableCell>
                       <TableCell>
-                        <Badge 
-                          variant={product.status === 'active' ? 'default' : 'secondary'}
-                          className={product.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}
+                        <Badge
+                          variant={product.status === '啟用' ? 'default' : 'secondary'}
+                          className={
+                            product.status === '啟用' ? 'bg-green-100 text-green-800' :
+                            product.status === '備用' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }
                         >
-                          {product.status === 'active' ? '啟用' : '停用'}
+                          {product.status}
                         </Badge>
                       </TableCell>
                       <TableCell>
