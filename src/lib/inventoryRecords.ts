@@ -131,7 +131,7 @@ export async function getInventoryRecords(params: InventoryRecordQueryParams = {
       const data = doc.data();
       records.push({
         id: doc.id,
-        changeDate: data.changeDate.toDate(),
+        changeDate: data.changeDate?.toDate ? data.changeDate.toDate() : new Date(),
         changeReason: data.changeReason,
         operatorId: data.operatorId,
         operatorName: data.operatorName,
@@ -139,7 +139,7 @@ export async function getInventoryRecords(params: InventoryRecordQueryParams = {
         relatedDocumentId: data.relatedDocumentId,
         relatedDocumentType: data.relatedDocumentType,
         details: data.details || [],
-        createdAt: data.createdAt.toDate()
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date()
       });
     });
 
@@ -193,7 +193,7 @@ export async function getItemInventoryHistory(
       if (hasTargetItem) {
         records.push({
           id: doc.id,
-          changeDate: data.changeDate.toDate(),
+          changeDate: data.changeDate?.toDate ? data.changeDate.toDate() : new Date(),
           changeReason: data.changeReason,
           operatorId: data.operatorId,
           operatorName: data.operatorName,
@@ -201,7 +201,7 @@ export async function getItemInventoryHistory(
           relatedDocumentId: data.relatedDocumentId,
           relatedDocumentType: data.relatedDocumentType,
           details: details,
-          createdAt: data.createdAt.toDate()
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date()
         });
       }
     });
