@@ -434,7 +434,7 @@ export const updateProduct = CrudApiHandlers.createUpdateHandler<UpdateProductRe
  * 刪除產品請求介面
  */
 interface DeleteProductRequest {
-  productId: string;
+  id: string;
 }
 
 /**
@@ -444,9 +444,9 @@ export const deleteProduct = CrudApiHandlers.createDeleteHandler<DeleteProductRe
   'Product',
   async (data, context, requestId) => {
     // 1. 驗證必填欄位
-    ErrorHandler.validateRequired(data, ['productId']);
-    
-    const { productId } = data;
+    ErrorHandler.validateRequired(data, ['id']);
+
+    const { id: productId } = data;
     
     let fragranceId: string | null = null;
     let productData: any = null;

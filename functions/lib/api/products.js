@@ -331,8 +331,8 @@ exports.updateProduct = apiWrapper_1.CrudApiHandlers.createUpdateHandler('Produc
  */
 exports.deleteProduct = apiWrapper_1.CrudApiHandlers.createDeleteHandler('Product', async (data, context, requestId) => {
     // 1. 驗證必填欄位
-    errorHandler_1.ErrorHandler.validateRequired(data, ['productId']);
-    const { productId } = data;
+    errorHandler_1.ErrorHandler.validateRequired(data, ['id']);
+    const { id: productId } = data;
     let fragranceId = null;
     let productData = null;
     try {
