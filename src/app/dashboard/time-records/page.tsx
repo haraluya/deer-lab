@@ -7,11 +7,11 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { useApiClient } from '@/hooks/useApiClient';
 import { toast } from 'sonner';
-import { 
-  Clock, User, Calendar, Factory, TrendingUp, 
+import {
+  Clock, User, Calendar, Factory, TrendingUp,
   Activity, Timer, Award, BarChart3, Filter,
   ChevronDown, ChevronUp, Zap, ChevronLeft, ChevronRight,
-  Trash2, AlertCircle
+  Trash2, AlertCircle, FileBarChart
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { BUSINESS_CONFIG } from '@/config/business';
 import { StandardStatsCard, StandardStats } from '@/components/StandardStatsCard';
+import { TimeRecordsReportDialog } from '@/components/TimeRecordsReportDialog';
 
 // 介面定義
 interface TimeEntry {
@@ -82,6 +83,9 @@ export default function PersonalTimeRecordsPage() {
   
   // 清理功能狀態
   const [isCleaningUp, setIsCleaningUp] = useState(false);
+
+  // 報表對話框狀態
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
 
   const loadPersonalTimeRecords = useCallback(async () => {
     try {
@@ -441,55 +445,41 @@ export default function PersonalTimeRecordsPage() {
       {/* 統計卡片 */}
       <StandardStatsCard stats={statsCards} />
 
-      {/* 搜尋和篩選 */}
+      {/* 功能按鈕 */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <Input
-                placeholder="搜尋工單號碼或備註..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Select value={monthFilter} onValueChange={setMonthFilter}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="選擇月份" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">全部月份</SelectItem>
-                  {monthlyStats.map(stat => (
-                    <SelectItem key={stat.month} value={stat.month}>
-                      {formatMonthDisplay(stat.month)} ({stat.entries}筆)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              {/* 管理員清理功能 */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCleanupInvalidRecords}
-                disabled={isCleaningUp}
-                className="px-3 text-red-600 border-red-300 hover:bg-red-50"
-                title="清理無效工時記錄（沒有對應工單的記錄）"
-              >
-                {isCleaningUp ? (
-                  <>
-                    <AlertCircle className="h-4 w-4 mr-1 animate-spin" />
-                    清理中
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    清理無效記錄
-                  </>
-                )}
-              </Button>
-            </div>
+          <div className="flex justify-end gap-2">
+            {/* 統計報表按鈕 */}
+            <Button
+              variant="outline"
+              onClick={() => setIsReportDialogOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+            >
+              <FileBarChart className="h-4 w-4 mr-1" />
+              統計報表
+            </Button>
+
+            {/* 管理員清理功能 */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCleanupInvalidRecords}
+              disabled={isCleaningUp}
+              className="px-3 text-red-600 border-red-300 hover:bg-red-50"
+              title="清理無效工時記錄（沒有對應工單的記錄）"
+            >
+              {isCleaningUp ? (
+                <>
+                  <AlertCircle className="h-4 w-4 mr-1 animate-spin" />
+                  清理中
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  清理無效記錄
+                </>
+              )}
+            </Button>
           </div>
           
           {/* 說明文字 */}
@@ -922,6 +912,12 @@ export default function PersonalTimeRecordsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* 工時統計報表對話框 */}
+      <TimeRecordsReportDialog
+        open={isReportDialogOpen}
+        onOpenChange={setIsReportDialogOpen}
+      />
     </div>
   );
 }
