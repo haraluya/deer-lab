@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
+import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { MaterialData } from '@/types/entities';
 import { usePermission } from '@/hooks/usePermission';
 import { useApiClient } from '@/hooks/useApiClient';
 import { useCartOperations } from '@/hooks/useCartOperations';
 import { useDataSearch } from '@/hooks/useDataSearch';
+import { useMaterialsCache } from '@/hooks/useMaterialsCache';
 import { StandardDataListPage, StandardColumn, StandardAction, QuickFilter } from '@/components/StandardDataListPage';
 import { StandardStats } from '@/components/StandardStatsCard';
 import { Package, DollarSign, AlertTriangle, Building, Eye, Edit, Trash2, ShoppingCart, Plus, Warehouse, MoreHorizontal, Tag, Layers, FolderOpen, Settings } from 'lucide-react';
@@ -30,12 +31,21 @@ interface MaterialWithSupplier extends MaterialData {
 
 export default function MaterialsPage() {
   const router = useRouter();
-  const [materials, setMaterials] = useState<MaterialWithSupplier[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [stocktakeMode, setStocktakeMode] = useState(false);
   const [stocktakeUpdates, setStocktakeUpdates] = useState<Record<string, number>>({});
   const apiClient = useApiClient();
+
+  // 🚀 使用智能快取 Hook 替代原有載入邏輯
+  const {
+    materials,
+    loading: isLoading,
+    error: materialsError,
+    loadMaterials,
+    invalidateCache,
+    isFromCache,
+    cacheAge
+  } = useMaterialsCache();
   
   // 對話框狀態
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -91,108 +101,19 @@ export default function MaterialsPage() {
     filteredCount
   } = useDataSearch(materials, searchConfig);
 
-  // 獲取供應商資料
-  const fetchRelatedData = useCallback(async () => {
-    const suppliersMap = new Map<string, string>();
-    
-    try {
-      if (!db) {
-        console.error("Firebase db 未初始化");
-        return { suppliersMap };
-      }
-      
-      // 獲取供應商
-      try {
-        const suppliersSnapshot = await getDocs(collection(db, "suppliers"));
-        suppliersSnapshot.forEach((doc) => {
-          const supplierData = doc.data();
-          if (supplierData.name) {
-            suppliersMap.set(doc.id, supplierData.name);
-          }
-        });
-      } catch (error) {
-        // 供應商集合載入失敗，繼續執行
-      }
-      
-    } catch (error) {
-      console.error("獲取關聯資料失敗:", error);
-    }
-    
-    return { suppliersMap };
-  }, []);
-
-  // 獲取原料資料
-  const fetchMaterials = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      if (!db) {
-        console.error("Firebase db 未初始化");
-        setIsLoading(false);
-        return;
-      }
-      
-      const { suppliersMap } = await fetchRelatedData();
-      const querySnapshot = await getDocs(collection(db, "materials"));
-      
-      const materialsData: MaterialWithSupplier[] = querySnapshot.docs.map((doc) => {
-        const data = { id: doc.id, ...doc.data() } as MaterialData;
-        
-        // 獲取供應商名稱 - 處理 supplierRef（Firebase 引用）
-        let supplierName = '未指定';
-        
-        // 優先順序：直接欄位 > ID 查找 > Firebase 引用 > 其他格式
-        if (data.supplierName && data.supplierName.trim() !== '') {
-          supplierName = data.supplierName.trim();
-        } else if (data.supplierId && suppliersMap.has(data.supplierId)) {
-          supplierName = suppliersMap.get(data.supplierId)!;
-        } else if (data.supplierRef && data.supplierRef.id) {
-          // 處理 Firebase DocumentReference
-          const refId = data.supplierRef.id;
-          supplierName = suppliersMap.get(refId) || '未知供應商';
-        } else if (data.supplier && typeof data.supplier === 'string') {
-          supplierName = data.supplier;
-        } else if (data.supplier && data.supplier.name) {
-          supplierName = data.supplier.name;
-        }
-        
-        
-        // 簡化分類處理 - 直接使用標準欄位
-        const categoryName = data.category || '未分類';
-        const subCategoryName = data.subCategory || '';
-
-
-        return {
-          ...data,
-          supplierName: supplierName,
-          categoryName: categoryName,
-          subCategoryName: subCategoryName,
-          type: 'material' as const,
-          isLowStock: data.currentStock < data.minStock
-        };
-      });
-      
-      // 按分類和名稱排序
-      const sortedMaterials = materialsData.sort((a, b) => {
-        const categoryComparison = a.categoryName.localeCompare(b.categoryName);
-        if (categoryComparison !== 0) return categoryComparison;
-        return a.name.localeCompare(b.name);
-      });
-      
-      setMaterials(sortedMaterials);
-    } catch (error) {
-      console.error("獲取原料資料失敗:", error);
-      toast.error("載入原料資料失敗");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [fetchRelatedData]);
-
   // 初始載入
   useEffect(() => {
     if (canViewMaterials) {
-      fetchMaterials();
+      loadMaterials();
     }
-  }, [canViewMaterials, fetchMaterials]);
+  }, [canViewMaterials, loadMaterials]);
+
+  // 錯誤處理
+  useEffect(() => {
+    if (materialsError) {
+      toast.error(materialsError);
+    }
+  }, [materialsError]);
 
   // 定義欄位
   const columns: StandardColumn<MaterialWithSupplier>[] = [
@@ -408,9 +329,12 @@ export default function MaterialsPage() {
               throw new Error(`刪除物料 ${material.name} 失敗`);
             }
           }
-          
+
           toast.success(`已成功刪除 ${materials.length} 項物料`, { id: toastId });
-          fetchMaterials();
+
+          // 🚀 批量刪除成功後清除快取並重新載入
+          invalidateCache();
+          loadMaterials();
           setSelectedRows([]); // 清除選中狀態
         } catch (error) {
           console.error("批量刪除物料失敗", error);
@@ -541,7 +465,10 @@ export default function MaterialsPage() {
     try {
       await deleteDoc(doc(db, "materials", selectedMaterial.id));
       toast.success(`物料 ${selectedMaterial.name} 已成功刪除。`, { id: toastId });
-      fetchMaterials();
+
+      // 🚀 刪除成功後清除快取並重新載入
+      invalidateCache();
+      loadMaterials();
     } catch (error) {
       console.error("刪除物料失敗:", error);
       toast.error("刪除物料失敗", { id: toastId });
@@ -578,7 +505,10 @@ export default function MaterialsPage() {
         }
         setStocktakeUpdates({});
         setStocktakeMode(false);
-        fetchMaterials();
+
+        // 🚀 盤點成功後清除快取並重新載入
+        invalidateCache();
+        loadMaterials();
       } else {
         // 處理API調用失敗
         console.error('原料盤點API調用失敗:', result.error);
@@ -635,7 +565,15 @@ export default function MaterialsPage() {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
             原料庫
           </h1>
-          <p className="text-gray-600 mt-2">管理原料庫存、分類與供應商資訊</p>
+          <div className="flex items-center gap-3 mt-2">
+            <p className="text-gray-600">管理原料庫存、分類與供應商資訊</p>
+            {/* 🚀 快取狀態顯示 */}
+            {isFromCache && (
+              <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md border border-blue-200">
+                ⚡ 快取資料 ({Math.floor(cacheAge / 1000)}秒前)
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -713,7 +651,9 @@ export default function MaterialsPage() {
           if (!open) setSelectedMaterial(null);
         }}
         onMaterialUpdate={() => {
-          fetchMaterials();
+          // 🚀 物料更新後清除快取並重新載入
+          invalidateCache();
+          loadMaterials();
         }}
         materialData={selectedMaterial}
       />
@@ -752,8 +692,9 @@ export default function MaterialsPage() {
               toast.error('匯入過程發生未知錯誤');
             }
 
-            // 重新載入資料
-            await fetchMaterials();
+            // 🚀 匯入成功後清除快取並重新載入
+            invalidateCache();
+            await loadMaterials();
 
             // 關閉匯入對話框
             setIsImportExportOpen(false);

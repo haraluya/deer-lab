@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
+import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { FragranceData } from './FragranceDialog';
 import { usePermission } from '@/hooks/usePermission';
 import { useCartOperations } from '@/hooks/useCartOperations';
 import { useApiClient } from '@/hooks/useApiClient';
+import { useFragrancesCache } from '@/hooks/useFragrancesCache';
 import { StandardDataListPage, StandardColumn, StandardAction, StandardFilter, QuickFilter } from '@/components/StandardDataListPage';
 import { StandardStats } from '@/components/StandardStatsCard';
 import { Droplets, DollarSign, AlertTriangle, Building, Eye, Edit, Trash2, ShoppingCart, Plus, Calculator, Package, MoreHorizontal, Warehouse } from 'lucide-react';
@@ -29,8 +30,6 @@ interface FragranceWithSupplier extends FragranceData {
 
 export default function FragrancesPage() {
   const router = useRouter();
-  const [fragrances, setFragrances] = useState<FragranceWithSupplier[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchValue, setSearchValue] = useState('');
   const [activeFilters, setActiveFilters] = useState<Record<string, any>>({});
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -44,6 +43,17 @@ export default function FragrancesPage() {
   // 排序狀態
   const [sortBy, setSortBy] = useState<string>('');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // 🚀 使用智能快取 Hook 替代原有載入邏輯
+  const {
+    fragrances,
+    loading: isLoading,
+    error: fragrancesError,
+    loadFragrances,
+    invalidateCache,
+    isFromCache,
+    cacheAge
+  } = useFragrancesCache();
   
   // 對話框狀態
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -61,61 +71,19 @@ export default function FragrancesPage() {
   // API 客戶端
   const apiClient = useApiClient();
 
-  // 獲取供應商資料
-  const fetchSuppliers = useCallback(async () => {
-    const suppliersMap = new Map<string, string>();
-    try {
-      if (!db) {
-        console.error("Firebase db 未初始化");
-        return suppliersMap;
-      }
-      const querySnapshot = await getDocs(collection(db, "suppliers"));
-      querySnapshot.forEach((doc) => {
-        suppliersMap.set(doc.id, doc.data().name);
-      });
-    } catch (error) {
-      console.error("獲取供應商資料失敗:", error);
-    }
-    return suppliersMap;
-  }, []);
-
-  // 獲取香精資料
-  const fetchFragrances = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      if (!db) {
-        console.error("Firebase db 未初始化");
-        setIsLoading(false);
-        return;
-      }
-      const suppliersMap = await fetchSuppliers();
-      const querySnapshot = await getDocs(collection(db, "fragrances"));
-      
-      const fragrancesData: FragranceWithSupplier[] = querySnapshot.docs.map((doc) => {
-        const data = { id: doc.id, ...doc.data() } as FragranceData;
-        return {
-          ...data,
-          supplierName: data.supplierRef ? suppliersMap.get(data.supplierRef.id) || '未知供應商' : '未指定',
-          type: 'fragrance' as const,
-          unit: data.unit || 'ml' // 預設單位
-        };
-      });
-      
-      setFragrances(fragrancesData);
-    } catch (error) {
-      console.error("獲取香精資料失敗:", error);
-      toast.error("載入香精資料失敗");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [fetchSuppliers]);
-
   // 初始載入
   useEffect(() => {
     if (canViewFragrances) {
-      fetchFragrances();
+      loadFragrances();
     }
-  }, [canViewFragrances, fetchFragrances]);
+  }, [canViewFragrances, loadFragrances]);
+
+  // 錯誤處理
+  useEffect(() => {
+    if (fragrancesError) {
+      toast.error(fragrancesError);
+    }
+  }, [fragrancesError]);
 
   // 處理新增
   const handleAdd = () => {
@@ -144,7 +112,10 @@ export default function FragrancesPage() {
     try {
       await deleteDoc(doc(db, "fragrances", fragrance.id));
       toast.success("刪除成功");
-      fetchFragrances();
+
+      // 🚀 刪除成功後清除快取並重新載入
+      invalidateCache();
+      loadFragrances();
     } catch (error) {
       console.error("刪除失敗:", error);
       toast.error("刪除失敗");
@@ -189,7 +160,10 @@ export default function FragrancesPage() {
         }
         setStocktakeUpdates({});
         setStocktakeMode(false);
-        fetchFragrances();
+
+        // 🚀 盤點成功後清除快取並重新載入
+        invalidateCache();
+        loadFragrances();
       } else {
         // 處理API調用失敗
         console.error('香精盤點API調用失敗:', result.error);
@@ -411,7 +385,10 @@ export default function FragrancesPage() {
           }
           
           toast.success(`已成功刪除 ${fragrances.length} 項香精`, { id: toastId });
-          fetchFragrances();
+
+          // 🚀 批量刪除成功後清除快取並重新載入
+          invalidateCache();
+          loadFragrances();
           setSelectedRows([]); // 清除選中狀態
         } catch (error) {
           console.error("批量刪除香精失敗", error);
@@ -773,7 +750,15 @@ export default function FragrancesPage() {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
             香精配方庫
           </h1>
-          <p className="text-gray-600 mt-2">管理所有香精配方，包括庫存監控和品質管理</p>
+          <div className="flex items-center gap-3 mt-2">
+            <p className="text-gray-600">管理所有香精配方，包括庫存監控和品質管理</p>
+            {/* 🚀 快取狀態顯示 */}
+            {isFromCache && (
+              <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md border border-blue-200">
+                ⚡ 快取資料 ({Math.floor(cacheAge / 1000)}秒前)
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -858,7 +843,9 @@ export default function FragrancesPage() {
           if (!open) setSelectedFragrance(null);
         }}
         onFragranceUpdate={() => {
-          fetchFragrances();
+          // 🚀 香精更新後清除快取並重新載入
+          invalidateCache();
+          loadFragrances();
         }}
         fragranceData={selectedFragrance}
       />
@@ -887,8 +874,9 @@ export default function FragrancesPage() {
               toast.error('匯入過程發生未知錯誤');
             }
 
-            // 重新載入資料
-            await fetchFragrances();
+            // 🚀 匯入成功後清除快取並重新載入
+            invalidateCache();
+            await loadFragrances();
 
             // 關閉匯入對話框
             setIsImportExportOpen(false);

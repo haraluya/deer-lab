@@ -1,28 +1,23 @@
-// src/hooks/useLowStockCache.ts
+// src/hooks/useFragrancesCache.ts
 /**
- * 🎯 低庫存項目智能快取 Hook
+ * 🎯 香精列表智能快取 Hook
  *
  * 建立時間：2025-09-19
- * 目的：為低庫存項目查詢提供智能快取機制，優化載入效能
+ * 目的：為香精列表查詢提供智能快取機制，優化載入效能
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { useApiSilent } from '@/hooks/useApiClient';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { FragranceData } from '@/app/dashboard/fragrances/FragranceDialog';
 
 // =============================================================================
 // 類型定義
 // =============================================================================
 
-interface LowStockItem {
-  id: string;
-  type: 'material' | 'fragrance';
-  code: string;
-  name: string;
-  currentStock: number;
-  safetyStockLevel: number;
-  unit: string;
-  shortage: number;
-  costPerUnit: number;
+interface FragranceWithSupplier extends FragranceData {
+  supplierName: string;
+  type: 'fragrance';
 }
 
 interface CacheEntry<T> {
@@ -31,11 +26,11 @@ interface CacheEntry<T> {
   requestId: string;
 }
 
-interface UseLowStockCacheReturn {
-  items: LowStockItem[];
+interface UseFragrancesCacheReturn {
+  fragrances: FragranceWithSupplier[];
   loading: boolean;
   error: string | null;
-  loadLowStockItems: () => Promise<void>;
+  loadFragrances: () => Promise<void>;
   invalidateCache: () => void;
   isFromCache: boolean;
   cacheAge: number;
@@ -45,8 +40,8 @@ interface UseLowStockCacheReturn {
 // 快取配置
 // =============================================================================
 
-const CACHE_DURATION = 10 * 60 * 1000; // 10 分鐘快取（低庫存變動較慢）
-const LOW_STOCK_CACHE_KEY = 'low_stock_items';
+const CACHE_DURATION = 8 * 60 * 1000; // 8 分鐘快取（香精變動頻率中等）
+const FRAGRANCES_CACHE_KEY = 'fragrances_list';
 
 // 全域快取存儲
 const globalCache = new Map<string, CacheEntry<any>>();
@@ -86,9 +81,8 @@ const cacheEmitter = new CacheEventEmitter();
 // Hook 實現
 // =============================================================================
 
-export function useLowStockCache(): UseLowStockCacheReturn {
-  const apiClient = useApiSilent();
-  const [items, setItems] = useState<LowStockItem[]>([]);
+export function useFragrancesCache(): UseFragrancesCacheReturn {
+  const [fragrances, setFragrances] = useState<FragranceWithSupplier[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isFromCache, setIsFromCache] = useState(false);
@@ -109,8 +103,8 @@ export function useLowStockCache(): UseLowStockCacheReturn {
   /**
    * 從快取取得資料
    */
-  const getFromCache = useCallback((): LowStockItem[] | null => {
-    const cacheEntry = globalCache.get(LOW_STOCK_CACHE_KEY);
+  const getFromCache = useCallback((): FragranceWithSupplier[] | null => {
+    const cacheEntry = globalCache.get(FRAGRANCES_CACHE_KEY);
     if (cacheEntry && isCacheValid(cacheEntry)) {
       return cacheEntry.data;
     }
@@ -120,30 +114,30 @@ export function useLowStockCache(): UseLowStockCacheReturn {
   /**
    * 存入快取
    */
-  const setToCache = useCallback((data: LowStockItem[], requestId: string) => {
-    const cacheEntry: CacheEntry<LowStockItem[]> = {
+  const setToCache = useCallback((data: FragranceWithSupplier[], requestId: string) => {
+    const cacheEntry: CacheEntry<FragranceWithSupplier[]> = {
       data,
       timestamp: Date.now(),
       requestId
     };
-    globalCache.set(LOW_STOCK_CACHE_KEY, cacheEntry);
+    globalCache.set(FRAGRANCES_CACHE_KEY, cacheEntry);
 
     // 通知其他組件快取已更新
-    cacheEmitter.emit(LOW_STOCK_CACHE_KEY);
+    cacheEmitter.emit(FRAGRANCES_CACHE_KEY);
   }, []);
 
   /**
    * 清除快取
    */
   const invalidateCache = useCallback(() => {
-    globalCache.delete(LOW_STOCK_CACHE_KEY);
+    globalCache.delete(FRAGRANCES_CACHE_KEY);
     setIsFromCache(false);
     setCacheAge(0);
 
     // 通知其他組件快取已失效
-    cacheEmitter.emit(LOW_STOCK_CACHE_KEY);
+    cacheEmitter.emit(FRAGRANCES_CACHE_KEY);
 
-    console.log('🗑️ 低庫存項目快取已清除');
+    console.log('🗑️ 香精列表快取已清除');
   }, []);
 
   // =============================================================================
@@ -151,66 +145,92 @@ export function useLowStockCache(): UseLowStockCacheReturn {
   // =============================================================================
 
   /**
-   * 載入低庫存項目 (智能快取)
+   * 獲取供應商資料
    */
-  const loadLowStockItems = useCallback(async () => {
+  const fetchSuppliers = useCallback(async () => {
+    const suppliersMap = new Map<string, string>();
+    try {
+      if (!db) {
+        console.error("Firebase db 未初始化");
+        return suppliersMap;
+      }
+      const querySnapshot = await getDocs(collection(db, "suppliers"));
+      querySnapshot.forEach((doc) => {
+        suppliersMap.set(doc.id, doc.data().name);
+      });
+    } catch (error) {
+      console.error("獲取供應商資料失敗:", error);
+    }
+    return suppliersMap;
+  }, []);
+
+  /**
+   * 載入香精列表 (智能快取)
+   */
+  const loadFragrances = useCallback(async () => {
     // 檢查快取
     const cachedData = getFromCache();
     if (cachedData) {
-      console.log('⚡ 從快取載入低庫存項目');
-      setItems(cachedData);
+      console.log('⚡ 從快取載入香精列表');
+      setFragrances(cachedData);
       setIsFromCache(true);
 
-      const cacheEntry = globalCache.get(LOW_STOCK_CACHE_KEY);
+      const cacheEntry = globalCache.get(FRAGRANCES_CACHE_KEY);
       setCacheAge(Date.now() - (cacheEntry?.timestamp || 0));
       setError(null);
       return;
     }
 
-    // 快取無效，從 API 載入
+    // 快取無效，從 Firestore 載入
     try {
       setLoading(true);
       setError(null);
       setIsFromCache(false);
 
-      const result = await apiClient.call('getLowStockItems');
-
-      if (result.success && result.data) {
-        const apiData = result.data;
-        console.log('🌐 從 API 載入低庫存項目:', apiData);
-
-        // 處理API回應資料
-        const lowStockItems: LowStockItem[] = (apiData.items || []).map((item: any) => ({
-          ...item,
-          safetyStockLevel: item.safetyStockLevel || item.minStock || 0,
-          unit: item.unit || 'pcs',
-          costPerUnit: item.costPerUnit || 0
-        }));
-
-        // 更新狀態
-        setItems(lowStockItems);
-
-        // 存入快取
-        const requestId = (result.rawResponse as any)?.meta?.requestId || `low_stock_${Date.now()}`;
-        setToCache(lowStockItems, requestId);
-        lastRequestRef.current = requestId;
-
-        setCacheAge(0);
-        console.log('💾 低庫存項目已存入快取', {
-          requestId,
-          itemCount: lowStockItems.length
-        });
-      } else {
-        throw new Error(result.error?.message || '載入低庫存項目失敗');
+      if (!db) {
+        throw new Error("Firebase db 未初始化");
       }
+
+      const suppliersMap = await fetchSuppliers();
+      const querySnapshot = await getDocs(collection(db, "fragrances"));
+
+      console.log('🌐 從 Firestore 載入香精列表');
+
+      const fragrancesData: FragranceWithSupplier[] = querySnapshot.docs.map((doc) => {
+        const data = { id: doc.id, ...doc.data() } as FragranceData;
+        return {
+          ...data,
+          supplierName: data.supplierRef ? suppliersMap.get(data.supplierRef.id) || '未知供應商' : '未指定',
+          type: 'fragrance' as const,
+          unit: data.unit || 'ml' // 預設單位
+        };
+      });
+
+      // 按名稱排序
+      const sortedFragrances = fragrancesData.sort((a, b) => a.name.localeCompare(b.name));
+
+      // 更新狀態
+      setFragrances(sortedFragrances);
+
+      // 存入快取
+      const requestId = `fragrances_${Date.now()}`;
+      setToCache(sortedFragrances, requestId);
+      lastRequestRef.current = requestId;
+
+      setCacheAge(0);
+      console.log('💾 香精列表已存入快取', {
+        requestId,
+        fragranceCount: sortedFragrances.length
+      });
+
     } catch (err: any) {
-      const errorMessage = err.message || '載入低庫存項目時發生錯誤';
+      const errorMessage = err.message || '載入香精列表時發生錯誤';
       setError(errorMessage);
-      console.error('❌ 載入低庫存項目失敗:', err);
+      console.error('❌ 載入香精列表失敗:', err);
     } finally {
       setLoading(false);
     }
-  }, [apiClient, getFromCache, setToCache]);
+  }, [getFromCache, setToCache, fetchSuppliers]);
 
   // =============================================================================
   // 跨組件快取同步
@@ -220,13 +240,13 @@ export function useLowStockCache(): UseLowStockCacheReturn {
    * 監聽快取變更事件
    */
   useEffect(() => {
-    const unsubscribe = cacheEmitter.subscribe(LOW_STOCK_CACHE_KEY, () => {
+    const unsubscribe = cacheEmitter.subscribe(FRAGRANCES_CACHE_KEY, () => {
       // 快取變更時重新檢查
       const cachedData = getFromCache();
       if (cachedData) {
-        setItems(cachedData);
+        setFragrances(cachedData);
         setIsFromCache(true);
-        const cacheEntry = globalCache.get(LOW_STOCK_CACHE_KEY);
+        const cacheEntry = globalCache.get(FRAGRANCES_CACHE_KEY);
         setCacheAge(Date.now() - (cacheEntry?.timestamp || 0));
       } else {
         setIsFromCache(false);
@@ -243,9 +263,9 @@ export function useLowStockCache(): UseLowStockCacheReturn {
   useEffect(() => {
     const cachedData = getFromCache();
     if (cachedData) {
-      setItems(cachedData);
+      setFragrances(cachedData);
       setIsFromCache(true);
-      const cacheEntry = globalCache.get(LOW_STOCK_CACHE_KEY);
+      const cacheEntry = globalCache.get(FRAGRANCES_CACHE_KEY);
       setCacheAge(Date.now() - (cacheEntry?.timestamp || 0));
     }
   }, [getFromCache]);
@@ -255,10 +275,10 @@ export function useLowStockCache(): UseLowStockCacheReturn {
   // =============================================================================
 
   return {
-    items,
+    fragrances,
     loading,
     error,
-    loadLowStockItems,
+    loadFragrances,
     invalidateCache,
     isFromCache,
     cacheAge
@@ -272,17 +292,17 @@ export function useLowStockCache(): UseLowStockCacheReturn {
 /**
  * 全域快取失效函數 (供其他模組調用)
  */
-export function invalidateLowStockCache() {
-  globalCache.delete(LOW_STOCK_CACHE_KEY);
-  cacheEmitter.emit(LOW_STOCK_CACHE_KEY);
-  console.log('🗑️ 全域低庫存快取已清除');
+export function invalidateFragrancesCache() {
+  globalCache.delete(FRAGRANCES_CACHE_KEY);
+  cacheEmitter.emit(FRAGRANCES_CACHE_KEY);
+  console.log('🗑️ 全域香精列表快取已清除');
 }
 
 /**
  * 檢查快取狀態
  */
-export function getLowStockCacheStatus() {
-  const cacheEntry = globalCache.get(LOW_STOCK_CACHE_KEY);
+export function getFragrancesCacheStatus() {
+  const cacheEntry = globalCache.get(FRAGRANCES_CACHE_KEY);
   if (!cacheEntry) {
     return { status: 'empty', age: 0 };
   }
@@ -293,7 +313,7 @@ export function getLowStockCacheStatus() {
   return {
     status: isValid ? 'valid' : 'expired',
     age,
-    itemCount: cacheEntry.data?.length || 0,
+    fragranceCount: cacheEntry.data?.length || 0,
     requestId: cacheEntry.requestId
   };
 }

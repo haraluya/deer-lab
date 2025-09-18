@@ -4,6 +4,8 @@ import { useState } from "react"
 import { useApiForm } from "@/hooks/useApiClient"
 import { invalidateInventoryCache } from "@/hooks/useInventoryCache"
 import { invalidateLowStockCache } from "@/hooks/useLowStockCache"
+import { invalidateMaterialsCache } from "@/hooks/useMaterialsCache"
+import { invalidateFragrancesCache } from "@/hooks/useFragrancesCache"
 import { toast } from "sonner"
 import { Loader2, Package, FlaskConical, AlertTriangle } from "lucide-react"
 
@@ -75,7 +77,9 @@ export function QuickUpdateDialog({ isOpen, onClose, item, onSuccess }: QuickUpd
         // 🚀 庫存更新成功後立即清除所有相關快取
         invalidateInventoryCache();
         invalidateLowStockCache();
-        console.log('🗑️ 庫存更新後已清除總覽快取和低庫存快取');
+        invalidateMaterialsCache();
+        invalidateFragrancesCache();
+        console.log('🗑️ 庫存更新後已清除總覽快取、低庫存快取、物料列表快取和香精列表快取');
 
         toast.success('庫存更新成功');
         onSuccess();
