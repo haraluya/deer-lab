@@ -546,7 +546,9 @@ export const updateMaterial = CrudApiHandlers.createUpdateHandler<UpdateMaterial
           oldStock,
           newStock,
           context.auth.uid,
-          context.auth.token?.name
+          context.auth.token?.name,
+          'manual_adjustment',
+          '透過編輯對話框直接修改庫存'
         );
       }
       

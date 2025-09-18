@@ -651,10 +651,13 @@ export const importFragrances = CrudApiHandlers.createCreateHandler<ImportFragra
             if (oldStock !== currentStock && context.auth?.uid) {
               await InventoryRecordManager.createInventoryRecord(
                 fragranceId,
-                'fragrances',
-                currentStock - oldStock,
+                existing.data.name,
+                existing.data.code,
+                oldStock,
+                currentStock,
                 context.auth.uid,
                 context.auth.token?.name || '未知用戶',
+                'import',
                 `批量匯入更新 - 從 ${oldStock} 更新為 ${currentStock}`
               );
             }
@@ -705,10 +708,13 @@ export const importFragrances = CrudApiHandlers.createCreateHandler<ImportFragra
             if (currentStock > 0 && context.auth?.uid) {
               await InventoryRecordManager.createInventoryRecord(
                 fragranceId,
-                'fragrances',
+                name,
+                code,
+                0,
                 currentStock,
                 context.auth.uid,
                 context.auth.token?.name || '未知用戶',
+                'import',
                 `批量匯入初始庫存`
               );
             }
