@@ -167,27 +167,10 @@ export default function TimeManagementPage() {
             if (!workOrderDoc.empty) {
               const data = workOrderDoc.docs[0].data();
 
-              // 獲取產品系列名稱
-              let seriesName = '';
-              if (data.productSnapshot?.seriesRef?.id) {
-                try {
-                  if (!db) return;
-                  const seriesDoc = await getDocs(query(
-                    collection(db, 'productSeries'),
-                    where('__name__', '==', data.productSnapshot.seriesRef.id)
-                  ));
-                  if (!seriesDoc.empty) {
-                    seriesName = seriesDoc.docs[0].data().name || '';
-                  }
-                } catch (error) {
-                  console.error(`載入產品系列 ${data.productSnapshot.seriesRef.id} 失敗:`, error);
-                }
-              }
-
               workOrderInfo.set(workOrderId, {
                 status: data.status || '未知',
                 productName: data.productSnapshot?.name,
-                seriesName
+                seriesName: data.productSnapshot?.seriesName
               });
             }
           } catch (error) {
