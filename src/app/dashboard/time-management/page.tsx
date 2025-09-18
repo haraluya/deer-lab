@@ -32,6 +32,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 // 擴展的工時記錄類型（包含工單狀態）
 interface TimeEntryExtended extends TimeEntry {
   workOrderStatus?: string;
+  seriesName?: string;
 }
 
 // 人員統計資訊
@@ -201,19 +202,16 @@ export default function TimeManagementPage() {
           const data = doc.data();
           const orderInfo = workOrderInfo.get(data.workOrderId);
 
-          // 組合產品名稱（系列名 + 產品名）
-          let fullProductName = data.productName || orderInfo?.productName || '';
-          if (orderInfo?.seriesName && fullProductName) {
-            fullProductName = `${orderInfo.seriesName} - ${fullProductName}`;
-          } else if (orderInfo?.seriesName) {
-            fullProductName = orderInfo.seriesName;
-          }
+          // 保持原始產品名稱，系列名稱作為獨立欄位
+          const productName = data.productName || orderInfo?.productName || '';
+          const seriesName = orderInfo?.seriesName || '';
 
           return {
             id: doc.id,
             ...data,
             workOrderStatus: orderInfo?.status || '未知',
-            productName: fullProductName,
+            productName: productName,
+            seriesName: seriesName,
             isSettled: data.isSettled || false, // 確保有預設值
             createdAt: data.createdAt || Timestamp.now(),
             updatedAt: data.updatedAt || Timestamp.now()
@@ -731,22 +729,13 @@ export default function TimeManagementPage() {
       title: '產品名稱',
       searchable: true,
       render: (value, record) => {
-        // 解析產品名稱和系列名稱
-        const fullProductName = value || '';
-        let productName = fullProductName;
-        let seriesName = '';
-
-        // 如果包含 " - "，分割系列名和產品名
-        if (fullProductName.includes(' - ')) {
-          const parts = fullProductName.split(' - ');
-          seriesName = parts[0];
-          productName = parts.slice(1).join(' - ');
-        }
+        const productName = value || '未知產品';
+        const seriesName = record.seriesName || '';
 
         return (
           <div className="space-y-1">
             <div className="font-medium text-gray-900">
-              {productName || '未知產品'}
+              {productName}
             </div>
             {seriesName && (
               <div className="text-xs text-gray-500">
