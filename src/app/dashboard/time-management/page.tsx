@@ -749,7 +749,7 @@ export default function TimeManagementPage() {
               {productName || '未知產品'}
             </div>
             {seriesName && (
-              <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full inline-block">
+              <div className="text-xs text-gray-500">
                 {seriesName}
               </div>
             )}
