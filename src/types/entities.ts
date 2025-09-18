@@ -294,6 +294,13 @@ export interface TimeEntry {
   createdBy: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+
+  // 結算相關欄位
+  isSettled?: boolean;        // 是否已結算
+  settledAt?: Timestamp;       // 結算時間
+  settledBy?: string;          // 結算人員ID
+  settledByName?: string;      // 結算人員姓名
+  settlementBatch?: string;    // 結算批次號
 }
 
 // 已移除 LegacyTimeRecord，統一使用 TimeEntry

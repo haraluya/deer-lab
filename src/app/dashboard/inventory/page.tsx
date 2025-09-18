@@ -26,6 +26,7 @@ import { ProductionCapacityDialog } from "./components/ProductionCapacityDialog"
 import { QuickUpdateDialog } from "./components/QuickUpdateDialog"
 import { BatchOperationsPanel } from "./components/BatchOperationsPanel"
 import { useAuth } from "@/context/AuthContext"
+import { useInventoryCache } from "@/hooks/useInventoryCache"
 
 interface InventoryOverview {
   totalMaterials: number
@@ -54,8 +55,17 @@ interface InventoryItem {
 
 export default function InventoryPage() {
   const { appUser } = useAuth()
-  const [overview, setOverview] = useState<InventoryOverview | null>(null)
-  const [overviewLoading, setOverviewLoading] = useState(true)
+
+  // 🚀 使用智能快取 Hook 替代原有的庫存總覽載入邏輯
+  const {
+    overview,
+    loading: overviewLoading,
+    error: overviewError,
+    loadOverview,
+    invalidateCache,
+    isFromCache,
+    cacheAge
+  } = useInventoryCache()
   
   // 權限檢查
   const { hasPermission, isAdmin, canAccess } = usePermission();
@@ -416,45 +426,8 @@ export default function InventoryPage() {
       }))
   ]
 
-  // 統一 API 客戶端（靜默模式，避免不必要的 toast）
+  // 🚀 統一 API 客戶端（靜默模式，避免不必要的 toast）
   const apiClient = useApiSilent()
-
-  // 載入庫存總覽
-  const loadOverview = useCallback(async () => {
-    try {
-      setOverviewLoading(true)
-      
-      const result = await apiClient.call('getInventoryOverview')
-      
-      if (result.success && result.data) {
-        // 轉換API回應格式為本地介面格式
-        const apiData = result.data;
-        console.log('📊 API 返回的數據結構:', apiData);
-
-        // 修正：使用正確的API回應結構 (新格式: data.overview 或舊格式: overview)
-        const overview = (apiData as any).data?.overview || (apiData as any).overview || apiData;
-        const localOverview: InventoryOverview = {
-          totalMaterials: overview.totalMaterials || 0,
-          totalFragrances: overview.totalFragrances || 0,
-          totalMaterialCost: overview.totalMaterialCost || 0,
-          totalFragranceCost: overview.totalFragranceCost || 0,
-          lowStockMaterials: overview.lowStockMaterials || 0,
-          lowStockFragrances: overview.lowStockFragrances || 0,
-          totalLowStock: overview.totalLowStock || (overview.lowStockMaterials + overview.lowStockFragrances) || 0
-        };
-        setOverview(localOverview)
-        toast.success('庫存統計載入完成')
-      } else {
-        console.error('載入庫存總覽失敗:', result.error)
-        toast.error('載入庫存總覽失敗')
-      }
-    } catch (error) {
-      console.error('載入庫存總覽失敗:', error)
-      toast.error('載入庫存總覽失敗')
-    } finally {
-      setOverviewLoading(false)
-    }
-  }, [apiClient])
 
   // 重新載入庫存數據
   const reloadInventoryData = useCallback(async () => {

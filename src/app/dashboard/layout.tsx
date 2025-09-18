@@ -16,8 +16,8 @@ import { PAGE_PERMISSIONS } from '@/utils/permissions';
 import {
   Home, Users, Building, Package, FlaskConical, Library, Box,
   ShoppingCart, Factory, Calculator, ClipboardList, LogOut, ChevronDown,
-  LucideIcon, Loader2, Warehouse, Shield, Tag, Clock, FileBarChart, 
-  Beaker, PackageSearch, TrendingUp, UserCheck, Settings
+  LucideIcon, Loader2, Warehouse, Shield, Tag, Clock, FileBarChart,
+  Beaker, PackageSearch, TrendingUp, UserCheck, Settings, CalendarCheck
 } from 'lucide-react';
 
 // ... (SidebarNav 和 UserNav 元件保持不變) ...
@@ -58,7 +58,7 @@ const navLinks: NavItem[] = [
   { href: '/dashboard/inventory', label: '庫存管理', icon: PackageSearch },
   { href: '/dashboard/inventory-records', label: '庫存歷史', icon: ClipboardList },
   { href: '/dashboard/cost-management', label: '成本分析', icon: TrendingUp },
-  { href: '/dashboard/time-reports', label: '工時報表', icon: FileBarChart },
+  { href: '/dashboard/time-management', label: '工時報表', icon: FileBarChart },
 ];
 
 function SidebarNav() {

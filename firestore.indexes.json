@@ -87,6 +87,62 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "materials",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "currentStock",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "safetyStockLevel",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "fragrances",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "currentStock",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "safetyStockLevel",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "materials",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "costPerUnit",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "currentStock",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "fragrances",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "costPerUnit",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "currentStock",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

@@ -83,10 +83,14 @@ export const getInventoryOverview = onCall(async (request) => {
   }
 
   try {
-    // 並行獲取物料和香精數據
+    // 🚀 優化：只查詢統計所需的欄位，大幅減少資料傳輸量
     const [materialsSnapshot, fragrancesSnapshot] = await Promise.all([
-      db.collection("materials").get(),
-      db.collection("fragrances").get()
+      db.collection("materials")
+        .select('currentStock', 'costPerUnit', 'safetyStockLevel')
+        .get(),
+      db.collection("fragrances")
+        .select('currentStock', 'costPerUnit', 'safetyStockLevel')
+        .get()
     ]);
 
     // 計算物料統計
@@ -143,7 +147,8 @@ export const getInventoryOverview = onCall(async (request) => {
       meta: {
         timestamp: Date.now(),
         requestId: `inventory_overview_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
-        version: '1.0'
+        version: '1.1',
+        optimization: 'limited-fields-query'
       }
     };
   } catch (error) {
