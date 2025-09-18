@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { useApiSilent } from "@/hooks/useApiClient"
+import { useState, useEffect } from "react"
+import { useLowStockCache } from "@/hooks/useLowStockCache"
 import { toast } from "sonner"
 import { AlertTriangle, Package, FlaskConical, Loader2, RefreshCw } from "lucide-react"
 
@@ -17,10 +17,10 @@ interface LowStockItem {
   code: string
   name: string
   currentStock: number
-  minStock: number
-  unit?: string
+  safetyStockLevel: number
+  unit: string
   shortage: number
-  costPerUnit?: number
+  costPerUnit: number
 }
 
 interface LowStockDialogProps {
@@ -29,33 +29,27 @@ interface LowStockDialogProps {
 }
 
 export function LowStockDialog({ isOpen, onClose }: LowStockDialogProps) {
-  const [items, setItems] = useState<LowStockItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const apiClient = useApiSilent()
-
-  const loadLowStockItems = useCallback(async () => {
-    setLoading(true)
-    try {
-      const result = await apiClient.call('getLowStockItems')
-      
-      if (result.success && result.data) {
-        setItems(result.data.items || [])
-      } else {
-        toast.error('載入低庫存項目失敗')
-      }
-    } catch (error) {
-      console.error('載入低庫存項目失敗:', error)
-      toast.error('載入低庫存項目失敗')
-    } finally {
-      setLoading(false)
-    }
-  }, [apiClient])
+  // 🚀 使用智能快取 Hook 替代原有載入邏輯
+  const {
+    items,
+    loading,
+    error,
+    loadLowStockItems,
+    isFromCache,
+    cacheAge
+  } = useLowStockCache()
 
   useEffect(() => {
     if (isOpen) {
       loadLowStockItems()
     }
   }, [isOpen, loadLowStockItems])
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error)
+    }
+  }, [error])
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -66,9 +60,17 @@ export function LowStockDialog({ isOpen, onClose }: LowStockDialogProps) {
             低庫存項目清單
           </DialogTitle>
           <div className="flex justify-between items-center">
-            <DialogDescription>
-              以下項目的庫存已低於或等於安全庫存線，建議及時補貨
-            </DialogDescription>
+            <div>
+              <DialogDescription>
+                以下項目的庫存已低於或等於安全庫存線，建議及時補貨
+              </DialogDescription>
+              {/* 🚀 快取狀態顯示 */}
+              {isFromCache && (
+                <div className="text-xs text-blue-600 mt-1">
+                  ⚡ 快取資料 (快取時間: {Math.floor(cacheAge / 1000)}秒前)
+                </div>
+              )}
+            </div>
             <Button
               variant="outline"
               size="sm"
@@ -151,22 +153,22 @@ export function LowStockDialog({ isOpen, onClose }: LowStockDialogProps) {
                         
                         <TableCell className="text-right">
                           <span className="text-red-600 font-medium">
-                            {item.currentStock} {item.unit || ''}
+                            {item.currentStock} {item.unit}
                           </span>
                         </TableCell>
                         
                         <TableCell className="text-right text-gray-600">
-                          {item.minStock} {item.unit || ''}
+                          {item.safetyStockLevel} {item.unit}
                         </TableCell>
                         
                         <TableCell className="text-right">
                           <Badge variant="destructive" className="font-medium">
-                            {item.shortage} {item.unit || ''}
+                            {item.shortage} {item.unit}
                           </Badge>
                         </TableCell>
                         
                         <TableCell className="text-right text-sm text-gray-600">
-                          NT$ {(item.costPerUnit || 0).toLocaleString()}
+                          NT$ {item.costPerUnit.toLocaleString()}
                         </TableCell>
                         
                         <TableCell className="text-right font-medium text-red-600">
@@ -185,7 +187,7 @@ export function LowStockDialog({ isOpen, onClose }: LowStockDialogProps) {
                     共 {items.length} 項低庫存項目
                   </span>
                   <span className="font-medium text-red-600">
-                    總補貨成本: NT$ {items.reduce((sum, item) => sum + (item.shortage * (item.costPerUnit || 0)), 0).toLocaleString()}
+                    總補貨成本: NT$ {items.reduce((sum, item) => sum + (item.shortage * item.costPerUnit), 0).toLocaleString()}
                   </span>
                 </div>
               </div>
