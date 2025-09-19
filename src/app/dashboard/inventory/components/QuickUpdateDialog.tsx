@@ -6,6 +6,7 @@ import { invalidateInventoryCache } from "@/hooks/useInventoryCache"
 import { invalidateLowStockCache } from "@/hooks/useLowStockCache"
 import { invalidateMaterialsCache } from "@/hooks/useMaterialsCache"
 import { invalidateFragrancesCache } from "@/hooks/useFragrancesCache"
+import { invalidateProductsCache } from "@/hooks/useProductsCache"
 import { toast } from "sonner"
 import { Loader2, Package, FlaskConical, AlertTriangle } from "lucide-react"
 
@@ -79,7 +80,8 @@ export function QuickUpdateDialog({ isOpen, onClose, item, onSuccess }: QuickUpd
         invalidateLowStockCache();
         invalidateMaterialsCache();
         invalidateFragrancesCache();
-        console.log('🗑️ 庫存更新後已清除總覽快取、低庫存快取、物料列表快取和香精列表快取');
+        invalidateProductsCache(); // 🚀 新增產品快取清除
+        console.log('🗑️ 庫存更新後已清除總覽快取、低庫存快取、物料列表快取、香精列表快取和產品列表快取');
 
         toast.success('庫存更新成功');
         onSuccess();

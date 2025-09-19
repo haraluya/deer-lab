@@ -6,6 +6,7 @@ import { collection, getDocs, DocumentReference, query, where } from 'firebase/f
 import { db } from '@/lib/firebase';
 import { useDataSearch, createProductSearchConfig } from '@/hooks/useDataSearch';
 import { useApiClient } from '@/hooks/useApiClient';
+import { useProductsCache } from '@/hooks/useProductsCache';
 
 import { MoreHorizontal, Droplets, FileSpreadsheet, Eye, Edit, Package, Factory, Calendar, Plus, Tag, Library, Search, Shield, FlaskConical, Star, Lightbulb } from 'lucide-react';
 import { toast } from 'sonner';
@@ -37,8 +38,18 @@ function ProductsPageContent() {
   const searchParams = useSearchParams();
   const apiClient = useApiClient();
 
+  // 🚀 使用產品快取 Hook
+  const {
+    products: cachedProducts,
+    loading: isLoading,
+    error: productsError,
+    loadProducts,
+    invalidateCache,
+    isFromCache,
+    cacheAge
+  } = useProductsCache();
+
   const [products, setProducts] = useState<ProductWithDetails[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isFragranceDialogOpen, setIsFragranceDialogOpen] = useState(false);
@@ -71,20 +82,23 @@ function ProductsPageContent() {
   const canViewProducts = hasPermission('products.view') || hasPermission('products:view');
   const canManageProducts = hasPermission('products.manage') || hasPermission('products:manage') || hasPermission('products:create') || hasPermission('products:edit');
   
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
+  // 🚀 產品數據處理函數 (使用快取機制)
+  const processProductsWithDetails = useCallback(async (rawProducts: any[]) => {
     try {
       if (!db) {
-        throw new Error("Firebase 未初始化")
+        throw new Error("Firebase 未初始化");
       }
-      
+
+      // 讀取關聯資料
       const seriesMap = new Map<string, string>();
       const fragrancesMap = new Map<string, { name: string; code: string }>();
-      
-      const seriesSnapshot = await getDocs(collection(db, "productSeries"));
+
+      const [seriesSnapshot, fragrancesSnapshot] = await Promise.all([
+        getDocs(collection(db, "productSeries")),
+        getDocs(collection(db, "fragrances"))
+      ]);
+
       seriesSnapshot.forEach(doc => seriesMap.set(doc.id, doc.data().name));
-      
-      const fragrancesSnapshot = await getDocs(collection(db, "fragrances"));
       fragrancesSnapshot.forEach(doc => {
         const data = doc.data();
         fragrancesMap.set(doc.id, {
@@ -93,15 +107,12 @@ function ProductsPageContent() {
         });
       });
 
-      const productsSnapshot = await getDocs(collection(db, 'products'));
-      
-      const productsList = productsSnapshot.docs.map(doc => {
-        const data = doc.data() as ProductData;
-        const fragranceInfo = fragrancesMap.get(data.currentFragranceRef?.id);
+      // 處理產品數據，加入關聯資訊
+      const productsList = rawProducts.map(product => {
+        const fragranceInfo = fragrancesMap.get(product.currentFragranceRef?.id);
         return {
-          ...data,
-          id: doc.id,
-          seriesName: seriesMap.get(data.seriesRef?.id) || '未知系列',
+          ...product,
+          seriesName: seriesMap.get(product.seriesRef?.id) || '未知系列',
           fragranceName: fragranceInfo?.name || '未知香精',
           fragranceCode: fragranceInfo?.code || '',
         } as ProductWithDetails;
@@ -109,25 +120,45 @@ function ProductsPageContent() {
 
       // 排序：先按系列名稱升序，再按產品名稱升序
       const sortedProductsList = productsList.sort((a, b) => {
-        // 首先按系列名稱排序
         const seriesComparison = (a.seriesName || '').localeCompare(b.seriesName || '');
         if (seriesComparison !== 0) {
           return seriesComparison;
         }
-        // 如果系列相同，再按產品名稱排序
         return (a.name || '').localeCompare(b.name || '');
       });
 
       setProducts(sortedProductsList);
+      console.log('📊 產品資料處理完成:', {
+        rawCount: rawProducts.length,
+        processedCount: sortedProductsList.length,
+        isFromCache
+      });
     } catch (error) {
-      console.error("讀取產品資料失敗:", error);
-      toast.error("讀取產品資料失敗。");
-    } finally {
-      setIsLoading(false);
+      console.error('處理產品資料失敗:', error);
+      toast.error('處理產品資料失敗。');
     }
-  }, []);
+  }, [db, isFromCache]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  const loadData = useCallback(async () => {
+    try {
+      await loadProducts();
+    } catch (error) {
+      console.error('讀取產品資料失敗:', error);
+      toast.error('讀取產品資料失敗。');
+    }
+  }, [loadProducts]);
+
+  // 初始載入產品資料
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // 監聽快取產品變化，處理關聯資料
+  useEffect(() => {
+    if (cachedProducts.length > 0) {
+      processProductsWithDetails(cachedProducts);
+    }
+  }, [cachedProducts, processProductsWithDetails]);
 
   // 處理 URL 查詢參數
   useEffect(() => {
@@ -383,6 +414,7 @@ function ProductsPageContent() {
       const result = await apiClient.call('deleteProduct', { id: selectedProduct.id }, { showErrorToast: false });
       if (result.success) {
         toast.success(`產品 ${selectedProduct.name} 已成功刪除。`, { id: toastId });
+        invalidateCache(); // 🚀 清除快取
         loadData();
       } else {
         throw new Error('刪除產品失敗');
@@ -411,10 +443,11 @@ function ProductsPageContent() {
         }
         return result;
       });
-      
+
       await Promise.all(deletePromises);
       toast.success(`已成功刪除 ${selectedProducts.size} 個產品。`, { id: toastId });
       setSelectedProducts(new Set());
+      invalidateCache(); // 🚀 清除快取
       loadData();
     } catch (error) {
       console.error("批次刪除產品失敗:", error);
@@ -432,13 +465,14 @@ function ProductsPageContent() {
   const handleImport = async (data: any[], options?: { updateMode?: boolean }, onProgress?: (current: number, total: number) => void) => {
     try {
       console.log('產品匯入資料:', data, '選項:', options);
-      
+
       // 使用統一 API 客戶端進行匯入
       // TODO: 實作統一 API 客戶端的批次匯入功能
-      
-      // 暫時重新載入資料
+
+      // 清除快取並重新載入資料
+      invalidateCache(); // 🚀 清除快取
       await loadData();
-      
+
       toast.success(`已處理 ${data.length} 筆產品資料`);
     } catch (error) {
       console.error('匯入產品失敗:', error);
@@ -493,6 +527,30 @@ function ProductsPageContent() {
           <p className="text-gray-600 mt-2">管理產品資訊與系列配置</p>
         </div>
       </div>
+
+      {/* 🚀 快取狀態顯示 */}
+      {isFromCache && (
+        <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-blue-800">
+              <FlaskConical className="h-4 w-4 text-blue-600" />
+              <span className="font-medium">⚡ 快取資料</span>
+              <span className="text-blue-600">({Math.floor(cacheAge / 1000)}秒前載入)</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                invalidateCache();
+                loadData();
+              }}
+              className="h-6 px-2 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+            >
+              重新載入
+            </Button>
+          </div>
+        </div>
+      )}
 
       <StandardDataListPage
         data={filteredProducts}
@@ -557,7 +615,10 @@ function ProductsPageContent() {
       <ProductDialog
         isOpen={isDialogOpen}
         onOpenChange={setIsDialogOpen}
-        onProductUpdate={loadData}
+        onProductUpdate={() => {
+          invalidateCache(); // 🚀 清除快取
+          loadData();
+        }}
         productData={selectedProduct}
       />
 
@@ -582,7 +643,10 @@ function ProductsPageContent() {
       <FragranceChangeDialog
         isOpen={isFragranceDialogOpen}
         onOpenChange={setIsFragranceDialogOpen}
-        onUpdate={loadData}
+        onUpdate={() => {
+          invalidateCache(); // 🚀 清除快取
+          loadData();
+        }}
         productData={selectedProduct}
         currentFragranceName={selectedProduct?.fragranceName || ''}
       />

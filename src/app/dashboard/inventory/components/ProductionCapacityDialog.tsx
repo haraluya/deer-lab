@@ -282,9 +282,16 @@ export function ProductionCapacityDialog({ isOpen, onClose }: ProductionCapacity
     setProductionPlans(prev => prev.filter((_, i) => i !== index))
   }
 
-  // 格式化數值顯示，整數不顯示小數點
+  // 格式化數值顯示，四捨五入到小數點後三位
   const formatNumber = (value: number) => {
-    return value % 1 === 0 ? value.toString() : value.toFixed(3);
+    // 先處理浮點精度問題，四捨五入到小數點後三位
+    const rounded = Math.round((value + Number.EPSILON) * 1000) / 1000;
+    // 如果是整數則不顯示小數點，否則顯示到第三位並移除末尾的0
+    if (rounded % 1 === 0) {
+      return rounded.toString();
+    } else {
+      return parseFloat(rounded.toFixed(3)).toString();
+    }
   };
 
   // 計算物料需求
@@ -332,14 +339,14 @@ export function ProductionCapacityDialog({ isOpen, onClose }: ProductionCapacity
           }
           
           const fragranceRatios = {
-            fragrance: percentage,
-            pg: pgRatio,
-            vg: vgRatio
+            fragrance: percentage || 0,
+            pg: pgRatio || 0,
+            vg: vgRatio || 0
           };
 
           // 2. 核心液體 (香精、PG、VG、尼古丁)
           // 香精 - 從香精集合中查找
-          if (product.fragranceName && product.fragranceName !== '未指定') {
+          if (product.fragranceName && product.fragranceName !== '未指定' && fragranceRatios.fragrance > 0) {
             const fragranceQuantity = plan.targetQuantity * (fragranceRatios.fragrance / 100)
             
             // 🚨 修復：只使用精確的代號匹配，移除危險的名稱匹配
@@ -375,7 +382,7 @@ export function ProductionCapacityDialog({ isOpen, onClose }: ProductionCapacity
 
           // PG (丙二醇)
           const pgMaterial = findMaterialByCategory(materials, 'pg')
-          if (pgMaterial) {
+          if (pgMaterial && fragranceRatios.pg > 0) {
             const pgQuantity = plan.targetQuantity * (fragranceRatios.pg / 100)
             const key = `material-${pgMaterial.id}`
             if (materialRequirementsMap.has(key)) {
@@ -401,7 +408,7 @@ export function ProductionCapacityDialog({ isOpen, onClose }: ProductionCapacity
 
           // VG (甘油)
           const vgMaterial = findMaterialByCategory(materials, 'vg')
-          if (vgMaterial) {
+          if (vgMaterial && fragranceRatios.vg > 0) {
             const vgQuantity = plan.targetQuantity * (fragranceRatios.vg / 100)
             const key = `material-${vgMaterial.id}`
             if (materialRequirementsMap.has(key)) {
@@ -697,7 +704,7 @@ export function ProductionCapacityDialog({ isOpen, onClose }: ProductionCapacity
                     </div>
 
                     <div className="w-40">
-                      <Label>目標產量</Label>
+                      <Label>目標產量 (瓶)</Label>
                       <Input
                         type="number"
                         placeholder="數量"

@@ -58,9 +58,11 @@ export const getPersonalTimeRecordsV2 = onCall(async (request) => {
 
     logger.info(`timeEntries 集合總數: ${totalCount}`);
 
-    // 4. 查詢該人員的所有工時記錄（不使用 orderBy 避免索引問題）
+    // 4. 🚀 優化查詢：使用索引排序 + 欄位限制
     const userTimeEntriesSnapshot = await timeEntriesCollectionRef
       .where('personnelId', '==', personnelId)
+      .select('workOrderId', 'workOrderNumber', 'personnelId', 'personnelName', 'startDate', 'startTime', 'endDate', 'endTime', 'duration', 'overtimeHours', 'notes', 'status', 'createdAt') // 🚀 只取必要欄位
+      .orderBy('startDate', 'desc') // 🚀 使用新建立的索引排序
       .limit(100)  // 增加限制以獲取更多記錄
       .get();
 
@@ -70,8 +72,11 @@ export const getPersonalTimeRecordsV2 = onCall(async (request) => {
     if (userTimeEntriesSnapshot.empty) {
       logger.warn('沒有找到工時記錄，開始除錯分析...');
 
-      // 獲取前5筆記錄查看資料結構
-      const sampleSnapshot = await timeEntriesCollectionRef.limit(5).get();
+      // 獲取前5筆記錄查看資料結構（同樣使用欄位限制）
+      const sampleSnapshot = await timeEntriesCollectionRef
+        .select('personnelId', 'personnelName', 'createdBy', 'workOrderId', 'duration', 'status') // 🚀 只取除錯需要的欄位
+        .limit(5)
+        .get();
       const sampleData = sampleSnapshot.docs.map(doc => {
         const data = doc.data();
         return {

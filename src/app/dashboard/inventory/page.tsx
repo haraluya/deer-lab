@@ -21,10 +21,8 @@ import { StandardDataListPage, StandardColumn, StandardAction, QuickFilter } fro
 import { StandardStats } from '@/components/StandardStatsCard'
 import { useDataSearch } from '@/hooks/useDataSearch'
 import { InventoryOverviewCards } from "./components/InventoryOverviewCards"
-import { LowStockDialog } from "./components/LowStockDialog"
 import { ProductionCapacityDialog } from "./components/ProductionCapacityDialog"
 import { QuickUpdateDialog } from "./components/QuickUpdateDialog"
-import { BatchOperationsPanel } from "./components/BatchOperationsPanel"
 import { useAuth } from "@/context/AuthContext"
 import { useInventoryCache } from "@/hooks/useInventoryCache"
 
@@ -49,6 +47,7 @@ interface InventoryItem {
   costPerUnit: number
   category?: string
   series?: string
+  seriesName?: string
   type: 'material' | 'fragrance'
   isLowStock?: boolean
 }
@@ -82,15 +81,15 @@ export default function InventoryPage() {
       try {
         console.log('開始直接從 Firebase 載入資料...')
         const { db } = await import('@/lib/firebase')
-        const { collection, getDocs } = await import('firebase/firestore')
-        
+        const { collection, getDocs, getDoc } = await import('firebase/firestore')
+
         if (!db) {
           console.error('Firebase db 未初始化')
           return
         }
 
         console.log('Firebase db 已初始化，開始查詢...')
-        
+
         // 直接查詢 materials
         const materialsSnapshot = await getDocs(collection(db, 'materials'))
         const materialsList = materialsSnapshot.docs.map(doc => ({
@@ -100,22 +99,41 @@ export default function InventoryPage() {
         console.log('直接載入的物料數量:', materialsList.length)
         setDirectMaterials(materialsList)
 
-        // 直接查詢 fragrances  
+        // 直接查詢 fragrances 並獲取 series 資訊
         const fragrancesSnapshot = await getDocs(collection(db, 'fragrances'))
-        const fragrancesList = fragrancesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
+        const fragrancesList = await Promise.all(fragrancesSnapshot.docs.map(async doc => {
+          const data = doc.data()
+          let seriesName = ''
+
+          // 如果有 seriesRef，獲取 series 名稱
+          if (data.seriesRef) {
+            try {
+              const seriesDoc = await getDoc(data.seriesRef)
+              if (seriesDoc.exists()) {
+                const seriesData = seriesDoc.data() as any
+                seriesName = seriesData.name || ''
+              }
+            } catch (error) {
+              console.error('獲取香精系列失敗:', error)
+            }
+          }
+
+          return {
+            id: doc.id,
+            ...data,
+            seriesName: seriesName
+          }
         }))
         console.log('直接載入的香精數量:', fragrancesList.length)
         setDirectFragrances(fragrancesList)
-        
+
       } catch (error) {
         console.error('直接載入資料失敗:', error)
       } finally {
         setDirectLoading(false)
       }
     }
-    
+
     testDirectLoad()
   }, [])
 
@@ -125,7 +143,7 @@ export default function InventoryPage() {
       console.log('📦 重新載入庫存資料...')
       setDirectLoading(true)
       const { db } = await import('@/lib/firebase')
-      const { collection, getDocs } = await import('firebase/firestore')
+      const { collection, getDocs, getDoc } = await import('firebase/firestore')
 
       if (!db) {
         console.error('Firebase db 未初始化')
@@ -141,11 +159,30 @@ export default function InventoryPage() {
       console.log('重新載入的物料數量:', materialsList.length)
       setDirectMaterials(materialsList)
 
-      // 直接查詢 fragrances
+      // 直接查詢 fragrances 並獲取 series 資訊
       const fragrancesSnapshot = await getDocs(collection(db, 'fragrances'))
-      const fragrancesList = fragrancesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
+      const fragrancesList = await Promise.all(fragrancesSnapshot.docs.map(async doc => {
+        const data = doc.data()
+        let seriesName = ''
+
+        // 如果有 seriesRef，獲取 series 名稱
+        if (data.seriesRef) {
+          try {
+            const seriesDoc = await getDoc(data.seriesRef)
+            if (seriesDoc.exists()) {
+              const seriesData = seriesDoc.data() as any
+              seriesName = seriesData.name || ''
+            }
+          } catch (error) {
+            console.error('獲取香精系列失敗:', error)
+          }
+        }
+
+        return {
+          id: doc.id,
+          ...data,
+          seriesName: seriesName
+        }
       }))
       console.log('重新載入的香精數量:', fragrancesList.length)
       setDirectFragrances(fragrancesList)
@@ -175,14 +212,30 @@ export default function InventoryPage() {
       type: 'material' as const,
       isLowStock: (item.currentStock || 0) <= (item.minStock || item.safetyStockLevel || 0)
     }))
-    
+
     const fragranceItems = fragrances.map(item => ({
       ...item,
       type: 'fragrance' as const,
       isLowStock: (item.currentStock || 0) <= (item.minStock || item.safetyStockLevel || 0)
     }))
-    
-    return [...materialItems, ...fragranceItems]
+
+    // 排序邏輯: 依照類型、分類、項目名稱升序排列
+    return [...materialItems, ...fragranceItems].sort((a, b) => {
+      // 1. 先按類型排序 (material 在前, fragrance 在後)
+      if (a.type !== b.type) {
+        return a.type === 'material' ? -1 : 1;
+      }
+
+      // 2. 再按分類排序 (香精用series，物料用category)
+      const aCategory = a.type === 'fragrance' ? (a.series || '') : (a.category || '');
+      const bCategory = b.type === 'fragrance' ? (b.series || '') : (b.category || '');
+      if (aCategory !== bCategory) {
+        return aCategory.localeCompare(bCategory, 'zh-TW');
+      }
+
+      // 3. 最後按名稱排序
+      return (a.name || '').localeCompare(b.name || '', 'zh-TW');
+    })
   }, [materials, fragrances])
   
   // 搜尋配置
@@ -225,10 +278,8 @@ export default function InventoryPage() {
   } = useDataSearch(allInventoryItems, searchConfig)
   
   // 對話框狀態
-  const [isLowStockDialogOpen, setIsLowStockDialogOpen] = useState(false)
   const [isProductionCapacityDialogOpen, setIsProductionCapacityDialogOpen] = useState(false)
   const [isQuickUpdateDialogOpen, setIsQuickUpdateDialogOpen] = useState(false)
-  const [isBatchOperationsPanelOpen, setIsBatchOperationsPanelOpen] = useState(false)
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
   
@@ -350,9 +401,9 @@ export default function InventoryPage() {
       filterable: true,
       priority: 2,
       hideOnMobile: true,
-      render: (value) => (
+      render: (value, record) => (
         <div className="text-sm text-gray-600">
-          {value || '未分類'}
+          {record.type === 'fragrance' ? (record.seriesName || record.series || '未分類') : (value || '未分類')}
         </div>
       )
     },
@@ -496,14 +547,6 @@ export default function InventoryPage() {
         
         <div className="flex flex-wrap gap-3">
           <Button
-            onClick={() => setIsLowStockDialogOpen(true)}
-            variant="outline"
-            className="border-red-200 text-red-600 hover:bg-red-50"
-          >
-            <AlertTriangle className="mr-2 h-4 w-4" />
-            低庫存項目
-          </Button>
-          <Button
             onClick={() => setIsProductionCapacityDialogOpen(true)}
             variant="outline"
             className="border-green-200 text-green-600 hover:bg-green-50"
@@ -511,16 +554,6 @@ export default function InventoryPage() {
             <Calculator className="mr-2 h-4 w-4" />
             生產評估
           </Button>
-          {canManageInventory && (
-            <Button
-              onClick={() => setIsBatchOperationsPanelOpen(true)}
-              variant="outline"
-              className="border-purple-200 text-purple-600 hover:bg-purple-50"
-            >
-              <Settings className="mr-2 h-4 w-4" />
-              批量操作
-            </Button>
-          )}
           <Button
             onClick={refreshAll}
             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
@@ -567,10 +600,6 @@ export default function InventoryPage() {
       />
 
       {/* 對話框 */}
-      <LowStockDialog
-        isOpen={isLowStockDialogOpen}
-        onClose={() => setIsLowStockDialogOpen(false)}
-      />
       
       <ProductionCapacityDialog
         isOpen={isProductionCapacityDialogOpen}
@@ -594,14 +623,6 @@ export default function InventoryPage() {
         />
       )}
       
-      {/* 批量操作面板 */}
-      {isBatchOperationsPanelOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <BatchOperationsPanel
-            onClose={() => setIsBatchOperationsPanelOpen(false)}
-          />
-        </div>
-      )}
       
     </div>
   )

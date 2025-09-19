@@ -6,6 +6,7 @@ import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { useApiClient } from '@/hooks/useApiClient';
+import { useTimeRecordsCache } from '@/hooks/useTimeRecordsCache';
 import { toast } from 'sonner';
 import {
   Clock, User, Calendar, Factory, TrendingUp,
@@ -62,8 +63,19 @@ interface MonthlyStats {
 export default function PersonalTimeRecordsPage() {
   const { appUser } = useAuth();
   const apiClient = useApiClient();
-  const [personalTimeEntries, setPersonalTimeEntries] = useState<TimeEntry[]>([]);
-  const [filteredEntries, setFilteredEntries] = useState<TimeEntry[]>([]);
+
+  // 🚀 使用工時記錄快取 Hook
+  const {
+    timeRecords: personalTimeEntries,
+    loading: isLoading,
+    error: timeRecordsError,
+    loadTimeRecords,
+    invalidateCache,
+    isFromCache,
+    cacheAge
+  } = useTimeRecordsCache(appUser?.employeeId);
+
+  const [filteredEntries, setFilteredEntries] = useState<any[]>([]);
   const [stats, setStats] = useState<PersonalTimeStats>({
     totalEntries: 0,
     totalHours: 0,
@@ -72,7 +84,6 @@ export default function PersonalTimeRecordsPage() {
     avgHoursPerEntry: 0
   });
   const [monthlyStats, setMonthlyStats] = useState<MonthlyStats[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [monthFilter, setMonthFilter] = useState('all');
   const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
@@ -87,144 +98,63 @@ export default function PersonalTimeRecordsPage() {
   // 報表對話框狀態
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
 
+  // 🚀 使用快取版本的載入函數
   const loadPersonalTimeRecords = useCallback(async () => {
+    if (!appUser?.employeeId) {
+      console.warn('用戶未初始化或缺少 employeeId:', { appUser: !!appUser });
+      return;
+    }
+
+    console.log('🚀 開始載入個人工時記錄 (使用快取機制)，當前用戶:', {
+      uid: appUser.uid,
+      name: appUser.name,
+      employeeId: appUser.employeeId
+    });
+
     try {
-      if (!appUser) {
-        console.warn('用戶未初始化:', { appUser: !!appUser });
-        setIsLoading(false);
-        return;
-      }
-      setIsLoading(true);
-
-      console.log('🚀 開始載入個人工時記錄 V2 - 統一映射機制，當前用戶:', {
-        uid: appUser.uid,
-        name: appUser.name,
-        employeeId: appUser.employeeId
-      });
-
-      // 🎯 使用標準 call 方法調用 V2 API - 類型安全的方式
-      const result = await apiClient.call('getPersonalTimeRecordsV2', {
-        employeeId: appUser.employeeId,  // 使用 employeeId (如 "052")
-        userId: appUser.uid              // 保留 userId 作為備用
-      });
-
-      console.log('📊 V2 API 調用完成，詳細結果:', {
-        success: result.success,
-        hasData: !!result.data,
-        dataType: typeof result.data,
-        recordCount: result.data?.records?.length || 0,
-        summary: result.data?.summary,
-        error: result.error
-      });
-
-      if (!result.success) {
-        console.error('API 調用失敗:', result.error);
-        throw new Error('獲取個人工時記錄失敗');
-      }
-      
-      // 🎯 V2 API 標準化資料處理
-      let timeEntries: TimeEntry[] = [];
-      let totalFound = 0;
-      let validCount = 0;
-      let invalidCount = 0;
-
-      console.log('🔍 V2 API 回傳資料分析:', {
-        hasData: !!result.data,
-        dataType: typeof result.data,
-        dataKeys: result.data ? Object.keys(result.data) : [],
-        firstLevelStructure: result.data
-      });
-
-      if (result.data) {
-        // V2 API 標準格式：{ records: [...], summary: {...} }
-        if ('records' in result.data && 'summary' in result.data) {
-          const apiData = result.data as any;
-          timeEntries = apiData.records || [];
-          totalFound = apiData.summary?.totalRecords || timeEntries.length;
-          validCount = timeEntries.length;
-          invalidCount = 0;
-
-          console.log('✅ V2 API 標準格式處理成功:', {
-            recordsCount: timeEntries.length,
-            summary: apiData.summary,
-            hasDebug: !!apiData.debug,
-            sampleRecord: timeEntries[0] || null
-          });
-        } else if ('timeEntries' in result.data) {
-          // 舊格式相容
-          const apiData = result.data as any;
-          timeEntries = apiData.timeEntries || [];
-          totalFound = apiData.totalFound || timeEntries.length;
-          validCount = apiData.validCount || timeEntries.length;
-          invalidCount = apiData.invalidCount || 0;
-          console.log('⚠️ 使用舊格式相容模式:', timeEntries.length);
-        } else {
-          // 格式不匹配
-          console.error('❌ API 回傳格式不符合預期:', {
-            expectedKeys: ['records', 'summary'],
-            actualKeys: Object.keys(result.data),
-            rawData: result.data
-          });
-          timeEntries = [];
-        }
-      } else {
-        console.warn('⚠️ result.data 為空或未定義');
-      }
-
-      console.log(`API 結果: 總共 ${totalFound} 筆，有效 ${validCount} 筆，無效 ${invalidCount} 筆`);
-
-      // 在客戶端排序（按創建時間降序）
-      const sortedTimeEntries = timeEntries.sort((a, b) => {
-        const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt);
-        const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt);
-        return dateB.getTime() - dateA.getTime();
-      });
-
-      setPersonalTimeEntries(sortedTimeEntries);
-
-      // 計算統計資料
-      calculateStats(timeEntries);
-      calculateMonthlyStats(timeEntries);
-
-      if (timeEntries.length === 0) {
-        if (totalFound > 0) {
-          toast.info(`找到 ${totalFound} 筆工時記錄，但都不是來自已完工或已入庫的工單，因此不顯示`);
-        }
-        console.info('沒有有效的工時記錄（只顯示已完工和已入庫工單的工時）');
-      } else {
-        toast.success(`載入 ${timeEntries.length} 筆有效工時記錄`);
-      }
-
+      await loadTimeRecords(appUser.employeeId);
     } catch (error) {
       console.error('載入個人工時記錄失敗:', error);
       toast.error(`載入個人工時記錄失敗: ${error instanceof Error ? error.message : '未知錯誤'}`);
-    } finally {
-      setIsLoading(false);
     }
-  }, [appUser, apiClient]);
+  }, [appUser, loadTimeRecords]);
   
-  // 載入個人工時記錄
+  // 載入個人工時記錄 (使用快取)
   useEffect(() => {
-    console.log('useEffect 觸發，appUser 狀態:', { 
-      appUser: !!appUser, 
-      uid: appUser?.uid, 
-      name: appUser?.name 
+    console.log('useEffect 觸發，appUser 狀態:', {
+      appUser: !!appUser,
+      uid: appUser?.uid,
+      name: appUser?.name,
+      employeeId: appUser?.employeeId
     });
-    
-    if (appUser && appUser.uid) {
+
+    if (appUser?.employeeId) {
       loadPersonalTimeRecords();
     } else {
-      console.warn('appUser 或 appUser.uid 未準備就緒');
+      console.warn('appUser 或 appUser.employeeId 未準備就緒');
     }
-  }, [appUser?.uid]); // 只依賴 appUser.uid，避免循環依賴
+  }, [appUser?.employeeId]); // 依賴 employeeId 而非 uid
+
+  // 🚀 監聽工時記錄變化並重新計算統計資料
+  useEffect(() => {
+    if (personalTimeEntries.length > 0) {
+      calculateStats(personalTimeEntries);
+      calculateMonthlyStats(personalTimeEntries);
+      console.log('📊 統計資料已重新計算:', {
+        recordCount: personalTimeEntries.length,
+        isFromCache,
+        cacheAge: Math.floor(cacheAge / 1000)
+      });
+    }
+  }, [personalTimeEntries, isFromCache, cacheAge]);
 
   // 篩選邏輯
   useEffect(() => {
     let filtered = personalTimeEntries;
     
     if (searchTerm) {
-      filtered = filtered.filter(entry => 
-        entry.workOrderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      filtered = filtered.filter(entry =>
+        entry.workOrderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         entry.notes?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -251,7 +181,7 @@ export default function PersonalTimeRecordsPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const calculateStats = (entries: TimeEntry[]) => {
+  const calculateStats = (entries: any[]) => {
     const totalHours = entries.reduce((sum, entry) => sum + entry.duration, 0);
     const uniqueWorkOrders = new Set(entries.map(entry => entry.workOrderId)).size;
 
@@ -270,7 +200,7 @@ export default function PersonalTimeRecordsPage() {
     });
   };
 
-  const calculateMonthlyStats = (entries: TimeEntry[]) => {
+  const calculateMonthlyStats = (entries: any[]) => {
     const monthlyData: { [key: string]: MonthlyStats } = {};
 
     entries.forEach(entry => {
@@ -396,8 +326,9 @@ export default function PersonalTimeRecordsPage() {
         toast.success(message);
         console.log(`清理完成：檢查了 ${checkedCount} 筆記錄，刪除了 ${deletedCount} 筆無效記錄`);
         
-        // 重新載入工時記錄
+        // 重新載入工時記錄 (清除快取)
         if (deletedCount > 0) {
+          invalidateCache(); // 🚀 清除快取
           await loadPersonalTimeRecords();
         }
       } else {
@@ -448,6 +379,28 @@ export default function PersonalTimeRecordsPage() {
       {/* 功能按鈕 */}
       <Card>
         <CardContent className="pt-6">
+          {/* 快取狀態顯示 */}
+          {isFromCache && (
+            <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center gap-2 text-sm text-blue-800">
+                <Zap className="h-4 w-4 text-blue-600" />
+                <span className="font-medium">⚡ 快取資料</span>
+                <span className="text-blue-600">({Math.floor(cacheAge / 1000)}秒前載入)</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    invalidateCache();
+                    loadPersonalTimeRecords();
+                  }}
+                  className="ml-auto h-6 px-2 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+                >
+                  重新載入
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2">
             {/* 統計報表按鈕 */}
             <Button
