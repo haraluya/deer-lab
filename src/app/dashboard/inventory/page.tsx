@@ -105,6 +105,13 @@ export default function InventoryPage() {
           const data = doc.data()
           let seriesName = ''
 
+          // 檢查香精是否有系列資訊
+          console.log(`重載處理香精: ${data.name}`, {
+            hasSeriesRef: !!data.seriesRef,
+            hasSeries: !!data.series,
+            seriesValue: data.series
+          })
+
           // 如果有 seriesRef，獲取 series 名稱
           if (data.seriesRef) {
             try {
@@ -112,15 +119,19 @@ export default function InventoryPage() {
               if (seriesDoc.exists()) {
                 const seriesData = seriesDoc.data() as any
                 seriesName = seriesData.name || ''
-                console.log(`重載香精 ${data.name} 的系列: ${seriesName}`)
+                console.log(`✅ 重載香精 ${data.name} 載入系列: ${seriesName}`)
               } else {
-                console.log(`重載香精 ${data.name} 的 seriesRef 不存在`)
+                console.log(`❌ 重載香精 ${data.name} 的 seriesRef 文檔不存在`)
               }
             } catch (error) {
-              console.error(`重載獲取香精 ${data.name} 系列失敗:`, error)
+              console.error(`❌ 重載獲取香精 ${data.name} 系列失敗:`, error)
             }
+          } else if (data.series) {
+            // 如果沒有 seriesRef 但有直接的 series 欄位
+            seriesName = data.series
+            console.log(`✅ 重載香精 ${data.name} 使用直接系列: ${seriesName}`)
           } else {
-            console.log(`重載香精 ${data.name} 沒有 seriesRef`)
+            console.log(`⚠️ 重載香精 ${data.name} 沒有任何系列資訊`)
           }
 
           return {
@@ -170,6 +181,13 @@ export default function InventoryPage() {
         const data = doc.data()
         let seriesName = ''
 
+        // 檢查香精是否有系列資訊
+        console.log(`處理香精: ${data.name}`, {
+          hasSeriesRef: !!data.seriesRef,
+          hasSeries: !!data.series,
+          seriesValue: data.series
+        })
+
         // 如果有 seriesRef，獲取 series 名稱
         if (data.seriesRef) {
           try {
@@ -177,15 +195,19 @@ export default function InventoryPage() {
             if (seriesDoc.exists()) {
               const seriesData = seriesDoc.data() as any
               seriesName = seriesData.name || ''
-              console.log(`香精 ${data.name} 的系列: ${seriesName}`)
+              console.log(`✅ 香精 ${data.name} 載入系列: ${seriesName}`)
             } else {
-              console.log(`香精 ${data.name} 的 seriesRef 不存在`)
+              console.log(`❌ 香精 ${data.name} 的 seriesRef 文檔不存在`)
             }
           } catch (error) {
-            console.error(`獲取香精 ${data.name} 系列失敗:`, error)
+            console.error(`❌ 獲取香精 ${data.name} 系列失敗:`, error)
           }
+        } else if (data.series) {
+          // 如果沒有 seriesRef 但有直接的 series 欄位
+          seriesName = data.series
+          console.log(`✅ 香精 ${data.name} 使用直接系列: ${seriesName}`)
         } else {
-          console.log(`香精 ${data.name} 沒有 seriesRef`)
+          console.log(`⚠️ 香精 ${data.name} 沒有任何系列資訊`)
         }
 
         return {

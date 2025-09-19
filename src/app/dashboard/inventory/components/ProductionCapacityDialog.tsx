@@ -474,7 +474,8 @@ export function ProductionCapacityDialog({ isOpen, onClose }: ProductionCapacity
                 return m.name === materialIdentifier || m.code === materialIdentifier
               })
               if (material) {
-                let requiredQuantity = plan.targetQuantity
+                // 專屬材料如果沒有特定比例，預設為 0
+                let requiredQuantity = 0
                 const key = `material-${material.id}`
                 if (materialRequirementsMap.has(key)) {
                   const existing = materialRequirementsMap.get(key)
@@ -514,7 +515,8 @@ export function ProductionCapacityDialog({ isOpen, onClose }: ProductionCapacity
                 return m.name === materialIdentifier || m.code === materialIdentifier
               })
               if (material) {
-                let requiredQuantity = plan.targetQuantity
+                // 通用材料如果沒有特定比例，預設為 0
+                let requiredQuantity = 0
                 const key = `material-${material.id}`
                 if (materialRequirementsMap.has(key)) {
                   const existing = materialRequirementsMap.get(key)
