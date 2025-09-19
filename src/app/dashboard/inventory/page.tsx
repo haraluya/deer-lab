@@ -112,10 +112,15 @@ export default function InventoryPage() {
               if (seriesDoc.exists()) {
                 const seriesData = seriesDoc.data() as any
                 seriesName = seriesData.name || ''
+                console.log(`重載香精 ${data.name} 的系列: ${seriesName}`)
+              } else {
+                console.log(`重載香精 ${data.name} 的 seriesRef 不存在`)
               }
             } catch (error) {
-              console.error('獲取香精系列失敗:', error)
+              console.error(`重載獲取香精 ${data.name} 系列失敗:`, error)
             }
+          } else {
+            console.log(`重載香精 ${data.name} 沒有 seriesRef`)
           }
 
           return {
@@ -172,10 +177,15 @@ export default function InventoryPage() {
             if (seriesDoc.exists()) {
               const seriesData = seriesDoc.data() as any
               seriesName = seriesData.name || ''
+              console.log(`香精 ${data.name} 的系列: ${seriesName}`)
+            } else {
+              console.log(`香精 ${data.name} 的 seriesRef 不存在`)
             }
           } catch (error) {
-            console.error('獲取香精系列失敗:', error)
+            console.error(`獲取香精 ${data.name} 系列失敗:`, error)
           }
+        } else {
+          console.log(`香精 ${data.name} 沒有 seriesRef`)
         }
 
         return {
@@ -226,9 +236,9 @@ export default function InventoryPage() {
         return a.type === 'material' ? -1 : 1;
       }
 
-      // 2. 再按分類排序 (香精用series，物料用category)
-      const aCategory = a.type === 'fragrance' ? (a.series || '') : (a.category || '');
-      const bCategory = b.type === 'fragrance' ? (b.series || '') : (b.category || '');
+      // 2. 再按分類排序 (香精用seriesName，物料用category)
+      const aCategory = a.type === 'fragrance' ? (a.seriesName || a.series || '') : (a.category || '');
+      const bCategory = b.type === 'fragrance' ? (b.seriesName || b.series || '') : (b.category || '');
       if (aCategory !== bCategory) {
         return aCategory.localeCompare(bCategory, 'zh-TW');
       }

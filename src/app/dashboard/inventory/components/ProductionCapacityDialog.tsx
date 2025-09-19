@@ -800,13 +800,13 @@ export function ProductionCapacityDialog({ isOpen, onClose }: ProductionCapacity
                         </TableCell>
                         
                         <TableCell className="text-right">
-                          {req.currentStock} {req.unit}
+                          {formatNumber(req.currentStock)} {req.unit}
                         </TableCell>
                         
                         <TableCell className="text-right">
                           {req.shortage > 0 ? (
                             <span className="text-red-600 font-medium">
-                              {req.shortage} {req.unit}
+                              {formatNumber(req.shortage)} {req.unit}
                             </span>
                           ) : (
                             <span className="text-green-600">-</span>
@@ -883,7 +883,7 @@ export function ProductionCapacityDialog({ isOpen, onClose }: ProductionCapacity
                         <div className="bg-white/70 p-2 rounded-lg text-center">
                           <div className="text-xs text-gray-600 mb-1">當前庫存</div>
                           <div className="font-medium text-gray-900">
-                            {req.currentStock} {req.unit}
+                            {formatNumber(req.currentStock)} {req.unit}
                           </div>
                         </div>
                         <div className="bg-white/70 p-2 rounded-lg text-center">
@@ -891,7 +891,7 @@ export function ProductionCapacityDialog({ isOpen, onClose }: ProductionCapacity
                           <div className="font-medium">
                             {req.shortage > 0 ? (
                               <span className="text-red-600">
-                                {req.shortage} {req.unit}
+                                {formatNumber(req.shortage)} {req.unit}
                               </span>
                             ) : (
                               <span className="text-green-600">-</span>
