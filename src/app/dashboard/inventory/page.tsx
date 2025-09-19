@@ -109,7 +109,11 @@ export default function InventoryPage() {
           console.log(`重載處理香精: ${data.name}`, {
             hasSeriesRef: !!data.seriesRef,
             hasSeries: !!data.series,
-            seriesValue: data.series
+            seriesValue: data.series,
+            category: data.category,
+            type: data.type,
+            productSeries: data.productSeries,
+            allKeys: Object.keys(data)
           })
 
           // 如果有 seriesRef，獲取 series 名稱
@@ -130,6 +134,14 @@ export default function InventoryPage() {
             // 如果沒有 seriesRef 但有直接的 series 欄位
             seriesName = data.series
             console.log(`✅ 重載香精 ${data.name} 使用直接系列: ${seriesName}`)
+          } else if (data.category) {
+            // 嘗試使用 category 欄位
+            seriesName = data.category
+            console.log(`✅ 重載香精 ${data.name} 使用分類: ${seriesName}`)
+          } else if (data.type) {
+            // 嘗試使用 type 欄位
+            seriesName = data.type
+            console.log(`✅ 重載香精 ${data.name} 使用類型: ${seriesName}`)
           } else {
             console.log(`⚠️ 重載香精 ${data.name} 沒有任何系列資訊`)
           }
@@ -185,7 +197,11 @@ export default function InventoryPage() {
         console.log(`處理香精: ${data.name}`, {
           hasSeriesRef: !!data.seriesRef,
           hasSeries: !!data.series,
-          seriesValue: data.series
+          seriesValue: data.series,
+          category: data.category,
+          type: data.type,
+          productSeries: data.productSeries,
+          allKeys: Object.keys(data)
         })
 
         // 如果有 seriesRef，獲取 series 名稱
@@ -206,6 +222,14 @@ export default function InventoryPage() {
           // 如果沒有 seriesRef 但有直接的 series 欄位
           seriesName = data.series
           console.log(`✅ 香精 ${data.name} 使用直接系列: ${seriesName}`)
+        } else if (data.category) {
+          // 嘗試使用 category 欄位
+          seriesName = data.category
+          console.log(`✅ 香精 ${data.name} 使用分類: ${seriesName}`)
+        } else if (data.type) {
+          // 嘗試使用 type 欄位
+          seriesName = data.type
+          console.log(`✅ 香精 ${data.name} 使用類型: ${seriesName}`)
         } else {
           console.log(`⚠️ 香精 ${data.name} 沒有任何系列資訊`)
         }
