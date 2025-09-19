@@ -234,11 +234,16 @@ export default function InventoryPage() {
           console.log(`⚠️ 香精 ${data.name} 沒有任何系列資訊`)
         }
 
-        return {
+        const finalData = {
           id: doc.id,
           ...data,
           seriesName: seriesName
         }
+
+        // 最終確認：顯示香精的系列資訊載入結果
+        console.log(`🔍 香精 ${data.name} 最終 seriesName: "${seriesName}"`)
+
+        return finalData
       }))
       console.log('重新載入的香精數量:', fragrancesList.length)
       setDirectFragrances(fragrancesList)
@@ -457,11 +462,23 @@ export default function InventoryPage() {
       filterable: true,
       priority: 2,
       hideOnMobile: true,
-      render: (value, record) => (
-        <div className="text-sm text-gray-600">
-          {record.type === 'fragrance' ? (record.seriesName || record.series || '未分類') : (value || '未分類')}
-        </div>
-      )
+      render: (value, record) => {
+        if (record.type === 'fragrance') {
+          const displayValue = record.seriesName || record.series || record.category || record.type || '未分類'
+          console.log(`🎯 香精 ${record.name} 分類顯示: "${displayValue}" (來源: seriesName="${record.seriesName}", series="${record.series}", category="${record.category}")`)
+          return (
+            <div className="text-sm text-gray-600">
+              {displayValue}
+            </div>
+          )
+        } else {
+          return (
+            <div className="text-sm text-gray-600">
+              {value || '未分類'}
+            </div>
+          )
+        }
+      }
     },
     {
       key: 'costPerUnit',
