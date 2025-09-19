@@ -8,6 +8,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useApiSilent } from '@/hooks/useApiClient';
+import { useMobileCacheStrategy } from '@/hooks/useMobileCacheStrategy';
 
 // =============================================================================
 // 類型定義
@@ -54,7 +55,8 @@ interface UseTimeRecordsCacheReturn {
 // 快取配置
 // =============================================================================
 
-const CACHE_DURATION = 15 * 60 * 1000; // 15 分鐘快取 (工時變動較少)
+// 基礎快取時間 (將由行動裝置策略動態調整)
+const BASE_CACHE_DURATION = 15 * 60 * 1000; // 15 分鐘快取 (工時變動較少)
 
 // 全域快取存儲 (跨組件共享，按 personnelId 分別快取)
 const globalCache = new Map<string, CacheEntry<CachedTimeEntry[]>>();
@@ -105,6 +107,10 @@ export function useTimeRecordsCache(defaultPersonnelId?: string): UseTimeRecords
   const [currentPersonnelId, setCurrentPersonnelId] = useState<string | null>(defaultPersonnelId || null);
   const lastRequestRef = useRef<string | null>(null);
 
+  // 行動裝置快取策略整合
+  const { getCacheTime, logCachePerformance, deviceInfo } = useMobileCacheStrategy();
+  const cacheDuration = getCacheTime('timeRecords');
+
   // =============================================================================
   // 快取管理函數
   // =============================================================================
@@ -120,8 +126,8 @@ export function useTimeRecordsCache(defaultPersonnelId?: string): UseTimeRecords
    * 檢查快取是否有效
    */
   const isCacheValid = useCallback((entry: CacheEntry<any>): boolean => {
-    return Date.now() - entry.timestamp < CACHE_DURATION;
-  }, []);
+    return Date.now() - entry.timestamp < cacheDuration;
+  }, [cacheDuration]);
 
   /**
    * 從快取取得資料
@@ -193,12 +199,22 @@ export function useTimeRecordsCache(defaultPersonnelId?: string): UseTimeRecords
    * 載入工時記錄 (智能快取)
    */
   const loadTimeRecords = useCallback(async (personnelId: string) => {
+    const startTime = Date.now();
     setCurrentPersonnelId(personnelId);
 
     // 檢查快取
     const cachedData = getFromCache(personnelId);
     if (cachedData) {
-      console.log('⚡ 從快取載入工時記錄 (員工ID:', personnelId, ')');
+      const duration = Date.now() - startTime;
+      logCachePerformance('timeRecords-load', duration, true);
+
+      console.log('⚡ 從快取載入工時記錄', {
+        personnelId,
+        loadTime: duration + 'ms',
+        deviceType: deviceInfo.isMobile ? 'mobile' : 'desktop',
+        itemCount: cachedData.length
+      });
+
       setTimeRecords(cachedData);
       setIsFromCache(true);
 
@@ -222,7 +238,12 @@ export function useTimeRecordsCache(defaultPersonnelId?: string): UseTimeRecords
 
       if (result.success && result.data) {
         const apiData = result.data as any;
-        console.log('🌐 從 API 載入工時記錄 (員工ID:', personnelId, '):', apiData);
+        console.log('🌐 從 API 載入工時記錄', {
+          personnelId,
+          deviceType: deviceInfo.isMobile ? 'mobile' : 'desktop',
+          cacheTime: cacheDuration + 'ms',
+          data: apiData
+        });
 
         // 處理API回應格式
         let records: any[] = [];
@@ -263,19 +284,37 @@ export function useTimeRecordsCache(defaultPersonnelId?: string): UseTimeRecords
         setToCache(processedRecords, personnelId, requestId);
         lastRequestRef.current = requestId;
 
+        // 記錄 API 調用效能
+        const duration = Date.now() - startTime;
+        logCachePerformance('timeRecords-api', duration, false);
+
         setCacheAge(0);
-        console.log('💾 工時記錄已存入快取', { personnelId, requestId, recordCount: processedRecords.length });
+        console.log('💾 工時記錄已存入快取', {
+          personnelId,
+          requestId,
+          recordCount: processedRecords.length,
+          loadTime: duration + 'ms',
+          deviceType: deviceInfo.isMobile ? 'mobile' : 'desktop'
+        });
       } else {
         throw new Error(result.error?.message || '載入工時記錄失敗');
       }
     } catch (err: any) {
+      const duration = Date.now() - startTime;
+      logCachePerformance('timeRecords-error', duration, false);
+
       const errorMessage = err.message || '載入工時記錄時發生錯誤';
       setError(errorMessage);
-      console.error('❌ 載入工時記錄失敗 (員工ID:', personnelId, '):', err);
+      console.error('❌ 載入工時記錄失敗', {
+        personnelId,
+        loadTime: duration + 'ms',
+        deviceType: deviceInfo.isMobile ? 'mobile' : 'desktop',
+        error: err
+      });
     } finally {
       setLoading(false);
     }
-  }, [apiClient, getFromCache, setToCache, getCacheKey]);
+  }, [apiClient, getFromCache, setToCache, getCacheKey, logCachePerformance, deviceInfo, cacheDuration]);
 
   // =============================================================================
   // 跨組件快取同步
@@ -377,7 +416,8 @@ export function getTimeRecordsCacheStatus(personnelId: string) {
   }
 
   const age = Date.now() - cacheEntry.timestamp;
-  const isValid = age < CACHE_DURATION;
+  // 使用基礎快取時間進行狀態檢查
+  const isValid = age < BASE_CACHE_DURATION;
 
   return {
     status: isValid ? 'valid' : 'expired',

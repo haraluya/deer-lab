@@ -101,12 +101,13 @@ export default function MaterialsPage() {
     filteredCount
   } = useDataSearch(materials, searchConfig);
 
-  // 初始載入
+  // 初始載入 - 移除 loadMaterials 依賴避免無限迴圈
   useEffect(() => {
     if (canViewMaterials) {
       loadMaterials();
     }
-  }, [canViewMaterials, loadMaterials]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canViewMaterials]);
 
   // 錯誤處理
   useEffect(() => {

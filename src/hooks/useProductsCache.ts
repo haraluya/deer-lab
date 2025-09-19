@@ -9,6 +9,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useMobileCacheStrategy } from '@/hooks/useMobileCacheStrategy';
 
 // =============================================================================
 // 類型定義
@@ -45,7 +46,8 @@ interface UseProductsCacheReturn {
 // 快取配置
 // =============================================================================
 
-const CACHE_DURATION = 12 * 60 * 1000; // 12 分鐘快取 (產品變動頻率較低)
+// 基礎快取時間 (將由行動裝置策略動態調整)
+const BASE_CACHE_DURATION = 12 * 60 * 1000; // 12 分鐘快取 (產品變動頻率較低)
 const PRODUCTS_CACHE_KEY = 'products_list';
 
 // 全域快取存儲 (跨組件共享)
@@ -95,6 +97,10 @@ export function useProductsCache(): UseProductsCacheReturn {
   const [cacheAge, setCacheAge] = useState(0);
   const lastRequestRef = useRef<string | null>(null);
 
+  // 行動裝置快取策略整合
+  const { getCacheTime, logCachePerformance, deviceInfo } = useMobileCacheStrategy();
+  const cacheDuration = getCacheTime('products');
+
   // =============================================================================
   // 快取管理函數
   // =============================================================================
@@ -103,8 +109,8 @@ export function useProductsCache(): UseProductsCacheReturn {
    * 檢查快取是否有效
    */
   const isCacheValid = useCallback((entry: CacheEntry<any>): boolean => {
-    return Date.now() - entry.timestamp < CACHE_DURATION;
-  }, []);
+    return Date.now() - entry.timestamp < cacheDuration;
+  }, [cacheDuration]);
 
   /**
    * 從快取取得資料
@@ -154,10 +160,20 @@ export function useProductsCache(): UseProductsCacheReturn {
    * 載入產品列表 (智能快取)
    */
   const loadProducts = useCallback(async () => {
+    const startTime = Date.now();
+
     // 檢查快取
     const cachedData = getFromCache();
     if (cachedData) {
-      console.log('⚡ 從快取載入產品列表');
+      const duration = Date.now() - startTime;
+      logCachePerformance('products-load', duration, true);
+
+      console.log('⚡ 從快取載入產品列表', {
+        loadTime: duration + 'ms',
+        deviceType: deviceInfo.isMobile ? 'mobile' : 'desktop',
+        itemCount: cachedData.length
+      });
+
       setProducts(cachedData);
       setIsFromCache(true);
 
@@ -177,7 +193,10 @@ export function useProductsCache(): UseProductsCacheReturn {
         throw new Error('Firebase 未初始化');
       }
 
-      console.log('🌐 從 Firestore 載入產品列表');
+      console.log('🌐 從 Firestore 載入產品列表', {
+        deviceType: deviceInfo.isMobile ? 'mobile' : 'desktop',
+        cacheTime: cacheDuration + 'ms'
+      });
       const productsSnapshot = await getDocs(collection(db, 'products'));
 
       const productsList: Product[] = productsSnapshot.docs.map(doc => {
@@ -213,16 +232,31 @@ export function useProductsCache(): UseProductsCacheReturn {
       setToCache(processedProducts, requestId);
       lastRequestRef.current = requestId;
 
+      // 記錄 API 調用效能
+      const duration = Date.now() - startTime;
+      logCachePerformance('products-api', duration, false);
+
       setCacheAge(0);
-      console.log('💾 產品列表已存入快取', { requestId, productCount: processedProducts.length });
+      console.log('💾 產品列表已存入快取', {
+        requestId,
+        productCount: processedProducts.length,
+        loadTime: duration + 'ms',
+        deviceType: deviceInfo.isMobile ? 'mobile' : 'desktop'
+      });
     } catch (err: any) {
+      const duration = Date.now() - startTime;
+      logCachePerformance('products-error', duration, false);
+
       const errorMessage = err.message || '載入產品列表時發生錯誤';
       setError(errorMessage);
-      console.error('❌ 載入產品列表失敗:', err);
+      console.error('❌ 載入產品列表失敗:', err, {
+        loadTime: duration + 'ms',
+        deviceType: deviceInfo.isMobile ? 'mobile' : 'desktop'
+      });
     } finally {
       setLoading(false);
     }
-  }, [getFromCache, setToCache]);
+  }, [getFromCache, setToCache, logCachePerformance, deviceInfo, cacheDuration]);
 
   // =============================================================================
   // 跨組件快取同步
@@ -300,7 +334,8 @@ export function getProductsCacheStatus() {
   }
 
   const age = Date.now() - cacheEntry.timestamp;
-  const isValid = age < CACHE_DURATION;
+  // 使用基礎快取時間進行狀態檢查
+  const isValid = age < BASE_CACHE_DURATION;
 
   return {
     status: isValid ? 'valid' : 'expired',

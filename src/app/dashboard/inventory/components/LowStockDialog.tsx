@@ -39,11 +39,13 @@ export function LowStockDialog({ isOpen, onClose }: LowStockDialogProps) {
     cacheAge
   } = useLowStockCache()
 
+  // 載入低庫存項目 - 移除 loadLowStockItems 依賴避免無限迴圈
   useEffect(() => {
     if (isOpen) {
       loadLowStockItems()
     }
-  }, [isOpen, loadLowStockItems])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen])
 
   useEffect(() => {
     if (error) {

@@ -10,6 +10,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { MaterialData } from '@/types/entities';
+import { useMobileCacheStrategy } from '@/hooks/useMobileCacheStrategy';
 
 // =============================================================================
 // 類型定義
@@ -43,7 +44,8 @@ interface UseMaterialsCacheReturn {
 // 快取配置
 // =============================================================================
 
-const CACHE_DURATION = 8 * 60 * 1000; // 8 分鐘快取（物料變動頻率中等）
+// 基礎快取時間 (將由行動裝置策略動態調整)
+const BASE_CACHE_DURATION = 8 * 60 * 1000; // 8 分鐘快取（物料變動頻率中等）
 const MATERIALS_CACHE_KEY = 'materials_list';
 
 // 全域快取存儲
@@ -92,6 +94,10 @@ export function useMaterialsCache(): UseMaterialsCacheReturn {
   const [cacheAge, setCacheAge] = useState(0);
   const lastRequestRef = useRef<string | null>(null);
 
+  // 行動裝置快取策略整合
+  const { getCacheTime, logCachePerformance, deviceInfo } = useMobileCacheStrategy();
+  const cacheDuration = getCacheTime('materials');
+
   // =============================================================================
   // 快取管理函數
   // =============================================================================
@@ -100,8 +106,8 @@ export function useMaterialsCache(): UseMaterialsCacheReturn {
    * 檢查快取是否有效
    */
   const isCacheValid = useCallback((entry: CacheEntry<any>): boolean => {
-    return Date.now() - entry.timestamp < CACHE_DURATION;
-  }, []);
+    return Date.now() - entry.timestamp < cacheDuration;
+  }, [cacheDuration]);
 
   /**
    * 從快取取得資料
@@ -183,10 +189,20 @@ export function useMaterialsCache(): UseMaterialsCacheReturn {
    * 載入物料列表 (智能快取)
    */
   const loadMaterials = useCallback(async () => {
+    const startTime = Date.now();
+
     // 檢查快取
     const cachedData = getFromCache();
     if (cachedData) {
-      console.log('⚡ 從快取載入物料列表');
+      const duration = Date.now() - startTime;
+      logCachePerformance('materials-load', duration, true);
+
+      console.log('⚡ 從快取載入物料列表', {
+        loadTime: duration + 'ms',
+        deviceType: deviceInfo.isMobile ? 'mobile' : 'desktop',
+        itemCount: cachedData.length
+      });
+
       setMaterials(cachedData);
       setIsFromCache(true);
 
@@ -209,7 +225,10 @@ export function useMaterialsCache(): UseMaterialsCacheReturn {
       const { suppliersMap } = await fetchRelatedData();
       const querySnapshot = await getDocs(collection(db, "materials"));
 
-      console.log('🌐 從 Firestore 載入物料列表');
+      console.log('🌐 從 Firestore 載入物料列表', {
+        deviceType: deviceInfo.isMobile ? 'mobile' : 'desktop',
+        cacheTime: cacheDuration + 'ms'
+      });
 
       const materialsData: MaterialWithSupplier[] = querySnapshot.docs.map((doc) => {
         const data = { id: doc.id, ...doc.data() } as MaterialData;
@@ -261,20 +280,32 @@ export function useMaterialsCache(): UseMaterialsCacheReturn {
       setToCache(sortedMaterials, requestId);
       lastRequestRef.current = requestId;
 
+      // 記錄 API 調用效能
+      const duration = Date.now() - startTime;
+      logCachePerformance('materials-api', duration, false);
+
       setCacheAge(0);
       console.log('💾 物料列表已存入快取', {
         requestId,
-        materialCount: sortedMaterials.length
+        materialCount: sortedMaterials.length,
+        loadTime: duration + 'ms',
+        deviceType: deviceInfo.isMobile ? 'mobile' : 'desktop'
       });
 
     } catch (err: any) {
+      const duration = Date.now() - startTime;
+      logCachePerformance('materials-error', duration, false);
+
       const errorMessage = err.message || '載入物料列表時發生錯誤';
       setError(errorMessage);
-      console.error('❌ 載入物料列表失敗:', err);
+      console.error('❌ 載入物料列表失敗:', err, {
+        loadTime: duration + 'ms',
+        deviceType: deviceInfo.isMobile ? 'mobile' : 'desktop'
+      });
     } finally {
       setLoading(false);
     }
-  }, [getFromCache, setToCache, fetchRelatedData]);
+  }, [getFromCache, setToCache, fetchRelatedData, logCachePerformance, deviceInfo, cacheDuration]);
 
   // =============================================================================
   // 跨組件快取同步
@@ -352,7 +383,8 @@ export function getMaterialsCacheStatus() {
   }
 
   const age = Date.now() - cacheEntry.timestamp;
-  const isValid = age < CACHE_DURATION;
+  // 使用基礎快取時間進行狀態檢查
+  const isValid = age < BASE_CACHE_DURATION;
 
   return {
     status: isValid ? 'valid' : 'expired',

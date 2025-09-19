@@ -71,12 +71,13 @@ export default function FragrancesPage() {
   // API 客戶端
   const apiClient = useApiClient();
 
-  // 初始載入
+  // 初始載入 - 移除 loadFragrances 依賴避免無限迴圈
   useEffect(() => {
     if (canViewFragrances) {
       loadFragrances();
     }
-  }, [canViewFragrances, loadFragrances]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canViewFragrances]);
 
   // 錯誤處理
   useEffect(() => {

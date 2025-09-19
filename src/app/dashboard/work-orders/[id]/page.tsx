@@ -499,7 +499,7 @@ export default function WorkOrderDetailPage() {
       console.error('載入工時記錄失敗:', err);
       error('載入工時記錄失敗', err as Error);
     }
-  }, [workOrderId, workOrder?.code]);
+  }, [workOrderId]); // 移除不穩定的 workOrder?.code 依賴
 
   // 快速編輯工時記錄
   const handleQuickEditTimeEntry = (entry: any) => {
@@ -977,7 +977,7 @@ export default function WorkOrderDetailPage() {
     } finally {
       setIsReloading(false);
     }
-  }, [workOrder, workOrderId, fetchWorkOrder]);
+  }, [workOrderId]); // 移除不穩定的 workOrder 物件依賴
 
   // 計算物料需求的輔助函數 - 完全重新計算，如同建立工單時一樣
   // 🔧 修復：加入 fragranceId 支援
@@ -1381,11 +1381,13 @@ export default function WorkOrderDetailPage() {
     }
   };
 
+  // 初始載入 - 移除函數依賴避免無限迴圈
   useEffect(() => {
     fetchWorkOrder()
     fetchPersonnel()
     loadTimeEntries()
-  }, [fetchWorkOrder, fetchPersonnel, loadTimeEntries])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workOrderId]) // 只依賴於 workOrderId
 
 
   // 初始化編輯資料

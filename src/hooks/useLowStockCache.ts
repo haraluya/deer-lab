@@ -8,6 +8,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useApiSilent } from '@/hooks/useApiClient';
+import { useMobileCacheStrategy } from '@/hooks/useMobileCacheStrategy';
 
 // =============================================================================
 // 類型定義
@@ -45,7 +46,8 @@ interface UseLowStockCacheReturn {
 // 快取配置
 // =============================================================================
 
-const CACHE_DURATION = 10 * 60 * 1000; // 10 分鐘快取（低庫存變動較慢）
+// 基礎快取時間 (將由行動裝置策略動態調整)
+const BASE_CACHE_DURATION = 10 * 60 * 1000; // 10 分鐘快取（低庫存變動較慢）
 const LOW_STOCK_CACHE_KEY = 'low_stock_items';
 
 // 全域快取存儲
@@ -95,6 +97,10 @@ export function useLowStockCache(): UseLowStockCacheReturn {
   const [cacheAge, setCacheAge] = useState(0);
   const lastRequestRef = useRef<string | null>(null);
 
+  // 行動裝置快取策略整合
+  const { getCacheTime, logCachePerformance, deviceInfo } = useMobileCacheStrategy();
+  const cacheDuration = getCacheTime('lowStock');
+
   // =============================================================================
   // 快取管理函數
   // =============================================================================
@@ -103,8 +109,8 @@ export function useLowStockCache(): UseLowStockCacheReturn {
    * 檢查快取是否有效
    */
   const isCacheValid = useCallback((entry: CacheEntry<any>): boolean => {
-    return Date.now() - entry.timestamp < CACHE_DURATION;
-  }, []);
+    return Date.now() - entry.timestamp < cacheDuration;
+  }, [cacheDuration]);
 
   /**
    * 從快取取得資料
@@ -154,10 +160,20 @@ export function useLowStockCache(): UseLowStockCacheReturn {
    * 載入低庫存項目 (智能快取)
    */
   const loadLowStockItems = useCallback(async () => {
+    const startTime = Date.now();
+
     // 檢查快取
     const cachedData = getFromCache();
     if (cachedData) {
-      console.log('⚡ 從快取載入低庫存項目');
+      const duration = Date.now() - startTime;
+      logCachePerformance('lowStock-load', duration, true);
+
+      console.log('⚡ 從快取載入低庫存項目', {
+        loadTime: duration + 'ms',
+        deviceType: deviceInfo.isMobile ? 'mobile' : 'desktop',
+        itemCount: cachedData.length
+      });
+
       setItems(cachedData);
       setIsFromCache(true);
 
@@ -177,7 +193,11 @@ export function useLowStockCache(): UseLowStockCacheReturn {
 
       if (result.success && result.data) {
         const apiData = result.data;
-        console.log('🌐 從 API 載入低庫存項目:', apiData);
+        console.log('🌐 從 API 載入低庫存項目', {
+          deviceType: deviceInfo.isMobile ? 'mobile' : 'desktop',
+          cacheTime: cacheDuration + 'ms',
+          data: apiData
+        });
 
         // 處理API回應資料
         const lowStockItems: LowStockItem[] = (apiData.items || []).map((item: any) => ({
@@ -195,22 +215,34 @@ export function useLowStockCache(): UseLowStockCacheReturn {
         setToCache(lowStockItems, requestId);
         lastRequestRef.current = requestId;
 
+        // 記錄 API 調用效能
+        const duration = Date.now() - startTime;
+        logCachePerformance('lowStock-api', duration, false);
+
         setCacheAge(0);
         console.log('💾 低庫存項目已存入快取', {
           requestId,
-          itemCount: lowStockItems.length
+          itemCount: lowStockItems.length,
+          loadTime: duration + 'ms',
+          deviceType: deviceInfo.isMobile ? 'mobile' : 'desktop'
         });
       } else {
         throw new Error(result.error?.message || '載入低庫存項目失敗');
       }
     } catch (err: any) {
+      const duration = Date.now() - startTime;
+      logCachePerformance('lowStock-error', duration, false);
+
       const errorMessage = err.message || '載入低庫存項目時發生錯誤';
       setError(errorMessage);
-      console.error('❌ 載入低庫存項目失敗:', err);
+      console.error('❌ 載入低庫存項目失敗:', err, {
+        loadTime: duration + 'ms',
+        deviceType: deviceInfo.isMobile ? 'mobile' : 'desktop'
+      });
     } finally {
       setLoading(false);
     }
-  }, [apiClient, getFromCache, setToCache]);
+  }, [apiClient, getFromCache, setToCache, logCachePerformance, deviceInfo, cacheDuration]);
 
   // =============================================================================
   // 跨組件快取同步
@@ -288,7 +320,8 @@ export function getLowStockCacheStatus() {
   }
 
   const age = Date.now() - cacheEntry.timestamp;
-  const isValid = age < CACHE_DURATION;
+  // 使用基礎快取時間進行狀態檢查
+  const isValid = age < BASE_CACHE_DURATION;
 
   return {
     status: isValid ? 'valid' : 'expired',

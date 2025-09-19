@@ -137,7 +137,7 @@ function ProductsPageContent() {
       console.error('處理產品資料失敗:', error);
       toast.error('處理產品資料失敗。');
     }
-  }, [db, isFromCache]);
+  }, [db]); // 移除不穩定的 isFromCache 依賴
 
   const loadData = useCallback(async () => {
     try {
@@ -148,10 +148,11 @@ function ProductsPageContent() {
     }
   }, [loadProducts]);
 
-  // 初始載入產品資料
+  // 初始載入產品資料 - 移除依賴避免無限迴圈
   useEffect(() => {
     loadData();
-  }, [loadData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 監聽快取產品變化，處理關聯資料
   useEffect(() => {
