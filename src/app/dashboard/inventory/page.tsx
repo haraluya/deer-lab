@@ -134,16 +134,30 @@ export default function InventoryPage() {
             // 如果沒有 seriesRef 但有直接的 series 欄位
             seriesName = data.series
             console.log(`✅ 重載香精 ${data.name} 使用直接系列: ${seriesName}`)
-          } else if (data.category) {
-            // 嘗試使用 category 欄位
-            seriesName = data.category
-            console.log(`✅ 重載香精 ${data.name} 使用分類: ${seriesName}`)
-          } else if (data.type) {
-            // 嘗試使用 type 欄位
-            seriesName = data.type
-            console.log(`✅ 重載香精 ${data.name} 使用類型: ${seriesName}`)
           } else {
-            console.log(`⚠️ 重載香精 ${data.name} 沒有任何系列資訊`)
+            // 查詢使用這個香精的產品
+            try {
+              const { query, where, getDocs, doc: docRef } = await import('firebase/firestore')
+              const fragranceRef = docRef(db, 'fragrances', doc.id)
+              const productsQuery = query(
+                collection(db, 'products'),
+                where('currentFragranceRef', '==', fragranceRef)
+              )
+              const productsSnapshot = await getDocs(productsQuery)
+
+              if (!productsSnapshot.empty) {
+                const productNames = productsSnapshot.docs.map(productDoc => {
+                  const productData = productDoc.data()
+                  return productData.name
+                })
+                seriesName = productNames.join(', ')
+                console.log(`✅ 重載香精 ${data.name} 被產品使用: ${seriesName}`)
+              } else {
+                console.log(`⚠️ 重載香精 ${data.name} 沒有被任何產品使用`)
+              }
+            } catch (error) {
+              console.error(`❌ 重載查詢香精 ${data.name} 使用產品失敗:`, error)
+            }
           }
 
           return {
@@ -222,16 +236,30 @@ export default function InventoryPage() {
           // 如果沒有 seriesRef 但有直接的 series 欄位
           seriesName = data.series
           console.log(`✅ 香精 ${data.name} 使用直接系列: ${seriesName}`)
-        } else if (data.category) {
-          // 嘗試使用 category 欄位
-          seriesName = data.category
-          console.log(`✅ 香精 ${data.name} 使用分類: ${seriesName}`)
-        } else if (data.type) {
-          // 嘗試使用 type 欄位
-          seriesName = data.type
-          console.log(`✅ 香精 ${data.name} 使用類型: ${seriesName}`)
         } else {
-          console.log(`⚠️ 香精 ${data.name} 沒有任何系列資訊`)
+          // 查詢使用這個香精的產品
+          try {
+            const { query, where, getDocs, doc: docRef } = await import('firebase/firestore')
+            const fragranceRef = docRef(db, 'fragrances', doc.id)
+            const productsQuery = query(
+              collection(db, 'products'),
+              where('currentFragranceRef', '==', fragranceRef)
+            )
+            const productsSnapshot = await getDocs(productsQuery)
+
+            if (!productsSnapshot.empty) {
+              const productNames = productsSnapshot.docs.map(productDoc => {
+                const productData = productDoc.data()
+                return productData.name
+              })
+              seriesName = productNames.join(', ')
+              console.log(`✅ 香精 ${data.name} 被產品使用: ${seriesName}`)
+            } else {
+              console.log(`⚠️ 香精 ${data.name} 沒有被任何產品使用`)
+            }
+          } catch (error) {
+            console.error(`❌ 查詢香精 ${data.name} 使用產品失敗:`, error)
+          }
         }
 
         const finalData = {
