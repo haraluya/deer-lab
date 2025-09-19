@@ -105,21 +105,31 @@ export default function InventoryPage() {
           const data = doc.data()
           let seriesName = ''
 
-          // 直接檢查香精資料中的所有可能欄位
-          console.log(`🔍 重載香精 ${data.name} 所有分類相關欄位:`, {
-            series: data.series,
-            category: data.category,
-            type: data.type,
-            productSeries: data.productSeries,
-            productName: data.productName,
-            usedInProducts: data.usedInProducts,
-            products: data.products,
-            seriesName: data.seriesName
-          })
+          // 查詢使用這個香精的產品
+          try {
+            const { query, where, getDocs, doc: docRef } = await import('firebase/firestore')
+            const fragranceRef = docRef(db, 'fragrances', doc.id)
+            const productsQuery = query(
+              collection(db, 'products'),
+              where('currentFragranceRef', '==', fragranceRef)
+            )
+            const productsSnapshot = await getDocs(productsQuery)
 
-          // 簡化邏輯：直接使用現有欄位
-          seriesName = data.series || data.category || data.productSeries || data.productName || data.usedInProducts || ''
-          console.log(`✅ 重載香精 ${data.name} 使用欄位作為分類: "${seriesName}"`)
+            if (!productsSnapshot.empty) {
+              const productNames = productsSnapshot.docs.map(productDoc => {
+                const productData = productDoc.data()
+                return productData.name
+              })
+              seriesName = productNames.join(', ')
+              console.log(`✅ 重載香精 ${data.name} 被產品使用: ${seriesName}`)
+            } else {
+              console.log(`⚠️ 重載香精 ${data.name} 沒有被任何產品使用`)
+              seriesName = '未使用'
+            }
+          } catch (error) {
+            console.error(`❌ 重載查詢香精 ${data.name} 使用產品失敗:`, error)
+            seriesName = '查詢失敗'
+          }
 
           return {
             id: doc.id,
@@ -168,21 +178,31 @@ export default function InventoryPage() {
         const data = doc.data()
         let seriesName = ''
 
-        // 直接檢查香精資料中的所有可能欄位
-        console.log(`🔍 香精 ${data.name} 所有分類相關欄位:`, {
-          series: data.series,
-          category: data.category,
-          type: data.type,
-          productSeries: data.productSeries,
-          productName: data.productName,
-          usedInProducts: data.usedInProducts,
-          products: data.products,
-          seriesName: data.seriesName
-        })
+        // 查詢使用這個香精的產品
+        try {
+          const { query, where, getDocs, doc: docRef } = await import('firebase/firestore')
+          const fragranceRef = docRef(db, 'fragrances', doc.id)
+          const productsQuery = query(
+            collection(db, 'products'),
+            where('currentFragranceRef', '==', fragranceRef)
+          )
+          const productsSnapshot = await getDocs(productsQuery)
 
-        // 簡化邏輯：直接使用現有欄位
-        seriesName = data.series || data.category || data.productSeries || data.productName || data.usedInProducts || ''
-        console.log(`✅ 香精 ${data.name} 使用欄位作為分類: "${seriesName}"`)
+          if (!productsSnapshot.empty) {
+            const productNames = productsSnapshot.docs.map(productDoc => {
+              const productData = productDoc.data()
+              return productData.name
+            })
+            seriesName = productNames.join(', ')
+            console.log(`✅ 香精 ${data.name} 被產品使用: ${seriesName}`)
+          } else {
+            console.log(`⚠️ 香精 ${data.name} 沒有被任何產品使用`)
+            seriesName = '未使用'
+          }
+        } catch (error) {
+          console.error(`❌ 查詢香精 ${data.name} 使用產品失敗:`, error)
+          seriesName = '查詢失敗'
+        }
 
         const finalData = {
           id: doc.id,
