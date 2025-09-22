@@ -300,6 +300,81 @@ export function ImportExportDialog({
     }
   }
 
+  const handleExportExcel = async () => {
+    setIsExporting(true)
+    try {
+      const data = await onExport()
+
+      // 準備工作表資料
+      const worksheetData = []
+
+      // 加入標題列
+      const headers = fields.map(f => f.label)
+      worksheetData.push(headers)
+
+      // 加入資料列
+      data.forEach(row => {
+        const rowData = fields.map(f => {
+          let value = row[f.key] || ''
+
+          // 如果是百分比格式，轉換為小數
+          if (f.format === 'percentage' && typeof value === 'number') {
+            value = value / 100
+          }
+
+          // 處理代碼欄位，保留前導零
+          if (f.key === 'code' && value !== '') {
+            // 在 Excel 中保留前導零的方法是將其設為文字格式
+            // 這會在稍後的格式化中處理
+            value = String(value)
+          }
+
+          return value
+        })
+        worksheetData.push(rowData)
+      })
+
+      // 建立工作簿和工作表
+      const wb = XLSX.utils.book_new()
+      const ws = XLSX.utils.aoa_to_sheet(worksheetData)
+
+      // 設定欄位格式，特別處理代碼欄位
+      const codeColumnIndex = fields.findIndex(f => f.key === 'code')
+      if (codeColumnIndex !== -1) {
+        // 設定代碼欄位為文字格式，保留前導零
+        const columnLetter = XLSX.utils.encode_col(codeColumnIndex)
+        const range = XLSX.utils.decode_range(ws['!ref'] || 'A1')
+
+        for (let row = 1; row <= range.e.r; row++) {
+          const cellAddress = `${columnLetter}${row + 1}`
+          if (ws[cellAddress]) {
+            // 設定單元格類型為文字
+            ws[cellAddress].t = 's'
+            // 確保值為字串
+            ws[cellAddress].v = String(ws[cellAddress].v)
+          }
+        }
+      }
+
+      // 設定欄位寬度
+      const colWidths = fields.map(f => ({ wch: Math.max(f.label.length * 1.5, 15) }))
+      ws['!cols'] = colWidths
+
+      // 加入工作表到工作簿
+      XLSX.utils.book_append_sheet(wb, ws, title)
+
+      // 輸出 Excel 檔案
+      XLSX.writeFile(wb, `${title}_${new Date().toISOString().split('T')[0]}.xlsx`)
+
+      toast.success("Excel 匯出成功")
+    } catch (error) {
+      console.error("Excel 匯出失敗:", error)
+      toast.error("Excel 匯出失敗")
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
 
   const getColorClasses = (color: string) => {
     switch (color) {
@@ -559,7 +634,7 @@ export function ImportExportDialog({
                 資料匯出
               </CardTitle>
               <CardDescription className="text-muted-foreground">
-                將現有資料匯出為 CSV 格式
+                將現有資料匯出為 Excel 或 CSV 格式
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -575,13 +650,23 @@ export function ImportExportDialog({
                 </div>
               </div>
 
-              <Button
-                onClick={handleExportCSV}
-                disabled={isExporting}
-                className={`w-full ${colorClasses.button}`}
-              >
-                {isExporting ? "匯出中..." : "匯出 CSV"}
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  onClick={handleExportExcel}
+                  disabled={isExporting}
+                  className={`w-full ${colorClasses.button}`}
+                >
+                  {isExporting ? "匯出中..." : "匯出 Excel"}
+                </Button>
+                <Button
+                  onClick={handleExportCSV}
+                  disabled={isExporting}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {isExporting ? "匯出中..." : "匯出 CSV"}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
