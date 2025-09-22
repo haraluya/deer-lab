@@ -55,7 +55,7 @@ async function updateFragranceStatuses(params: {
   }
 
   return await db.runTransaction(async (transaction) => {
-    // 處理新香精 - 自動設為啟用
+    // 處理新香精 - 如果原本是備用狀態，自動設為啟用
     if (newFragranceId) {
       const newFragranceRef = db.doc(`fragrances/${newFragranceId}`);
       const newFragranceDoc = await transaction.get(newFragranceRef);
@@ -63,29 +63,43 @@ async function updateFragranceStatuses(params: {
       if (newFragranceDoc.exists) {
         const newFragranceData = newFragranceDoc.data();
 
-        // 更新為啟用狀態，除非手動設為棄用
-        if (newFragranceData?.fragranceStatus !== '棄用') {
+        // 如果香精原本是備用狀態或沒有設定狀態，且非棄用狀態，則設為啟用
+        if (newFragranceData?.fragranceStatus === '備用' ||
+            (!newFragranceData?.fragranceStatus && newFragranceData?.fragranceStatus !== '棄用')) {
           transaction.update(newFragranceRef, {
             fragranceStatus: '啟用',
             usageCount: newFragranceProductCount,
             lastUsedAt: FieldValue.serverTimestamp(),
             updatedAt: FieldValue.serverTimestamp()
           });
-          logger.info(`香精 ${newFragranceId} 自動設為啟用狀態，使用產品數: ${newFragranceProductCount}`);
+          logger.info(`香精 ${newFragranceId} 從備用狀態自動設為啟用狀態，使用產品數: ${newFragranceProductCount}`);
+        } else if (newFragranceData?.fragranceStatus === '啟用') {
+          // 如果已經是啟用狀態，只更新使用數量
+          transaction.update(newFragranceRef, {
+            usageCount: newFragranceProductCount,
+            lastUsedAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp()
+          });
+          logger.info(`香精 ${newFragranceId} 保持啟用狀態，使用產品數更新為: ${newFragranceProductCount}`);
         }
+        // 棄用狀態不做任何更新
       }
     }
 
     // 處理舊香精 - 檢查是否需要降級為備用
-    if (oldFragranceId) {
+    if (oldFragranceId && oldFragranceId !== newFragranceId) {
       const oldFragranceRef = db.doc(`fragrances/${oldFragranceId}`);
       const oldFragranceDoc = await transaction.get(oldFragranceRef);
 
       if (oldFragranceDoc.exists) {
         const oldFragranceData = oldFragranceDoc.data();
 
-        // 檢查剩餘的產品數量（減1是因為當前產品正在更換）
-        const remainingProductCount = Math.max(0, oldFragranceProductCount - 1);
+        // 根據操作類型計算剩餘的產品數量
+        let remainingProductCount = oldFragranceProductCount;
+        if (action === 'update' || action === 'remove') {
+          // 更新或刪除操作，當前產品不再使用此香精
+          remainingProductCount = Math.max(0, oldFragranceProductCount - 1);
+        }
 
         // 如果沒有其他產品使用此香精，且非棄用狀態，則設為備用
         if (remainingProductCount === 0 && oldFragranceData?.fragranceStatus !== '棄用') {
@@ -94,9 +108,9 @@ async function updateFragranceStatuses(params: {
             usageCount: 0,
             updatedAt: FieldValue.serverTimestamp()
           });
-          logger.info(`香精 ${oldFragranceId} 自動設為備用狀態（無產品使用）`);
-        } else {
-          // 更新使用數量
+          logger.info(`香精 ${oldFragranceId} 因無產品使用，自動設為備用狀態`);
+        } else if (oldFragranceData?.fragranceStatus !== '棄用') {
+          // 更新使用數量，保持原有狀態
           transaction.update(oldFragranceRef, {
             usageCount: remainingProductCount,
             updatedAt: FieldValue.serverTimestamp()

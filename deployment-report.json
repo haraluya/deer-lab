@@ -1,0 +1,17 @@
+{
+  "timestamp": "2025-09-19T08:13:58.441Z",
+  "results": {
+    "criticalFiles": true,
+    "cacheSystem": true,
+    "pwaConfiguration": true,
+    "buildSuccess": false,
+    "deploymentPrep": false,
+    "deployment": null,
+    "postDeployment": null
+  },
+  "summary": {
+    "totalChecks": 7,
+    "passed": 3,
+    "failed": 4
+  }
+}

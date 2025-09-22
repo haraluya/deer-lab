@@ -191,6 +191,7 @@ export default function InventoryPage() {
           if (!productsSnapshot.empty) {
             const productNames = productsSnapshot.docs.map(productDoc => {
               const productData = productDoc.data()
+              console.log(`🔍 產品資料:`, productData)
               return productData.name
             })
             seriesName = productNames.join(', ')

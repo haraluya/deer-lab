@@ -8,6 +8,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useApiSilent } from '@/hooks/useApiClient';
+import { useMobileCacheStrategy } from '@/hooks/useMobileCacheStrategy';
 
 // =============================================================================
 // 類型定義
@@ -43,7 +44,8 @@ interface UseInventoryCacheReturn {
 // 快取配置
 // =============================================================================
 
-const CACHE_DURATION = 5 * 60 * 1000; // 5 分鐘快取
+// 基礎快取時間 (將由行動裝置策略動態調整)
+const BASE_CACHE_DURATION = 5 * 60 * 1000; // 5 分鐘快取
 const OVERVIEW_CACHE_KEY = 'inventory_overview';
 
 // 全域快取存儲 (跨組件共享)
@@ -87,6 +89,8 @@ const cacheEmitter = new CacheEventEmitter();
 
 export function useInventoryCache(): UseInventoryCacheReturn {
   const apiClient = useApiSilent();
+  const { getCacheTime, logCachePerformance, deviceInfo } = useMobileCacheStrategy();
+
   const [overview, setOverview] = useState<InventoryOverview | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,16 +98,19 @@ export function useInventoryCache(): UseInventoryCacheReturn {
   const [cacheAge, setCacheAge] = useState(0);
   const lastRequestRef = useRef<string | null>(null);
 
+  // 🚀 動態快取時間：根據裝置類型調整
+  const cacheDuration = getCacheTime('inventory');
+
   // =============================================================================
   // 快取管理函數
   // =============================================================================
 
   /**
-   * 檢查快取是否有效
+   * 檢查快取是否有效 (🚀 支援動態快取時間)
    */
   const isCacheValid = useCallback((entry: CacheEntry<any>): boolean => {
-    return Date.now() - entry.timestamp < CACHE_DURATION;
-  }, []);
+    return Date.now() - entry.timestamp < cacheDuration;
+  }, [cacheDuration]);
 
   /**
    * 從快取取得資料
@@ -150,19 +157,27 @@ export function useInventoryCache(): UseInventoryCacheReturn {
   // =============================================================================
 
   /**
-   * 載入庫存總覽 (智能快取)
+   * 載入庫存總覽 (🚀 行動裝置智能快取)
    */
   const loadOverview = useCallback(async () => {
+    const startTime = Date.now();
+
     // 檢查快取
     const cachedData = getFromCache();
     if (cachedData) {
+      const duration = Date.now() - startTime;
       console.log('⚡ 從快取載入庫存總覽');
+
+      // 🚀 行動裝置效能記錄
+      logCachePerformance('inventory-overview-load', duration, true);
+
       setOverview(cachedData);
       setIsFromCache(true);
 
       const cacheEntry = globalCache.get(OVERVIEW_CACHE_KEY);
       setCacheAge(Date.now() - (cacheEntry?.timestamp || 0));
       setError(null);
+
       return;
     }
 
@@ -171,6 +186,11 @@ export function useInventoryCache(): UseInventoryCacheReturn {
       setLoading(true);
       setError(null);
       setIsFromCache(false);
+
+      // 🚀 行動裝置網路提示
+      if (deviceInfo.isMobile && deviceInfo.isSlowConnection) {
+        console.log('🐌 偵測到行動裝置慢速連線，載入可能較慢...');
+      }
 
       const result = await apiClient.call('getInventoryOverview');
 
@@ -199,18 +219,35 @@ export function useInventoryCache(): UseInventoryCacheReturn {
         lastRequestRef.current = requestId;
 
         setCacheAge(0);
-        console.log('💾 庫存總覽已存入快取', { requestId, data: processedOverview });
+
+        // 🚀 行動裝置效能記錄
+        const duration = Date.now() - startTime;
+        logCachePerformance('inventory-overview-api', duration, false);
+
+        console.log('💾 庫存總覽已存入快取', {
+          requestId,
+          data: processedOverview,
+          deviceType: deviceInfo.isMobile ? 'mobile' : 'desktop',
+          cacheTime: `${cacheDuration / 1000}秒`,
+          duration: `${duration}ms`
+        });
       } else {
         throw new Error(result.error?.message || '載入庫存總覽失敗');
       }
     } catch (err: any) {
       const errorMessage = err.message || '載入庫存總覽時發生錯誤';
       setError(errorMessage);
-      console.error('❌ 載入庫存總覽失敗:', err);
+
+      // 🚀 行動裝置錯誤處理
+      if (deviceInfo.isMobile && deviceInfo.isSlowConnection) {
+        console.error('❌ 行動裝置慢速連線載入失敗:', err);
+      } else {
+        console.error('❌ 載入庫存總覽失敗:', err);
+      }
     } finally {
       setLoading(false);
     }
-  }, [apiClient, getFromCache, setToCache]);
+  }, [apiClient, getFromCache, setToCache, logCachePerformance, deviceInfo, cacheDuration]);
 
   // =============================================================================
   // 跨組件快取同步
@@ -288,7 +325,9 @@ export function getInventoryCacheStatus() {
   }
 
   const age = Date.now() - cacheEntry.timestamp;
-  const isValid = age < CACHE_DURATION;
+
+  // 🚀 注意：這裡使用基礎時間檢查，實際應用中會被動態調整
+  const isValid = age < BASE_CACHE_DURATION;
 
   return {
     status: isValid ? 'valid' : 'expired',

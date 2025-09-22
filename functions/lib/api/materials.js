@@ -368,7 +368,7 @@ exports.updateMaterial = apiWrapper_1.CrudApiHandlers.createUpdateHandler('Mater
         await materialRef.update(updateData);
         // 10. 如果庫存有變更，建立庫存紀錄
         if (stockChanged && ((_a = context.auth) === null || _a === void 0 ? void 0 : _a.uid)) {
-            await InventoryRecordManager.createInventoryRecord(materialId, name, updatedCode, oldStock, newStock, context.auth.uid, (_b = context.auth.token) === null || _b === void 0 ? void 0 : _b.name);
+            await InventoryRecordManager.createInventoryRecord(materialId, name, updatedCode, oldStock, newStock, context.auth.uid, (_b = context.auth.token) === null || _b === void 0 ? void 0 : _b.name, 'manual_adjustment', '透過編輯對話框直接修改庫存');
         }
         // 11. 返回標準化回應
         return {

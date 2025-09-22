@@ -458,7 +458,7 @@ exports.importFragrances = apiWrapper_1.CrudApiHandlers.createCreateHandler('Imp
                     // 如果庫存有變更，建立庫存紀錄
                     const oldStock = existing.data.currentStock || 0;
                     if (oldStock !== currentStock && ((_j = context.auth) === null || _j === void 0 ? void 0 : _j.uid)) {
-                        await InventoryRecordManager.createInventoryRecord(fragranceId, 'fragrances', currentStock - oldStock, context.auth.uid, ((_k = context.auth.token) === null || _k === void 0 ? void 0 : _k.name) || '未知用戶', `批量匯入更新 - 從 ${oldStock} 更新為 ${currentStock}`);
+                        await InventoryRecordManager.createInventoryRecord(fragranceId, 'fragrance', currentStock - oldStock, context.auth.uid, ((_k = context.auth.token) === null || _k === void 0 ? void 0 : _k.name) || '未知用戶', `批量匯入更新 - 從 ${oldStock} 更新為 ${currentStock}`);
                     }
                     if (hasChanges) {
                         results.successful.push({
@@ -502,7 +502,7 @@ exports.importFragrances = apiWrapper_1.CrudApiHandlers.createCreateHandler('Imp
                     fragranceId = docRef.id;
                     // 建立初始庫存記錄
                     if (currentStock > 0 && ((_l = context.auth) === null || _l === void 0 ? void 0 : _l.uid)) {
-                        await InventoryRecordManager.createInventoryRecord(fragranceId, 'fragrances', currentStock, context.auth.uid, ((_m = context.auth.token) === null || _m === void 0 ? void 0 : _m.name) || '未知用戶', `批量匯入初始庫存`);
+                        await InventoryRecordManager.createInventoryRecord(fragranceId, 'fragrance', currentStock, context.auth.uid, ((_m = context.auth.token) === null || _m === void 0 ? void 0 : _m.name) || '未知用戶', `批量匯入初始庫存`);
                     }
                     // 更新本地快取
                     existingFragrancesMap.set(code, { id: fragranceId, data: fragranceData });
