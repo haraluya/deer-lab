@@ -27,6 +27,8 @@ interface PurchaseOrderItem {
   quantity: number;
   unit: string;
   costPerUnit?: number;
+  productCapacityKg?: number; // 香精可做產品公斤數
+  fragrancePercentage?: number; // 香精比例
   itemRef: any; // Keep the ref for the receive dialog
 }
 
@@ -603,6 +605,7 @@ export default function PurchaseOrderDetailPage() {
                       <TableHead className="font-semibold text-gray-700">品項代號</TableHead>
                       <TableHead className="font-semibold text-gray-700">品項名稱</TableHead>
                       <TableHead className="text-right font-semibold text-gray-700">採購數量</TableHead>
+                      <TableHead className="text-right font-semibold text-gray-700">可做產品</TableHead>
                       <TableHead className="text-right font-semibold text-gray-700">單價</TableHead>
                       <TableHead className="text-right font-semibold text-gray-700">小計</TableHead>
                     </TableRow>
@@ -639,6 +642,20 @@ export default function PurchaseOrderDetailPage() {
                                 />
                                 <span className="text-sm text-gray-500 whitespace-nowrap">{item.unit}</span>
                               </div>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {item.productCapacityKg ? (
+                              <div className="flex flex-col items-end">
+                                <span className="font-semibold text-purple-600">
+                                  {item.productCapacityKg.toFixed(2)} KG
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  (香精 {item.fragrancePercentage || 0}%)
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">-</span>
                             )}
                           </TableCell>
                           <TableCell className="text-right">
@@ -732,6 +749,18 @@ export default function PurchaseOrderDetailPage() {
                               </div>
                             )}
                           </div>
+
+                          {item.productCapacityKg && (
+                            <div className="col-span-2 bg-purple-100 p-3 rounded-lg text-center">
+                              <div className="text-xs text-purple-700 mb-1">可做產品公斤數</div>
+                              <div className="font-bold text-purple-800 text-lg">
+                                {item.productCapacityKg.toFixed(2)} KG
+                              </div>
+                              <div className="text-xs text-purple-600">
+                                (香精比例 {item.fragrancePercentage || 0}%)
+                              </div>
+                            </div>
+                          )}
 
                           <div className="col-span-2 bg-amber-100 p-3 rounded-lg text-center">
                             <div className="text-xs text-amber-700 mb-1">小計</div>

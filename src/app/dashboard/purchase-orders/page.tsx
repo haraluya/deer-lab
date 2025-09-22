@@ -956,15 +956,29 @@ function PurchaseOrdersPageContent() {
       // 轉換為 API 所需的格式
       const supplierGroups = suppliersToProcess.map(supplierGroup => ({
         supplierId: supplierGroup.supplierId,
-        items: supplierGroup.items.map(item => ({
-          id: item.id,
-          name: item.name,
-          code: item.code,
-          quantity: item.quantity,
-          unit: item.unit,
-          price: item.costPerUnit || 0, // 使用即時查詢的最新價格
-          itemRefPath: `${item.type === 'material' ? 'materials' : 'fragrances'}/${item.id}`
-        }))
+        items: supplierGroup.items.map(item => {
+          const baseItem = {
+            id: item.id,
+            name: item.name,
+            code: item.code,
+            quantity: item.quantity,
+            unit: item.unit,
+            price: item.costPerUnit || 0, // 使用即時查詢的最新價格
+            itemRefPath: `${item.type === 'material' ? 'materials' : 'fragrances'}/${item.id}`
+          };
+
+          // 如果是香精，計算可做產品公斤數
+          if (item.type === 'fragrance' && item.percentage && item.percentage > 0) {
+            const productCapacityKg = (item.quantity / (item.percentage / 100));
+            return {
+              ...baseItem,
+              productCapacityKg: Math.round(productCapacityKg * 100) / 100, // 四捨五入到小數點第二位
+              fragrancePercentage: item.percentage
+            };
+          }
+
+          return baseItem;
+        })
       }));
 
       const payload = {
@@ -1455,20 +1469,26 @@ function PurchaseOrdersPageContent() {
                             <TableCell>
                               <div className="flex items-center gap-3">
                                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                                  item.type === 'material' 
-                                    ? 'bg-blue-100 text-blue-600' 
+                                  item.type === 'material'
+                                    ? 'bg-blue-100 text-blue-600'
                                     : 'bg-pink-100 text-pink-600'
                                 }`}>
                                   {item.type === 'material' ? <Package className="h-4 w-4" /> : <Droplets className="h-4 w-4" />}
                                 </div>
                                 <div>
-                                  <div 
+                                  <div
                                     className="font-medium text-gray-900 cursor-pointer hover:text-amber-600 transition-colors"
                                     onClick={() => handleItemDetailClick(item)}
                                   >
                                     {item.name}
                                   </div>
                                   <div className="text-sm text-gray-500">{item.code}</div>
+                                  {/* 香精可做產品公斤數 */}
+                                  {item.type === 'fragrance' && item.percentage && item.percentage > 0 && (
+                                    <div className="text-xs text-purple-600 mt-1">
+                                      可做產品: {(item.quantity / (item.percentage / 100)).toFixed(2)} KG
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </TableCell>
@@ -1582,6 +1602,12 @@ function PurchaseOrdersPageContent() {
                               <div>
                                 {item.code} • NT$ {Math.round(item.price || item.costPerUnit || 0).toLocaleString()}/{item.unit}
                               </div>
+                              {/* 香精可做產品公斤數 */}
+                              {item.type === 'fragrance' && item.percentage && item.percentage > 0 && (
+                                <div className="text-xs text-purple-600">
+                                  🏆 可做產品: {(item.quantity / (item.percentage / 100)).toFixed(2)} KG (香精 {item.percentage}%)
+                                </div>
+                              )}
                               {/* 原料用途或香精使用產品 */}
                               {item.type === 'material' ? (
                                 <div className="text-xs text-blue-600">
@@ -1750,6 +1776,12 @@ function PurchaseOrdersPageContent() {
                                   <div className="text-sm text-gray-500">
                                     {item.code} • NT$ {Math.round(item.price || item.costPerUnit || 0).toLocaleString()}/{item.unit}
                                   </div>
+                                  {/* 香精可做產品公斤數 */}
+                                  {item.type === 'fragrance' && item.percentage && item.percentage > 0 && (
+                                    <div className="text-xs text-purple-600 mt-1">
+                                      可做產品: {(item.quantity / (item.percentage / 100)).toFixed(2)} KG (香精 {item.percentage}%)
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                               <div className="text-right">

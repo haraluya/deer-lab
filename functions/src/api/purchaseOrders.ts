@@ -29,6 +29,8 @@ interface PurchaseItemPayload {
   price?: number; // 單價
   itemRefPath?: string; // 用於收貨
   receivedQuantity?: number; // 用於收貨
+  productCapacityKg?: number; // 香精可做產品公斤數
+  fragrancePercentage?: number; // 香精比例
 }
 
 export const createPurchaseOrders = onCall(async (request) => {
@@ -63,14 +65,27 @@ export const createPurchaseOrders = onCall(async (request) => {
       const sequence = String(newCount + i + 1).padStart(3, '0');
       const poCode = `PO-${dateStr}-${sequence}`;
       const poRef = db.collection("purchaseOrders").doc();
-      const itemsForPO = supplier.items.map((item: PurchaseItemPayload) => ({
-        itemRef: db.doc(`${item.unit ? 'materials' : 'fragrances'}/${item.id}`),
-        name: item.name,
-        code: item.code,
-        quantity: Number(item.quantity),
-        unit: item.unit || '',
-        costPerUnit: Number(item.price) || 0,
-      }));
+      const itemsForPO = supplier.items.map((item: PurchaseItemPayload) => {
+        const baseItem = {
+          itemRef: db.doc(`${item.unit ? 'materials' : 'fragrances'}/${item.id}`),
+          name: item.name,
+          code: item.code,
+          quantity: Number(item.quantity),
+          unit: item.unit || '',
+          costPerUnit: Number(item.price) || 0,
+        };
+
+        // 如果有可做產品公斤數資料（香精），一併儲存
+        if (item.productCapacityKg !== undefined) {
+          return {
+            ...baseItem,
+            productCapacityKg: Number(item.productCapacityKg),
+            fragrancePercentage: Number(item.fragrancePercentage) || 0
+          };
+        }
+
+        return baseItem;
+      });
       writeBatch.set(poRef, {
         code: poCode,
         supplierRef: db.doc(`suppliers/${supplier.supplierId}`),

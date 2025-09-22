@@ -222,7 +222,11 @@ export interface PurchaseOrderItem {
   costPerUnit: number;
   totalCost: number;
   itemRefPath: string;
-  
+
+  // 香精可做產品公斤數（僅香精項目有此欄位）
+  productCapacityKg?: number;
+  fragrancePercentage?: number; // 儲存香精比例用於計算
+
   // 收貨資訊
   receivedQuantity?: number;
   receivedAt?: Timestamp;
