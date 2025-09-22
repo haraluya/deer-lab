@@ -625,6 +625,9 @@ function PurchaseOrdersPageContent() {
           category: data.category || '',
           series: data.series || '',
           usedInProducts: productsMap.get(data.id) || [],
+          percentage: data.percentage || 0, // 香精比例
+          pgRatio: data.pgRatio || 0, // PG比例
+          vgRatio: data.vgRatio || 0, // VG比例
         };
       });
 
@@ -1453,6 +1456,7 @@ function PurchaseOrdersPageContent() {
                           <TableHead>現有庫存</TableHead>
                           <TableHead>單價</TableHead>
                           <TableHead>數量</TableHead>
+                          <TableHead>可做產品</TableHead>
                           <TableHead className="w-12">操作</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -1557,6 +1561,20 @@ function PurchaseOrdersPageContent() {
                                 />
                                 <span className="text-xs text-gray-500 min-w-0 truncate">{item.unit}</span>
                               </div>
+                            </TableCell>
+                            <TableCell>
+                              {item.type === 'fragrance' && item.percentage && item.percentage > 0 ? (
+                                <div className="text-sm">
+                                  <div className="font-semibold text-purple-600">
+                                    {(item.quantity / (item.percentage / 100)).toFixed(2)} KG
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    (香精 {item.percentage}%)
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
                             </TableCell>
                             <TableCell>
                               <Button
