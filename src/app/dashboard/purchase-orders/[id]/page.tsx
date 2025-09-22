@@ -4,7 +4,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
-import { doc, getDoc, updateDoc, Timestamp, DocumentData } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, Timestamp, DocumentData, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useApiForm } from '@/hooks/useApiClient';
 import { useAuth } from '@/context/AuthContext';
@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { NewReceiveDialog } from './NewReceiveDialog'; // 引入新的簡潔收貨元件
+import { formatQuantity } from '@/utils/numberFormat';
 
 interface PurchaseOrderItem {
   name: string;
@@ -114,37 +115,71 @@ export default function PurchaseOrderDetailPage() {
       const createdBySnap = data.createdByRef ? await getDoc(data.createdByRef) : null;
       const createdAt = (data.createdAt as Timestamp)?.toDate().toLocaleString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) || 'N/A';
 
-      // 增強項目資料：為香精項目加入比例資料
-      const enhancedItems = await Promise.all((data.items || []).map(async (item: any) => {
+      // 💡 使用與採購車相同的邏輯來豐富項目資料
+      console.log('開始豐富項目資料，採用採購車相同邏輯');
+
+      // 收集所有項目的 code，然後查詢香精資料來判斷哪些是香精
+      const allItemCodes = (data.items || [])
+        .map((item: any) => item.code)
+        .filter(Boolean);
+
+      console.log('採購單中所有項目編號:', allItemCodes);
+
+      // 批量查詢香精資料（與採購車邏輯一致）
+      let fragrancesMap = new Map<string, any>();
+      if (allItemCodes.length > 0) {
+        const fragrancesSnapshot = await getDocs(
+          query(collection(db, 'fragrances'), where('code', 'in', allItemCodes))
+        );
+
+        fragrancesSnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          fragrancesMap.set(data.code, {
+            id: doc.id,
+            ...data,
+            percentage: data.percentage || 0, // 與採購車保持一致的處理方式
+            pgRatio: data.pgRatio || 0,
+            vgRatio: data.vgRatio || 0,
+          });
+        });
+        console.log(`批量載入了 ${fragrancesSnapshot.docs.length} 個香精資料`);
+      }
+
+      // 使用相同邏輯豐富項目資料
+      const enhancedItems = (data.items || []).map((item: any) => {
         console.log('處理項目:', item);
 
-        // 如果是香精項目且有 itemRef，查詢詳細資料
-        if (item.itemRef && item.itemRef.path && item.itemRef.path.includes('fragrances')) {
-          try {
-            console.log('查詢香精資料:', item.itemRef.path);
-            const fragranceSnap = await getDoc(item.itemRef);
-            if (fragranceSnap.exists()) {
-              const fragranceData = fragranceSnap.data() as any;
-              console.log('香精資料:', fragranceData);
-              const productCapacity = fragranceData.percentage ?
-                Math.round((item.quantity / (fragranceData.percentage / 100)) * 1000) / 1000 : undefined;
-              console.log('計算結果:', {
-                quantity: item.quantity,
-                percentage: fragranceData.percentage,
-                productCapacity
-              });
+        // 直接檢查該 code 是否存在於香精資料中（更可靠的方式）
+        if (item.code && fragrancesMap.has(item.code)) {
+          const fragranceData = fragrancesMap.get(item.code);
+          if (fragranceData) {
+            const percentage = fragranceData.percentage || 0;
+            console.log('找到香精資料:', {
+              code: item.code,
+              name: item.name,
+              percentage: percentage,
+              fragranceDataName: fragranceData.name
+            });
+
+            if (percentage > 0) {
+              const productCapacity = Math.round((item.quantity / (percentage / 100)) * 1000) / 1000;
               return {
                 ...item,
                 productCapacityKg: productCapacity,
-                fragrancePercentage: fragranceData.percentage || 0
+                fragrancePercentage: percentage
+              };
+            } else {
+              return {
+                ...item,
+                fragrancePercentage: percentage
               };
             }
-          } catch (error) {
-            console.error('查詢香精資料失敗:', error);
           }
         }
+
+        console.log('項目不是香精或無法找到香精資料:', item);
         return item;
-      }));
+      });
 
       const purchaseOrderData = {
         id: poSnap.id,
@@ -268,7 +303,7 @@ export default function PurchaseOrderDetailPage() {
     });
 
     cancelEditingProductCapacity(index);
-    toast.success(`已更新香精數量至 ${requiredFragranceQuantity.toFixed(3)} ${item.unit}`);
+    toast.success(`已更新香精數量至 ${formatQuantity(requiredFragranceQuantity)} ${item.unit}`);
   };
 
   // 使用成熟的圖片上傳工具
@@ -724,7 +759,7 @@ export default function PurchaseOrderDetailPage() {
                             )}
                           </TableCell>
                           <TableCell className="text-right">
-                            {item.productCapacityKg && item.fragrancePercentage ? (
+                            {item.fragrancePercentage !== undefined ? (
                               <div className="flex flex-col items-end">
                                 {editingProductCapacity.has(index) ? (
                                   <div className="flex items-center gap-1">
@@ -762,17 +797,25 @@ export default function PurchaseOrderDetailPage() {
                                   <div className="flex items-center gap-1 justify-end">
                                     <div className="text-right">
                                       <div className="font-semibold text-purple-600">
-                                        {item.productCapacityKg.toFixed(3)} KG
+                                        {(item.fragrancePercentage || 0) > 0
+                                          ? formatQuantity(Math.round((item.quantity / ((item.fragrancePercentage || 0) / 100)) * 1000) / 1000)
+                                          : '0'
+                                        } KG
                                       </div>
                                       <div className="text-xs text-gray-500">
-                                        (香精 {item.fragrancePercentage}%)
+                                        (香精 {item.fragrancePercentage || 0}%)
                                       </div>
                                     </div>
                                     {po.status !== '已收貨' && (
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => startEditingProductCapacity(index, item.productCapacityKg || 0)}
+                                        onClick={() => {
+                                          const currentCapacity = (item.fragrancePercentage || 0) > 0
+                                            ? Math.round((item.quantity / ((item.fragrancePercentage || 0) / 100)) * 1000) / 1000
+                                            : 0;
+                                          startEditingProductCapacity(index, currentCapacity);
+                                        }}
                                         className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
                                       >
                                         <Edit className="h-3 w-3" />

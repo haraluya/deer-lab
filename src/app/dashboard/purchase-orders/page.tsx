@@ -28,6 +28,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { BUSINESS_CONFIG } from '@/config/business';
+import { formatQuantity } from '@/utils/numberFormat';
 
 // 引入統一架構組件
 import { StandardDataListPage, StandardColumn, StandardAction, QuickFilter } from '@/components/StandardDataListPage';
@@ -820,7 +821,7 @@ function PurchaseOrdersPageContent() {
     try {
       await updateCartItemQuantity(item.id, item.type, requiredFragranceQuantity);
       cancelEditingProductCapacity(item.id);
-      toast.success(`已更新香精數量至 ${requiredFragranceQuantity.toFixed(3)} ${item.unit}`);
+      toast.success(`已更新香精數量至 ${formatQuantity(requiredFragranceQuantity)} ${item.unit}`);
     } catch (error) {
       console.error('反向計算更新失敗:', error);
       toast.error('更新失敗');
@@ -1642,7 +1643,7 @@ function PurchaseOrdersPageContent() {
                                   ) : (
                                     <div className="flex items-center gap-1">
                                       <div className="font-semibold text-purple-600">
-                                        {(Math.round((item.quantity / (item.percentage / 100)) * 1000) / 1000).toFixed(3)} KG
+                                        {formatQuantity(Math.round((item.quantity / (item.percentage / 100)) * 1000) / 1000)} KG
                                       </div>
                                       <Button
                                         variant="ghost"
@@ -1709,7 +1710,7 @@ function PurchaseOrdersPageContent() {
                               {/* 香精可做產品公斤數 */}
                               {item.type === 'fragrance' && item.percentage && item.percentage > 0 && (
                                 <div className="text-xs text-purple-600">
-                                  🏆 可做產品: {(Math.round((item.quantity / (item.percentage / 100)) * 1000) / 1000).toFixed(3)} KG (香精 {item.percentage}%)
+                                  🏆 可做產品: {formatQuantity(Math.round((item.quantity / (item.percentage / 100)) * 1000) / 1000)} KG (香精 {item.percentage}%)
                                 </div>
                               )}
                               {/* 原料用途或香精使用產品 */}
@@ -1884,7 +1885,7 @@ function PurchaseOrdersPageContent() {
                                   {/* 香精可做產品公斤數 */}
                                   {item.type === 'fragrance' && item.percentage && item.percentage > 0 && (
                                     <div className="text-xs text-purple-600 mt-1">
-                                      可做產品: {(Math.round((item.quantity / (item.percentage / 100)) * 1000) / 1000).toFixed(3)} KG (香精 {item.percentage}%)
+                                      可做產品: {formatQuantity(Math.round((item.quantity / (item.percentage / 100)) * 1000) / 1000)} KG (香精 {item.percentage}%)
                                     </div>
                                   )}
                                 </div>

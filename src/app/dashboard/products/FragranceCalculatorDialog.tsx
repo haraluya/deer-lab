@@ -65,7 +65,7 @@ export function FragranceCalculatorDialog({
       setLocalSelectedProducts(new Set(selectedProductIds));
       loadCalculationData();
     }
-  }, [isOpen, selectedProductIds]);
+  }, [isOpen]); // 只依賴 isOpen，不依賴 selectedProductIds
 
   // 移除過濾邏輯，讓所有載入的計算項目保持顯示
 
@@ -184,16 +184,12 @@ export function FragranceCalculatorDialog({
       newLocalSelected.delete(productId);
     }
     setLocalSelectedProducts(newLocalSelected);
-    
+
     // 通知父組件更新選擇狀態
     onProductSelectionChange(productId, checked);
-    
-    // 如果取消勾選，從計算項目中移除
-    if (!checked) {
-      setCalculationItems(prev => 
-        prev.filter(item => item.productId !== productId)
-      );
-    }
+
+    // 不移除計算項目，保留用戶輸入的目標產量
+    // 只在顯示和計算時根據 localSelectedProducts 進行過濾
   };
 
   // 更新目標產量
@@ -211,44 +207,47 @@ export function FragranceCalculatorDialog({
     );
   };
 
-  // 計算總需求
+  // 計算總需求（只計算已選擇的產品）
   const totalRequirements = useMemo(() => {
-    const fragranceMap = new Map<string, { 
-      name: string; 
-      code: string; 
-      unit: string; 
-      totalRequired: number; 
+    const fragranceMap = new Map<string, {
+      name: string;
+      code: string;
+      unit: string;
+      totalRequired: number;
       currentStock: number;
       costPerUnit: number;
       supplierId: string;
       supplierName: string;
     }>();
 
-    calculationItems.forEach(item => {
-      const key = item.fragranceId;
-      if (fragranceMap.has(key)) {
-        const existing = fragranceMap.get(key)!;
-        existing.totalRequired = Math.round((existing.totalRequired + item.requiredFragrance) * 1000) / 1000;
-      } else {
-        fragranceMap.set(key, {
-          name: item.fragranceName,
-          code: item.fragranceCode,
-          unit: item.fragranceUnit,
-          totalRequired: item.requiredFragrance,
-          currentStock: item.currentStock,
-          costPerUnit: item.costPerUnit,
-          supplierId: item.supplierId,
-          supplierName: item.supplierName
-        });
-      }
-    });
+    // 只計算已選擇的產品
+    calculationItems
+      .filter(item => localSelectedProducts.has(item.productId))
+      .forEach(item => {
+        const key = item.fragranceId;
+        if (fragranceMap.has(key)) {
+          const existing = fragranceMap.get(key)!;
+          existing.totalRequired = Math.round((existing.totalRequired + item.requiredFragrance) * 1000) / 1000;
+        } else {
+          fragranceMap.set(key, {
+            name: item.fragranceName,
+            code: item.fragranceCode,
+            unit: item.fragranceUnit,
+            totalRequired: item.requiredFragrance,
+            currentStock: item.currentStock,
+            costPerUnit: item.costPerUnit,
+            supplierId: item.supplierId,
+            supplierName: item.supplierName
+          });
+        }
+      });
 
     return Array.from(fragranceMap.entries()).map(([id, data]) => ({
       id,
       ...data,
       shortage: Math.max(0, data.totalRequired - data.currentStock)
     }));
-  }, [calculationItems]);
+  }, [calculationItems, localSelectedProducts]);
 
   // 加入採購車 - 極簡引用模式
   const handleAddToCart = async () => {
@@ -326,11 +325,13 @@ export function FragranceCalculatorDialog({
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                   <Package className="h-5 w-5 text-purple-600" />
-                  選定產品 ({calculationItems.length} 項)
+                  選定產品 ({calculationItems.filter(item => localSelectedProducts.has(item.productId)).length} 項)
                 </h3>
-                
+
                 <div className="grid gap-4 md:grid-cols-2">
-                  {calculationItems.map((item) => (
+                  {calculationItems
+                    .filter(item => localSelectedProducts.has(item.productId))
+                    .map((item) => (
                     <Card key={item.productId} className="border border-purple-100 hover:border-purple-200 transition-colors">
                       <CardHeader className="pb-3">
                         <div className="flex items-start justify-between">
