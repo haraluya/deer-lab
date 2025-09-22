@@ -148,7 +148,7 @@ export function FragranceCalculatorDialog({
             fragranceCode: fragranceInfo.code,
             fragranceRatio: fragranceRatio,
             targetQuantity: 1, // 預設目標產量為 1
-            requiredFragrance: fragranceRatio / 100, // 計算所需香精量
+            requiredFragrance: Math.round((fragranceRatio / 100) * 1000) / 1000, // 計算所需香精量 (進位到小數點第三位)
             currentStock: fragranceInfo.currentStock,
             fragranceUnit: fragranceInfo.unit,
             costPerUnit: fragranceInfo.costPerUnit,
@@ -204,7 +204,7 @@ export function FragranceCalculatorDialog({
           ? { 
               ...item, 
               targetQuantity: quantity,
-              requiredFragrance: (quantity * item.fragranceRatio) / 100
+              requiredFragrance: Math.round((quantity * item.fragranceRatio / 100) * 1000) / 1000
             }
           : item
       )
@@ -228,7 +228,7 @@ export function FragranceCalculatorDialog({
       const key = item.fragranceId;
       if (fragranceMap.has(key)) {
         const existing = fragranceMap.get(key)!;
-        existing.totalRequired += item.requiredFragrance;
+        existing.totalRequired = Math.round((existing.totalRequired + item.requiredFragrance) * 1000) / 1000;
       } else {
         fragranceMap.set(key, {
           name: item.fragranceName,

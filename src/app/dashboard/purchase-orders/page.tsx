@@ -1551,12 +1551,13 @@ function PurchaseOrdersPageContent() {
                                 <Input
                                   type="number"
                                   min="0"
-                                  step="0.1"
+                                  step="0.001"
                                   value={item.quantity}
                                   onChange={(e) => {
-                                    const newQuantity = parseFloat(e.target.value) || 0;
+                                    const newQuantity = Math.round(parseFloat(e.target.value) * 1000) / 1000 || 0;
                                     updateCartItemQuantity(item.id, item.type, newQuantity);
                                   }}
+                                  onWheel={(e) => e.currentTarget.blur()}
                                   className="w-20 h-8 text-center text-sm border-amber-200 focus:border-amber-500 focus:ring-amber-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 />
                                 <span className="text-xs text-gray-500 min-w-0 truncate">{item.unit}</span>
@@ -1566,7 +1567,7 @@ function PurchaseOrdersPageContent() {
                               {item.type === 'fragrance' && item.percentage && item.percentage > 0 ? (
                                 <div className="text-sm">
                                   <div className="font-semibold text-purple-600">
-                                    {(item.quantity / (item.percentage / 100)).toFixed(2)} KG
+                                    {(Math.round((item.quantity / (item.percentage / 100)) * 1000) / 1000).toFixed(3)} KG
                                   </div>
                                   <div className="text-xs text-gray-500">
                                     (香精 {item.percentage}%)
@@ -1623,7 +1624,7 @@ function PurchaseOrdersPageContent() {
                               {/* 香精可做產品公斤數 */}
                               {item.type === 'fragrance' && item.percentage && item.percentage > 0 && (
                                 <div className="text-xs text-purple-600">
-                                  🏆 可做產品: {(item.quantity / (item.percentage / 100)).toFixed(2)} KG (香精 {item.percentage}%)
+                                  🏆 可做產品: {(Math.round((item.quantity / (item.percentage / 100)) * 1000) / 1000).toFixed(3)} KG (香精 {item.percentage}%)
                                 </div>
                               )}
                               {/* 原料用途或香精使用產品 */}
@@ -1657,12 +1658,13 @@ function PurchaseOrdersPageContent() {
                               <Input
                                 type="number"
                                 min="0"
-                                step="0.1"
+                                step="0.001"
                                 value={item.quantity}
                                 onChange={(e) => {
-                                  const newQuantity = parseFloat(e.target.value) || 0;
+                                  const newQuantity = Math.round(parseFloat(e.target.value) * 1000) / 1000 || 0;
                                   updateCartItemQuantity(item.id, item.type, newQuantity);
                                 }}
+                                onWheel={(e) => e.currentTarget.blur()}
                                 className="w-20 h-8 text-center text-sm border-amber-200 focus:border-amber-500 focus:ring-amber-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                               />
                               <span className="text-sm text-gray-500">{item.unit}</span>
@@ -1797,7 +1799,7 @@ function PurchaseOrdersPageContent() {
                                   {/* 香精可做產品公斤數 */}
                                   {item.type === 'fragrance' && item.percentage && item.percentage > 0 && (
                                     <div className="text-xs text-purple-600 mt-1">
-                                      可做產品: {(item.quantity / (item.percentage / 100)).toFixed(2)} KG (香精 {item.percentage}%)
+                                      可做產品: {(Math.round((item.quantity / (item.percentage / 100)) * 1000) / 1000).toFixed(3)} KG (香精 {item.percentage}%)
                                     </div>
                                   )}
                                 </div>
