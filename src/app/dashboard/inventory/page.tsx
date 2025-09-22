@@ -65,11 +65,19 @@ export default function InventoryPage() {
     isFromCache,
     cacheAge
   } = useInventoryCache()
-  
+
   // 權限檢查
   const { hasPermission, isAdmin, canAccess } = usePermission();
   const canViewInventory = canAccess('/dashboard/inventory') || hasPermission('inventory.view') || hasPermission('inventory.manage') || isAdmin();
   const canManageInventory = hasPermission('inventory.manage') || isAdmin();
+
+  // 選擇狀態管理
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+
+  // 處理選擇變更
+  const handleSelectionChange = useCallback((selectedRowKeys: string[] | number[]) => {
+    setSelectedRows(selectedRowKeys.map(key => String(key)));
+  }, []);
   
   // 臨時直接從 Firebase 載入測試
   const [directMaterials, setDirectMaterials] = useState<any[]>([])
@@ -484,6 +492,34 @@ export default function InventoryPage() {
       }
     }
   ]
+
+  // 批量操作配置
+  const bulkActions = useMemo(() => {
+    const actions: any[] = [];
+
+    if (canManageInventory) {
+      actions.push({
+        key: 'bulkUpdate',
+        title: `批量更新 (${selectedRows.length})`,
+        icon: <Edit className="h-4 w-4" />,
+        onClick: () => {
+          toast.info(`批量更新 ${selectedRows.length} 個項目功能開發中`);
+        }
+      });
+
+      actions.push({
+        key: 'bulkDelete',
+        title: `批量刪除 (${selectedRows.length})`,
+        icon: <AlertTriangle className="h-4 w-4" />,
+        variant: 'destructive',
+        onClick: () => {
+          toast.warning(`批量刪除 ${selectedRows.length} 個項目功能開發中`);
+        }
+      });
+    }
+
+    return actions;
+  }, [selectedRows.length, canManageInventory]);
   
   // 快速篩選配置
   const quickFilters: QuickFilter[] = [
@@ -614,7 +650,13 @@ export default function InventoryPage() {
         columns={columns}
         actions={actions}
         onRowClick={(record) => openQuickUpdateDialog(record)}
-        
+
+        // 選擇功能
+        selectable={canManageInventory}
+        selectedRows={selectedRows}
+        onSelectionChange={handleSelectionChange}
+        bulkActions={bulkActions}
+
         // 搜尋與過濾
         searchable={true}
         searchPlaceholder="搜尋庫存項目名稱、代碼、分類..."
@@ -632,14 +674,14 @@ export default function InventoryPage() {
         onClearFilters={() => {
           Object.keys(activeFilters).forEach(key => clearFilter(key));
         }}
-        
+
         // 統計資訊
         stats={stats}
         showStats={true}
-        
+
         // 工具列功能
         showToolbar={true}
-        
+
         className="space-y-6"
       />
 
