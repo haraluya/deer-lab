@@ -10,9 +10,9 @@ import { CartItem } from '@/types';
 import { useGlobalCart } from '@/hooks/useGlobalCart';
 
 import { toast } from 'sonner';
-import { 
-  MoreHorizontal, Eye, Edit, Trash2, ShoppingCart, Calendar, Building, User, Plus, 
-  Search, Package, Droplets, X, ChevronLeft, ChevronRight, Filter, Shield, RefreshCw, AlertCircle, CheckCircle, Clock, DollarSign
+import {
+  MoreHorizontal, Eye, Edit, Trash2, ShoppingCart, Calendar, Building, User, Plus,
+  Search, Package, Droplets, X, ChevronLeft, ChevronRight, Filter, Shield, RefreshCw, AlertCircle, CheckCircle, Clock, DollarSign, Save, Ban
 } from 'lucide-react';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -338,6 +338,9 @@ function PurchaseOrdersPageContent() {
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [itemDetailDialog, setItemDetailDialog] = useState<{open: boolean, item: any | null}>({open: false, item: null});
+  // 可做產品數量編輯狀態
+  const [editingProductCapacity, setEditingProductCapacity] = useState<Set<string>>(new Set());
+  const [tempProductCapacity, setTempProductCapacity] = useState<Map<string, number>>(new Map());
 
   // 載入採購單資料
   const loadPurchaseOrders = useCallback(async () => {
@@ -785,6 +788,44 @@ function PurchaseOrdersPageContent() {
       await globalUpdateCartItem(targetItem.id, { quantity });
     }
   }, [cartItems, materials, fragrances, removeFromCart, globalUpdateCartItem]);
+
+  // 開始編輯可做產品數量
+  const startEditingProductCapacity = (itemId: string, currentCapacity: number) => {
+    setEditingProductCapacity(prev => new Set([...prev, itemId]));
+    setTempProductCapacity(prev => new Map([...prev, [itemId, currentCapacity]]));
+  };
+
+  // 取消編輯可做產品數量
+  const cancelEditingProductCapacity = (itemId: string) => {
+    setEditingProductCapacity(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(itemId);
+      return newSet;
+    });
+    setTempProductCapacity(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(itemId);
+      return newMap;
+    });
+  };
+
+  // 保存可做產品數量並反向計算香精數量
+  const saveProductCapacity = async (item: any) => {
+    const newCapacity = tempProductCapacity.get(item.id);
+    if (newCapacity === undefined || !item.percentage || item.percentage <= 0) return;
+
+    // 反向計算所需香精數量：可做產品數量 × (香精比例 ÷ 100)
+    const requiredFragranceQuantity = Math.round((newCapacity * (item.percentage / 100)) * 1000) / 1000;
+
+    try {
+      await updateCartItemQuantity(item.id, item.type, requiredFragranceQuantity);
+      cancelEditingProductCapacity(item.id);
+      toast.success(`已更新香精數量至 ${requiredFragranceQuantity.toFixed(3)} ${item.unit}`);
+    } catch (error) {
+      console.error('反向計算更新失敗:', error);
+      toast.error('更新失敗');
+    }
+  };
 
   // 切換採購車項目選擇狀態
   const toggleCartItemSelection = useCallback((itemId: string, type: 'material' | 'fragrance') => {
@@ -1566,9 +1607,53 @@ function PurchaseOrdersPageContent() {
                             <TableCell>
                               {item.type === 'fragrance' && item.percentage && item.percentage > 0 ? (
                                 <div className="text-sm">
-                                  <div className="font-semibold text-purple-600">
-                                    {(Math.round((item.quantity / (item.percentage / 100)) * 1000) / 1000).toFixed(3)} KG
-                                  </div>
+                                  {editingProductCapacity.has(item.id) ? (
+                                    <div className="flex items-center gap-1">
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        step="0.001"
+                                        value={tempProductCapacity.get(item.id) || 0}
+                                        onChange={(e) => {
+                                          const value = Math.round(parseFloat(e.target.value) * 1000) / 1000 || 0;
+                                          setTempProductCapacity(prev => new Map([...prev, [item.id, value]]));
+                                        }}
+                                        onWheel={(e) => e.currentTarget.blur()}
+                                        className="w-16 h-6 text-xs text-center"
+                                      />
+                                      <span className="text-xs text-gray-500">KG</span>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => saveProductCapacity(item)}
+                                        className="h-6 w-6 p-0 text-green-600 hover:text-green-700"
+                                      >
+                                        <Save className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => cancelEditingProductCapacity(item.id)}
+                                        className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                      >
+                                        <Ban className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-1">
+                                      <div className="font-semibold text-purple-600">
+                                        {(Math.round((item.quantity / (item.percentage / 100)) * 1000) / 1000).toFixed(3)} KG
+                                      </div>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => startEditingProductCapacity(item.id, Math.round((item.quantity / (item.percentage / 100)) * 1000) / 1000)}
+                                        className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
+                                      >
+                                        <Edit className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  )}
                                   <div className="text-xs text-gray-500">
                                     (香精 {item.percentage}%)
                                   </div>

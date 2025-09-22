@@ -10,7 +10,7 @@ import { useApiForm } from '@/hooks/useApiClient';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { uploadMultipleImages } from '@/lib/imageUpload';
-import { ArrowLeft, Loader2, CheckCircle, Truck, ShoppingCart, Building, User, Calendar, Package, Plus, MessageSquare, Upload, X, Trash2 } from 'lucide-react';
+import { ArrowLeft, Loader2, CheckCircle, Truck, ShoppingCart, Building, User, Calendar, Package, Plus, MessageSquare, Upload, X, Trash2, Edit, Save, Ban } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -90,6 +90,9 @@ export default function PurchaseOrderDetailPage() {
     unit: '項',
     description: ''
   });
+  // 可做產品數量編輯狀態
+  const [editingProductCapacity, setEditingProductCapacity] = useState<Set<number>>(new Set());
+  const [tempProductCapacity, setTempProductCapacity] = useState<Map<number, number>>(new Map());
 
   const loadData = useCallback(async (poId: string) => {
     setIsLoading(true);
@@ -111,6 +114,38 @@ export default function PurchaseOrderDetailPage() {
       const createdBySnap = data.createdByRef ? await getDoc(data.createdByRef) : null;
       const createdAt = (data.createdAt as Timestamp)?.toDate().toLocaleString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) || 'N/A';
 
+      // 增強項目資料：為香精項目加入比例資料
+      const enhancedItems = await Promise.all((data.items || []).map(async (item: any) => {
+        console.log('處理項目:', item);
+
+        // 如果是香精項目且有 itemRef，查詢詳細資料
+        if (item.itemRef && item.itemRef.path && item.itemRef.path.includes('fragrances')) {
+          try {
+            console.log('查詢香精資料:', item.itemRef.path);
+            const fragranceSnap = await getDoc(item.itemRef);
+            if (fragranceSnap.exists()) {
+              const fragranceData = fragranceSnap.data() as any;
+              console.log('香精資料:', fragranceData);
+              const productCapacity = fragranceData.percentage ?
+                Math.round((item.quantity / (fragranceData.percentage / 100)) * 1000) / 1000 : undefined;
+              console.log('計算結果:', {
+                quantity: item.quantity,
+                percentage: fragranceData.percentage,
+                productCapacity
+              });
+              return {
+                ...item,
+                productCapacityKg: productCapacity,
+                fragrancePercentage: fragranceData.percentage || 0
+              };
+            }
+          } catch (error) {
+            console.error('查詢香精資料失敗:', error);
+          }
+        }
+        return item;
+      }));
+
       const purchaseOrderData = {
         id: poSnap.id,
         code: data.code,
@@ -118,13 +153,13 @@ export default function PurchaseOrderDetailPage() {
         status: data.status,
         createdByName: (createdBySnap?.data() as UserDoc)?.name || '未知人員',
         createdAt: createdAt,
-        items: data.items || [],
+        items: enhancedItems,
         additionalFees: data.additionalFees || [],
         comments: data.comments || [],
       };
-      
+
       setPo(purchaseOrderData);
-      setEditedItems([...data.items || []]);
+      setEditedItems([...enhancedItems]);
       setEditedAdditionalFees([...data.additionalFees || []]);
       setComments([...data.comments || []]);
 
@@ -190,6 +225,50 @@ export default function PurchaseOrderDetailPage() {
   const handleRemoveAdditionalFee = (feeId: string) => {
     setEditedAdditionalFees(prev => prev.filter(fee => fee.id !== feeId));
     toast.success("已移除其他費用");
+  };
+
+  // 開始編輯可做產品數量
+  const startEditingProductCapacity = (index: number, currentCapacity: number) => {
+    setEditingProductCapacity(prev => new Set([...prev, index]));
+    setTempProductCapacity(prev => new Map([...prev, [index, currentCapacity]]));
+  };
+
+  // 取消編輯可做產品數量
+  const cancelEditingProductCapacity = (index: number) => {
+    setEditingProductCapacity(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(index);
+      return newSet;
+    });
+    setTempProductCapacity(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(index);
+      return newMap;
+    });
+  };
+
+  // 保存可做產品數量並反向計算香精數量
+  const saveProductCapacity = (index: number) => {
+    const item = editedItems[index];
+    const newCapacity = tempProductCapacity.get(index);
+    if (newCapacity === undefined || !item.fragrancePercentage || item.fragrancePercentage <= 0) return;
+
+    // 反向計算所需香精數量：可做產品數量 × (香精比例 ÷ 100)
+    const requiredFragranceQuantity = Math.round((newCapacity * (item.fragrancePercentage / 100)) * 1000) / 1000;
+
+    // 更新項目數量和可做產品數量
+    setEditedItems(prev => {
+      const newItems = [...prev];
+      newItems[index] = {
+        ...newItems[index],
+        quantity: requiredFragranceQuantity,
+        productCapacityKg: newCapacity
+      };
+      return newItems;
+    });
+
+    cancelEditingProductCapacity(index);
+    toast.success(`已更新香精數量至 ${requiredFragranceQuantity.toFixed(3)} ${item.unit}`);
   };
 
   // 使用成熟的圖片上傳工具
@@ -645,14 +724,62 @@ export default function PurchaseOrderDetailPage() {
                             )}
                           </TableCell>
                           <TableCell className="text-right">
-                            {item.productCapacityKg ? (
+                            {item.productCapacityKg && item.fragrancePercentage ? (
                               <div className="flex flex-col items-end">
-                                <span className="font-semibold text-purple-600">
-                                  {item.productCapacityKg.toFixed(2)} KG
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  (香精 {item.fragrancePercentage || 0}%)
-                                </span>
+                                {editingProductCapacity.has(index) ? (
+                                  <div className="flex items-center gap-1">
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      step="0.001"
+                                      value={tempProductCapacity.get(index) || 0}
+                                      onChange={(e) => {
+                                        const value = Math.round(parseFloat(e.target.value) * 1000) / 1000 || 0;
+                                        setTempProductCapacity(prev => new Map([...prev, [index, value]]));
+                                      }}
+                                      onWheel={(e) => e.currentTarget.blur()}
+                                      className="w-16 h-6 text-xs text-center"
+                                    />
+                                    <span className="text-xs text-gray-500">KG</span>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => saveProductCapacity(index)}
+                                      className="h-6 w-6 p-0 text-green-600 hover:text-green-700"
+                                    >
+                                      <Save className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => cancelEditingProductCapacity(index)}
+                                      className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                    >
+                                      <Ban className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-1 justify-end">
+                                    <div className="text-right">
+                                      <div className="font-semibold text-purple-600">
+                                        {item.productCapacityKg.toFixed(3)} KG
+                                      </div>
+                                      <div className="text-xs text-gray-500">
+                                        (香精 {item.fragrancePercentage}%)
+                                      </div>
+                                    </div>
+                                    {po.status !== '已收貨' && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => startEditingProductCapacity(index, item.productCapacityKg || 0)}
+                                        className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
+                                      >
+                                        <Edit className="h-3 w-3" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             ) : (
                               <span className="text-gray-400">-</span>
