@@ -10,7 +10,7 @@ import { useApiForm } from '@/hooks/useApiClient';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { uploadMultipleImages } from '@/lib/imageUpload';
-import { ArrowLeft, Loader2, CheckCircle, Truck, ShoppingCart, Building, User, Calendar, Package, Plus, MessageSquare, Upload, X, Trash2, Edit, Save, Ban } from 'lucide-react';
+import { ArrowLeft, Loader2, CheckCircle, Truck, ShoppingCart, Building, User, Calendar, Package, Plus, MessageSquare, Upload, X, Trash2, Edit, Save, Ban, FileDown, FileSpreadsheet } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -21,6 +21,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { NewReceiveDialog } from './NewReceiveDialog'; // 引入新的簡潔收貨元件
 import { formatQuantity } from '@/utils/numberFormat';
+import { exportPurchaseOrderToExcel, exportSimplePurchaseOrder } from '@/utils/exportPurchaseOrder';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 
 interface PurchaseOrderItem {
   name: string;
@@ -587,9 +596,68 @@ export default function PurchaseOrderDetailPage() {
         
         {/* 操作按鈕區域 */}
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          {/* 匯出功能下拉選單 */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 border-0 w-full sm:w-auto"
+              >
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                匯出 Excel
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>選擇匯出格式</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  exportPurchaseOrderToExcel({
+                    code: po.code,
+                    supplierName: po.supplierName,
+                    status: po.status,
+                    createdByName: po.createdByName,
+                    createdAt: po.createdAt,
+                    items: editedItems,
+                    additionalFees: editedAdditionalFees,
+                  });
+                  toast.success('採購單已匯出為完整版 Excel');
+                }}
+                className="cursor-pointer"
+              >
+                <FileDown className="mr-2 h-4 w-4 text-blue-600" />
+                <div>
+                  <div className="font-medium">完整版採購單</div>
+                  <div className="text-xs text-gray-500">包含所有詳細資訊</div>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  exportSimplePurchaseOrder({
+                    code: po.code,
+                    supplierName: po.supplierName,
+                    status: po.status,
+                    createdByName: po.createdByName,
+                    createdAt: po.createdAt,
+                    items: editedItems,
+                    additionalFees: editedAdditionalFees,
+                  });
+                  toast.success('採購單已匯出為簡化版 Excel');
+                }}
+                className="cursor-pointer"
+              >
+                <FileDown className="mr-2 h-4 w-4 text-green-600" />
+                <div>
+                  <div className="font-medium">簡化版採購單</div>
+                  <div className="text-xs text-gray-500">適合傳送給供應商</div>
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {po.status === '預報單' && (
-            <Button 
-              onClick={() => handleUpdateStatus('已訂購')} 
+            <Button
+              onClick={() => handleUpdateStatus('已訂購')}
               disabled={isUpdating}
               className="bg-amber-600 hover:bg-amber-700 w-full sm:w-auto"
             >
@@ -607,8 +675,8 @@ export default function PurchaseOrderDetailPage() {
               收貨入庫
             </Button>
           )}
-          <Button 
-            onClick={() => setIsDeleteDialogOpen(true)} 
+          <Button
+            onClick={() => setIsDeleteDialogOpen(true)}
             disabled={isDeleting}
             variant="destructive"
             className="bg-red-600 hover:bg-red-700 w-full sm:w-auto"
