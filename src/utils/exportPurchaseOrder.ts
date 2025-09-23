@@ -213,10 +213,10 @@ export function exportPurchaseOrderToExcel(orderData: PurchaseOrderData) {
     return buf;
   }
 
-  // 生成檔名（包含日期和採購單編號）
+  // 生成檔名（包含供應商名稱、採購單編號和日期）
   const today = new Date();
   const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
-  const fileName = `採購單_${orderData.code}_${dateStr}.xlsx`;
+  const fileName = `${orderData.supplierName}_${orderData.code}_${dateStr}.xlsx`;
 
   // 下載檔案
   const blob = new Blob([s2ab(wbout)], { type: 'application/octet-stream' });
@@ -271,7 +271,9 @@ export function exportSimplePurchaseOrder(orderData: PurchaseOrderData) {
     return buf;
   }
 
-  const fileName = `採購單_${orderData.code}_簡化版.xlsx`;
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+  const fileName = `${orderData.supplierName}_${orderData.code}_簡化版_${dateStr}.xlsx`;
   const blob = new Blob([s2ab(wbout)], { type: 'application/octet-stream' });
   saveAs(blob, fileName);
 }
