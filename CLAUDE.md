@@ -53,6 +53,17 @@ npm run logs                   # 查看 Functions 日誌
 
 ## 🚨 強制執行規則（絕對禁令）
 
+### 0️⃣ Git Commit 規則
+**每次完成程式碼修改後必須執行中文 git commit，但絕不執行 git push！**
+```bash
+# ✅ 必須執行：中文 commit 訊息
+git add .
+git commit -m "🔧 修復採購車供應商全選功能"
+
+# ❌ 絕對禁止：除非用戶明確要求
+git push
+```
+
 ### 1️⃣ API調用禁令
 ```tsx
 // ❌ 絕對禁止 - 已完全廢棄

@@ -842,13 +842,28 @@ function PurchaseOrdersPageContent() {
     });
   }, []);
 
-  // 切換供應商全選狀態 - 極簡引用模式適配
+  // 切換供應商全選狀態 - 動態計算供應商項目
   const toggleSupplierSelection = useCallback((supplierId: string) => {
-    // 🚀 極簡模式：從 cartBySupplier 中找到對應供應商的項目
-    const supplierGroup = cartBySupplier.find(group => group.supplierId === supplierId);
-    if (!supplierGroup) return;
+    // 動態計算供應商的項目，不依賴 cartBySupplier
+    const supplierItemKeys: string[] = [];
 
-    const supplierItemKeys = supplierGroup.items.map(item => `${item.cartId}-${item.type}`);
+    // 遍歷所有購物車項目，找出屬於該供應商的項目
+    cartItems.forEach(cartItem => {
+      // 根據類型找到對應的完整資料
+      if (cartItem.type === 'material') {
+        const material = materials.find(m => m.code === cartItem.code);
+        if (material && (material.supplierId === supplierId)) {
+          supplierItemKeys.push(`${cartItem.id}-material`);
+        }
+      } else if (cartItem.type === 'fragrance') {
+        const fragrance = fragrances.find(f => f.code === cartItem.code);
+        if (fragrance && (fragrance.supplierId === supplierId)) {
+          supplierItemKeys.push(`${cartItem.id}-fragrance`);
+        }
+      }
+    });
+
+    if (supplierItemKeys.length === 0) return;
 
     setSelectedCartItems(prev => {
       const newSet = new Set(prev);
@@ -861,10 +876,10 @@ function PurchaseOrdersPageContent() {
         // 如果有未選中的，則全部選中
         supplierItemKeys.forEach(key => newSet.add(key));
       }
-      
+
       return newSet;
     });
-  }, []); // 移除 cartBySupplier 依賴，避免循環依賴，在函數內部動態獲取即可
+  }, [cartItems, materials, fragrances]); // 依賴實際的資料來源
 
   // 顯示確認對話框
   const showConfirmDialog = useCallback(() => {
