@@ -53,19 +53,26 @@ export function FragranceCalculatorDialog({
   const [calculationItems, setCalculationItems] = useState<FragranceCalculationItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // 本地產品選擇狀態
-  const [localSelectedProducts, setLocalSelectedProducts] = useState<Set<string>>(new Set());
-
   // API 客戶端
   const apiClient = useApiClient();
 
-  // 當對話框開啟時載入資料並初始化本地選擇狀態
+  // 當對話框開啟時載入資料
   useEffect(() => {
     if (isOpen && selectedProductIds.size > 0) {
-      setLocalSelectedProducts(new Set(selectedProductIds));
       loadCalculationData();
     }
   }, [isOpen]); // 只依賴 isOpen，不依賴 selectedProductIds
+
+  // 當對話框關閉時，清理計算項目
+  useEffect(() => {
+    if (!isOpen) {
+      // 延遲清理，確保關閉動畫完成
+      const timer = setTimeout(() => {
+        setCalculationItems([]);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
 
   // 移除過濾邏輯，讓所有載入的計算項目保持顯示
 
@@ -176,20 +183,11 @@ export function FragranceCalculatorDialog({
 
   // 處理產品勾選狀態變更
   const handleProductSelectionChange = (productId: string, checked: boolean) => {
-    // 更新本地選擇狀態
-    const newLocalSelected = new Set(localSelectedProducts);
-    if (checked) {
-      newLocalSelected.add(productId);
-    } else {
-      newLocalSelected.delete(productId);
-    }
-    setLocalSelectedProducts(newLocalSelected);
-
-    // 通知父組件更新選擇狀態
+    // 直接通知父組件更新選擇狀態
     onProductSelectionChange(productId, checked);
 
     // 不移除計算項目，保留用戶輸入的目標產量
-    // 只在顯示和計算時根據 localSelectedProducts 進行過濾
+    // 只在顯示和計算時根據 selectedProductIds 進行過濾
   };
 
   // 更新目標產量
@@ -222,7 +220,7 @@ export function FragranceCalculatorDialog({
 
     // 只計算已選擇的產品
     calculationItems
-      .filter(item => localSelectedProducts.has(item.productId))
+      .filter(item => selectedProductIds.has(item.productId))
       .forEach(item => {
         const key = item.fragranceId;
         if (fragranceMap.has(key)) {
@@ -247,7 +245,7 @@ export function FragranceCalculatorDialog({
       ...data,
       shortage: Math.max(0, data.totalRequired - data.currentStock)
     }));
-  }, [calculationItems, localSelectedProducts]);
+  }, [calculationItems, selectedProductIds]);
 
   // 加入採購車 - 極簡引用模式
   const handleAddToCart = async () => {
@@ -325,12 +323,12 @@ export function FragranceCalculatorDialog({
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                   <Package className="h-5 w-5 text-purple-600" />
-                  選定產品 ({calculationItems.filter(item => localSelectedProducts.has(item.productId)).length} 項)
+                  選定產品 ({calculationItems.filter(item => selectedProductIds.has(item.productId)).length} 項)
                 </h3>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   {calculationItems
-                    .filter(item => localSelectedProducts.has(item.productId))
+                    .filter(item => selectedProductIds.has(item.productId))
                     .map((item) => (
                     <Card key={item.productId} className="border border-purple-100 hover:border-purple-200 transition-colors">
                       <CardHeader className="pb-3">
@@ -348,8 +346,8 @@ export function FragranceCalculatorDialog({
                           </div>
                           <div className="flex items-start gap-2 ml-3">
                             <Checkbox
-                              checked={localSelectedProducts.has(item.productId)}
-                              onCheckedChange={(checked) => 
+                              checked={selectedProductIds.has(item.productId)}
+                              onCheckedChange={(checked) =>
                                 handleProductSelectionChange(item.productId, checked as boolean)
                               }
                               className="mt-1 border-2 border-gray-800 data-[state=checked]:bg-gray-800 data-[state=checked]:border-gray-800"
