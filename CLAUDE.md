@@ -1,6 +1,44 @@
 # CLAUDE.md
 
-本檔案為 Claude Code 在此程式碼庫中工作時提供指引。
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## 🛠️ 常用開發指令
+
+### 開發環境
+```bash
+npm run dev                    # 啟動開發伺服器 (端口 3000)
+npm run build                  # 建構生產版本
+npm run start                  # 啟動生產伺服器
+npm run lint                   # ESLint 程式碼檢查
+npm run lint:functions         # 檢查 Functions 程式碼
+npm run install:functions      # 安裝 Functions 依賴
+```
+
+### 部署相關（Windows 環境）
+```bash
+# 標準部署流程
+npm run build
+copy .next functions\  /E /Y
+rmdir /s /q functions\.next\cache
+firebase deploy --only functions:nextServer
+
+# 使用優化部署腳本（推薦）
+scripts\optimize-deploy.bat
+
+# 完整部署 (hosting + functions)
+npm run deploy-full
+
+# 僅部署 hosting
+npm run deploy-only
+```
+
+### Functions 開發
+```bash
+cd functions
+npm run build                  # TypeScript 編譯
+npm run deploy                 # 部署 Functions
+npm run logs                   # 查看 Functions 日誌
+```
 
 ## 🏗️ 系統架構認知
 
@@ -8,9 +46,10 @@
 「德科斯特的實驗室」(Dexter's Lab) - Next.js + Firebase 全方位生產管理系統
 
 ### ⚠️ 關鍵架構特性（防止誤解）
-- **這是動態網站**：Next.js SSR + Firebase Functions，非靜態部署
-- **部署架構**：Firebase Functions 運行 Next.js server (nextServer)
+- **這是動態網站**：Next.js 14 SSR + Firebase Functions，非靜態部署
+- **部署架構**：Firebase Functions (Node.js 20) 運行 Next.js server (nextServer)
 - **路由處理**：所有請求通過 firebase.json rewrites 導向 nextServer 函數
+- **TypeScript**：前後端完全使用 TypeScript，嚴格類型檢查
 
 ## 🚨 強制執行規則（絕對禁令）
 
@@ -35,11 +74,24 @@ const personnelId = await convertEmployeeIdToPersonnelId(employeeId);
 
 ### 3️⃣ 部署流程強制規則
 **每次修改後 AI 必須主動提醒並執行部署！**
+
+#### Windows 環境部署
 ```bash
-# 標準部署流程（必須使用）
+# 標準部署流程
+npm run build
+xcopy .next functions\.next /E /I /H /Y
+rmdir /s /q functions\.next\cache
+firebase deploy --only functions:nextServer
+
+# 推薦：使用優化腳本
+scripts\optimize-deploy.bat
+```
+
+#### Linux/Mac 環境部署
+```bash
 npm run build
 cp -r .next functions/
-rm -rf functions/.next/cache  # 強制清理快取
+rm -rf functions/.next/cache
 firebase deploy --only functions:nextServer
 ```
 
@@ -115,14 +167,18 @@ interface QuickFilter {
 - **檢查**：`du -sh functions/.next` 確認大小
 
 ### 快取清理（強制執行）
+
+#### Windows 環境
 ```bash
-rm -rf functions/.next/cache     # 清理快取
-rm -f functions/.next/trace      # 清理追蹤檔
+rmdir /s /q functions\.next\cache  # 清理快取
+del /f functions\.next\trace       # 清理追蹤檔
+scripts\optimize-deploy.bat        # 一鍵優化部署腳本
 ```
 
-### 優化部署腳本
+#### Linux/Mac 環境
 ```bash
-scripts\optimize-deploy.bat  # Windows一鍵優化部署
+rm -rf functions/.next/cache       # 清理快取
+rm -f functions/.next/trace        # 清理追蹤檔
 ```
 
 ## 🛠️ 維護工具API系統
