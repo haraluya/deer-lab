@@ -204,9 +204,16 @@ export const updateProductSeries = CrudApiHandlers.createUpdateHandler<UpdatePro
       if (error instanceof BusinessError) {
         throw error;
       }
+      // 記錄完整錯誤資訊以便診斷
+      console.error('產品系列更新失敗 - 詳細錯誤:', {
+        error,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined,
+        data: { id, name, typeCode, productType, description, defaultMaterialsCount: defaultMaterials?.length }
+      });
       throw new BusinessError(
         ApiErrorCode.DATABASE_ERROR,
-        '更新產品系列時發生錯誤',
+        `更新產品系列時發生錯誤: ${error instanceof Error ? error.message : String(error)}`,
         error
       );
     }
