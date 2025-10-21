@@ -380,10 +380,10 @@ export function FragranceCalculatorDialog({
                             <Input
                               id={`quantity-${item.productId}`}
                               type="number"
-                              min="1"
+                              min="0"
                               step="1"
                               value={item.targetQuantity}
-                              onChange={(e) => updateTargetQuantity(item.productId, Number(e.target.value) || 1)}
+                              onChange={(e) => updateTargetQuantity(item.productId, Number(e.target.value) || 0)}
                               className="h-9 text-sm border-purple-200 focus:border-purple-500 focus:ring-purple-500"
                               inputMode="numeric"
                             />
