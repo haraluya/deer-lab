@@ -147,11 +147,11 @@ export const updateProductSeries = CrudApiHandlers.createUpdateHandler<UpdatePro
       if (typeCode && typeCode !== seriesDoc.data()?.typeCode) {
         const existingCode = await db.collection('productSeries')
           .where('typeCode', '==', typeCode)
-          .where('id', '!=', id)
           .limit(1)
           .get();
 
-        if (!existingCode.empty) {
+        // 檢查找到的文檔是否是當前文檔本身
+        if (!existingCode.empty && existingCode.docs[0].id !== id) {
           throw new BusinessError(
             ApiErrorCode.DUPLICATE_DATA,
             `系列代碼 ${typeCode} 已存在`
