@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(git log:*)",
-      "Read(//e/PrtSrc/Screenshots/2025-09/**)"
+      "Read(//e/PrtSrc/Screenshots/2025-09/**)",
+      "Bash(copy firestore.indexes.json firestore.indexes.backup.json)"
     ],
     "deny": [],
     "ask": []

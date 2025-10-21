@@ -46,14 +46,21 @@ exports.createPurchaseOrders = (0, https_1.onCall)(async (request) => {
             const sequence = String(newCount + i + 1).padStart(3, '0');
             const poCode = `PO-${dateStr}-${sequence}`;
             const poRef = db.collection("purchaseOrders").doc();
-            const itemsForPO = supplier.items.map((item) => ({
-                itemRef: db.doc(`${item.unit ? 'materials' : 'fragrances'}/${item.id}`),
-                name: item.name,
-                code: item.code,
-                quantity: Number(item.quantity),
-                unit: item.unit || '',
-                costPerUnit: Number(item.price) || 0,
-            }));
+            const itemsForPO = supplier.items.map((item) => {
+                const baseItem = {
+                    itemRef: db.doc(`${item.unit ? 'materials' : 'fragrances'}/${item.id}`),
+                    name: item.name,
+                    code: item.code,
+                    quantity: Number(item.quantity),
+                    unit: item.unit || '',
+                    costPerUnit: Number(item.price) || 0,
+                };
+                // 如果有可做產品公斤數資料（香精），一併儲存
+                if (item.productCapacityKg !== undefined) {
+                    return Object.assign(Object.assign({}, baseItem), { productCapacityKg: Number(item.productCapacityKg), fragrancePercentage: Number(item.fragrancePercentage) || 0 });
+                }
+                return baseItem;
+            });
             writeBatch.set(poRef, {
                 code: poCode,
                 supplierRef: db.doc(`suppliers/${supplier.supplierId}`),

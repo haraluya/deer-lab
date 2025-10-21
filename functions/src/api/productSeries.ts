@@ -161,10 +161,13 @@ export const updateProductSeries = CrudApiHandlers.createUpdateHandler<UpdatePro
 
       // 4. 處理預設物料（轉換為 DocumentReference 陣列）
       let commonMaterials: any[] | undefined;
-      if (defaultMaterials !== undefined) {
+      if (defaultMaterials !== undefined && defaultMaterials.length > 0) {
         commonMaterials = defaultMaterials.map(item =>
           db.collection('materials').doc(item.materialId)
         );
+      } else if (defaultMaterials !== undefined) {
+        // 如果明確傳入空陣列，則設定為空陣列
+        commonMaterials = [];
       }
 
       // 5. 準備更新資料

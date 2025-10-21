@@ -127,10 +127,12 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
           typeCode: values.code,
           productType: values.productType,
           description: `${values.name} 系列`,
-          defaultMaterials: values.commonMaterialIds?.map(materialId => ({
-            materialId,
-            quantity: 1
-          })),
+          defaultMaterials: values.commonMaterialIds && values.commonMaterialIds.length > 0 
+            ? values.commonMaterialIds.map(materialId => ({
+                materialId,
+                quantity: 1
+              }))
+            : [],
           isActive: true
         });
 
@@ -147,10 +149,12 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
           typeCode: values.code,
           productType: values.productType,
           description: `${values.name} 系列`,
-          defaultMaterials: values.commonMaterialIds?.map(materialId => ({
-            materialId,
-            quantity: 1
-          })),
+          defaultMaterials: values.commonMaterialIds && values.commonMaterialIds.length > 0 
+            ? values.commonMaterialIds.map(materialId => ({
+                materialId,
+                quantity: 1
+              }))
+            : [],
           isActive: true
         });
 
