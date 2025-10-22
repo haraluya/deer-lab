@@ -6,6 +6,7 @@ import { collection, getDocs, DocumentReference } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useApiForm } from '@/hooks/useApiClient';
 import { useDataSearch } from '@/hooks/useDataSearch';
+import { getProductTypeColor, extractProductTypeCode } from '@/lib/utils';
 
 import { SeriesDialog, SeriesData } from './SeriesDialog';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
@@ -97,8 +98,19 @@ function ProductSeriesPageContent() {
         } as SeriesWithMaterials;
       }));
       
-      // 按名稱排序
-      const sortedSeriesList = seriesList.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      // 先按產品類型排序，再按系列名稱排序
+      const sortedSeriesList = seriesList.sort((a, b) => {
+        const typeCodeA = extractProductTypeCode(a.productType || '');
+        const typeCodeB = extractProductTypeCode(b.productType || '');
+
+        // 先比較產品類型代碼
+        if (typeCodeA !== typeCodeB) {
+          return typeCodeA.localeCompare(typeCodeB);
+        }
+
+        // 同類型的，再按系列名稱排序
+        return (a.name || '').localeCompare(b.name || '', 'zh-TW');
+      });
       setSeries(sortedSeriesList);
     } catch (error) {
       console.error("讀取產品系列資料失敗:", error);
@@ -132,23 +144,29 @@ function ProductSeriesPageContent() {
       sortable: true,
       searchable: true,
       priority: 5,
-      render: (value, record) => (
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
-            <Tag className="h-5 w-5 text-white" />
+      render: (value, record) => {
+        const typeColor = getProductTypeColor(record.productType);
+        return (
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 bg-gradient-to-r ${typeColor.gradient} rounded-lg flex items-center justify-center`}>
+              <Tag className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <div className="font-semibold text-foreground">{record.name}</div>
+              <div className={`text-xs font-medium ${typeColor.text}`}>{record.code}</div>
+            </div>
           </div>
+        );
+      },
+      mobileRender: (value, record) => {
+        const typeColor = getProductTypeColor(record.productType);
+        return (
           <div>
-            <div className="font-semibold text-foreground">{record.name}</div>
-            <div className="text-xs text-emerald-600 font-medium">{record.code}</div>
+            <div className="font-medium text-gray-900">{record.name}</div>
+            <div className={`text-xs font-medium ${typeColor.text}`}>{record.code}</div>
           </div>
-        </div>
-      ),
-      mobileRender: (value, record) => (
-        <div>
-          <div className="font-medium text-gray-900">{record.name}</div>
-          <div className="text-xs text-emerald-600 font-medium">{record.code}</div>
-        </div>
-      )
+        );
+      }
     },
     {
       key: 'productType',
@@ -156,11 +174,14 @@ function ProductSeriesPageContent() {
       sortable: true,
       filterable: true,
       priority: 4,
-      render: (value) => (
-        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
-          {value}
-        </Badge>
-      )
+      render: (value) => {
+        const typeColor = getProductTypeColor(value);
+        return (
+          <Badge variant="outline" className={`${typeColor.bg} ${typeColor.text} ${typeColor.border}`}>
+            {value}
+          </Badge>
+        );
+      }
     },
     {
       key: 'productCount',
@@ -239,14 +260,22 @@ function ProductSeriesPageContent() {
   // 配置快速篩選
   const quickFilters: QuickFilter[] = [
     ...Array.from(new Set(series.map(s => s.productType)))
-      .sort()
-      .map(productType => ({
-        key: 'productType',
-        label: productType,
-        value: productType,
-        color: 'green' as const,
-        count: series.filter(s => s.productType === productType).length
-      }))
+      .sort((a, b) => {
+        // 先按產品類型代碼排序
+        const codeA = extractProductTypeCode(a);
+        const codeB = extractProductTypeCode(b);
+        return codeA.localeCompare(codeB);
+      })
+      .map(productType => {
+        const typeColor = getProductTypeColor(productType);
+        return {
+          key: 'productType',
+          label: productType,
+          value: productType,
+          color: typeColor.badgeColor,
+          count: series.filter(s => s.productType === productType).length
+        };
+      })
   ];
 
   // 配置統計資料
@@ -369,13 +398,14 @@ function ProductSeriesPageContent() {
         // 自定義卡片渲染以提高資訊密度
         renderCard={(record, index) => {
           const isSelected = false; // 暫時不支援選擇
-          
+          const typeColor = getProductTypeColor(record.productType);
+
           return (
             <div
               className={`
-                bg-gradient-to-br from-white to-emerald-50/30 border border-emerald-100
+                bg-gradient-to-br from-white ${typeColor.bg}/30 border ${typeColor.border}
                 rounded-lg p-3 hover:shadow-md transition-all duration-200 cursor-pointer
-                hover:border-emerald-300 hover:bg-emerald-50/50
+                hover:border-${typeColor.border} hover:${typeColor.bg}/50
                 min-h-[120px] flex flex-col justify-between
               `}
               onClick={() => router.push(`/dashboard/product-series/${record.id}`)}
@@ -385,25 +415,25 @@ function ProductSeriesPageContent() {
                 {/* 標題行 */}
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <div className={`w-8 h-8 bg-gradient-to-br ${typeColor.gradient} rounded-lg flex items-center justify-center flex-shrink-0`}>
                       <Tag className="h-4 w-4 text-white" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <h3 className="font-semibold text-gray-900 text-sm leading-tight truncate">
                         {record.name}
                       </h3>
-                      <p className="text-xs text-emerald-600 font-medium truncate">
+                      <p className={`text-xs ${typeColor.text} font-medium truncate`}>
                         {record.code}
                       </p>
                     </div>
                   </div>
-                  
+
                   {/* 操作菜單 */}
                   <div onClick={(e) => e.stopPropagation()}>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-6 w-6 p-0 hover:bg-emerald-100"
+                      className={`h-6 w-6 p-0 hover:${typeColor.bg}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         // 可以添加快速操作菜單
@@ -413,12 +443,12 @@ function ProductSeriesPageContent() {
                     </Button>
                   </div>
                 </div>
-                
+
                 {/* 關鍵信息標籤 */}
                 <div className="flex flex-wrap gap-1">
-                  <Badge 
-                    variant="outline" 
-                    className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs px-2 py-0.5"
+                  <Badge
+                    variant="outline"
+                    className={`${typeColor.bg} ${typeColor.text} ${typeColor.border} text-xs px-2 py-0.5`}
                   >
                     {record.productType}
                   </Badge>

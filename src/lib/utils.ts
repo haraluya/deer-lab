@@ -201,6 +201,65 @@ export function extractProductTypeCode(productType: string): string {
   return codeMatch ? codeMatch[1] : 'ETC';
 }
 
+/**
+ * 產品類型顏色映射
+ * 根據產品類型代碼返回對應的顏色配置
+ */
+export const productTypeColors = {
+  'OMP': {
+    gradient: 'from-red-500 to-rose-600',
+    bg: 'bg-red-50',
+    border: 'border-red-200',
+    text: 'text-red-700',
+    badgeColor: 'red' as const,
+  },
+  'OTP': {
+    gradient: 'from-orange-500 to-amber-600',
+    bg: 'bg-orange-50',
+    border: 'border-orange-200',
+    text: 'text-orange-700',
+    badgeColor: 'orange' as const,
+  },
+  'FTP': {
+    gradient: 'from-purple-500 to-violet-600',
+    bg: 'bg-purple-50',
+    border: 'border-purple-200',
+    text: 'text-purple-700',
+    badgeColor: 'purple' as const,
+  },
+  'BOT': {
+    gradient: 'from-green-500 to-emerald-600',
+    bg: 'bg-green-50',
+    border: 'border-green-200',
+    text: 'text-green-700',
+    badgeColor: 'green' as const,
+  },
+  'ETC': {
+    gradient: 'from-gray-500 to-slate-600',
+    bg: 'bg-gray-50',
+    border: 'border-gray-200',
+    text: 'text-gray-700',
+    badgeColor: 'blue' as const,
+  },
+  'default': {
+    gradient: 'from-blue-500 to-indigo-600',
+    bg: 'bg-blue-50',
+    border: 'border-blue-200',
+    text: 'text-blue-700',
+    badgeColor: 'blue' as const,
+  }
+};
+
+/**
+ * 獲取產品類型顏色配置
+ * @param productType 產品類型字串，例如 "罐裝油(BOT)" 或 "BOT"
+ * @returns 顏色配置對象
+ */
+export function getProductTypeColor(productType: string) {
+  const code = extractProductTypeCode(productType);
+  return productTypeColors[code as keyof typeof productTypeColors] || productTypeColors.default;
+}
+
 // 生成完整的產品編號
 export async function generateCompleteProductCode(
   seriesCode: string,
