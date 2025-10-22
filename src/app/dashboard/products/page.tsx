@@ -8,7 +8,7 @@ import { useDataSearch, createProductSearchConfig } from '@/hooks/useDataSearch'
 import { useApiClient } from '@/hooks/useApiClient';
 import { useProductsCache } from '@/hooks/useProductsCache';
 
-import { MoreHorizontal, Droplets, FileSpreadsheet, Eye, Edit, Package, Factory, Calendar, Plus, Tag, Library, Search, Shield, FlaskConical, Star, Lightbulb } from 'lucide-react';
+import { MoreHorizontal, Droplets, FileSpreadsheet, Eye, Edit, Package, Factory, Calendar, Plus, Tag, Library, Search, Shield, FlaskConical, Star, Lightbulb, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -637,8 +637,18 @@ function ProductsPageContent() {
   const toolbarActions = (
     <>
       {canManageProducts && (
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
+          onClick={() => router.push('/dashboard/product-types')}
+          className="border-indigo-200 text-indigo-600 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all duration-200"
+        >
+          <Layers className="h-4 w-4 mr-2" />
+          產品類型
+        </Button>
+      )}
+      {canManageProducts && (
+        <Button
+          variant="outline"
           onClick={() => router.push('/dashboard/product-series')}
           className="border-purple-200 text-purple-600 hover:bg-purple-600 hover:text-white hover:border-purple-600 transition-all duration-200"
         >
@@ -701,7 +711,8 @@ function ProductsPageContent() {
         actions={actions}
         bulkActions={bulkActions}
         onRowClick={(record) => router.push(`/dashboard/products/${record.id}`)}
-        
+        viewModes={[]} // 禁用視圖切換按鈕
+
         // 搜尋與過濾
         searchable={true}
         searchPlaceholder="搜尋產品名稱、代號、系列或香精..."
