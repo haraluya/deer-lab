@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useEffect, useState, useCallback, Suspense, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { collection, getDocs, DocumentReference } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useApiForm } from '@/hooks/useApiClient';
 import { useDataSearch } from '@/hooks/useDataSearch';
-import { getProductTypeColor, extractProductTypeCode } from '@/lib/utils';
+import { generateColorConfig, extractProductTypeCode, ProductTypeColorConfig } from '@/lib/utils';
 
 import { SeriesDialog, SeriesData } from './SeriesDialog';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
@@ -32,6 +32,7 @@ function ProductSeriesPageContent() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [selectedSeries, setSelectedSeries] = useState<SeriesData | null>(null);
+  const [productTypeColors, setProductTypeColors] = useState<Map<string, ProductTypeColorConfig>>(new Map());
 
   // 使用統一的搜尋過濾 Hook
   const searchConfig = {
@@ -65,10 +66,21 @@ function ProductSeriesPageContent() {
       if (!db) {
         throw new Error("Firebase 未初始化")
       }
-      
+
       const materialsMap = new Map<string, string>();
       const materialSnapshot = await getDocs(collection(db, "materials"));
       materialSnapshot.forEach(doc => materialsMap.set(doc.id, doc.data().name));
+
+      // 載入產品類型及其顏色配置
+      const productTypesSnapshot = await getDocs(collection(db, 'productTypes'));
+      const typeColorsMap = new Map<string, ProductTypeColorConfig>();
+      productTypesSnapshot.forEach(doc => {
+        const data = doc.data();
+        const typeFullName = `${data.name}(${data.code})`;
+        const colorConfig = generateColorConfig(data.color || 'gray');
+        typeColorsMap.set(typeFullName, colorConfig);
+      });
+      setProductTypeColors(typeColorsMap);
 
       const seriesSnapshot = await getDocs(collection(db, 'productSeries'));
       const productsSnapshot = await getDocs(collection(db, 'products'));
@@ -136,6 +148,11 @@ function ProductSeriesPageContent() {
     }
   }, [searchParams, series, router]);
 
+  // 輔助函數：獲取產品類型顏色配置
+  const getTypeColor = useCallback((productType: string): ProductTypeColorConfig => {
+    return productTypeColors.get(productType) || generateColorConfig('gray');
+  }, [productTypeColors]);
+
   // 配置欄位
   const columns: StandardColumn<SeriesWithMaterials>[] = [
     {
@@ -145,7 +162,7 @@ function ProductSeriesPageContent() {
       searchable: true,
       priority: 5,
       render: (value, record) => {
-        const typeColor = getProductTypeColor(record.productType);
+        const typeColor = getTypeColor(record.productType);
         return (
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 bg-gradient-to-r ${typeColor.gradient} rounded-lg flex items-center justify-center`}>
@@ -159,7 +176,7 @@ function ProductSeriesPageContent() {
         );
       },
       mobileRender: (value, record) => {
-        const typeColor = getProductTypeColor(record.productType);
+        const typeColor = getTypeColor(record.productType);
         return (
           <div>
             <div className="font-medium text-gray-900">{record.name}</div>
@@ -175,7 +192,7 @@ function ProductSeriesPageContent() {
       filterable: true,
       priority: 4,
       render: (value) => {
-        const typeColor = getProductTypeColor(value);
+        const typeColor = getTypeColor(value);
         return (
           <Badge variant="outline" className={`${typeColor.bg} ${typeColor.text} ${typeColor.border}`}>
             {value}
@@ -267,7 +284,7 @@ function ProductSeriesPageContent() {
         return codeA.localeCompare(codeB);
       })
       .map(productType => {
-        const typeColor = getProductTypeColor(productType);
+        const typeColor = getTypeColor(productType);
         return {
           key: 'productType',
           label: productType,
@@ -398,7 +415,7 @@ function ProductSeriesPageContent() {
         // 自定義卡片渲染以提高資訊密度
         renderCard={(record, index) => {
           const isSelected = false; // 暫時不支援選擇
-          const typeColor = getProductTypeColor(record.productType);
+          const typeColor = getTypeColor(record.productType);
 
           return (
             <div

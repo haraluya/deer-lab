@@ -65,7 +65,7 @@ export interface QuickFilter {
   label: string;
   value: any;
   count?: number;
-  color?: 'blue' | 'green' | 'yellow' | 'red' | 'purple' | 'orange' | 'gray';
+  color?: 'blue' | 'green' | 'yellow' | 'red' | 'purple' | 'orange' | 'gray' | 'pink' | 'cyan' | 'indigo';
 }
 
 export interface StandardViewMode {

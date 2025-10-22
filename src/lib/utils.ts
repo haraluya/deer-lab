@@ -202,62 +202,96 @@ export function extractProductTypeCode(productType: string): string {
 }
 
 /**
- * 產品類型顏色映射
- * 根據產品類型代碼返回對應的顏色配置
+ * 產品類型顏色映射介面
  */
-export const productTypeColors = {
-  'OMP': {
-    gradient: 'from-red-500 to-rose-600',
-    bg: 'bg-red-50',
-    border: 'border-red-200',
-    text: 'text-red-700',
-    badgeColor: 'red' as const,
-  },
-  'OTP': {
-    gradient: 'from-orange-500 to-amber-600',
-    bg: 'bg-orange-50',
-    border: 'border-orange-200',
-    text: 'text-orange-700',
-    badgeColor: 'orange' as const,
-  },
-  'FTP': {
-    gradient: 'from-purple-500 to-violet-600',
-    bg: 'bg-purple-50',
-    border: 'border-purple-200',
-    text: 'text-purple-700',
-    badgeColor: 'purple' as const,
-  },
-  'BOT': {
-    gradient: 'from-green-500 to-emerald-600',
-    bg: 'bg-green-50',
-    border: 'border-green-200',
-    text: 'text-green-700',
-    badgeColor: 'green' as const,
-  },
-  'ETC': {
-    gradient: 'from-gray-500 to-slate-600',
-    bg: 'bg-gray-50',
-    border: 'border-gray-200',
-    text: 'text-gray-700',
-    badgeColor: 'blue' as const,
-  },
-  'default': {
-    gradient: 'from-blue-500 to-indigo-600',
-    bg: 'bg-blue-50',
-    border: 'border-blue-200',
-    text: 'text-blue-700',
-    badgeColor: 'blue' as const,
-  }
-};
+export interface ProductTypeColorConfig {
+  gradient: string;
+  bg: string;
+  border: string;
+  text: string;
+  badgeColor: 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | 'cyan' | 'indigo' | 'gray';
+}
 
 /**
- * 獲取產品類型顏色配置
- * @param productType 產品類型字串，例如 "罐裝油(BOT)" 或 "BOT"
+ * 根據顏色值生成顏色配置
+ * @param colorValue 顏色值，例如 'pink', 'blue', 'green' 等
  * @returns 顏色配置對象
  */
-export function getProductTypeColor(productType: string) {
-  const code = extractProductTypeCode(productType);
-  return productTypeColors[code as keyof typeof productTypeColors] || productTypeColors.default;
+export function generateColorConfig(colorValue: string): ProductTypeColorConfig {
+  const colorMap: Record<string, ProductTypeColorConfig> = {
+    'red': {
+      gradient: 'from-red-500 to-rose-600',
+      bg: 'bg-red-50',
+      border: 'border-red-200',
+      text: 'text-red-700',
+      badgeColor: 'red' as const,
+    },
+    'orange': {
+      gradient: 'from-orange-500 to-amber-600',
+      bg: 'bg-orange-50',
+      border: 'border-orange-200',
+      text: 'text-orange-700',
+      badgeColor: 'orange' as const,
+    },
+    'yellow': {
+      gradient: 'from-yellow-500 to-amber-600',
+      bg: 'bg-yellow-50',
+      border: 'border-yellow-200',
+      text: 'text-yellow-700',
+      badgeColor: 'yellow' as const,
+    },
+    'green': {
+      gradient: 'from-green-500 to-emerald-600',
+      bg: 'bg-green-50',
+      border: 'border-green-200',
+      text: 'text-green-700',
+      badgeColor: 'green' as const,
+    },
+    'blue': {
+      gradient: 'from-blue-500 to-indigo-600',
+      bg: 'bg-blue-50',
+      border: 'border-blue-200',
+      text: 'text-blue-700',
+      badgeColor: 'blue' as const,
+    },
+    'purple': {
+      gradient: 'from-purple-500 to-violet-600',
+      bg: 'bg-purple-50',
+      border: 'border-purple-200',
+      text: 'text-purple-700',
+      badgeColor: 'purple' as const,
+    },
+    'pink': {
+      gradient: 'from-pink-500 to-rose-600',
+      bg: 'bg-pink-50',
+      border: 'border-pink-200',
+      text: 'text-pink-700',
+      badgeColor: 'pink' as const,
+    },
+    'cyan': {
+      gradient: 'from-cyan-500 to-teal-600',
+      bg: 'bg-cyan-50',
+      border: 'border-cyan-200',
+      text: 'text-cyan-700',
+      badgeColor: 'cyan' as const,
+    },
+    'indigo': {
+      gradient: 'from-indigo-500 to-purple-600',
+      bg: 'bg-indigo-50',
+      border: 'border-indigo-200',
+      text: 'text-indigo-700',
+      badgeColor: 'indigo' as const,
+    },
+    'gray': {
+      gradient: 'from-gray-500 to-slate-600',
+      bg: 'bg-gray-50',
+      border: 'border-gray-200',
+      text: 'text-gray-700',
+      badgeColor: 'gray' as const,
+    },
+  };
+
+  return colorMap[colorValue] || colorMap['gray'];
 }
 
 // 生成完整的產品編號
