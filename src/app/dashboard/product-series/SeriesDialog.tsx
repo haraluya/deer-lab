@@ -22,14 +22,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Package, Tag, Palette } from 'lucide-react';
-import { ColorPicker, getRandomColor } from '@/components/ui/color-picker'; 
+import { Package, Tag } from 'lucide-react'; 
 
 const formSchema = z.object({
   name: z.string().min(2, { message: '系列名稱至少需要 2 個字元' }),
   code: z.string().min(1, { message: '系列代號為必填欄位' }),
   productType: z.string().min(1, { message: '產品類型為必填欄位' }),
-  color: z.string().min(1, { message: '請選擇系列顏色' }),
   commonMaterialIds: z.array(z.string()).optional(),
 });
 
@@ -41,7 +39,6 @@ export interface SeriesData extends DocumentData {
   code: string;
   typeCode?: string;
   productType: string;
-  color?: string;
   commonMaterials: DocumentReference[];
 }
 
@@ -52,16 +49,9 @@ interface SeriesDialogProps {
   seriesData?: SeriesData | null;
 }
 
-const PRODUCT_TYPES = [
-  { value: '罐裝油(BOT)', label: '罐裝油(BOT)' },
-  { value: '一代棉芯煙彈(OMP)', label: '一代棉芯煙彈(OMP)' },
-  { value: '一代陶瓷芯煙彈(OTP)', label: '一代陶瓷芯煙彈(OTP)' },
-  { value: '五代陶瓷芯煙彈(FTP)', label: '五代陶瓷芯煙彈(FTP)' },
-  { value: '其他(ETC)', label: '其他(ETC)' },
-];
-
 export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData }: SeriesDialogProps) {
   const [materialOptions, setMaterialOptions] = useState<OptionType[]>([]);
+  const [productTypeOptions, setProductTypeOptions] = useState<OptionType[]>([]);
   const apiClient = useApiForm();
   const isEditMode = !!seriesData;
 
@@ -70,21 +60,22 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
     defaultValues: {
       name: '',
       code: '',
-      productType: '其他(ETC)',
-      color: getRandomColor(), // 新增時隨機分配顏色
+      productType: '',
       commonMaterialIds: []
     },
   });
 
   useEffect(() => {
     if (isOpen) {
-      const fetchMaterials = async () => {
+      const fetchOptions = async () => {
         try {
           if (!db) {
             throw new Error("Firebase 未初始化")
           }
-          const querySnapshot = await getDocs(collection(db, 'materials'));
-          const options = querySnapshot.docs.map(doc => {
+
+          // 讀取物料選項
+          const materialsSnapshot = await getDocs(collection(db, 'materials'));
+          const materials = materialsSnapshot.docs.map(doc => {
             const data = doc.data();
             const category = data.category || '未分類';
             const subCategory = data.subCategory || '未分類';
@@ -105,12 +96,26 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
             }
             return a.materialName.localeCompare(b.materialName, 'zh-TW');
           });
-          setMaterialOptions(options);
+          setMaterialOptions(materials);
+
+          // 讀取產品類型選項
+          const typesSnapshot = await getDocs(collection(db, 'productTypes'));
+          const types = typesSnapshot.docs
+            .map(doc => {
+              const data = doc.data();
+              return {
+                value: `${data.name}(${data.code})`, // 值格式：罐裝油(BOT)
+                label: `${data.name}(${data.code})`,
+              };
+            })
+            .sort((a, b) => a.label.localeCompare(b.label, 'zh-TW'));
+          setProductTypeOptions(types);
+
         } catch (error) {
-          toast.error("讀取物料選項失敗。");
+          toast.error("讀取選項資料失敗。");
         }
       };
-      fetchMaterials();
+      fetchOptions();
     }
   }, [isOpen]);
 
@@ -119,16 +124,14 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
       form.reset({
         name: seriesData.name || '',
         code: seriesData.code || seriesData.typeCode || '',
-        productType: seriesData.productType || '其他(ETC)',
-        color: seriesData.color || getRandomColor(), // 如果沒有顏色，隨機分配一個
+        productType: seriesData.productType || '',
         commonMaterialIds: seriesData.commonMaterials?.map(ref => ref.id) || [],
       });
     } else if (isOpen && !seriesData) {
       form.reset({
         name: '',
         code: '',
-        productType: '其他(ETC)',
-        color: getRandomColor(),
+        productType: '',
         commonMaterialIds: []
       });
     }
@@ -142,7 +145,6 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
           name: values.name,
           typeCode: values.code,
           productType: values.productType,
-          color: values.color,
           description: `${values.name} 系列`,
           defaultMaterials: values.commonMaterialIds && values.commonMaterialIds.length > 0
             ? values.commonMaterialIds.map(materialId => ({
@@ -165,7 +167,6 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
           name: values.name,
           typeCode: values.code,
           productType: values.productType,
-          color: values.color,
           description: `${values.name} 系列`,
           defaultMaterials: values.commonMaterialIds && values.commonMaterialIds.length > 0
             ? values.commonMaterialIds.map(materialId => ({
@@ -263,7 +264,7 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {PRODUCT_TYPES.map((type) => (
+                          {productTypeOptions.map((type) => (
                             <SelectItem key={type.value} value={type.value}>
                               {type.label}
                             </SelectItem>
@@ -271,27 +272,6 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
                         </SelectContent>
                       </Select>
                       <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* 顏色選擇 */}
-              <div className="mt-4">
-                <FormField
-                  control={form.control}
-                  name="color"
-                  render={({ field }) => (
-                    <FormItem>
-                      <ColorPicker
-                        value={field.value}
-                        onChange={field.onChange}
-                        label="系列顏色 *"
-                      />
-                      <FormMessage />
-                      <p className="text-xs text-gray-500 mt-1">
-                        此顏色將用於在產品選擇時區分不同系列
-                      </p>
                     </FormItem>
                   )}
                 />

@@ -128,7 +128,19 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
             code: doc.data().code,
             name: doc.data().name
           })));
-          
+
+          // 查詢所有產品類型以獲取顏色資訊
+          const productTypesQuery = getDocs(collection(db, 'productTypes'));
+          const [productTypesSnapshot] = await Promise.all([productTypesQuery]);
+
+          // 建立產品類型到顏色的映射表
+          const productTypeColorMap = new Map<string, string>();
+          productTypesSnapshot.docs.forEach(doc => {
+            const data = doc.data();
+            const typeKey = `${data.name}(${data.code})`;
+            productTypeColorMap.set(typeKey, data.color || 'gray');
+          });
+
           setOptions({
              series: seriesSnapshot.docs
                .map(doc => {
@@ -138,13 +150,15 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
                  const seriesCode = data.code;
                  // 格式: "產品類型 系列名稱 (系列編號)"
                  const displayLabel = `${productType} ${seriesName} (${seriesCode})`;
+                 // 從產品類型映射表獲取顏色
+                 const color = productTypeColorMap.get(productType) || 'gray';
                  return {
                    value: doc.id,
                    label: displayLabel,
                    productType: productType,
                    seriesName: seriesName,
                    seriesCode: seriesCode,
-                   color: data.color || 'gray'
+                   color: color
                  };
                })
                .sort((a, b) => {

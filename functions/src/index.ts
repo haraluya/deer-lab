@@ -77,6 +77,7 @@ export * from "./api/suppliers";
 export * from "./api/materials";
 export * from "./api/fragrances";
 export * from "./api/products";
+export * from "./api/productTypes";
 export * from "./api/productSeries";
 export * from "./api/purchaseOrders";
 export * from "./api/inventory";

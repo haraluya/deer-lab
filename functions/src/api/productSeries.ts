@@ -20,7 +20,6 @@ interface CreateProductSeriesRequest {
   name: string;
   typeCode: string;
   productType?: string;
-  color?: string;
   description?: string;
   defaultMaterials?: {
     materialId: string;
@@ -37,7 +36,6 @@ interface UpdateProductSeriesRequest {
   name?: string;
   typeCode?: string;
   productType?: string;
-  color?: string;
   description?: string;
   defaultMaterials?: {
     materialId: string;
@@ -55,7 +53,7 @@ export const createProductSeries = CrudApiHandlers.createCreateHandler<CreatePro
     // 1. 驗證必填欄位
     ErrorHandler.validateRequired(data, ['name', 'typeCode']);
 
-    const { name, typeCode, productType, color, description, defaultMaterials, isActive } = data;
+    const { name, typeCode, productType, description, defaultMaterials, isActive } = data;
 
     try {
       // 2. 檢查系列代碼是否已存在
@@ -87,7 +85,6 @@ export const createProductSeries = CrudApiHandlers.createCreateHandler<CreatePro
         code: typeCode,        // 前端期望的欄位名稱
         typeCode,             // API 標準欄位名稱
         productType: productType || '其他(ETC)',
-        color: color || 'gray', // 顏色，默認灰色
         description: description || '',
         commonMaterials,
         isActive: isActive !== false,
@@ -132,7 +129,7 @@ export const updateProductSeries = CrudApiHandlers.createUpdateHandler<UpdatePro
     // 1. 驗證必填欄位
     ErrorHandler.validateRequired(data, ['id']);
 
-    const { id, name, typeCode, productType, color, description, defaultMaterials, isActive } = data;
+    const { id, name, typeCode, productType, description, defaultMaterials, isActive } = data;
 
     try {
       // 2. 檢查系列是否存在
@@ -185,7 +182,6 @@ export const updateProductSeries = CrudApiHandlers.createUpdateHandler<UpdatePro
         updateData.code = typeCode;  // 同時更新兩個欄位保持相容
       }
       if (productType !== undefined) updateData.productType = productType;
-      if (color !== undefined) updateData.color = color;
       if (description !== undefined) updateData.description = description;
       if (commonMaterials !== undefined) updateData.commonMaterials = commonMaterials;
       if (isActive !== undefined) updateData.isActive = isActive;
