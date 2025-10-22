@@ -129,7 +129,29 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
           })));
           
           setOptions({
-             series: seriesSnapshot.docs.map(doc => ({ value: doc.id, label: doc.data().name })),
+             series: seriesSnapshot.docs
+               .map(doc => {
+                 const data = doc.data();
+                 const productType = data.productType || '其他(ETC)';
+                 const seriesName = data.name;
+                 const seriesCode = data.code;
+                 // 格式: "產品類型 系列名稱 (系列編號)"
+                 const displayLabel = `${productType} ${seriesName} (${seriesCode})`;
+                 return {
+                   value: doc.id,
+                   label: displayLabel,
+                   productType: productType,
+                   seriesName: seriesName
+                 };
+               })
+               .sort((a, b) => {
+                 // 先按產品類別排序
+                 if (a.productType !== b.productType) {
+                   return a.productType.localeCompare(b.productType, 'zh-TW');
+                 }
+                 // 再按系列名稱排序
+                 return a.seriesName.localeCompare(b.seriesName, 'zh-TW');
+               }),
              fragrances: fragrancesSnapshot.docs
                .map(doc => ({ 
                  value: doc.id, 
