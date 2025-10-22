@@ -1,0 +1,37 @@
+[
+  {
+    "name": "罐裝油",
+    "code": "BOT",
+    "color": "blue",
+    "description": "罐裝油產品類型",
+    "isActive": true
+  },
+  {
+    "name": "一代棉芯煙彈",
+    "code": "OMP",
+    "color": "purple",
+    "description": "一代棉芯煙彈產品類型",
+    "isActive": true
+  },
+  {
+    "name": "一代陶瓷芯煙彈",
+    "code": "OTP",
+    "color": "pink",
+    "description": "一代陶瓷芯煙彈產品類型",
+    "isActive": true
+  },
+  {
+    "name": "五代陶瓷芯煙彈",
+    "code": "FTP",
+    "color": "orange",
+    "description": "五代陶瓷芯煙彈產品類型",
+    "isActive": true
+  },
+  {
+    "name": "其他",
+    "code": "ETC",
+    "color": "gray",
+    "description": "其他產品類型",
+    "isActive": true
+  }
+]

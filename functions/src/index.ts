@@ -87,3 +87,6 @@ export * from "./api/personnel";
 export * from "./api/timeRecords";
 export * from "./api/globalCart";
 
+// 匯出維護工具 API（初始化用）
+export * from "./api/maintenance/initializeProductTypes";
+
