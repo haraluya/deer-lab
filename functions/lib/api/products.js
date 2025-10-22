@@ -139,15 +139,10 @@ exports.createProduct = apiWrapper_1.CrudApiHandlers.createCreateHandler('Produc
             throw new errorHandler_1.BusinessError(errorHandler_1.ApiErrorCode.INTERNAL_ERROR, '無法生成唯一的產品編號，請重試');
         };
         const productNumber = await generateProductNumber();
-        // 4. 將產品類型名稱轉換為代碼
-        const productTypeCodeMap = {
-            '罐裝油(BOT)': 'BOT',
-            '一代棉芯煙彈(OMP)': 'OMP',
-            '一代陶瓷芯煙彈(OTP)': 'OTP',
-            '五代陶瓷芯煙彈(FTP)': 'FTP',
-            '其他(ETC)': 'ETC',
-        };
-        const productTypeCode = productTypeCodeMap[productType] || 'ETC';
+        // 4. 從 "名稱(代碼)" 格式中動態提取代碼部分
+        // 例如 "罐裝油(BOT)" -> "BOT"
+        const codeMatch = productType.match(/\(([^)]+)\)$/);
+        const productTypeCode = codeMatch ? codeMatch[1] : 'ETC';
         const productCode = `${productTypeCode}-${seriesCode}-${productNumber}`;
         // 5. 準備引用
         const fragranceRef = db.doc(`fragrances/${fragranceId}`);

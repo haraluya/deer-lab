@@ -205,22 +205,16 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
                const data = doc.data();
                console.log('單個系列資料:', { id: doc.id, data }); // 調試用
                
-               // 處理產品類型，將顯示名稱轉換為代碼
+               // 處理產品類型，從 "名稱(代碼)" 格式中提取代碼
                let productType = data.productType;
                if (!productType || productType === '') {
                  productType = '其他(ETC)'; // 預設為其他
                }
-               
-               // 將產品類型名稱轉換為代碼
-               const productTypeCodeMap: { [key: string]: string } = {
-                 '罐裝油(BOT)': 'BOT',
-                 '一代棉芯煙彈(OMP)': 'OMP',
-                 '一代陶瓷芯煙彈(OTP)': 'OTP',
-                 '五代陶瓷芯煙彈(FTP)': 'FTP',
-                 '其他(ETC)': 'ETC',
-               };
-               
-               const productTypeCode = productTypeCodeMap[productType] || 'ETC';
+
+               // 從 "名稱(代碼)" 格式中動態提取代碼部分
+               // 例如 "罐裝油(BOT)" -> "BOT"
+               const codeMatch = productType.match(/\(([^)]+)\)$/);
+               const productTypeCode = codeMatch ? codeMatch[1] : 'ETC';
                
                                 return {
                    id: doc.id,

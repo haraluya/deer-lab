@@ -192,24 +192,24 @@ export function generateRandomBgColor(): string {
 }
 
 
-// 產品類型代號映射
-export const PRODUCT_TYPE_CODES = {
-  '罐裝油(BOT)': 'BOT',
-  '一代棉芯煙彈(OMP)': 'OMP',
-  '一代陶瓷芯煙彈(OTP)': 'OTP',
-  '五代陶瓷芯煙彈(FTP)': 'FTP',
-  '其他(ETC)': 'ETC',
-} as const;
+/**
+ * 從 "名稱(代碼)" 格式中提取代碼部分
+ * 例如: "罐裝油(BOT)" -> "BOT"
+ */
+export function extractProductTypeCode(productType: string): string {
+  const codeMatch = productType.match(/\(([^)]+)\)$/);
+  return codeMatch ? codeMatch[1] : 'ETC';
+}
 
 // 生成完整的產品編號
 export async function generateCompleteProductCode(
-  seriesCode: string, 
-  productType: string, 
+  seriesCode: string,
+  productType: string,
   db: any
 ): Promise<string> {
   try {
-    // 獲取產品類型代號
-    const typeCode = PRODUCT_TYPE_CODES[productType as keyof typeof PRODUCT_TYPE_CODES] || 'ETC';
+    // 獲取產品類型代號（動態提取）
+    const typeCode = extractProductTypeCode(productType);
     
     // 查詢該系列下現有的產品數量
     const productsQuery = query(
@@ -267,17 +267,16 @@ export function validateProductCode(productCode: string): boolean {
   if (!parsed) {
     return false;
   }
-  
-  // 檢查類型代號是否有效
-  const validTypeCodes = Object.values(PRODUCT_TYPE_CODES);
-  if (!validTypeCodes.includes(parsed.typeCode as any)) {
+
+  // 檢查類型代號格式（2-4個大寫字母）
+  if (!/^[A-Z]{2,4}$/.test(parsed.typeCode)) {
     return false;
   }
-  
+
   // 檢查序號是否為數字
   if (!/^\d+$/.test(parsed.sequenceNumber)) {
     return false;
   }
-  
+
   return true;
 }
