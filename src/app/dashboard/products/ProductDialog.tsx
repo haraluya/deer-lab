@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MultiSelect, OptionType } from '@/components/ui/multi-select';
 import { Package, Tag, FlaskConical, Search, ChevronDown, Check } from 'lucide-react';
+import { getColorOption } from '@/components/ui/color-picker';
 
 // 表單的 Zod 驗證 Schema
 const formSchema = z.object({
@@ -141,7 +142,9 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
                    value: doc.id,
                    label: displayLabel,
                    productType: productType,
-                   seriesName: seriesName
+                   seriesName: seriesName,
+                   seriesCode: seriesCode,
+                   color: data.color || 'gray'
                  };
                })
                .sort((a, b) => {
@@ -482,9 +485,22 @@ export function ProductDialog({ isOpen, onOpenChange, onProductUpdate, productDa
                              </SelectTrigger>
                            </FormControl>
                            <SelectContent>
-                             {options.series.map(option => (
-                               <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                             ))}
+                             {options.series.map((option: any) => {
+                               // 從系列顏色設定獲取顏色樣式
+                               const colorOption = getColorOption(option.color);
+
+                               return (
+                                 <SelectItem key={option.value} value={option.value}>
+                                   <div className="flex items-center gap-2">
+                                     <span className={`px-2 py-0.5 rounded text-xs font-medium border ${colorOption.bgClass} ${colorOption.textClass} ${colorOption.borderClass}`}>
+                                       {option.productType}
+                                     </span>
+                                     <span className="font-semibold text-gray-900">{option.seriesName}</span>
+                                     <span className="text-gray-500 text-sm">({option.seriesCode})</span>
+                                   </div>
+                                 </SelectItem>
+                               );
+                             })}
                            </SelectContent>
                          </Select>
                          <FormMessage />

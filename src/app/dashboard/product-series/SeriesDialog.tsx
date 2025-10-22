@@ -22,12 +22,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Package, Tag } from 'lucide-react'; 
+import { Package, Tag, Palette } from 'lucide-react';
+import { ColorPicker, getRandomColor } from '@/components/ui/color-picker'; 
 
 const formSchema = z.object({
   name: z.string().min(2, { message: '系列名稱至少需要 2 個字元' }),
   code: z.string().min(1, { message: '系列代號為必填欄位' }),
   productType: z.string().min(1, { message: '產品類型為必填欄位' }),
+  color: z.string().min(1, { message: '請選擇系列顏色' }),
   commonMaterialIds: z.array(z.string()).optional(),
 });
 
@@ -39,6 +41,7 @@ export interface SeriesData extends DocumentData {
   code: string;
   typeCode?: string;
   productType: string;
+  color?: string;
   commonMaterials: DocumentReference[];
 }
 
@@ -64,7 +67,13 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: { name: '', code: '', productType: '其他(ETC)', commonMaterialIds: [] },
+    defaultValues: {
+      name: '',
+      code: '',
+      productType: '其他(ETC)',
+      color: getRandomColor(), // 新增時隨機分配顏色
+      commonMaterialIds: []
+    },
   });
 
   useEffect(() => {
@@ -111,10 +120,17 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
         name: seriesData.name || '',
         code: seriesData.code || seriesData.typeCode || '',
         productType: seriesData.productType || '其他(ETC)',
+        color: seriesData.color || getRandomColor(), // 如果沒有顏色，隨機分配一個
         commonMaterialIds: seriesData.commonMaterials?.map(ref => ref.id) || [],
       });
     } else if (isOpen && !seriesData) {
-      form.reset({ name: '', code: '', productType: '其他(ETC)', commonMaterialIds: [] });
+      form.reset({
+        name: '',
+        code: '',
+        productType: '其他(ETC)',
+        color: getRandomColor(),
+        commonMaterialIds: []
+      });
     }
   }, [isOpen, seriesData, form]);
 
@@ -126,8 +142,9 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
           name: values.name,
           typeCode: values.code,
           productType: values.productType,
+          color: values.color,
           description: `${values.name} 系列`,
-          defaultMaterials: values.commonMaterialIds && values.commonMaterialIds.length > 0 
+          defaultMaterials: values.commonMaterialIds && values.commonMaterialIds.length > 0
             ? values.commonMaterialIds.map(materialId => ({
                 materialId,
                 quantity: 1
@@ -148,8 +165,9 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
           name: values.name,
           typeCode: values.code,
           productType: values.productType,
+          color: values.color,
           description: `${values.name} 系列`,
-          defaultMaterials: values.commonMaterialIds && values.commonMaterialIds.length > 0 
+          defaultMaterials: values.commonMaterialIds && values.commonMaterialIds.length > 0
             ? values.commonMaterialIds.map(materialId => ({
                 materialId,
                 quantity: 1
@@ -253,6 +271,27 @@ export function SeriesDialog({ isOpen, onOpenChange, onSeriesUpdate, seriesData 
                         </SelectContent>
                       </Select>
                       <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* 顏色選擇 */}
+              <div className="mt-4">
+                <FormField
+                  control={form.control}
+                  name="color"
+                  render={({ field }) => (
+                    <FormItem>
+                      <ColorPicker
+                        value={field.value}
+                        onChange={field.onChange}
+                        label="系列顏色 *"
+                      />
+                      <FormMessage />
+                      <p className="text-xs text-gray-500 mt-1">
+                        此顏色將用於在產品選擇時區分不同系列
+                      </p>
                     </FormItem>
                   )}
                 />
