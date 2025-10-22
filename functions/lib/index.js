@@ -87,6 +87,7 @@ __exportStar(require("./api/suppliers"), exports);
 __exportStar(require("./api/materials"), exports);
 __exportStar(require("./api/fragrances"), exports);
 __exportStar(require("./api/products"), exports);
+__exportStar(require("./api/productTypes"), exports);
 __exportStar(require("./api/productSeries"), exports);
 __exportStar(require("./api/purchaseOrders"), exports);
 __exportStar(require("./api/inventory"), exports);
@@ -95,4 +96,6 @@ __exportStar(require("./api/roles"), exports);
 __exportStar(require("./api/personnel"), exports);
 __exportStar(require("./api/timeRecords"), exports);
 __exportStar(require("./api/globalCart"), exports);
+// 匯出維護工具 API（初始化用）
+__exportStar(require("./api/maintenance/initializeProductTypes"), exports);
 //# sourceMappingURL=index.js.map

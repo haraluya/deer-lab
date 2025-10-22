@@ -7,7 +7,7 @@
  */
 
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import { CrudApiHandlers } from "../../utils/apiWrapper";
+import { createSimpleApiHandler } from "../../utils/apiWrapper";
 import { BusinessError, ApiErrorCode } from "../../utils/errorHandler";
 
 const db = getFirestore();
@@ -54,9 +54,9 @@ const DEFAULT_PRODUCT_TYPES = [
 /**
  * 初始化產品類型
  */
-export const initializeProductTypes = CrudApiHandlers.createReadHandler(
+export const initializeProductTypes = createSimpleApiHandler<any, any>(
   'InitializeProductTypes',
-  async (data: any, context, requestId) => {
+  async (data: any, context) => {
     try {
       console.log('🚀 開始初始化產品類型資料...');
 
