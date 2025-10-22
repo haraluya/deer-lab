@@ -818,6 +818,28 @@ export namespace GlobalCartApi {
 }
 
 // =============================================================================
+// 產品類型 (Product Types) API
+// =============================================================================
+
+export namespace ProductTypesApi {
+  export interface CreateRequest {
+    name: string;
+    code: string;
+    color: string;
+    description?: string;
+    isActive?: boolean;
+  }
+
+  export interface UpdateRequest extends Partial<CreateRequest> {
+    id: string;
+  }
+
+  export interface DeleteRequest {
+    id: string;
+  }
+}
+
+// =============================================================================
 // 產品系列 (Product Series) API
 // =============================================================================
 
@@ -1161,6 +1183,20 @@ export interface ApiEndpoints {
   'syncGlobalCart': {
     request: GlobalCartApi.SyncCartRequest;
     response: GlobalCartApi.SyncCartResponse;
+  };
+
+  // 產品類型
+  'createProductType': {
+    request: ProductTypesApi.CreateRequest;
+    response: CrudResponse;
+  };
+  'updateProductType': {
+    request: ProductTypesApi.UpdateRequest;
+    response: CrudResponse;
+  };
+  'deleteProductType': {
+    request: ProductTypesApi.DeleteRequest;
+    response: CrudResponse;
   };
 
   // 產品系列

@@ -195,7 +195,7 @@ function ProductTypesPageContent() {
       value: types.length,
       subtitle: '所有產品類型',
       icon: <Layers className="h-4 w-4" />,
-      color: 'indigo'
+      color: 'blue'
     },
     {
       title: '總系列數',
