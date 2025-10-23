@@ -7,6 +7,7 @@ import { db } from '@/lib/firebase';
 import { useDataSearch, createProductSearchConfig } from '@/hooks/useDataSearch';
 import { useApiClient } from '@/hooks/useApiClient';
 import { useProductsCache } from '@/hooks/useProductsCache';
+import { generateColorConfig, ProductTypeColorConfig } from '@/lib/utils';
 
 import { MoreHorizontal, Droplets, FileSpreadsheet, Eye, Edit, Package, Factory, Calendar, Plus, Tag, Library, Search, Shield, FlaskConical, Star, Lightbulb, Layers } from 'lucide-react';
 import { toast } from 'sonner';
@@ -31,6 +32,7 @@ interface ProductWithDetails extends ProductData {
   fragranceName: string;
   fragranceCode: string;
   status?: '啟用' | '備用' | '棄用';
+  productType: string; // 產品類型（從系列繼承）
 }
 
 function ProductsPageContent() {
@@ -60,6 +62,7 @@ function ProductsPageContent() {
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [isBatchDeleteOpen, setIsBatchDeleteOpen] = useState(false);
   const [isFragranceCalculatorOpen, setIsFragranceCalculatorOpen] = useState(false);
+  const [productTypeColors, setProductTypeColors] = useState<Map<string, ProductTypeColorConfig>>(new Map());
 
   // 使用統一的搜尋過濾 Hook
   const {
@@ -90,15 +93,32 @@ function ProductsPageContent() {
       }
 
       // 讀取關聯資料
-      const seriesMap = new Map<string, string>();
+      const seriesMap = new Map<string, { name: string; productType: string }>();
       const fragrancesMap = new Map<string, { name: string; code: string }>();
+
+      // 載入產品類型及其顏色配置
+      const productTypesSnapshot = await getDocs(collection(db, 'productTypes'));
+      const typeColorsMap = new Map<string, ProductTypeColorConfig>();
+      productTypesSnapshot.forEach(doc => {
+        const data = doc.data();
+        const typeFullName = `${data.name}(${data.code})`;
+        const colorConfig = generateColorConfig(data.color || 'gray');
+        typeColorsMap.set(typeFullName, colorConfig);
+      });
+      setProductTypeColors(typeColorsMap);
 
       const [seriesSnapshot, fragrancesSnapshot] = await Promise.all([
         getDocs(collection(db, "productSeries")),
         getDocs(collection(db, "fragrances"))
       ]);
 
-      seriesSnapshot.forEach(doc => seriesMap.set(doc.id, doc.data().name));
+      seriesSnapshot.forEach(doc => {
+        const data = doc.data();
+        seriesMap.set(doc.id, {
+          name: data.name,
+          productType: data.productType || '其他(ETC)'
+        });
+      });
       fragrancesSnapshot.forEach(doc => {
         const data = doc.data();
         fragrancesMap.set(doc.id, {
@@ -110,9 +130,11 @@ function ProductsPageContent() {
       // 處理產品數據，加入關聯資訊
       const productsList = rawProducts.map(product => {
         const fragranceInfo = fragrancesMap.get(product.currentFragranceRef?.id);
+        const seriesInfo = seriesMap.get(product.seriesRef?.id);
         return {
           ...product,
-          seriesName: seriesMap.get(product.seriesRef?.id) || '未知系列',
+          seriesName: seriesInfo?.name || '未知系列',
+          productType: seriesInfo?.productType || '其他(ETC)',
           fragranceName: fragranceInfo?.name || '未知香精',
           fragranceCode: fragranceInfo?.code || '',
         } as ProductWithDetails;
@@ -175,6 +197,11 @@ function ProductsPageContent() {
     }
   }, [searchParams, products, router]);
 
+  // 輔助函數：獲取產品類型顏色配置
+  const getTypeColor = useCallback((productType: string): ProductTypeColorConfig => {
+    return productTypeColors.get(productType) || generateColorConfig('gray');
+  }, [productTypeColors]);
+
   // 權限保護：如果沒有查看權限，顯示無權限頁面
   if (!canViewProducts && !isAdmin()) {
     return (
@@ -197,23 +224,29 @@ function ProductsPageContent() {
       sortable: true,
       searchable: true,
       priority: 5,
-      render: (value, record) => (
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center">
-            <Package className="h-5 w-5 text-white" />
+      render: (value, record) => {
+        const typeColor = getTypeColor(record.productType);
+        return (
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 bg-gradient-to-r ${typeColor.gradient} rounded-lg flex items-center justify-center`}>
+              <Package className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <div className="font-semibold text-foreground">{record.name}</div>
+              <div className={`text-xs font-medium ${typeColor.text}`}>{record.code}</div>
+            </div>
           </div>
+        );
+      },
+      mobileRender: (value, record) => {
+        const typeColor = getTypeColor(record.productType);
+        return (
           <div>
-            <div className="font-semibold text-foreground">{record.name}</div>
-            <div className="text-xs text-green-600 font-medium">{record.code}</div>
+            <div className="font-medium text-gray-900">{record.name}</div>
+            <div className={`text-xs font-medium ${typeColor.text}`}>{record.code}</div>
           </div>
-        </div>
-      ),
-      mobileRender: (value, record) => (
-        <div>
-          <div className="font-medium text-gray-900">{record.name}</div>
-          <div className="text-xs text-green-600 font-medium">{record.code}</div>
-        </div>
-      )
+        );
+      }
     },
     {
       key: 'seriesName',
@@ -224,6 +257,21 @@ function ProductsPageContent() {
       render: (value) => (
         <span className="text-sm font-medium text-foreground">{value}</span>
       )
+    },
+    {
+      key: 'productType',
+      title: '產品類型',
+      sortable: true,
+      filterable: true,
+      priority: 4,
+      render: (value) => {
+        const typeColor = getTypeColor(value);
+        return (
+          <Badge variant="outline" className={`${typeColor.bg} ${typeColor.text} ${typeColor.border}`}>
+            {value}
+          </Badge>
+        );
+      }
     },
     {
       key: 'fragranceCode',
