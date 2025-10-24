@@ -5,7 +5,16 @@
       "Read(//e/PrtSrc/Screenshots/2025-09/**)",
       "Bash(copy firestore.indexes.json firestore.indexes.backup.json)",
       "Bash(npm run build:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\n🎨 優化產品管理頁面 - 繼承產品類型動態顏色系統\n\n- 擴充 ProductWithDetails 介面，新增 productType 欄位\n- 從 Firestore 動態載入產品類型顏色配置\n- 產品資訊欄位圖標使用產品類型漸層色\n- 產品代號文字顯示產品類型顏色\n- 新增產品類型欄位到欄位列表，顯示為彩色 Badge\n- 實現與系列管理頁面一致的視覺設計風格\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(xcopy:*)",
+      "Bash(powershell:*)",
+      "Bash(firebase deploy:*)",
+      "Bash(git push)",
+      "Bash(firebase functions:log:*)",
+      "Bash(Select-String -Pattern \"Deploy complete\" -Context 5,5)",
+      "Bash(timeout 180 bash:*)",
+      "Bash(Select-String -Pattern \"Deploy complete\" -Context 2,2)"
     ],
     "deny": [],
     "ask": []

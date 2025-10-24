@@ -42,7 +42,10 @@ interface Comment {
 interface WorkOrderData {
   id: string
   code: string
-  productSnapshot: {
+  orderType?: 'product' | 'general' // 工單類型
+
+  // 產品工單專用
+  productSnapshot?: {
     code: string
     name: string
     seriesName?: string
@@ -50,6 +53,11 @@ interface WorkOrderData {
     fragranceCode: string
     nicotineMg: number
   }
+
+  // 通用工單專用
+  workItem?: string
+  workDescription?: string
+
   billOfMaterials: Array<{
     id: string
     name: string
@@ -627,14 +635,21 @@ export default function WorkOrderDetailPage() {
         setWorkOrder({
           id: workOrderDoc.id,
           code: data.code,
-          productSnapshot: {
+          orderType: data.orderType || 'product', // 預設為產品工單（向後相容）
+
+          // 產品工單資料
+          productSnapshot: data.productSnapshot ? {
             code: data.productSnapshot?.code || '',
             name: data.productSnapshot?.name || '',
             seriesName: data.productSnapshot?.seriesName || '未指定',
             fragranceName: data.productSnapshot?.fragranceName || '未指定',
             fragranceCode: data.productSnapshot?.fragranceCode || '未指定',
             nicotineMg: data.productSnapshot?.nicotineMg || 0,
-          },
+          } : undefined,
+
+          // 通用工單資料
+          workItem: data.workItem,
+          workDescription: data.workDescription,
           billOfMaterials: (data.billOfMaterials || []).map((item: BillOfMaterialsItem) => {
             // 查找對應的物料或香精，獲取當前庫存
             let material: Material | Fragrance | null = null;
@@ -1871,34 +1886,66 @@ export default function WorkOrderDetailPage() {
           <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Package className="h-5 w-5" />
             工單基本資料
+            {workOrder.orderType === 'general' && (
+              <Badge className="ml-2 bg-indigo-100 text-indigo-800 border border-indigo-300">
+                通用工單
+              </Badge>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-            <div className="text-center p-3 sm:p-4 bg-white rounded-lg border">
-              <div className="text-xs sm:text-sm text-gray-600 mb-1">生產產品名稱</div>
-              <div className="font-semibold text-blue-800 text-sm sm:text-base truncate">{workOrder.productSnapshot.name}</div>
-              <div className="text-xs text-gray-500 truncate">{workOrder.productSnapshot.seriesName || '未指定'}</div>
+          {/* 產品工單顯示 */}
+          {workOrder.orderType === 'product' && workOrder.productSnapshot && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+              <div className="text-center p-3 sm:p-4 bg-white rounded-lg border">
+                <div className="text-xs sm:text-sm text-gray-600 mb-1">生產產品名稱</div>
+                <div className="font-semibold text-blue-800 text-sm sm:text-base truncate">{workOrder.productSnapshot.name}</div>
+                <div className="text-xs text-gray-500 truncate">{workOrder.productSnapshot.seriesName || '未指定'}</div>
+              </div>
+
+              <div className="text-center p-3 sm:p-4 bg-white rounded-lg border">
+                <div className="text-xs sm:text-sm text-gray-600 mb-1">使用香精</div>
+                <div className="font-semibold text-pink-800 text-sm sm:text-base truncate">{workOrder.productSnapshot.fragranceCode}</div>
+                <div className="text-xs text-gray-500 truncate">{workOrder.productSnapshot.fragranceName}</div>
+              </div>
+
+              <div className="text-center p-3 sm:p-4 bg-white rounded-lg border">
+                <div className="text-xs sm:text-sm text-gray-600 mb-1">尼古丁濃度</div>
+                <div className="font-semibold text-orange-800 text-sm sm:text-base">{workOrder.productSnapshot.nicotineMg} mg</div>
+              </div>
+
+              <div className="text-center p-3 sm:p-4 bg-white rounded-lg border">
+                <div className="text-xs sm:text-sm text-gray-600 mb-1">工單狀態</div>
+                <Badge className={`${statusOptions.find(s => s.value === workOrder.status)?.color} text-base sm:text-lg font-bold px-3 py-1`}>
+                  {workOrder.status}
+                </Badge>
+              </div>
             </div>
-            
-            <div className="text-center p-3 sm:p-4 bg-white rounded-lg border">
-              <div className="text-xs sm:text-sm text-gray-600 mb-1">使用香精</div>
-              <div className="font-semibold text-pink-800 text-sm sm:text-base truncate">{workOrder.productSnapshot.fragranceCode}</div>
-              <div className="text-xs text-gray-500 truncate">{workOrder.productSnapshot.fragranceName}</div>
+          )}
+
+          {/* 通用工單顯示 */}
+          {workOrder.orderType === 'general' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                  <div className="text-sm text-gray-600 mb-2 font-semibold">工作項目</div>
+                  <div className="text-lg font-bold text-blue-900">{workOrder.workItem}</div>
+                </div>
+
+                <div className="text-center p-3 sm:p-4 bg-white rounded-lg border">
+                  <div className="text-xs sm:text-sm text-gray-600 mb-1">工單狀態</div>
+                  <Badge className={`${statusOptions.find(s => s.value === workOrder.status)?.color} text-base sm:text-lg font-bold px-3 py-1`}>
+                    {workOrder.status}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="text-sm text-gray-600 mb-2 font-semibold">工作描述</div>
+                <div className="text-gray-800 whitespace-pre-wrap">{workOrder.workDescription}</div>
+              </div>
             </div>
-            
-            <div className="text-center p-3 sm:p-4 bg-white rounded-lg border">
-              <div className="text-xs sm:text-sm text-gray-600 mb-1">尼古丁濃度</div>
-              <div className="font-semibold text-orange-800 text-sm sm:text-base">{workOrder.productSnapshot.nicotineMg} mg</div>
-            </div>
-            
-            <div className="text-center p-3 sm:p-4 bg-white rounded-lg border">
-              <div className="text-xs sm:text-sm text-gray-600 mb-1">工單狀態</div>
-              <Badge className={`${statusOptions.find(s => s.value === workOrder.status)?.color} text-base sm:text-lg font-bold px-3 py-1`}>
-                {workOrder.status}
-              </Badge>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
@@ -1951,31 +1998,46 @@ export default function WorkOrderDetailPage() {
               )}
             </div>
 
-            <div>
-              <Label className="text-sm text-gray-600">生產產品名稱</Label>
-              <div className="mt-1 font-medium text-gray-900">{workOrder.productSnapshot.name}</div>
-            </div>
+            {/* 產品工單才顯示產品名稱和系列 */}
+            {workOrder.orderType === 'product' && workOrder.productSnapshot && (
+              <>
+                <div>
+                  <Label className="text-sm text-gray-600">生產產品名稱</Label>
+                  <div className="mt-1 font-medium text-gray-900">{workOrder.productSnapshot.name}</div>
+                </div>
 
-            <div>
-              <Label className="text-sm text-gray-600">產品系列</Label>
-              <div className="mt-1 font-medium text-gray-900">{workOrder.productSnapshot.seriesName || '未指定'}</div>
-            </div>
+                <div>
+                  <Label className="text-sm text-gray-600">產品系列</Label>
+                  <div className="mt-1 font-medium text-gray-900">{workOrder.productSnapshot.seriesName || '未指定'}</div>
+                </div>
+              </>
+            )}
 
-            <div>
-              <Label className="text-sm text-gray-600">目標產量 (KG)</Label>
-              {isEditing ? (
-                <Input
-                  type="number"
-                  min="0.1"
-                  step="0.1"
-                  value={editData.targetQuantity}
-                  onChange={(e) => handleTargetQuantityChange(parseFloat(e.target.value) || 0)}
-                  className="mt-1"
-                />
-              ) : (
-                <div className="mt-1 font-medium text-gray-900">{formatWeight(workOrder.targetQuantity)}</div>
-              )}
-            </div>
+            {/* 通用工單顯示工作項目 */}
+            {workOrder.orderType === 'general' && (
+              <div className="lg:col-span-2">
+                <Label className="text-sm text-gray-600">工作項目</Label>
+                <div className="mt-1 font-medium text-gray-900">{workOrder.workItem}</div>
+              </div>
+            )}
+
+            {workOrder.orderType === 'product' && (
+              <div>
+                <Label className="text-sm text-gray-600">目標產量 (KG)</Label>
+                {isEditing ? (
+                  <Input
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    value={editData.targetQuantity}
+                    onChange={(e) => handleTargetQuantityChange(parseFloat(e.target.value) || 0)}
+                    className="mt-1"
+                  />
+                ) : (
+                  <div className="mt-1 font-medium text-gray-900">{formatWeight(workOrder.targetQuantity)}</div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* 編輯按鈕 */}

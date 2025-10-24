@@ -197,28 +197,38 @@ export interface CartItem {
 export interface WorkOrder {
   id: string;
   code: string;
-  productSnapshot: {
+
+  // 工單類型：產品工單或通用工單
+  orderType?: 'product' | 'general'; // 預設為 'product' 以支援向後相容
+
+  // 產品工單專用欄位
+  productSnapshot?: {
     id: string;
     name: string;
     code: string;
     seriesName?: string;
     recipe?: ProductRecipe;
   };
+
+  // 通用工單專用欄位
+  workItem?: string;        // 工作項目
+  workDescription?: string; // 工作描述
+
   targetQuantity: number;
   unit: string;
   status: '預報' | '進行' | '完工' | '入庫';
-  
+
   // BOM 表和庫存管理
   billOfMaterials: BillOfMaterialsItem[];
   completedAt?: Timestamp;
   warehousedAt?: Timestamp;
-  
+
   // 圖片和留言
   images?: string[];
   comments?: WorkOrderComment[];
-  
+
   // 工時記錄統一使用 timeEntries 集合
-  
+
   // 元數據
   createdBy: string;
   createdByName: string;

@@ -21,8 +21,10 @@ const ITEMS_PER_PAGE = 20;
 export interface WorkOrderColumn {
   id: string
   code: string
-  productName: string
-  seriesName: string
+  orderType?: 'product' | 'general'
+  productName?: string
+  seriesName?: string
+  workItem?: string
   targetQuantity: number
   status: string
   createdAt: string
@@ -131,11 +133,14 @@ function WorkOrdersPageContent() {
       
       const workOrdersList = querySnapshot.docs.map(doc => {
         const data = doc.data()
+        const orderType = data.orderType || 'product' // 預設為產品工單（向後相容）
         return {
           id: doc.id,
           code: data.code || "",
-          productName: data.productSnapshot?.name || "未知產品",
-          seriesName: data.productSnapshot?.seriesName || "未指定",
+          orderType: orderType,
+          productName: orderType === 'product' ? (data.productSnapshot?.name || "未知產品") : undefined,
+          seriesName: orderType === 'product' ? (data.productSnapshot?.seriesName || "未指定") : undefined,
+          workItem: orderType === 'general' ? (data.workItem || "未命名工作") : undefined,
           targetQuantity: data.targetQuantity || 0,
           status: data.status || "預報",
           createdAt: data.createdAt?.toDate?.()?.toLocaleDateString() || "未知日期"
@@ -179,11 +184,14 @@ function WorkOrdersPageContent() {
       
       const workOrdersList = querySnapshot.docs.map(doc => {
         const data = doc.data()
+        const orderType = data.orderType || 'product' // 預設為產品工單（向後相容）
         return {
           id: doc.id,
           code: data.code || "",
-          productName: data.productSnapshot?.name || "未知產品",
-          seriesName: data.productSnapshot?.seriesName || "未指定",
+          orderType: orderType,
+          productName: orderType === 'product' ? (data.productSnapshot?.name || "未知產品") : undefined,
+          seriesName: orderType === 'product' ? (data.productSnapshot?.seriesName || "未指定") : undefined,
+          workItem: orderType === 'general' ? (data.workItem || "未命名工作") : undefined,
           targetQuantity: data.targetQuantity || 0,
           status: data.status || "預報",
           createdAt: data.createdAt?.toDate?.()?.toLocaleDateString() || "未知日期"
@@ -290,12 +298,26 @@ function WorkOrdersPageContent() {
       sortable: true,
       searchable: true,
       priority: 4,
-      render: (value, record) => (
-        <div>
-          <div className="font-medium text-gray-900">{record.productName}</div>
-          <div className="text-sm text-gray-500">{record.seriesName}</div>
-        </div>
-      )
+      render: (value, record) => {
+        if (record.orderType === 'general') {
+          return (
+            <div>
+              <div className="font-medium text-blue-900">{record.workItem}</div>
+              <div className="text-xs text-gray-500 flex items-center gap-1">
+                <Badge className="bg-indigo-100 text-indigo-800 border border-indigo-200 text-xs px-1.5 py-0.5">
+                  通用工單
+                </Badge>
+              </div>
+            </div>
+          )
+        }
+        return (
+          <div>
+            <div className="font-medium text-gray-900">{record.productName}</div>
+            <div className="text-sm text-gray-500">{record.seriesName}</div>
+          </div>
+        )
+      }
     },
     {
       key: 'targetQuantity',
@@ -387,6 +409,10 @@ function WorkOrdersPageContent() {
     );
   }
 
+  const handleCreateGeneralWorkOrder = () => {
+    router.push("/dashboard/work-orders/create-general")
+  }
+
   return (
     <div className="container mx-auto py-10">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -396,15 +422,6 @@ function WorkOrdersPageContent() {
           </h1>
           <p className="text-gray-600 mt-2">管理所有生產工單，追蹤生產進度和狀態</p>
         </div>
-        {canManageWorkOrders && (
-          <Button 
-            onClick={handleCreateWorkOrder}
-            className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold px-4 py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            建立新工單
-          </Button>
-        )}
       </div>
 
       <StandardDataListPage
@@ -413,7 +430,7 @@ function WorkOrdersPageContent() {
         columns={columns}
         actions={actions}
         onRowClick={(record) => router.push(`/dashboard/work-orders/${record.id}`)}
-        
+
         // 搜尋與過濾
         searchable={true}
         searchPlaceholder="搜尋工單編號、產品名稱、系列..."
@@ -431,19 +448,33 @@ function WorkOrdersPageContent() {
         onClearFilters={() => {
           Object.keys(activeFilters).forEach(key => clearFilter(key));
         }}
-        
+
         // 統計資訊
         stats={stats}
         showStats={true}
-        
+
         // 工具列功能
         showToolbar={true}
-        
+
         // 新增功能
         showAddButton={canManageWorkOrders}
         addButtonText="建立新工單"
         onAdd={handleCreateWorkOrder}
-        
+
+        // 自訂工具列按鈕
+        renderToolbarExtra={() => (
+          canManageWorkOrders ? (
+            <Button
+              onClick={handleCreateGeneralWorkOrder}
+              variant="outline"
+              className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white border-0 font-semibold px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+            >
+              <Factory className="mr-2 h-4 w-4" />
+              建立通用工單
+            </Button>
+          ) : null
+        )}
+
         className="space-y-6"
       />
 
