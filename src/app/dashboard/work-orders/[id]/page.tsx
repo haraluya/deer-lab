@@ -28,6 +28,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
 import { TimePicker } from "@/components/ui/time-picker"
 import { TimeTrackingDialog } from "./TimeTrackingDialog"
 
@@ -250,15 +252,21 @@ export default function WorkOrderDetailPage() {
     setIsLoadingItems(true);
     try {
       const fragrancesRef = collection(db, "fragrances");
-      const q = query(fragrancesRef, where("status", "==", "active"));
-      const snapshot = await getDocs(q);
-      const items = snapshot.docs.map(doc => ({
-        id: doc.id,
-        code: doc.data().code,
-        name: doc.data().name,
-        unit: "KG"
-      }));
+      const snapshot = await getDocs(fragrancesRef);
+      const items = snapshot.docs
+        .filter(doc => {
+          const data = doc.data();
+          // 排除已刪除或停用的香精
+          return data.status !== "deleted" && data.status !== "inactive";
+        })
+        .map(doc => ({
+          id: doc.id,
+          code: doc.data().code || doc.id,
+          name: doc.data().name || "未命名",
+          unit: "KG"
+        }));
       setAvailableFragrances(items);
+      console.log("載入香精清單:", items.length, "筆");
     } catch (err) {
       error("載入香精清單失敗", err as Error);
       toast.error("載入香精清單失敗");
@@ -273,15 +281,21 @@ export default function WorkOrderDetailPage() {
     setIsLoadingItems(true);
     try {
       const materialsRef = collection(db, "materials");
-      const q = query(materialsRef, where("status", "==", "active"));
-      const snapshot = await getDocs(q);
-      const items = snapshot.docs.map(doc => ({
-        id: doc.id,
-        code: doc.data().code,
-        name: doc.data().name,
-        unit: doc.data().unit || "KG"
-      }));
+      const snapshot = await getDocs(materialsRef);
+      const items = snapshot.docs
+        .filter(doc => {
+          const data = doc.data();
+          // 排除已刪除或停用的原料
+          return data.status !== "deleted" && data.status !== "inactive";
+        })
+        .map(doc => ({
+          id: doc.id,
+          code: doc.data().code || doc.id,
+          name: doc.data().name || "未命名",
+          unit: doc.data().unit || "KG"
+        }));
       setAvailableMaterials(items);
+      console.log("載入原料清單:", items.length, "筆");
     } catch (err) {
       error("載入原料清單失敗", err as Error);
       toast.error("載入原料清單失敗");
@@ -3710,40 +3724,63 @@ export default function WorkOrderDetailPage() {
           <div className="space-y-4">
             <div>
               <Label>選擇香精</Label>
-              <Select
-                value={selectedItemToAdd?.id || ""}
-                onValueChange={(value) => {
-                  const item = availableFragrances.find(f => f.id === value);
-                  setSelectedItemToAdd(item || null);
-                }}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="請選擇香精" />
-                </SelectTrigger>
-                <SelectContent>
-                  {isLoadingItems ? (
-                    <div className="p-2 text-center text-gray-500">載入中...</div>
-                  ) : availableFragrances.length === 0 ? (
-                    <div className="p-2 text-center text-gray-500">無可用香精</div>
-                  ) : (
-                    availableFragrances.map(item => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.code} - {item.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              {!isLoadingItems && availableFragrances.length === 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={loadAvailableFragrances}
-                  className="mt-2"
-                >
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  載入香精清單
-                </Button>
+              {isLoadingItems ? (
+                <div className="mt-1 p-3 text-center text-gray-500 border rounded-md">
+                  <Loader2 className="h-4 w-4 animate-spin inline-block mr-2" />
+                  載入中...
+                </div>
+              ) : availableFragrances.length === 0 ? (
+                <div className="mt-1">
+                  <div className="p-3 text-center text-gray-500 border rounded-md">無可用香精</div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={loadAvailableFragrances}
+                    className="mt-2 w-full"
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    載入香精清單
+                  </Button>
+                </div>
+              ) : (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full mt-1 justify-start text-left font-normal"
+                    >
+                      {selectedItemToAdd && selectedItemToAdd.unit === "KG" ? (
+                        <span>{selectedItemToAdd.code} - {selectedItemToAdd.name}</span>
+                      ) : (
+                        <span className="text-gray-500">請選擇香精</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-96 p-0">
+                    <Command>
+                      <CommandInput placeholder="搜尋香精名稱或代號..." />
+                      <CommandEmpty>找不到符合條件的香精。</CommandEmpty>
+                      <CommandGroup className="max-h-64 overflow-auto">
+                        {availableFragrances.map((item) => (
+                          <CommandItem
+                            key={item.id}
+                            onSelect={() => {
+                              setSelectedItemToAdd(item);
+                            }}
+                            className="cursor-pointer"
+                          >
+                            <div className="flex flex-col flex-1">
+                              <span className="font-medium">{item.name}</span>
+                              <span className="text-xs text-slate-500">
+                                代號：{item.code}
+                              </span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               )}
             </div>
 
@@ -3799,40 +3836,63 @@ export default function WorkOrderDetailPage() {
           <div className="space-y-4">
             <div>
               <Label>選擇原料</Label>
-              <Select
-                value={selectedItemToAdd?.id || ""}
-                onValueChange={(value) => {
-                  const item = availableMaterials.find(m => m.id === value);
-                  setSelectedItemToAdd(item || null);
-                }}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="請選擇原料" />
-                </SelectTrigger>
-                <SelectContent>
-                  {isLoadingItems ? (
-                    <div className="p-2 text-center text-gray-500">載入中...</div>
-                  ) : availableMaterials.length === 0 ? (
-                    <div className="p-2 text-center text-gray-500">無可用原料</div>
-                  ) : (
-                    availableMaterials.map(item => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.code} - {item.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              {!isLoadingItems && availableMaterials.length === 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={loadAvailableMaterials}
-                  className="mt-2"
-                >
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  載入原料清單
-                </Button>
+              {isLoadingItems ? (
+                <div className="mt-1 p-3 text-center text-gray-500 border rounded-md">
+                  <Loader2 className="h-4 w-4 animate-spin inline-block mr-2" />
+                  載入中...
+                </div>
+              ) : availableMaterials.length === 0 ? (
+                <div className="mt-1">
+                  <div className="p-3 text-center text-gray-500 border rounded-md">無可用原料</div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={loadAvailableMaterials}
+                    className="mt-2 w-full"
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    載入原料清單
+                  </Button>
+                </div>
+              ) : (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full mt-1 justify-start text-left font-normal"
+                    >
+                      {selectedItemToAdd && selectedItemToAdd.unit !== "KG" || selectedItemToAdd ? (
+                        <span>{selectedItemToAdd.code} - {selectedItemToAdd.name}</span>
+                      ) : (
+                        <span className="text-gray-500">請選擇原料</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-96 p-0">
+                    <Command>
+                      <CommandInput placeholder="搜尋原料名稱或代號..." />
+                      <CommandEmpty>找不到符合條件的原料。</CommandEmpty>
+                      <CommandGroup className="max-h-64 overflow-auto">
+                        {availableMaterials.map((item) => (
+                          <CommandItem
+                            key={item.id}
+                            onSelect={() => {
+                              setSelectedItemToAdd(item);
+                            }}
+                            className="cursor-pointer"
+                          >
+                            <div className="flex flex-col flex-1">
+                              <span className="font-medium">{item.name}</span>
+                              <span className="text-xs text-slate-500">
+                                代號：{item.code}
+                              </span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               )}
             </div>
 
