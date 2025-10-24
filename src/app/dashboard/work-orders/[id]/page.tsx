@@ -2105,8 +2105,17 @@ export default function WorkOrderDetailPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-                  <div className="text-sm text-gray-600 mb-2 font-semibold">工作項目</div>
-                  <div className="text-lg font-bold text-blue-900">{workOrder.workItem}</div>
+                  <Label className="text-sm text-gray-600 mb-2 font-semibold">工作項目</Label>
+                  {isEditing ? (
+                    <Input
+                      value={editData.workItem}
+                      onChange={(e) => setEditData({...editData, workItem: e.target.value})}
+                      className="mt-1"
+                      placeholder="請輸入工作項目"
+                    />
+                  ) : (
+                    <div className="text-lg font-bold text-blue-900">{workOrder.workItem}</div>
+                  )}
                 </div>
 
                 <div className="text-center p-3 sm:p-4 bg-white rounded-lg border">
@@ -2118,149 +2127,65 @@ export default function WorkOrderDetailPage() {
               </div>
 
               <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="text-sm text-gray-600 mb-2 font-semibold">工作描述</div>
-                <div className="text-gray-800 whitespace-pre-wrap">{workOrder.workDescription}</div>
+                <Label className="text-sm text-gray-600 mb-2 font-semibold">工作描述</Label>
+                {isEditing ? (
+                  <textarea
+                    value={editData.workDescription}
+                    onChange={(e) => setEditData({...editData, workDescription: e.target.value})}
+                    className="mt-1 w-full p-2 border rounded-md min-h-[100px]"
+                    placeholder="請輸入工作描述"
+                  />
+                ) : (
+                  <div className="text-gray-800 whitespace-pre-wrap">{workOrder.workDescription}</div>
+                )}
+              </div>
+
+              {/* 通用工單編輯按鈕 */}
+              <div className="flex flex-col sm:flex-row justify-end gap-2">
+                {isEditing ? (
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsEditing(false)}
+                      disabled={isSaving}
+                      className="w-full sm:w-auto"
+                    >
+                      取消
+                    </Button>
+                    <Button
+                      onClick={handleSave}
+                      disabled={isSaving}
+                      className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
+                    >
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          儲存中...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="mr-2 h-4 w-4" />
+                          儲存
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    onClick={handleStartEditing}
+                    disabled={!canEdit()}
+                    className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+                    title={!canEdit() ? "完工或入庫狀態無法編輯" : "點擊編輯工單資料"}
+                  >
+                    <Edit className="mr-2 h-4 w-4" />
+                    編輯
+                  </Button>
+                )}
               </div>
             </div>
           )}
         </CardContent>
       </Card>
-
-      {/* 通用工單詳細資料 - 僅通用工單顯示 */}
-      {workOrder.orderType === 'general' && (
-      <Card className="mb-4 sm:mb-6 shadow-lg border-0 bg-white">
-        <CardHeader className="pb-3 sm:pb-6 bg-gradient-to-r from-blue-200 to-indigo-300 text-blue-800 rounded-t-xl">
-          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-            <Calculator className="h-5 w-5" />
-            通用工單詳細資料
-            {workOrder?.status === "入庫" && (
-              <Badge variant="secondary" className="ml-2 bg-purple-100 text-purple-800 border-purple-200">
-                已入庫 - 僅可查看
-              </Badge>
-            )}
-            {workOrder?.status === "完工" && (
-              <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800 border-green-200">
-                已完工 - 僅可編輯工時
-              </Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <Label className="text-sm text-gray-600">工作項目</Label>
-              {isEditing ? (
-                <Input
-                  value={editData.workItem}
-                  onChange={(e) => setEditData({...editData, workItem: e.target.value})}
-                  className="mt-1"
-                  placeholder="請輸入工作項目"
-                />
-              ) : (
-                <div className="mt-1 font-medium text-gray-900">{workOrder.workItem}</div>
-              )}
-            </div>
-
-            <div>
-              <Label className="text-sm text-gray-600">目前工單狀態</Label>
-              {isEditing ? (
-                <Select value={editData.status} onValueChange={handleStatusChange}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statusOptions
-                      .filter(option => {
-                        return option.value === '預報' || option.value === '進行';
-                      })
-                      .map(option => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="mt-1 font-medium text-gray-900">{workOrder.status}</div>
-              )}
-            </div>
-
-            <div className="lg:col-span-2">
-              <Label className="text-sm text-gray-600">工作描述</Label>
-              {isEditing ? (
-                <textarea
-                  value={editData.workDescription}
-                  onChange={(e) => setEditData({...editData, workDescription: e.target.value})}
-                  className="mt-1 w-full p-2 border rounded-md min-h-[100px]"
-                  placeholder="請輸入工作描述"
-                />
-              ) : (
-                <div className="mt-1 font-medium text-gray-900 whitespace-pre-wrap">{workOrder.workDescription}</div>
-              )}
-            </div>
-
-            <div className="lg:col-span-2">
-              <Label className="text-sm text-gray-600">備註</Label>
-              {isEditing ? (
-                <textarea
-                  value={editData.notes}
-                  onChange={(e) => setEditData({...editData, notes: e.target.value})}
-                  className="mt-1 w-full p-2 border rounded-md min-h-[80px]"
-                  placeholder="補充說明（選填）"
-                />
-              ) : (
-                <div className="mt-1 font-medium text-gray-900 whitespace-pre-wrap">
-                  {workOrder.notes || "無"}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 編輯按鈕 */}
-          <div className="mt-4 flex flex-col sm:flex-row justify-end gap-2">
-            {isEditing ? (
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsEditing(false)}
-                  disabled={isSaving}
-                  className="w-full sm:w-auto"
-                >
-                  取消
-                </Button>
-                <Button
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      儲存中...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      儲存
-                    </>
-                  )}
-                </Button>
-              </div>
-            ) : (
-              <Button
-                onClick={handleStartEditing}
-                disabled={!canEdit()}
-                className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
-                title={!canEdit() ? "完工或入庫狀態無法編輯" : "點擊編輯工單詳細資料"}
-              >
-                <Edit className="mr-2 h-4 w-4" />
-                編輯
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-      )}
 
       {/* 工單詳細資料 - 僅產品工單顯示 */}
       {workOrder.orderType === 'product' && workOrder.productSnapshot && (
