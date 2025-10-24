@@ -142,6 +142,15 @@ export default function WorkOrderDetailPage() {
   const [isEditingQuantity, setIsEditingQuantity] = useState(false)
   const [editingQuantities, setEditingQuantities] = useState<{[key: string]: number}>({})
 
+  // 新增物料對話框狀態
+  const [isAddFragranceOpen, setIsAddFragranceOpen] = useState(false)
+  const [isAddMaterialOpen, setIsAddMaterialOpen] = useState(false)
+  const [selectedItemToAdd, setSelectedItemToAdd] = useState<{id: string; name: string; code: string; unit: string} | null>(null)
+  const [quantityToAdd, setQuantityToAdd] = useState<number>(0)
+  const [availableFragrances, setAvailableFragrances] = useState<any[]>([])
+  const [availableMaterials, setAvailableMaterials] = useState<any[]>([])
+  const [isLoadingItems, setIsLoadingItems] = useState(false)
+
   // 新增狀態：完工確認對話框
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false)
   const [isCompleting, setIsCompleting] = useState(false)
@@ -232,6 +241,148 @@ export default function WorkOrderDetailPage() {
     } catch (err) {
       error("更新使用數量失敗", err as Error);
       toast.error("更新使用數量失敗");
+    }
+  };
+
+  // 載入可用的香精清單
+  const loadAvailableFragrances = async () => {
+    if (!db) return;
+    setIsLoadingItems(true);
+    try {
+      const fragrancesRef = collection(db, "fragrances");
+      const q = query(fragrancesRef, where("status", "==", "active"));
+      const snapshot = await getDocs(q);
+      const items = snapshot.docs.map(doc => ({
+        id: doc.id,
+        code: doc.data().code,
+        name: doc.data().name,
+        unit: "KG"
+      }));
+      setAvailableFragrances(items);
+    } catch (err) {
+      error("載入香精清單失敗", err as Error);
+      toast.error("載入香精清單失敗");
+    } finally {
+      setIsLoadingItems(false);
+    }
+  };
+
+  // 載入可用的原料清單
+  const loadAvailableMaterials = async () => {
+    if (!db) return;
+    setIsLoadingItems(true);
+    try {
+      const materialsRef = collection(db, "materials");
+      const q = query(materialsRef, where("status", "==", "active"));
+      const snapshot = await getDocs(q);
+      const items = snapshot.docs.map(doc => ({
+        id: doc.id,
+        code: doc.data().code,
+        name: doc.data().name,
+        unit: doc.data().unit || "KG"
+      }));
+      setAvailableMaterials(items);
+    } catch (err) {
+      error("載入原料清單失敗", err as Error);
+      toast.error("載入原料清單失敗");
+    } finally {
+      setIsLoadingItems(false);
+    }
+  };
+
+  // 新增香精到BOM表
+  const handleAddFragrance = async () => {
+    if (!workOrder || !db || !selectedItemToAdd || quantityToAdd <= 0) {
+      toast.error("請選擇香精並輸入有效數量");
+      return;
+    }
+
+    try {
+      // 檢查是否已存在
+      const exists = workOrder.billOfMaterials.some(item => item.id === selectedItemToAdd.id);
+      if (exists) {
+        toast.error("此香精已在BOM表中");
+        return;
+      }
+
+      // 新增項目
+      const newItem = {
+        id: selectedItemToAdd.id,
+        code: selectedItemToAdd.code,
+        name: selectedItemToAdd.name,
+        type: "fragrance" as const,
+        category: "fragrance" as const,
+        unit: selectedItemToAdd.unit,
+        quantity: quantityToAdd,
+        usedQuantity: quantityToAdd,
+        ratio: 0,
+        isCalculated: false
+      };
+
+      const updatedBOM = [...workOrder.billOfMaterials, newItem];
+
+      const docRef = doc(db, "workOrders", workOrderId);
+      await updateDoc(docRef, {
+        billOfMaterials: updatedBOM,
+        updatedAt: Timestamp.now()
+      });
+
+      setWorkOrder(prev => prev ? { ...prev, billOfMaterials: updatedBOM } : null);
+      setIsAddFragranceOpen(false);
+      setSelectedItemToAdd(null);
+      setQuantityToAdd(0);
+      toast.success("香精已新增到BOM表");
+    } catch (err) {
+      error("新增香精失敗", err as Error);
+      toast.error("新增香精失敗");
+    }
+  };
+
+  // 新增原料到BOM表
+  const handleAddMaterial = async () => {
+    if (!workOrder || !db || !selectedItemToAdd || quantityToAdd <= 0) {
+      toast.error("請選擇原料並輸入有效數量");
+      return;
+    }
+
+    try {
+      // 檢查是否已存在
+      const exists = workOrder.billOfMaterials.some(item => item.id === selectedItemToAdd.id);
+      if (exists) {
+        toast.error("此原料已在BOM表中");
+        return;
+      }
+
+      // 新增項目（歸類為 common 類別）
+      const newItem = {
+        id: selectedItemToAdd.id,
+        code: selectedItemToAdd.code,
+        name: selectedItemToAdd.name,
+        type: "material" as const,
+        category: "common" as const,
+        unit: selectedItemToAdd.unit,
+        quantity: quantityToAdd,
+        usedQuantity: quantityToAdd,
+        ratio: 0,
+        isCalculated: false
+      };
+
+      const updatedBOM = [...workOrder.billOfMaterials, newItem];
+
+      const docRef = doc(db, "workOrders", workOrderId);
+      await updateDoc(docRef, {
+        billOfMaterials: updatedBOM,
+        updatedAt: Timestamp.now()
+      });
+
+      setWorkOrder(prev => prev ? { ...prev, billOfMaterials: updatedBOM } : null);
+      setIsAddMaterialOpen(false);
+      setSelectedItemToAdd(null);
+      setQuantityToAdd(0);
+      toast.success("原料已新增到BOM表");
+    } catch (err) {
+      error("新增原料失敗", err as Error);
+      toast.error("新增原料失敗");
     }
   };
 
@@ -1413,6 +1564,22 @@ export default function WorkOrderDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workOrderId]) // 只依賴於 workOrderId
 
+  // 載入香精清單當對話框打開時
+  useEffect(() => {
+    if (isAddFragranceOpen && availableFragrances.length === 0) {
+      loadAvailableFragrances()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAddFragranceOpen])
+
+  // 載入原料清單當對話框打開時
+  useEffect(() => {
+    if (isAddMaterialOpen && availableMaterials.length === 0) {
+      loadAvailableMaterials()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAddMaterialOpen])
+
 
   // 初始化編輯資料
   const handleStartEditing = () => {
@@ -1959,6 +2126,142 @@ export default function WorkOrderDetailPage() {
         </CardContent>
       </Card>
 
+      {/* 通用工單詳細資料 - 僅通用工單顯示 */}
+      {workOrder.orderType === 'general' && (
+      <Card className="mb-4 sm:mb-6 shadow-lg border-0 bg-white">
+        <CardHeader className="pb-3 sm:pb-6 bg-gradient-to-r from-blue-200 to-indigo-300 text-blue-800 rounded-t-xl">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <Calculator className="h-5 w-5" />
+            通用工單詳細資料
+            {workOrder?.status === "入庫" && (
+              <Badge variant="secondary" className="ml-2 bg-purple-100 text-purple-800 border-purple-200">
+                已入庫 - 僅可查看
+              </Badge>
+            )}
+            {workOrder?.status === "完工" && (
+              <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800 border-green-200">
+                已完工 - 僅可編輯工時
+              </Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+            <div>
+              <Label className="text-sm text-gray-600">工作項目</Label>
+              {isEditing ? (
+                <Input
+                  value={editData.workItem}
+                  onChange={(e) => setEditData({...editData, workItem: e.target.value})}
+                  className="mt-1"
+                  placeholder="請輸入工作項目"
+                />
+              ) : (
+                <div className="mt-1 font-medium text-gray-900">{workOrder.workItem}</div>
+              )}
+            </div>
+
+            <div>
+              <Label className="text-sm text-gray-600">目前工單狀態</Label>
+              {isEditing ? (
+                <Select value={editData.status} onValueChange={handleStatusChange}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions
+                      .filter(option => {
+                        return option.value === '預報' || option.value === '進行';
+                      })
+                      .map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="mt-1 font-medium text-gray-900">{workOrder.status}</div>
+              )}
+            </div>
+
+            <div className="lg:col-span-2">
+              <Label className="text-sm text-gray-600">工作描述</Label>
+              {isEditing ? (
+                <textarea
+                  value={editData.workDescription}
+                  onChange={(e) => setEditData({...editData, workDescription: e.target.value})}
+                  className="mt-1 w-full p-2 border rounded-md min-h-[100px]"
+                  placeholder="請輸入工作描述"
+                />
+              ) : (
+                <div className="mt-1 font-medium text-gray-900 whitespace-pre-wrap">{workOrder.workDescription}</div>
+              )}
+            </div>
+
+            <div className="lg:col-span-2">
+              <Label className="text-sm text-gray-600">備註</Label>
+              {isEditing ? (
+                <textarea
+                  value={editData.notes}
+                  onChange={(e) => setEditData({...editData, notes: e.target.value})}
+                  className="mt-1 w-full p-2 border rounded-md min-h-[80px]"
+                  placeholder="補充說明（選填）"
+                />
+              ) : (
+                <div className="mt-1 font-medium text-gray-900 whitespace-pre-wrap">
+                  {workOrder.notes || "無"}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 編輯按鈕 */}
+          <div className="mt-4 flex flex-col sm:flex-row justify-end gap-2">
+            {isEditing ? (
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditing(false)}
+                  disabled={isSaving}
+                  className="w-full sm:w-auto"
+                >
+                  取消
+                </Button>
+                <Button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      儲存中...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      儲存
+                    </>
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <Button
+                onClick={handleStartEditing}
+                disabled={!canEdit()}
+                className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+                title={!canEdit() ? "完工或入庫狀態無法編輯" : "點擊編輯工單詳細資料"}
+              >
+                <Edit className="mr-2 h-4 w-4" />
+                編輯
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      )}
+
       {/* 工單詳細資料 - 僅產品工單顯示 */}
       {workOrder.orderType === 'product' && workOrder.productSnapshot && (
       <Card className="mb-4 sm:mb-6 shadow-lg border-0 bg-white">
@@ -2021,58 +2324,23 @@ export default function WorkOrderDetailPage() {
                   <Label className="text-sm text-gray-600">產品系列</Label>
                   <div className="mt-1 font-medium text-gray-900">{workOrder.productSnapshot.seriesName || '未指定'}</div>
                 </div>
-              </>
-            )}
 
-            {/* 通用工單顯示工作項目和描述 */}
-            {workOrder.orderType !== 'product' && workOrder.orderType !== undefined && (
-              <>
                 <div>
-                  <Label className="text-sm text-gray-600">工作項目</Label>
+                  <Label className="text-sm text-gray-600">目標產量 (KG)</Label>
                   {isEditing ? (
                     <Input
-                      value={editData.workItem}
-                      onChange={(e) => setEditData({...editData, workItem: e.target.value})}
+                      type="number"
+                      min="0.1"
+                      step="0.1"
+                      value={editData.targetQuantity}
+                      onChange={(e) => handleTargetQuantityChange(parseFloat(e.target.value) || 0)}
                       className="mt-1"
-                      placeholder="請輸入工作項目"
                     />
                   ) : (
-                    <div className="mt-1 font-medium text-gray-900">{workOrder.workItem}</div>
-                  )}
-                </div>
-
-                <div className="lg:col-span-2">
-                  <Label className="text-sm text-gray-600">工作描述</Label>
-                  {isEditing ? (
-                    <textarea
-                      value={editData.workDescription}
-                      onChange={(e) => setEditData({...editData, workDescription: e.target.value})}
-                      className="mt-1 w-full p-2 border rounded-md min-h-[100px]"
-                      placeholder="請輸入工作描述"
-                    />
-                  ) : (
-                    <div className="mt-1 font-medium text-gray-900 whitespace-pre-wrap">{workOrder.workDescription}</div>
+                    <div className="mt-1 font-medium text-gray-900">{formatWeight(workOrder.targetQuantity)}</div>
                   )}
                 </div>
               </>
-            )}
-
-            {workOrder.orderType === 'product' && (
-              <div>
-                <Label className="text-sm text-gray-600">目標產量 (KG)</Label>
-                {isEditing ? (
-                  <Input
-                    type="number"
-                    min="0.1"
-                    step="0.1"
-                    value={editData.targetQuantity}
-                    onChange={(e) => handleTargetQuantityChange(parseFloat(e.target.value) || 0)}
-                    className="mt-1"
-                  />
-                ) : (
-                  <div className="mt-1 font-medium text-gray-900">{formatWeight(workOrder.targetQuantity)}</div>
-                )}
-              </div>
             )}
           </div>
 
@@ -2180,17 +2448,41 @@ export default function WorkOrderDetailPage() {
                   </Button>
                 </>
               ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditingQuantity(true)}
-                  disabled={!canEditQuantity()}
-                  className="text-purple-700 border-purple-300 hover:bg-purple-50 w-full sm:w-auto"
-                  title={!canEditQuantity() ? "完工或入庫狀態無法編輯數量" : "點擊編輯物料使用數量"}
-                >
-                  <Edit className="h-4 w-4 mr-1" />
-                  編輯數量
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditingQuantity(true)}
+                    disabled={!canEditQuantity()}
+                    className="text-purple-700 border-purple-300 hover:bg-purple-50 w-full sm:w-auto"
+                    title={!canEditQuantity() ? "完工或入庫狀態無法編輯數量" : "點擊編輯物料使用數量"}
+                  >
+                    <Edit className="h-4 w-4 mr-1" />
+                    編輯數量
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsAddFragranceOpen(true)}
+                    disabled={!canEditQuantity()}
+                    className="text-pink-700 border-pink-300 hover:bg-pink-50 w-full sm:w-auto"
+                    title={!canEditQuantity() ? "完工或入庫狀態無法新增" : "新增香精到BOM表"}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    新增香精
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsAddMaterialOpen(true)}
+                    disabled={!canEditQuantity()}
+                    className="text-green-700 border-green-300 hover:bg-green-50 w-full sm:w-auto"
+                    title={!canEditQuantity() ? "完工或入庫狀態無法新增" : "新增原料到BOM表"}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    新增原料
+                  </Button>
+                </>
               )}
             </div>
           </div>
@@ -3476,6 +3768,184 @@ export default function WorkOrderDetailPage() {
                   確認刪除
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 新增香精對話框 */}
+      <Dialog open={isAddFragranceOpen} onOpenChange={setIsAddFragranceOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-pink-700">
+              <Droplets className="h-5 w-5" />
+              新增香精到BOM表
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>選擇香精</Label>
+              <Select
+                value={selectedItemToAdd?.id || ""}
+                onValueChange={(value) => {
+                  const item = availableFragrances.find(f => f.id === value);
+                  setSelectedItemToAdd(item || null);
+                }}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="請選擇香精" />
+                </SelectTrigger>
+                <SelectContent>
+                  {isLoadingItems ? (
+                    <div className="p-2 text-center text-gray-500">載入中...</div>
+                  ) : availableFragrances.length === 0 ? (
+                    <div className="p-2 text-center text-gray-500">無可用香精</div>
+                  ) : (
+                    availableFragrances.map(item => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.code} - {item.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {!isLoadingItems && availableFragrances.length === 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadAvailableFragrances}
+                  className="mt-2"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  載入香精清單
+                </Button>
+              )}
+            </div>
+
+            {selectedItemToAdd && (
+              <div className="p-3 bg-pink-50 rounded-lg border border-pink-200">
+                <div className="text-sm text-gray-600">已選擇</div>
+                <div className="font-semibold text-pink-900">{selectedItemToAdd.code} - {selectedItemToAdd.name}</div>
+              </div>
+            )}
+
+            <div>
+              <Label>使用數量 ({selectedItemToAdd?.unit || 'KG'})</Label>
+              <Input
+                type="number"
+                min="0.001"
+                step="0.001"
+                value={quantityToAdd || ''}
+                onChange={(e) => setQuantityToAdd(parseFloat(e.target.value) || 0)}
+                placeholder="請輸入數量"
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsAddFragranceOpen(false);
+              setSelectedItemToAdd(null);
+              setQuantityToAdd(0);
+            }}>
+              取消
+            </Button>
+            <Button
+              onClick={handleAddFragrance}
+              disabled={!selectedItemToAdd || quantityToAdd <= 0}
+              className="bg-pink-600 hover:bg-pink-700"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              新增香精
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 新增原料對話框 */}
+      <Dialog open={isAddMaterialOpen} onOpenChange={setIsAddMaterialOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-700">
+              <Package className="h-5 w-5" />
+              新增原料到BOM表
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>選擇原料</Label>
+              <Select
+                value={selectedItemToAdd?.id || ""}
+                onValueChange={(value) => {
+                  const item = availableMaterials.find(m => m.id === value);
+                  setSelectedItemToAdd(item || null);
+                }}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="請選擇原料" />
+                </SelectTrigger>
+                <SelectContent>
+                  {isLoadingItems ? (
+                    <div className="p-2 text-center text-gray-500">載入中...</div>
+                  ) : availableMaterials.length === 0 ? (
+                    <div className="p-2 text-center text-gray-500">無可用原料</div>
+                  ) : (
+                    availableMaterials.map(item => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.code} - {item.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {!isLoadingItems && availableMaterials.length === 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadAvailableMaterials}
+                  className="mt-2"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  載入原料清單
+                </Button>
+              )}
+            </div>
+
+            {selectedItemToAdd && (
+              <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                <div className="text-sm text-gray-600">已選擇</div>
+                <div className="font-semibold text-green-900">{selectedItemToAdd.code} - {selectedItemToAdd.name}</div>
+              </div>
+            )}
+
+            <div>
+              <Label>使用數量 ({selectedItemToAdd?.unit || 'KG'})</Label>
+              <Input
+                type="number"
+                min="0.001"
+                step="0.001"
+                value={quantityToAdd || ''}
+                onChange={(e) => setQuantityToAdd(parseFloat(e.target.value) || 0)}
+                placeholder="請輸入數量"
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsAddMaterialOpen(false);
+              setSelectedItemToAdd(null);
+              setQuantityToAdd(0);
+            }}>
+              取消
+            </Button>
+            <Button
+              onClick={handleAddMaterial}
+              disabled={!selectedItemToAdd || quantityToAdd <= 0}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              新增原料
             </Button>
           </DialogFooter>
         </DialogContent>
