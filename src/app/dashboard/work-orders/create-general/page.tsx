@@ -184,10 +184,13 @@ export default function CreateGeneralWorkOrderPage() {
       })
 
       if (result.success && result.data) {
-        toast.success(`通用工單 ${result.data.workOrderCode} 建立成功`)
-        // 短暫延遲確保 Firestore 資料已同步
-        await new Promise(resolve => setTimeout(resolve, 500))
-        router.push(`/dashboard/work-orders/${result.data.workOrderId}`)
+        const workOrderId = result.data.workOrderId;
+        const workOrderCode = result.data.workOrderCode;
+        toast.success(`通用工單 ${workOrderCode} 建立成功`)
+        // 延遲確保 Firestore 資料已同步，然後跳轉
+        setTimeout(() => {
+          router.push(`/dashboard/work-orders/${workOrderId}`)
+        }, 1000)
       } else {
         toast.error("建立通用工單失敗")
       }

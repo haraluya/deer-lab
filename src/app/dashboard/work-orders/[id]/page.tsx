@@ -1529,15 +1529,19 @@ export default function WorkOrderDetailPage() {
       });
     };
 
-    const coreMaterials = workOrder.billOfMaterials.filter(item => 
-      ['fragrance', 'pg', 'vg', 'nicotine'].includes(item.category)
+    // 香精物料
+    const fragranceMaterials = workOrder.billOfMaterials.filter(item =>
+      item.category === 'fragrance'
     );
-    const specificMaterials = workOrder.billOfMaterials.filter(item => 
-      item.category === 'specific'
-    );
-    const commonMaterials = workOrder.billOfMaterials.filter(item => 
-      item.category === 'common'
-    );
+    // 原料物料（包含 pg, vg, nicotine, specific, common）
+    const rawMaterials = workOrder.billOfMaterials.filter(item =>
+      ['pg', 'vg', 'nicotine', 'specific', 'common'].includes(item.category)
+    ).sort((a, b) => {
+      const categoryOrder = ['pg', 'vg', 'nicotine', 'specific', 'common'];
+      const catCompare = categoryOrder.indexOf(a.category) - categoryOrder.indexOf(b.category);
+      if (catCompare !== 0) return catCompare;
+      return a.name.localeCompare(b.name);
+    });
 
     return `
       <!DOCTYPE html>
@@ -1718,7 +1722,7 @@ export default function WorkOrderDetailPage() {
         
                  <div class="main-content">
            <div class="materials-section">
-             <h3>核心配方物料清單</h3>
+             <h3>香精物料清單</h3>
              <table>
                <thead>
                  <tr>
@@ -1731,7 +1735,7 @@ export default function WorkOrderDetailPage() {
                  </tr>
                </thead>
                <tbody>
-                 ${coreMaterials.map(item => `
+                 ${fragranceMaterials.map(item => `
                    <tr>
                                         <td style="font-weight: bold;">${item.name}</td>
                    <td style="font-weight: bold; font-size: 11px;">${item.code}</td>
@@ -1743,9 +1747,9 @@ export default function WorkOrderDetailPage() {
                  `).join('')}
                </tbody>
              </table>
-             
-             ${specificMaterials.length > 0 ? `
-             <h3>產品專屬物料</h3>
+
+             ${rawMaterials.length > 0 ? `
+             <h3>原料物料清單</h3>
              <table>
                <thead>
                  <tr>
@@ -1756,31 +1760,7 @@ export default function WorkOrderDetailPage() {
                  </tr>
                </thead>
                <tbody>
-                 ${specificMaterials.map(item => `
-                   <tr>
-                     <td style="font-weight: bold;">${item.name}</td>
-                     <td style="font-weight: bold; font-size: 11px;">${item.code}</td>
-                     <td style="border: 1px solid #000; background-color: #f9f9f9; min-width: 60px; height: 30px;"></td>
-                     <td>${item.unit}</td>
-                   </tr>
-                 `).join('')}
-               </tbody>
-             </table>
-             ` : ''}
-             
-             ${commonMaterials.length > 0 ? `
-             <h3>系列通用物料</h3>
-             <table>
-               <thead>
-                 <tr>
-                   <th>物料名稱</th>
-                   <th>料件代號</th>
-                   <th>使用數量</th>
-                   <th>單位</th>
-                 </tr>
-               </thead>
-               <tbody>
-                 ${commonMaterials.map(item => `
+                 ${rawMaterials.map(item => `
                    <tr>
                      <td style="font-weight: bold;">${item.name}</td>
                      <td style="font-weight: bold; font-size: 11px;">${item.code}</td>
@@ -2217,11 +2197,11 @@ export default function WorkOrderDetailPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4 sm:space-y-6">
-            {/* 核心配方物料 */}
+            {/* 香精物料清單 */}
             <div>
               <h3 className="text-lg font-semibold text-purple-700 mb-3 flex items-center gap-2">
                 <Droplets className="h-4 w-4" />
-                核心配方物料
+                香精物料清單
               </h3>
               {/* 桌面版表格 */}
               <div className="hidden md:block overflow-x-auto">
@@ -2238,7 +2218,7 @@ export default function WorkOrderDetailPage() {
                   </TableHeader>
                   <TableBody>
                     {workOrder.billOfMaterials
-                      .filter(item => ['fragrance', 'pg', 'vg', 'nicotine'].includes(item.category))
+                      .filter(item => item.category === 'fragrance')
                       .map((item, index) => (
                         <TableRow key={index} className="hover:bg-gray-50/50 transition-all duration-200">
                           <TableCell className="font-medium">
@@ -2281,7 +2261,7 @@ export default function WorkOrderDetailPage() {
               {/* 手機版卡片式佈局 */}
               <div className="md:hidden space-y-3">
                 {workOrder.billOfMaterials
-                  .filter(item => ['fragrance', 'pg', 'vg', 'nicotine'].includes(item.category))
+                  .filter(item => item.category === 'fragrance')
                   .map((item, index) => (
                     <Card key={index} className="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200">
                       <CardContent className="p-4">
@@ -2452,12 +2432,12 @@ export default function WorkOrderDetailPage() {
               </div>
             )}
 
-            {/* 系列通用物料 */}
-            {workOrder.billOfMaterials.filter(item => item.category === 'common').length > 0 && (
+            {/* 原料物料清單 */}
+            {workOrder.billOfMaterials.filter(item => ['pg', 'vg', 'nicotine', 'specific', 'common'].includes(item.category)).length > 0 && (
               <div>
                 <h3 className="text-lg font-semibold text-green-700 mb-3 flex items-center gap-2">
                   <Package className="h-4 w-4" />
-                  系列通用物料
+                  原料物料清單
                 </h3>
                 {/* 桌面版表格 */}
                 <div className="hidden md:block overflow-x-auto">
@@ -2472,8 +2452,15 @@ export default function WorkOrderDetailPage() {
                     </TableHeader>
                     <TableBody>
                       {workOrder.billOfMaterials
-                        .filter(item => item.category === 'common')
-                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .filter(item => ['pg', 'vg', 'nicotine', 'specific', 'common'].includes(item.category))
+                        .sort((a, b) => {
+                          // 先按類別排序：pg, vg, nicotine, specific, common
+                          const categoryOrder = ['pg', 'vg', 'nicotine', 'specific', 'common'];
+                          const catCompare = categoryOrder.indexOf(a.category) - categoryOrder.indexOf(b.category);
+                          if (catCompare !== 0) return catCompare;
+                          // 同類別按名稱排序
+                          return a.name.localeCompare(b.name);
+                        })
                         .map((item, index) => (
                           <TableRow key={index} className="bg-gradient-to-r from-green-50 to-emerald-50">
                             <TableCell className="font-medium">{item.name}</TableCell>
@@ -2504,8 +2491,13 @@ export default function WorkOrderDetailPage() {
                 {/* 手機版卡片式佈局 */}
                 <div className="md:hidden space-y-3">
                   {workOrder.billOfMaterials
-                    .filter(item => item.category === 'common')
-                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .filter(item => ['pg', 'vg', 'nicotine', 'specific', 'common'].includes(item.category))
+                    .sort((a, b) => {
+                      const categoryOrder = ['pg', 'vg', 'nicotine', 'specific', 'common'];
+                      const catCompare = categoryOrder.indexOf(a.category) - categoryOrder.indexOf(b.category);
+                      if (catCompare !== 0) return catCompare;
+                      return a.name.localeCompare(b.name);
+                    })
                     .map((item, index) => (
                       <Card key={index} className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200">
                         <CardContent className="p-4">
