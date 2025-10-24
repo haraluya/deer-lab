@@ -555,3 +555,99 @@ export const completeWorkOrder = onCall(async (request) => {
     throw new HttpsError("internal", "工單完工操作失敗");
   }
 });
+
+/**
+ * Creates a new general work order (non-product specific work order)
+ */
+export const createGeneralWorkOrder = onCall(async (request) => {
+  const { auth: contextAuth, data } = request;
+  // await ensureIsAdminOrForeman(contextAuth?.uid);
+
+  if (!contextAuth) {
+    throw new HttpsError("internal", "驗證檢查後 contextAuth 不應為空。");
+  }
+
+  const { workItem, workDescription, bomItems } = data;
+
+  // 驗證必填欄位
+  if (!workItem || !workItem.trim()) {
+    throw new HttpsError("invalid-argument", "工作項目為必填欄位。");
+  }
+
+  if (!workDescription || !workDescription.trim()) {
+    throw new HttpsError("invalid-argument", "工作描述為必填欄位。");
+  }
+
+  const createdByRef = db.doc(`users/${contextAuth.uid}`);
+
+  try {
+    // 1. Generate a unique work order code with G prefix for General
+    const today = new Date().toISOString().split('T')[0];
+    const counterRef = db.doc(`counters/generalWorkOrders_${today}`);
+    const newCount = await db.runTransaction(async (t) => {
+      const doc = await t.get(counterRef);
+      const count = doc.exists ? (doc.data()?.count || 0) + 1 : 1;
+      t.set(counterRef, { count }, { merge: true });
+      return count;
+    });
+    const sequence = String(newCount).padStart(3, '0');
+    const woCode = `WO-G-${today.replace(/-/g, "")}-${sequence}`;
+
+    // 2. Build Bill of Materials (BOM) from provided bomItems
+    const billOfMaterials: MaterialInfo[] = [];
+
+    if (bomItems && Array.isArray(bomItems)) {
+      for (const bomItem of bomItems) {
+        try {
+          const materialRef = db.doc(`${bomItem.materialType === 'fragrance' ? 'fragrances' : 'materials'}/${bomItem.materialId}`);
+          const materialSnap = await materialRef.get();
+
+          if (materialSnap.exists) {
+            const materialData = materialSnap.data()!;
+
+            billOfMaterials.push({
+              id: bomItem.materialId,
+              name: materialData.name,
+              code: materialData.code,
+              type: bomItem.materialType,
+              category: bomItem.materialType === 'fragrance' ? 'fragrance' : 'common',
+              unit: bomItem.unit || materialData.unit || 'KG',
+              quantity: 0, // 通用工單不預設數量，由使用者手動輸入
+              usedQuantity: bomItem.usedQuantity || 0,
+              ratio: 0,
+              isCalculated: false,
+            });
+          }
+        } catch (error) {
+          logger.warn(`無法載入物料 ${bomItem.materialId}:`, error);
+        }
+      }
+    }
+
+    // 3. Create the general work order document
+    const workOrderRef = db.collection("workOrders").doc();
+    await workOrderRef.set({
+      code: woCode,
+      orderType: 'general', // 標記為通用工單
+      workItem: workItem.trim(),
+      workDescription: workDescription.trim(),
+      billOfMaterials: billOfMaterials,
+      targetQuantity: 0, // 通用工單沒有目標數量
+      actualQuantity: 0,
+      status: "預報",
+      qcStatus: "未檢驗",
+      createdAt: FieldValue.serverTimestamp(),
+      createdByRef: createdByRef,
+      notes: "",
+      timeRecords: [],
+    });
+
+    logger.info(`使用者 ${contextAuth.uid} 成功建立了通用工單 ${woCode} (ID: ${workOrderRef.id})`);
+    return { success: true, workOrderId: workOrderRef.id, workOrderCode: woCode };
+
+  } catch (error) {
+    logger.error(`建立通用工單時發生嚴重錯誤:`, error);
+    if (error instanceof HttpsError) { throw error; }
+    throw new HttpsError("internal", "建立通用工單時發生未知錯誤。");
+  }
+});

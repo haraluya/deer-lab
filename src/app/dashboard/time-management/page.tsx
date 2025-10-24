@@ -152,8 +152,10 @@ export default function TimeManagementPage() {
 
       const workOrderInfo = new Map<string, {
         status: string;
+        orderType?: 'product' | 'general';
         productName?: string;
         seriesName?: string;
+        workItem?: string;
       }>();
 
       await Promise.all(
@@ -166,11 +168,14 @@ export default function TimeManagementPage() {
             ));
             if (!workOrderDoc.empty) {
               const data = workOrderDoc.docs[0].data();
+              const orderType = data.orderType || 'product'; // 預設為產品工單（向後相容）
 
               workOrderInfo.set(workOrderId, {
                 status: data.status || '未知',
-                productName: data.productSnapshot?.name,
-                seriesName: data.productSnapshot?.seriesName
+                orderType: orderType,
+                productName: orderType === 'product' ? (data.productSnapshot?.name || '未知產品') : data.workItem,
+                seriesName: orderType === 'product' ? data.productSnapshot?.seriesName : '通用工單',
+                workItem: orderType === 'general' ? data.workItem : undefined
               });
             }
           } catch (error) {
@@ -248,7 +253,8 @@ export default function TimeManagementPage() {
       filtered = filtered.filter(record =>
         record.personnelName?.toLowerCase().includes(search) ||
         record.workOrderNumber?.toLowerCase().includes(search) ||
-        record.productName?.toLowerCase().includes(search)
+        record.productName?.toLowerCase().includes(search) ||
+        (record as any).workItem?.toLowerCase().includes(search) // 支援搜尋通用工單的工作項目
       );
     }
 

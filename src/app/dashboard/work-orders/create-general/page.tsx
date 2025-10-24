@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { collection, getDocs, addDoc, doc } from "firebase/firestore"
+import { collection, getDocs } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
+import { useApiClient } from "@/hooks/useApiClient"
 import { ArrowLeft, Plus, Loader2, Calculator, Target, Zap, CheckCircle, AlertTriangle, Package, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -49,6 +50,7 @@ interface SelectedItem {
 
 export default function CreateGeneralWorkOrderPage() {
   const router = useRouter()
+  const apiClient = useApiClient() // 使用統一API客戶端
   const [materials, setMaterials] = useState<Material[]>([])
   const [fragrances, setFragrances] = useState<Fragrance[]>([])
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([])
@@ -166,43 +168,27 @@ export default function CreateGeneralWorkOrderPage() {
 
     setCreating(true)
     try {
-      const workOrderCode = generateWorkOrderCode()
+      // 準備 BOM 項目資料
+      const bomItems = selectedItems.map(item => ({
+        materialId: item.id,
+        materialType: item.type,
+        unit: item.unit,
+        usedQuantity: item.usedQuantity || 0
+      }))
 
-      const workOrderData = {
-        code: workOrderCode,
-        orderType: 'general' as const, // 通用工單類型
-
-        // 通用工單專用欄位
+      // 呼叫 API 建立通用工單
+      const result = await apiClient.call('createGeneralWorkOrder', {
         workItem: workItem.trim(),
         workDescription: workDescription.trim(),
+        bomItems: bomItems
+      })
 
-        // BOM 表：包含選擇的原料和香精
-        billOfMaterials: selectedItems.map(item => ({
-          id: item.id,
-          name: item.name,
-          code: item.code,
-          type: item.type,
-          quantity: 0, // 通用工單不預設數量，由使用者手動輸入
-          unit: item.unit,
-          ratio: 0,
-          isCalculated: false,
-          category: item.type === 'fragrance' ? 'fragrance' : 'common',
-          usedQuantity: item.usedQuantity || 0
-        })),
-
-        targetQuantity: 0, // 通用工單沒有目標數量
-        actualQuantity: 0,
-        status: "預報",
-        qcStatus: "未檢驗",
-        createdAt: new Date(),
-        createdByRef: null, // 這裡應該加入當前用戶的參考
-        updatedAt: new Date()
+      if (result.success) {
+        toast.success(`通用工單 ${result.workOrderCode} 建立成功`)
+        router.push(`/dashboard/work-orders/${result.workOrderId}`)
+      } else {
+        toast.error("建立通用工單失敗")
       }
-
-      const docRef = await addDoc(collection(db!, "workOrders"), workOrderData)
-
-      toast.success(`通用工單 ${workOrderCode} 建立成功`)
-      router.push(`/dashboard/work-orders/${docRef.id}`)
     } catch (error) {
       console.error("建立通用工單失敗:", error)
       toast.error("建立通用工單失敗")

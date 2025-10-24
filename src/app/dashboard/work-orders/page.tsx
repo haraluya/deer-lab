@@ -274,17 +274,24 @@ function WorkOrdersPageContent() {
       sortable: true,
       searchable: true,
       priority: 5,
-      render: (value, record) => (
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-            <Factory className="h-5 w-5 text-white" />
+      render: (value, record) => {
+        // 根據工單類型使用不同的顏色
+        const gradientClass = record.orderType === 'general'
+          ? 'bg-gradient-to-br from-blue-500 to-indigo-600'  // 通用工單：藍紫色
+          : 'bg-gradient-to-br from-orange-500 to-red-600';   // 產品工單：橙紅色
+
+        return (
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 ${gradientClass} rounded-lg flex items-center justify-center`}>
+              <Factory className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <div className="font-semibold text-gray-900">{record.code}</div>
+              <div className="text-sm text-gray-500">工單編號</div>
+            </div>
           </div>
-          <div>
-            <div className="font-semibold text-gray-900">{record.code}</div>
-            <div className="text-sm text-gray-500">工單編號</div>
-          </div>
-        </div>
-      ),
+        );
+      },
       mobileRender: (value, record) => (
         <div>
           <div className="font-medium text-gray-900">{record.code}</div>
@@ -294,7 +301,7 @@ function WorkOrdersPageContent() {
     },
     {
       key: 'productName',
-      title: '產品資訊',
+      title: '產品/項目',
       sortable: true,
       searchable: true,
       priority: 4,
@@ -325,11 +332,22 @@ function WorkOrdersPageContent() {
       sortable: true,
       priority: 3,
       align: 'center',
-      render: (value) => (
-        <div className="font-medium text-gray-900">
-          {value.toLocaleString()}
-        </div>
-      ),
+      render: (value, record) => {
+        // 通用工單顯示 "-"
+        if (record.orderType === 'general') {
+          return (
+            <div className="font-medium text-gray-500">
+              -
+            </div>
+          );
+        }
+        // 產品工單顯示數量
+        return (
+          <div className="font-medium text-gray-900">
+            {value.toLocaleString()}
+          </div>
+        );
+      },
       hideOnMobile: true
     },
     {

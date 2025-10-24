@@ -50,10 +50,12 @@ interface WorkOrder {
   id: string;
   code: string;
   status: string;
+  orderType?: 'product' | 'general';
   productSnapshot?: {
     name: string;
     seriesName?: string;
   };
+  workItem?: string;
 }
 
 interface ReportData {
@@ -101,7 +103,9 @@ export function TimeRecordsReportDialog({ open, onOpenChange }: TimeRecordsRepor
           id: doc.id,
           code: data.code || '',
           status: data.status || '',
-          productSnapshot: data.productSnapshot
+          orderType: data.orderType || 'product',
+          productSnapshot: data.productSnapshot,
+          workItem: data.workItem
         };
       });
       setWorkOrders(workOrdersList);
@@ -194,11 +198,15 @@ export function TimeRecordsReportDialog({ open, onOpenChange }: TimeRecordsRepor
       filteredRecords.forEach(record => {
         if (!workOrderSummary[record.workOrderId]) {
           const workOrder = workOrders.find(wo => wo.id === record.workOrderId);
+          // 根據工單類型取得產品名稱或工作項目
+          const displayName = workOrder?.orderType === 'general'
+            ? workOrder.workItem
+            : workOrder?.productSnapshot?.name;
           workOrderSummary[record.workOrderId] = {
             code: record.workOrderNumber,
             hours: 0,
             records: 0,
-            productName: workOrder?.productSnapshot?.name
+            productName: displayName
           };
         }
         workOrderSummary[record.workOrderId].hours += record.duration;
