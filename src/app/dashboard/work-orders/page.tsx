@@ -474,6 +474,10 @@ function WorkOrdersPageContent() {
         // 工具列功能
         showToolbar={true}
 
+        // 視圖模式：強制使用表格模式，移除視圖切換按鈕
+        viewModes={[{ key: 'table', title: '表格', icon: <List className="h-4 w-4" /> }]}
+        defaultViewMode="table"
+
         // 新增功能
         showAddButton={canManageWorkOrders}
         addButtonText="建立新工單"

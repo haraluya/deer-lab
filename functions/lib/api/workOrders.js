@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.completeWorkOrder = exports.deleteWorkOrder = exports.addTimeRecord = exports.updateWorkOrder = exports.createWorkOrder = void 0;
+exports.createGeneralWorkOrder = exports.completeWorkOrder = exports.deleteWorkOrder = exports.addTimeRecord = exports.updateWorkOrder = exports.createWorkOrder = void 0;
 // functions/src/api/workOrders.ts
 const firebase_functions_1 = require("firebase-functions");
 const https_1 = require("firebase-functions/v2/https");
@@ -467,6 +467,93 @@ exports.completeWorkOrder = (0, https_1.onCall)(async (request) => {
     catch (error) {
         firebase_functions_1.logger.error(`完成工單 ${workOrderId} 失敗:`, error);
         throw new https_1.HttpsError("internal", "工單完工操作失敗");
+    }
+});
+/**
+ * Creates a new general work order (non-product specific work order)
+ */
+exports.createGeneralWorkOrder = (0, https_1.onCall)(async (request) => {
+    const { auth: contextAuth, data } = request;
+    // await ensureIsAdminOrForeman(contextAuth?.uid);
+    if (!contextAuth) {
+        throw new https_1.HttpsError("internal", "驗證檢查後 contextAuth 不應為空。");
+    }
+    const { workItem, workDescription, bomItems } = data;
+    // 驗證必填欄位
+    if (!workItem || !workItem.trim()) {
+        throw new https_1.HttpsError("invalid-argument", "工作項目為必填欄位。");
+    }
+    if (!workDescription || !workDescription.trim()) {
+        throw new https_1.HttpsError("invalid-argument", "工作描述為必填欄位。");
+    }
+    const createdByRef = db.doc(`users/${contextAuth.uid}`);
+    try {
+        // 1. Generate a unique work order code with G prefix for General
+        const today = new Date().toISOString().split('T')[0];
+        const counterRef = db.doc(`counters/generalWorkOrders_${today}`);
+        const newCount = await db.runTransaction(async (t) => {
+            var _a;
+            const doc = await t.get(counterRef);
+            const count = doc.exists ? (((_a = doc.data()) === null || _a === void 0 ? void 0 : _a.count) || 0) + 1 : 1;
+            t.set(counterRef, { count }, { merge: true });
+            return count;
+        });
+        const sequence = String(newCount).padStart(3, '0');
+        const woCode = `WO-G-${today.replace(/-/g, "")}-${sequence}`;
+        // 2. Build Bill of Materials (BOM) from provided bomItems
+        const billOfMaterials = [];
+        if (bomItems && Array.isArray(bomItems)) {
+            for (const bomItem of bomItems) {
+                try {
+                    const materialRef = db.doc(`${bomItem.materialType === 'fragrance' ? 'fragrances' : 'materials'}/${bomItem.materialId}`);
+                    const materialSnap = await materialRef.get();
+                    if (materialSnap.exists) {
+                        const materialData = materialSnap.data();
+                        billOfMaterials.push({
+                            id: bomItem.materialId,
+                            name: materialData.name,
+                            code: materialData.code,
+                            type: bomItem.materialType,
+                            category: bomItem.materialType === 'fragrance' ? 'fragrance' : 'common',
+                            unit: bomItem.unit || materialData.unit || 'KG',
+                            quantity: 0,
+                            usedQuantity: bomItem.usedQuantity || 0,
+                            ratio: 0,
+                            isCalculated: false,
+                        });
+                    }
+                }
+                catch (error) {
+                    firebase_functions_1.logger.warn(`無法載入物料 ${bomItem.materialId}:`, error);
+                }
+            }
+        }
+        // 3. Create the general work order document
+        const workOrderRef = db.collection("workOrders").doc();
+        await workOrderRef.set({
+            code: woCode,
+            orderType: 'general',
+            workItem: workItem.trim(),
+            workDescription: workDescription.trim(),
+            billOfMaterials: billOfMaterials,
+            targetQuantity: 0,
+            actualQuantity: 0,
+            status: "預報",
+            qcStatus: "未檢驗",
+            createdAt: firestore_1.FieldValue.serverTimestamp(),
+            createdByRef: createdByRef,
+            notes: "",
+            timeRecords: [],
+        });
+        firebase_functions_1.logger.info(`使用者 ${contextAuth.uid} 成功建立了通用工單 ${woCode} (ID: ${workOrderRef.id})`);
+        return { success: true, workOrderId: workOrderRef.id, workOrderCode: woCode };
+    }
+    catch (error) {
+        firebase_functions_1.logger.error(`建立通用工單時發生嚴重錯誤:`, error);
+        if (error instanceof https_1.HttpsError) {
+            throw error;
+        }
+        throw new https_1.HttpsError("internal", "建立通用工單時發生未知錯誤。");
     }
 });
 //# sourceMappingURL=workOrders.js.map
