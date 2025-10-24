@@ -127,7 +127,9 @@ export default function WorkOrderDetailPage() {
     qcStatus: "",
     actualQuantity: 0,
     targetQuantity: 0,
-    notes: ""
+    notes: "",
+    workItem: "",
+    workDescription: ""
   })
   
   // 留言相關狀態
@@ -1415,13 +1417,15 @@ export default function WorkOrderDetailPage() {
   // 初始化編輯資料
   const handleStartEditing = () => {
     if (!workOrder) return;
-    
+
     setEditData({
       status: workOrder.status,
       qcStatus: workOrder.qcStatus,
       actualQuantity: workOrder.actualQuantity,
       targetQuantity: workOrder.targetQuantity,
-      notes: workOrder.notes || ""
+      notes: workOrder.notes || "",
+      workItem: workOrder.workItem || "",
+      workDescription: workOrder.workDescription || ""
     });
     setIsEditing(true);
   };
@@ -1436,7 +1440,7 @@ export default function WorkOrderDetailPage() {
       const updatedBOM = recalculateBOMQuantities(editData.targetQuantity);
       
       const docRef = doc(db, "workOrders", workOrderId)
-      await updateDoc(docRef, {
+      const updateData: any = {
         status: editData.status,
         qcStatus: editData.qcStatus,
         actualQuantity: editData.actualQuantity,
@@ -1444,7 +1448,15 @@ export default function WorkOrderDetailPage() {
         notes: editData.notes,
         billOfMaterials: updatedBOM,
         updatedAt: Timestamp.now()
-      })
+      };
+
+      // 如果是通用工單，更新工作項目和描述
+      if (workOrder.orderType === 'general') {
+        updateData.workItem = editData.workItem;
+        updateData.workDescription = editData.workDescription;
+      }
+
+      await updateDoc(docRef, updateData);
 
       setWorkOrder(prev => prev ? {
         ...prev,
@@ -1453,7 +1465,11 @@ export default function WorkOrderDetailPage() {
         actualQuantity: editData.actualQuantity,
         targetQuantity: editData.targetQuantity,
         notes: editData.notes,
-        billOfMaterials: updatedBOM
+        billOfMaterials: updatedBOM,
+        ...(workOrder.orderType === 'general' ? {
+          workItem: editData.workItem,
+          workDescription: editData.workDescription
+        } : {})
       } : null)
 
       setIsEditing(false)
@@ -1963,7 +1979,8 @@ export default function WorkOrderDetailPage() {
         </CardContent>
       </Card>
 
-      {/* 工單詳細資料 */}
+      {/* 工單詳細資料 - 僅產品工單顯示 */}
+      {workOrder.orderType === 'product' && workOrder.productSnapshot && (
       <Card className="mb-4 sm:mb-6 shadow-lg border-0 bg-white">
         <CardHeader className="pb-3 sm:pb-6 bg-gradient-to-r from-green-200 to-green-300 text-green-800 rounded-t-xl">
           <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
@@ -2013,7 +2030,7 @@ export default function WorkOrderDetailPage() {
             </div>
 
             {/* 產品工單才顯示產品名稱和系列 */}
-            {workOrder.orderType === 'product' && workOrder.productSnapshot && (
+            {(workOrder.orderType || 'product') === 'product' && workOrder.productSnapshot && (
               <>
                 <div>
                   <Label className="text-sm text-gray-600">生產產品名稱</Label>
@@ -2027,12 +2044,37 @@ export default function WorkOrderDetailPage() {
               </>
             )}
 
-            {/* 通用工單顯示工作項目 */}
-            {workOrder.orderType === 'general' && (
-              <div className="lg:col-span-2">
-                <Label className="text-sm text-gray-600">工作項目</Label>
-                <div className="mt-1 font-medium text-gray-900">{workOrder.workItem}</div>
-              </div>
+            {/* 通用工單顯示工作項目和描述 */}
+            {workOrder.orderType !== 'product' && workOrder.orderType !== undefined && (
+              <>
+                <div>
+                  <Label className="text-sm text-gray-600">工作項目</Label>
+                  {isEditing ? (
+                    <Input
+                      value={editData.workItem}
+                      onChange={(e) => setEditData({...editData, workItem: e.target.value})}
+                      className="mt-1"
+                      placeholder="請輸入工作項目"
+                    />
+                  ) : (
+                    <div className="mt-1 font-medium text-gray-900">{workOrder.workItem}</div>
+                  )}
+                </div>
+
+                <div className="lg:col-span-2">
+                  <Label className="text-sm text-gray-600">工作描述</Label>
+                  {isEditing ? (
+                    <textarea
+                      value={editData.workDescription}
+                      onChange={(e) => setEditData({...editData, workDescription: e.target.value})}
+                      className="mt-1 w-full p-2 border rounded-md min-h-[100px]"
+                      placeholder="請輸入工作描述"
+                    />
+                  ) : (
+                    <div className="mt-1 font-medium text-gray-900 whitespace-pre-wrap">{workOrder.workDescription}</div>
+                  )}
+                </div>
+              </>
             )}
 
             {workOrder.orderType === 'product' && (
@@ -2098,6 +2140,7 @@ export default function WorkOrderDetailPage() {
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* 香精物料清單 (BOM表) */}
       <Card className="mb-4 sm:mb-6 shadow-lg border-0 bg-white">

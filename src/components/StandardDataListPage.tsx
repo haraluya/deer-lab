@@ -491,7 +491,7 @@ const Toolbar = <T,>({
           
           {/* 新增按鈕 */}
           {showAddButton && onAdd && (
-            <Button 
+            <Button
               onClick={onAdd}
               className="bg-gradient-to-r from-orange-500 to-blue-500 hover:from-orange-600 hover:to-blue-600 text-white shadow-lg"
             >
@@ -499,9 +499,12 @@ const Toolbar = <T,>({
               {addButtonText}
             </Button>
           )}
+
+          {/* 自定義工具列額外內容 */}
+          {renderToolbarExtra?.()}
         </div>
       </div>
-      
+
       {/* 盤點模式工具列 */}
       {stocktakeMode && (
         <div className="flex items-center gap-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
@@ -648,9 +651,6 @@ const Toolbar = <T,>({
           </CardContent>
         </Card>
       )}
-      
-      {/* 自定義工具列額外內容 */}
-      {renderToolbarExtra?.()}
     </div>
   );
 };
