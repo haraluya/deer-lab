@@ -838,13 +838,20 @@ export default function WorkOrderDetailPage() {
   // 重新載入BOM表
   const handleReloadBOM = useCallback(async () => {
     if (!workOrder || !db) return;
-    
+
     setIsReloading(true);
     try {
       // 1. 獲取工單中的產品快照資料
       const productSnapshotData = workOrder.productSnapshot;
       console.log('重新載入BOM表 - 工單中的產品快照:', productSnapshotData);
-      
+
+      // 🔧 檢查是否為通用工單（沒有產品快照）
+      if (!productSnapshotData) {
+        console.log('重新載入BOM表 - 通用工單沒有產品快照，跳過香精配方載入');
+        setIsReloading(false);
+        return;
+      }
+
       // 2. 從香精集合中獲取完整的香精配方資料
       // 🔧 修復：優先使用 fragranceId，備用 fragranceCode
       let fragranceFormulaData = null;
@@ -1664,6 +1671,7 @@ export default function WorkOrderDetailPage() {
         </div>
         
                  <div class="top-info">
+           ${workOrder.productSnapshot ? `
            <div class="top-info-item">
              <div class="top-info-label">產品系列</div>
              <div class="top-info-value">${workOrder.productSnapshot.seriesName || '未指定'}</div>
@@ -1680,6 +1688,12 @@ export default function WorkOrderDetailPage() {
              <div class="top-info-label">尼古丁濃度</div>
              <div class="top-info-value">${workOrder.productSnapshot.nicotineMg} mg</div>
            </div>
+           ` : `
+           <div class="top-info-item">
+             <div class="top-info-label">工作項目</div>
+             <div class="top-info-value">${(workOrder as any).workItem || '通用工單'}</div>
+           </div>
+           `}
            <div class="top-info-item">
              <div class="top-info-label">目標產量</div>
              <div class="top-info-value">${formatWeight(workOrder.targetQuantity)}</div>

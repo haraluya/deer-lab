@@ -183,9 +183,9 @@ export default function CreateGeneralWorkOrderPage() {
         bomItems: bomItems
       })
 
-      if (result.success) {
-        toast.success(`通用工單 ${result.workOrderCode} 建立成功`)
-        router.push(`/dashboard/work-orders/${result.workOrderId}`)
+      if (result.success && result.data) {
+        toast.success(`通用工單 ${result.data.workOrderCode} 建立成功`)
+        router.push(`/dashboard/work-orders/${result.data.workOrderId}`)
       } else {
         toast.error("建立通用工單失敗")
       }

@@ -1012,6 +1012,23 @@ export interface ApiEndpoints {
     request: WorkOrdersApi.CreateRequest;
     response: any;
   };
+  'createGeneralWorkOrder': {
+    request: {
+      workItem: string;
+      workDescription: string;
+      bomItems: Array<{
+        materialId: string;
+        materialType: 'material' | 'fragrance';
+        unit: string;
+        usedQuantity: number;
+      }>;
+    };
+    response: {
+      success: boolean;
+      workOrderId: string;
+      workOrderCode: string;
+    };
+  };
   'updateWorkOrder': {
     request: WorkOrdersApi.UpdateRequest;
     response: any;
