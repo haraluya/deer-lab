@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,10 +11,18 @@ import { toast } from 'sonner';
 import Image from 'next/image';
 
 export default function LoginPage() {
-  const { login, isLoading } = useAuth();
+  const { login, isLoading, appUser } = useAuth();
+  const router = useRouter();
   const [employeeId, setEmployeeId] = useState('');
   const [password, setPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // 已登入自動跳轉到 dashboard
+  useEffect(() => {
+    if (!isLoading && appUser) {
+      router.push('/dashboard');
+    }
+  }, [isLoading, appUser, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,6 +49,18 @@ export default function LoginPage() {
       setIsLoggingIn(false);
     }
   };
+
+  // 載入中顯示載入畫面
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+          <p className="text-gray-600 font-medium">檢查登入狀態...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 relative overflow-hidden">
