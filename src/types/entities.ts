@@ -174,6 +174,7 @@ export interface BillOfMaterialsItem {
   ratio?: number;
   isCalculated?: boolean;
   usedQuantity?: number;
+  unitUsage?: number; // 單位用量（每件成品使用的物料量，僅 specific/common 使用）
 }
 
 // ==================== 購物車和採購相關類型 ====================

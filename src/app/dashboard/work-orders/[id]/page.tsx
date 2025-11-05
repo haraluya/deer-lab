@@ -422,13 +422,11 @@ export default function WorkOrderDetailPage() {
         };
       }
 
-      // specific/common 物料按成品件數計算
+      // specific/common 物料：成品件數 = 需求數量（建議值）
       if (['specific', 'common'].includes(item.category)) {
-        const unitUsage = item.unitUsage || 0;
-        const newQuantity = parseFloat((finishedCount * unitUsage).toFixed(3));
         return {
           ...item,
-          quantity: newQuantity
+          quantity: finishedCount  // 成品件數直接作為需求數量
         };
       }
 
@@ -461,30 +459,6 @@ export default function WorkOrderDetailPage() {
     } : null);
   };
 
-  // 處理單位用量變更
-  const handleUnitUsageChange = (materialId: string, newUnitUsage: number) => {
-    setWorkOrder(prev => {
-      if (!prev) return null;
-
-      const updatedBOM = prev.billOfMaterials.map(item => {
-        if (item.id === materialId) {
-          const finishedCount = prev.finishedProductCount || 0;
-          const newQuantity = parseFloat((finishedCount * newUnitUsage).toFixed(3));
-          return {
-            ...item,
-            unitUsage: newUnitUsage,
-            quantity: newQuantity
-          };
-        }
-        return item;
-      });
-
-      return {
-        ...prev,
-        billOfMaterials: updatedBOM
-      };
-    });
-  };
 
   // 處理工單狀態變更
   const handleStatusChange = (newStatus: string) => {
@@ -2669,10 +2643,7 @@ export default function WorkOrderDetailPage() {
                         <TableHead className="text-gray-700 font-bold">物料名稱</TableHead>
                         <TableHead className="text-gray-700 font-bold">料件代號</TableHead>
                         {workOrder.orderType === 'product' && (
-                          <>
-                            <TableHead className="text-gray-700 font-bold">單位用量</TableHead>
-                            <TableHead className="text-gray-700 font-bold">需求數量</TableHead>
-                          </>
+                          <TableHead className="text-gray-700 font-bold">需求數量</TableHead>
                         )}
                         <TableHead className="text-gray-700 font-bold">使用數量</TableHead>
                         <TableHead className="text-gray-700 font-bold">單位</TableHead>
@@ -2687,25 +2658,9 @@ export default function WorkOrderDetailPage() {
                             <TableCell className="font-medium">{item.name}</TableCell>
                             <TableCell className="font-mono text-sm">{item.code}</TableCell>
                             {workOrder.orderType === 'product' && (
-                              <>
-                                <TableCell>
-                                  {isEditing ? (
-                                    <Input
-                                      type="number"
-                                      min="0"
-                                      step="0.001"
-                                      value={item.unitUsage || 0}
-                                      onChange={(e) => handleUnitUsageChange(item.id, parseFloat(e.target.value) || 0)}
-                                      className="w-20"
-                                    />
-                                  ) : (
-                                    <span>{formatQuantity(item.unitUsage || 0)}</span>
-                                  )}
-                                </TableCell>
-                                <TableCell className="font-medium text-blue-700">
-                                  {formatQuantity(item.quantity)}
-                                </TableCell>
-                              </>
+                              <TableCell className="font-medium text-blue-700">
+                                {formatQuantity(item.quantity)}
+                              </TableCell>
                             )}
                             <TableCell>
                               {isEditingQuantity ? (
@@ -2792,7 +2747,7 @@ export default function WorkOrderDetailPage() {
                         <TableHead className="text-black font-bold">料件代號</TableHead>
                         {workOrder.orderType === 'product' && (
                           <>
-                            <TableHead className="text-black font-bold">比例/單位用量</TableHead>
+                            <TableHead className="text-black font-bold">比例</TableHead>
                             <TableHead className="text-black font-bold">需求數量</TableHead>
                           </>
                         )}
@@ -2818,21 +2773,10 @@ export default function WorkOrderDetailPage() {
                             {workOrder.orderType === 'product' && (
                               <>
                                 <TableCell>
-                                  {['pg', 'vg', 'nicotine'].includes(item.category) ? (
+                                  {['pg', 'vg', 'nicotine', 'fragrance'].includes(item.category) && item.ratio ? (
                                     <span className="text-purple-700 font-medium">{item.ratio}%</span>
                                   ) : (
-                                    isEditing ? (
-                                      <Input
-                                        type="number"
-                                        min="0"
-                                        step="0.001"
-                                        value={item.unitUsage || 0}
-                                        onChange={(e) => handleUnitUsageChange(item.id, parseFloat(e.target.value) || 0)}
-                                        className="w-20"
-                                      />
-                                    ) : (
-                                      <span>{formatQuantity(item.unitUsage || 0)}</span>
-                                    )
+                                    <span className="text-gray-400">-</span>
                                   )}
                                 </TableCell>
                                 <TableCell className="font-medium text-blue-700">
