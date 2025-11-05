@@ -2264,13 +2264,13 @@ export default function WorkOrderDetailPage() {
             )}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-            <div>
-              <Label className="text-sm text-gray-600 whitespace-nowrap">目前工單狀態</Label>
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="min-w-0">
+              <Label className="text-sm text-gray-600 whitespace-nowrap block mb-2">目前工單狀態</Label>
               {isEditing ? (
                 <Select value={editData.status} onValueChange={handleStatusChange}>
-                  <SelectTrigger className="mt-1">
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -2287,8 +2287,8 @@ export default function WorkOrderDetailPage() {
                   </SelectContent>
                 </Select>
               ) : (
-                <div className="mt-1">
-                  <Badge className={`${statusOptions.find(s => s.value === workOrder.status)?.color} text-base sm:text-lg font-bold px-3 py-1`}>
+                <div>
+                  <Badge className={`${statusOptions.find(s => s.value === workOrder.status)?.color} text-base font-bold px-3 py-1`}>
                     {workOrder.status}
                   </Badge>
                 </div>
@@ -2298,22 +2298,22 @@ export default function WorkOrderDetailPage() {
             {/* 產品工單才顯示產品名稱和系列 */}
             {(workOrder.orderType || 'product') === 'product' && workOrder.productSnapshot && (
               <>
-                <div>
-                  <Label className="text-sm text-gray-600 whitespace-nowrap">生產產品名稱</Label>
-                  <div className="mt-1 font-medium text-gray-900 truncate" title={workOrder.productSnapshot.name}>
+                <div className="min-w-0">
+                  <Label className="text-sm text-gray-600 whitespace-nowrap block mb-2">生產產品名稱</Label>
+                  <div className="font-medium text-gray-900 text-base truncate" title={workOrder.productSnapshot.name}>
                     {workOrder.productSnapshot.name}
                   </div>
                 </div>
 
-                <div>
-                  <Label className="text-sm text-gray-600 whitespace-nowrap">產品系列</Label>
-                  <div className="mt-1 font-medium text-gray-900 truncate" title={workOrder.productSnapshot.seriesName || '未指定'}>
+                <div className="min-w-0">
+                  <Label className="text-sm text-gray-600 whitespace-nowrap block mb-2">產品系列</Label>
+                  <div className="font-medium text-gray-900 text-base truncate" title={workOrder.productSnapshot.seriesName || '未指定'}>
                     {workOrder.productSnapshot.seriesName || '未指定'}
                   </div>
                 </div>
 
-                <div>
-                  <Label className="text-sm text-gray-600 whitespace-nowrap">目標產量 (KG)</Label>
+                <div className="min-w-0">
+                  <Label className="text-sm text-gray-600 whitespace-nowrap block mb-2">目標產量 (KG)</Label>
                   {isEditing ? (
                     <Input
                       type="number"
@@ -2321,15 +2321,14 @@ export default function WorkOrderDetailPage() {
                       step="0.1"
                       value={editData.targetQuantity}
                       onChange={(e) => handleTargetQuantityChange(parseFloat(e.target.value) || 0)}
-                      className="mt-1"
                     />
                   ) : (
-                    <div className="mt-1 font-medium text-gray-900 whitespace-nowrap">{formatWeight(workOrder.targetQuantity)}</div>
+                    <div className="font-medium text-gray-900 text-base whitespace-nowrap">{formatWeight(workOrder.targetQuantity)}</div>
                   )}
                 </div>
 
-                <div>
-                  <Label className="text-sm text-gray-600 whitespace-nowrap">成品件數 (pcs)</Label>
+                <div className="min-w-0">
+                  <Label className="text-sm text-gray-600 whitespace-nowrap block mb-2">成品件數 (pcs)</Label>
                   {isEditing ? (
                     <Input
                       type="number"
@@ -2337,10 +2336,9 @@ export default function WorkOrderDetailPage() {
                       step="1"
                       value={editData.finishedProductCount}
                       onChange={(e) => handleFinishedProductCountChange(parseInt(e.target.value) || 0)}
-                      className="mt-1"
                     />
                   ) : (
-                    <div className="mt-1 font-medium text-gray-900 whitespace-nowrap">{workOrder.finishedProductCount || 0} pcs</div>
+                    <div className="font-medium text-gray-900 text-base whitespace-nowrap">{workOrder.finishedProductCount || 0} pcs</div>
                   )}
                 </div>
               </>
