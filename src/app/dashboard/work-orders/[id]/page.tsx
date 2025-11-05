@@ -2265,9 +2265,9 @@ export default function WorkOrderDetailPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
             <div>
-              <Label className="text-sm text-gray-600">目前工單狀態</Label>
+              <Label className="text-sm text-gray-600 whitespace-nowrap">目前工單狀態</Label>
               {isEditing ? (
                 <Select value={editData.status} onValueChange={handleStatusChange}>
                   <SelectTrigger className="mt-1">
@@ -2299,17 +2299,21 @@ export default function WorkOrderDetailPage() {
             {(workOrder.orderType || 'product') === 'product' && workOrder.productSnapshot && (
               <>
                 <div>
-                  <Label className="text-sm text-gray-600">生產產品名稱</Label>
-                  <div className="mt-1 font-medium text-gray-900">{workOrder.productSnapshot.name}</div>
+                  <Label className="text-sm text-gray-600 whitespace-nowrap">生產產品名稱</Label>
+                  <div className="mt-1 font-medium text-gray-900 truncate" title={workOrder.productSnapshot.name}>
+                    {workOrder.productSnapshot.name}
+                  </div>
                 </div>
 
                 <div>
-                  <Label className="text-sm text-gray-600">產品系列</Label>
-                  <div className="mt-1 font-medium text-gray-900">{workOrder.productSnapshot.seriesName || '未指定'}</div>
+                  <Label className="text-sm text-gray-600 whitespace-nowrap">產品系列</Label>
+                  <div className="mt-1 font-medium text-gray-900 truncate" title={workOrder.productSnapshot.seriesName || '未指定'}>
+                    {workOrder.productSnapshot.seriesName || '未指定'}
+                  </div>
                 </div>
 
                 <div>
-                  <Label className="text-sm text-gray-600">目標產量 (KG)</Label>
+                  <Label className="text-sm text-gray-600 whitespace-nowrap">目標產量 (KG)</Label>
                   {isEditing ? (
                     <Input
                       type="number"
@@ -2320,12 +2324,12 @@ export default function WorkOrderDetailPage() {
                       className="mt-1"
                     />
                   ) : (
-                    <div className="mt-1 font-medium text-gray-900">{formatWeight(workOrder.targetQuantity)}</div>
+                    <div className="mt-1 font-medium text-gray-900 whitespace-nowrap">{formatWeight(workOrder.targetQuantity)}</div>
                   )}
                 </div>
 
                 <div>
-                  <Label className="text-sm text-gray-600">成品件數 (pcs)</Label>
+                  <Label className="text-sm text-gray-600 whitespace-nowrap">成品件數 (pcs)</Label>
                   {isEditing ? (
                     <Input
                       type="number"
@@ -2336,7 +2340,7 @@ export default function WorkOrderDetailPage() {
                       className="mt-1"
                     />
                   ) : (
-                    <div className="mt-1 font-medium text-gray-900">{workOrder.finishedProductCount || 0} pcs</div>
+                    <div className="mt-1 font-medium text-gray-900 whitespace-nowrap">{workOrder.finishedProductCount || 0} pcs</div>
                   )}
                 </div>
               </>
