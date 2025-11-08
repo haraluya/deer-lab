@@ -9,6 +9,7 @@ import { toast } from "sonner"
 import { uploadImage, uploadMultipleImages } from "@/lib/imageUpload"
 import { error, debug, info } from "@/utils/logger"
 import { useApiClient } from "@/hooks/useApiClient"
+import { limitToThreeDecimals } from "@/utils/numberValidation"
 import { useAuth } from "@/context/AuthContext"
 import { findMaterialByCategory } from "@/lib/systemConfig"
 import { Material, Fragrance, Personnel, WorkOrder, TimeEntry, BillOfMaterialsItem } from "@/types"
@@ -177,7 +178,7 @@ export default function WorkOrderDetailPage() {
 
   // 處理使用數量更新
   const handleQuantityChange = (itemId: string, value: string) => {
-    const numValue = Math.max(0, parseFloat(parseFloat(value || '0').toFixed(3))); // 確保不是負數
+    const numValue = limitToThreeDecimals(Math.max(0, parseFloat(value || '0'))); // 確保不是負數且精度為3位小數
     setEditingQuantities(prev => ({
       ...prev,
       [itemId]: numValue
@@ -194,8 +195,8 @@ export default function WorkOrderDetailPage() {
 
       const updatedBillOfMaterials = workOrder.billOfMaterials.map(item => {
         const newUsedQuantity = editingQuantities[item.id] !== undefined ?
-          Math.max(0, parseFloat(editingQuantities[item.id].toFixed(3))) :
-          (item.usedQuantity !== undefined ? Math.max(0, parseFloat(item.usedQuantity.toFixed(3))) : Math.max(0, parseFloat((item.quantity || 0).toFixed(3))));
+          limitToThreeDecimals(Math.max(0, editingQuantities[item.id])) :
+          (item.usedQuantity !== undefined ? limitToThreeDecimals(Math.max(0, item.usedQuantity)) : limitToThreeDecimals(Math.max(0, item.quantity || 0)));
 
         // 特別診斷香精項目
         if (item.type === 'fragrance' || item.category === 'fragrance') {
@@ -414,11 +415,11 @@ export default function WorkOrderDetailPage() {
     return workOrder.billOfMaterials.map(item => {
       // 核心配方物料（fragrance, pg, vg, nicotine）按比例計算
       if (['fragrance', 'pg', 'vg', 'nicotine'].includes(item.category) && item.ratio) {
-        const newQuantity = parseFloat((newTargetQuantity * (item.ratio / 100)).toFixed(3));
+        const newQuantity = limitToThreeDecimals(newTargetQuantity * (item.ratio / 100));
         return {
           ...item,
           quantity: newQuantity,
-          usedQuantity: item.usedQuantity !== undefined ? Math.max(0, parseFloat(item.usedQuantity.toFixed(3))) : Math.max(0, parseFloat(newQuantity.toFixed(3))) // 保留已設定的使用數量，包括 0，並確保不是負數
+          usedQuantity: item.usedQuantity !== undefined ? limitToThreeDecimals(Math.max(0, item.usedQuantity)) : limitToThreeDecimals(Math.max(0, newQuantity)) // 保留已設定的使用數量，包括 0，並確保不是負數
         };
       }
 

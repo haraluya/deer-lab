@@ -7,6 +7,7 @@ import { db } from "@/lib/firebase"
 import { toast } from "sonner"
 import { ArrowLeft, Plus, Package, Loader2, Calculator, Target, Zap, CheckCircle, AlertTriangle, Search, ChevronsUpDown, Check } from "lucide-react"
 import { findMaterialByCategory } from "@/lib/systemConfig"
+import { limitToThreeDecimals } from "@/utils/numberValidation"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -313,7 +314,7 @@ export default function CreateWorkOrderPage() {
                         (selectedProduct.fragranceCode && selectedProduct.fragranceCode !== '未指定');
 
     if (hasFragrance) {
-      const fragranceQuantity = targetQuantity * (fragranceRatios.fragrance / 100)
+      const fragranceQuantity = limitToThreeDecimals(targetQuantity * (fragranceRatios.fragrance / 100))
 
       // 查找香精的實際庫存 - 從香精集合中查找，使用更精確的匹配邏輯
       let fragranceMaterial = null
@@ -374,7 +375,7 @@ export default function CreateWorkOrderPage() {
     // PG (丙二醇) - 使用系統配置查找
     const pgMaterial = findMaterialByCategory(materials, 'pg')
     if (pgMaterial) {
-      const pgQuantity = targetQuantity * (fragranceRatios.pg / 100) // 24.3% = 0.243
+      const pgQuantity = limitToThreeDecimals(targetQuantity * (fragranceRatios.pg / 100)) // 24.3% = 0.243
       materialRequirementsMap.set(pgMaterial.id, {
         materialId: pgMaterial.id,
         materialCode: pgMaterial.code,
@@ -394,7 +395,7 @@ export default function CreateWorkOrderPage() {
     // VG (甘油) - 使用系統配置查找
     const vgMaterial = findMaterialByCategory(materials, 'vg')
     if (vgMaterial) {
-      const vgQuantity = targetQuantity * (fragranceRatios.vg / 100) // 40% = 0.4
+      const vgQuantity = limitToThreeDecimals(targetQuantity * (fragranceRatios.vg / 100)) // 40% = 0.4
       materialRequirementsMap.set(vgMaterial.id, {
         materialId: vgMaterial.id,
         materialCode: vgMaterial.code,
@@ -416,8 +417,12 @@ export default function CreateWorkOrderPage() {
     if (nicotineMaterial) {
       // 修復：即使濃度為0也要計算和添加尼古丁，確保正常顯示
       const nicotineConcentration = selectedProduct.nicotineMg || 0 // 確保數值存在，默認為0
+      // 尼古丁用量計算公式說明：
+      // - 尼古丁鹽原液濃度: 250mg/ml
+      // - 需求量(KG) = (總量(KG) × 目標濃度(mg/ml)) / 250(mg/ml)
+      // - 例: 10KG × 3mg/ml / 250 = 0.12 KG
       const nicotineQuantity = nicotineConcentration > 0
-        ? (targetQuantity * nicotineConcentration) / 250
+        ? limitToThreeDecimals((targetQuantity * nicotineConcentration) / 250)
         : 0 // 0mg 時數量為0，但仍然要添加到BOM表中
 
       materialRequirementsMap.set(nicotineMaterial.id, {

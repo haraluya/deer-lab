@@ -6,6 +6,7 @@ import { collection, getDocs } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
 import { useApiClient } from "@/hooks/useApiClient"
+import { limitToThreeDecimals } from "@/utils/numberValidation"
 import { ArrowLeft, Plus, Loader2, Calculator, Target, Zap, CheckCircle, AlertTriangle, Package, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -135,7 +136,7 @@ export default function CreateGeneralWorkOrderPage() {
   }
 
   const handleQuantityChange = (itemId: string, value: string) => {
-    const numValue = Math.max(0, parseFloat(value || '0'))
+    const numValue = limitToThreeDecimals(Math.max(0, parseFloat(value || '0')))
     setSelectedItems(prev =>
       prev.map(item =>
         item.id === itemId
@@ -168,12 +169,12 @@ export default function CreateGeneralWorkOrderPage() {
 
     setCreating(true)
     try {
-      // 準備 BOM 項目資料
+      // 準備 BOM 項目資料（確保精度控制）
       const bomItems = selectedItems.map(item => ({
         materialId: item.id,
         materialType: item.type,
         unit: item.unit,
-        usedQuantity: item.usedQuantity || 0
+        usedQuantity: limitToThreeDecimals(item.usedQuantity || 0)
       }))
 
       // 呼叫 API 建立通用工單

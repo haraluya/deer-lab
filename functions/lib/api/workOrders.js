@@ -6,6 +6,7 @@ const firebase_functions_1 = require("firebase-functions");
 const https_1 = require("firebase-functions/v2/https");
 const firestore_1 = require("firebase-admin/firestore");
 const auth_1 = require("../utils/auth");
+const numberValidation_1 = require("../utils/numberValidation");
 const db = (0, firestore_1.getFirestore)();
 /**
  * Creates a new work order based on a product and target quantity with advanced BOM calculation.
@@ -108,7 +109,7 @@ exports.createWorkOrder = (0, https_1.onCall)(async (request) => {
                 }
             }
         }
-        // 6. Create the work order document
+        // 6. Create the work order document (加入精度驗證)
         const workOrderRef = db.collection("workOrders").doc();
         await workOrderRef.set({
             code: woCode,
@@ -124,7 +125,7 @@ exports.createWorkOrder = (0, https_1.onCall)(async (request) => {
                 fragranceCode: (fragranceData === null || fragranceData === void 0 ? void 0 : fragranceData.code) || productData.fragranceCode || '未指定',
                 nicotineMg: nicotineMg || productData.nicotineMg || 0,
             },
-            billOfMaterials: billOfMaterials,
+            billOfMaterials: billOfMaterials.map(item => (Object.assign(Object.assign({}, item), { quantity: (0, numberValidation_1.limitToThreeDecimals)(item.quantity || 0), usedQuantity: item.usedQuantity ? (0, numberValidation_1.limitToThreeDecimals)(item.usedQuantity) : undefined }))),
             targetQuantity: targetQuantity,
             actualQuantity: 0,
             status: "未確認",
@@ -408,8 +409,10 @@ exports.completeWorkOrder = (0, https_1.onCall)(async (request) => {
             for (const itemInfo of itemRefs) {
                 const { ref: itemRef, snap: itemSnap, consumedQuantity, itemType } = itemInfo;
                 const itemData = itemSnap.data(); // 使用之前讀取的數據
+                // 確保消耗量精度為3位小數
+                const validatedConsumedQuantity = (0, numberValidation_1.limitToThreeDecimals)(consumedQuantity || 0);
                 const currentStock = itemData.currentStock || 0;
-                const newStock = Math.max(0, currentStock - consumedQuantity); // 確保庫存不為負
+                const newStock = (0, numberValidation_1.limitToThreeDecimals)(Math.max(0, currentStock - validatedConsumedQuantity)); // 確保庫存不為負且精度正確
                 // 更新庫存
                 transaction.update(itemRef, {
                     currentStock: newStock,
@@ -422,7 +425,7 @@ exports.completeWorkOrder = (0, https_1.onCall)(async (request) => {
                     itemCode: itemData.code || '',
                     itemName: itemData.name || '',
                     quantityBefore: currentStock,
-                    quantityChange: -consumedQuantity,
+                    quantityChange: -validatedConsumedQuantity,
                     quantityAfter: newStock,
                     changeReason: `工單 ${workOrderData.code || workOrderId} 完工消耗`
                 });
@@ -528,14 +531,14 @@ exports.createGeneralWorkOrder = (0, https_1.onCall)(async (request) => {
                 }
             }
         }
-        // 3. Create the general work order document
+        // 3. Create the general work order document (加入精度驗證)
         const workOrderRef = db.collection("workOrders").doc();
         await workOrderRef.set({
             code: woCode,
             orderType: 'general',
             workItem: workItem.trim(),
             workDescription: workDescription.trim(),
-            billOfMaterials: billOfMaterials,
+            billOfMaterials: billOfMaterials.map(item => (Object.assign(Object.assign({}, item), { quantity: (0, numberValidation_1.limitToThreeDecimals)(item.quantity || 0), usedQuantity: item.usedQuantity ? (0, numberValidation_1.limitToThreeDecimals)(item.usedQuantity) : undefined }))),
             targetQuantity: 0,
             actualQuantity: 0,
             status: "預報",
