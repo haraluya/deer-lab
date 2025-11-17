@@ -110,11 +110,22 @@ export function NewReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrde
               itemRefPath = path;
               console.log(`使用 path: ${itemRefPath}`);
             } else if (item.itemRef.id) {
-              // 只有 id 的情況，根據 unit 判斷類型
-              const collection = item.unit ? 'materials' : 'fragrances';
+              // 🔧 修復：只有 id 的情況，需要正確判斷是香精還是原料
+              // 無法直接從 itemRef.id 判斷類型，需要使用其他線索
+              // 香精通常沒有單位或單位為 KG/kg，原料有特定單位（如 L、ML、G、PC 等）
               const itemId = typeof item.itemRef.id === 'string' ? item.itemRef.id : String(item.itemRef.id);
+
+              // 判斷邏輯：如果沒有 unit 或 unit 是 KG/kg，則為香精
+              const isFragrance = !item.unit || item.unit.toUpperCase() === 'KG';
+              const collection = isFragrance ? 'fragrances' : 'materials';
+
               itemRefPath = `${collection}/${itemId}`;
-              console.log(`使用 id: ${itemRefPath}`, { originalId: item.itemRef.id, type: typeof item.itemRef.id });
+              console.log(`使用 id: ${itemRefPath}`, {
+                originalId: item.itemRef.id,
+                type: typeof item.itemRef.id,
+                unit: item.unit,
+                isFragrance
+              });
             }
           }
 
