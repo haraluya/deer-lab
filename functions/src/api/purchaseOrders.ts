@@ -67,8 +67,14 @@ export const createPurchaseOrders = onCall(async (request) => {
       const poCode = `PO-${dateStr}-${sequence}`;
       const poRef = db.collection("purchaseOrders").doc();
       const itemsForPO = supplier.items.map((item: PurchaseItemPayload) => {
+        // 🔧 修復：正確判斷香精/原料
+        // 香精：無 unit 或 unit 為 KG/kg
+        // 原料：有特定單位（L、ML、G、PC 等）
+        const isFragrance = !item.unit || (item.unit && item.unit.toUpperCase() === 'KG');
+        const collection = isFragrance ? 'fragrances' : 'materials';
+
         const baseItem = {
-          itemRef: db.doc(`${item.unit ? 'materials' : 'fragrances'}/${item.id}`),
+          itemRef: db.doc(`${collection}/${item.id}`),
           name: item.name,
           code: item.code,
           quantity: Number(item.quantity),
