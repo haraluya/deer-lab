@@ -2,6 +2,7 @@
 import { logger } from "firebase-functions";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { ensureIsAdmin } from "../../utils/auth";
 
 const db = getFirestore();
 
@@ -17,13 +18,7 @@ export const fixPurchaseOrderItemRefs = onCall(async (request) => {
   }
 
   // 檢查權限（僅管理員可使用）
-  const userDoc = await db.collection("users").doc(contextAuth.uid).get();
-  const userData = userDoc.data();
-  const userRole = userData?.role || "employee";
-
-  if (userRole !== "admin") {
-    throw new HttpsError("permission-denied", "僅限管理員使用此功能");
-  }
+  await ensureIsAdmin(contextAuth.uid);
 
   const { purchaseOrderId, dryRun = true } = data;
 
@@ -174,13 +169,7 @@ export const scanAllPurchaseOrders = onCall(async (request) => {
   }
 
   // 檢查權限（僅管理員可使用）
-  const userDoc = await db.collection("users").doc(contextAuth.uid).get();
-  const userData = userDoc.data();
-  const userRole = userData?.role || "employee";
-
-  if (userRole !== "admin") {
-    throw new HttpsError("permission-denied", "僅限管理員使用此功能");
-  }
+  await ensureIsAdmin(contextAuth.uid);
 
   try {
     const poSnapshot = await db.collection("purchaseOrders")
