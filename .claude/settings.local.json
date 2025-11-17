@@ -20,7 +20,15 @@
       "Bash(git commit -m \"$(cat <<''EOF''\n🔧 修復通用工單建立功能並優化工單列表UI\n\n## 問題修復\n\n### 1. API 匯出遺漏\n- **問題**：createGeneralWorkOrder API 未在 functions/src/index.ts 中匯出\n- **修復**：已由 `export * from \"./api/workOrders\"` 自動匯出\n- **影響**：通用工單建立功能現在可以正常使用\n\n### 2. UI 優化\n- **問題**：工單列表頁面視圖切換按鈕導致按鈕列換行\n- **修復**：移除視圖切換功能，強制使用表格模式\n- **檔案**：src/app/dashboard/work-orders/page.tsx\n- **改動**：\n  - 設定 viewModes 為單一選項（僅表格模式）\n  - 確保「建立新工單」和「建立通用工單」按鈕在同一行\n  - 優化工具列佈局，避免按鈕溢出\n\n## 技術細節\n\n### API 架構\n```typescript\n// functions/src/api/workOrders.ts\nexport const createGeneralWorkOrder = onCall(async (request) => {\n  // 通用工單建立邏輯\n  // 支援自由選擇原料和香精\n  // 工單編號：WO-G-YYYYMMDD-XXX\n});\n\n// functions/src/index.ts\nexport * from \"./api/workOrders\"; // 自動匯出所有 API\n```\n\n### UI 配置\n```typescript\n// 強制使用表格模式，移除視圖切換\nviewModes={[{ key: ''table'', title: ''表格'', icon: <List /> }]}\ndefaultViewMode=\"table\"\n```\n\n## 部署說明\n- Firebase Functions 部署中：createGeneralWorkOrder\n- 前端修改：工單列表頁面 UI 優化\n- 向後相容：所有現有功能完整保留\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
       "Bash(git commit:*)",
       "Read(//c/Users/haral/**)",
-      "Bash(timeout /t 120)"
+      "Bash(timeout /t 120)",
+      "Bash(findstr:*)",
+      "Bash(nul)",
+      "Bash(dir /s /b *.ts)",
+      "Bash(dir:*)",
+      "Bash(npm run lint:functions:*)",
+      "Bash(node -e:*)",
+      "Bash(timeout /t 30)",
+      "Bash(Select-String -Pattern \"Build error|Error:|Successfully compiled|Build completed\" -Context 2,2)"
     ],
     "deny": [],
     "ask": []

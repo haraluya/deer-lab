@@ -5,6 +5,7 @@ exports.receivePurchaseOrderItems = exports.updatePurchaseOrderStatus = exports.
 const firebase_functions_1 = require("firebase-functions");
 const https_1 = require("firebase-functions/v2/https");
 const firestore_1 = require("firebase-admin/firestore");
+const numberValidation_1 = require("../utils/numberValidation");
 const db = (0, firestore_1.getFirestore)();
 // 🎯 統一API回應格式輔助函數
 function createStandardResponse(success, data, error) {
@@ -47,8 +48,14 @@ exports.createPurchaseOrders = (0, https_1.onCall)(async (request) => {
             const poCode = `PO-${dateStr}-${sequence}`;
             const poRef = db.collection("purchaseOrders").doc();
             const itemsForPO = supplier.items.map((item) => {
+                // 🔧 修復：正確判斷香精/原料
+                // 香精：無 unit 或 unit 為 KG/kg
+                // 原料：有特定單位（L、ML、G、PC 等）
+                const isFragrance = !item.unit || (item.unit && item.unit.toUpperCase() === 'KG');
+                const collection = isFragrance ? 'fragrances' : 'materials';
                 const baseItem = {
-                    itemRef: db.doc(`${item.unit ? 'materials' : 'fragrances'}/${item.id}`),
+                    itemRef: db.doc(`${collection}/${item.id}`),
+                    type: isFragrance ? 'fragrance' : 'material',
                     name: item.name,
                     code: item.code,
                     quantity: Number(item.quantity),
@@ -263,7 +270,10 @@ exports.receivePurchaseOrderItems = (0, https_1.onCall)(async (request) => {
             const inventoryRecordDetails = [];
             for (const [itemRefPath, itemData] of itemDataMap) {
                 const { itemRef, itemDoc, itemId, itemType, item, currentStock, receivedQuantity } = itemData;
-                const newStock = currentStock + receivedQuantity;
+                // 🔧 修復：使用 limitToThreeDecimals 確保數字精度
+                const validatedReceivedQuantity = (0, numberValidation_1.limitToThreeDecimals)(receivedQuantity);
+                const validatedCurrentStock = (0, numberValidation_1.limitToThreeDecimals)(currentStock);
+                const newStock = (0, numberValidation_1.limitToThreeDecimals)(validatedCurrentStock + validatedReceivedQuantity);
                 // 更新庫存
                 transaction.update(itemRef, {
                     currentStock: newStock,
@@ -275,8 +285,8 @@ exports.receivePurchaseOrderItems = (0, https_1.onCall)(async (request) => {
                     itemType: itemType,
                     itemCode: item.code || '',
                     itemName: item.name || '',
-                    quantityBefore: currentStock,
-                    quantityChange: receivedQuantity,
+                    quantityBefore: validatedCurrentStock,
+                    quantityChange: validatedReceivedQuantity,
                     quantityAfter: newStock,
                     changeReason: `採購單 ${purchaseOrderId} 收貨入庫`
                 });
@@ -286,7 +296,7 @@ exports.receivePurchaseOrderItems = (0, https_1.onCall)(async (request) => {
                     itemType: itemType,
                     itemCode: item.code || '',
                     itemName: item.name || '',
-                    quantityChange: receivedQuantity,
+                    quantityChange: validatedReceivedQuantity,
                     quantityAfter: newStock
                 });
                 // 建立庫存異動記錄
@@ -294,7 +304,7 @@ exports.receivePurchaseOrderItems = (0, https_1.onCall)(async (request) => {
                 transaction.set(movementRef, {
                     itemRef: itemRef,
                     itemType: itemType,
-                    changeQuantity: receivedQuantity,
+                    changeQuantity: validatedReceivedQuantity,
                     type: "purchase_inbound",
                     relatedDocRef: poRef,
                     createdAt: firestore_1.FieldValue.serverTimestamp(),
