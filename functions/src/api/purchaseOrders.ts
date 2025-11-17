@@ -75,6 +75,7 @@ export const createPurchaseOrders = onCall(async (request) => {
 
         const baseItem = {
           itemRef: db.doc(`${collection}/${item.id}`),
+          type: isFragrance ? 'fragrance' : 'material', // 明確儲存類型，避免依賴 unit 判斷
           name: item.name,
           code: item.code,
           quantity: Number(item.quantity),
