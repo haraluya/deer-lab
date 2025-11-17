@@ -1239,6 +1239,59 @@ export interface ApiEndpoints {
     request: ResetPermissionsApi.GrantAdminRequest;
     response: ResetPermissionsApi.GrantAdminResponse;
   };
+
+  // 維護工具 - 採購單修復
+  'scanAllPurchaseOrders': {
+    request: {};
+    response: {
+      scannedCount: number;
+      problematicCount: number;
+      problematicPurchaseOrders: Array<{
+        id: string;
+        code: string;
+        status: string;
+        createdAt: string;
+        problemCount: number;
+        problems: Array<{
+          itemIndex: number;
+          code: string;
+          name: string;
+          needsTypeField: boolean;
+          needsRefFix: boolean;
+          expectedCollection: string;
+          currentCollection: string;
+        }>;
+      }>;
+    };
+  };
+  'fixPurchaseOrderItemRefs': {
+    request: {
+      purchaseOrderId: string;
+      dryRun?: boolean;
+    };
+    response: {
+      message: string;
+      dryRun: boolean;
+      purchaseOrderId: string;
+      purchaseOrderCode: string;
+      totalItems: number;
+      needsFix: number;
+      details: Array<{
+        index: number;
+        code: string;
+        name: string;
+        unit?: string;
+        status?: string;
+        currentType?: string;
+        expectedType?: string;
+        currentCollection?: string;
+        expectedCollection?: string;
+        needsTypeField?: boolean;
+        needsRefFix?: boolean;
+        itemId?: string;
+      }>;
+    };
+  };
 }
 
 // =============================================================================
