@@ -3,6 +3,7 @@ import { logger } from "firebase-functions";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { ensureIsAdmin } from "../utils/auth";
+import { limitToThreeDecimals } from "../utils/numberValidation";
 
 const db = getFirestore();
 
@@ -331,7 +332,10 @@ export const receivePurchaseOrderItems = onCall(async (request) => {
       for (const [itemRefPath, itemData] of itemDataMap) {
         const { itemRef, itemDoc, itemId, itemType, item, currentStock, receivedQuantity } = itemData;
 
-        const newStock = currentStock + receivedQuantity;
+        // 🔧 修復：使用 limitToThreeDecimals 確保數字精度
+        const validatedReceivedQuantity = limitToThreeDecimals(receivedQuantity);
+        const validatedCurrentStock = limitToThreeDecimals(currentStock);
+        const newStock = limitToThreeDecimals(validatedCurrentStock + validatedReceivedQuantity);
 
         // 更新庫存
         transaction.update(itemRef, {
@@ -345,8 +349,8 @@ export const receivePurchaseOrderItems = onCall(async (request) => {
           itemType: itemType,
           itemCode: item.code || '',
           itemName: item.name || '',
-          quantityBefore: currentStock,
-          quantityChange: receivedQuantity,
+          quantityBefore: validatedCurrentStock,
+          quantityChange: validatedReceivedQuantity,
           quantityAfter: newStock,
           changeReason: `採購單 ${purchaseOrderId} 收貨入庫`
         });
@@ -357,7 +361,7 @@ export const receivePurchaseOrderItems = onCall(async (request) => {
           itemType: itemType,
           itemCode: item.code || '',
           itemName: item.name || '',
-          quantityChange: receivedQuantity,
+          quantityChange: validatedReceivedQuantity,
           quantityAfter: newStock
         });
 
@@ -366,7 +370,7 @@ export const receivePurchaseOrderItems = onCall(async (request) => {
         transaction.set(movementRef, {
           itemRef: itemRef,
           itemType: itemType,
-          changeQuantity: receivedQuantity,
+          changeQuantity: validatedReceivedQuantity,
           type: "purchase_inbound",
           relatedDocRef: poRef,
           createdAt: FieldValue.serverTimestamp(),

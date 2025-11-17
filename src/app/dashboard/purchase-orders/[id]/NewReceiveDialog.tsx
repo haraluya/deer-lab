@@ -35,9 +35,11 @@ export function NewReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrde
 
   const handleQuantityChange = (index: number, value: string) => {
     const numValue = Number(value) || 0;
+    // 🔧 修復：限制為三位小數
+    const limitedValue = Math.round(numValue * 1000) / 1000;
     setReceivedQuantities(prev => ({
       ...prev,
-      [index]: numValue
+      [index]: limitedValue
     }));
   };
 
@@ -137,11 +139,15 @@ export function NewReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrde
             toast.warning(`項目 "${item.name}" 使用代號查找，建議更新採購單以包含正確的物料參考`);
           }
 
+          // 🔧 修復：確保發送到後端的數量也限制為三位小數
+          const quantity = receivedQuantities[index] || 0;
+          const validatedQuantity = Math.round(quantity * 1000) / 1000;
+
           return {
             itemRefPath,
             code: item.code,
             name: item.name,
-            receivedQuantity: receivedQuantities[index] || 0
+            receivedQuantity: validatedQuantity
           };
         })
       };
@@ -198,6 +204,7 @@ export function NewReceiveDialog({ isOpen, onOpenChange, onSuccess, purchaseOrde
                     id={`quantity-${index}`}
                     type="number"
                     min="0"
+                    step="0.001"
                     value={receivedQuantities[index] || 0}
                     onChange={(e) => handleQuantityChange(index, e.target.value)}
                     className="w-20 text-center"
