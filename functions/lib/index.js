@@ -98,4 +98,5 @@ __exportStar(require("./api/timeRecords"), exports);
 __exportStar(require("./api/globalCart"), exports);
 // 匯出維護工具 API（初始化用）
 __exportStar(require("./api/maintenance/initializeProductTypes"), exports);
+__exportStar(require("./api/maintenance/purchaseOrderFixes"), exports);
 //# sourceMappingURL=index.js.map
