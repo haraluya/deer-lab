@@ -4,8 +4,6 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ClientProvider } from "./client-provider";
 
-// 強制動態渲染，因為使用了 Context
-export const dynamic = 'force-dynamic';
 
 const inter = Inter({ subsets: ["latin"] });
 

@@ -1,9 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-
-// 強制動態渲染，跳過預渲染
-export const dynamic = 'force-dynamic';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
