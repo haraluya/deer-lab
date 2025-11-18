@@ -223,13 +223,23 @@ export default function PurchaseOrderDetailPage() {
 
 
   const handleQuantityChange = (index: number, newQuantity: number) => {
-    if (newQuantity < 1) return;
-    
     setEditedItems(prev => {
       const newItems = [...prev];
       newItems[index] = { ...newItems[index], quantity: newQuantity };
       return newItems;
     });
+  };
+
+  const handleQuantityBlur = (index: number) => {
+    const item = editedItems[index];
+    if (item.quantity < 0) {
+      setEditedItems(prev => {
+        const newItems = [...prev];
+        newItems[index] = { ...newItems[index], quantity: 0 };
+        return newItems;
+      });
+      toast.error("數量不能小於 0，已自動調整為 0");
+    }
   };
 
   const handleCostPerUnitChange = (index: number, newCostPerUnit: number) => {
@@ -816,10 +826,10 @@ export default function PurchaseOrderDetailPage() {
                               <div className="flex items-center justify-end gap-2">
                                 <Input
                                   type="number"
-                                  min="0"
                                   step="0.1"
                                   value={item.quantity}
                                   onChange={(e) => handleQuantityChange(index, parseFloat(e.target.value) || 0)}
+                                  onBlur={() => handleQuantityBlur(index)}
                                   className="w-20 text-center border-amber-200 focus:border-amber-500"
                                 />
                                 <span className="text-sm text-gray-500 whitespace-nowrap">{item.unit}</span>
@@ -956,10 +966,10 @@ export default function PurchaseOrderDetailPage() {
                               <div className="flex items-center gap-2">
                                 <Input
                                   type="number"
-                                  min="0"
                                   step="0.1"
                                   value={item.quantity}
                                   onChange={(e) => handleQuantityChange(index, parseFloat(e.target.value) || 0)}
+                                  onBlur={() => handleQuantityBlur(index)}
                                   className="flex-1 text-center border-amber-200 focus:border-amber-500 h-10 text-lg"
                                 />
                                 <span className="text-sm text-gray-500">{item.unit}</span>
