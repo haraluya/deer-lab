@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+
+// 強制動態渲染，跳過預渲染
+export const dynamic = 'force-dynamic';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -25,9 +28,9 @@ export default function PurchaseOrderMaintenancePage() {
     try {
       const result = await apiClient.call('scanAllPurchaseOrders', {});
 
-      if (result.success) {
-        setScanResult(result);
-        toast.success(`掃描完成：發現 ${result.problematicCount} 個需要修復的採購單`);
+      if (result.success && result.data) {
+        setScanResult(result.data);
+        toast.success(`掃描完成：發現 ${result.data.problematicCount} 個需要修復的採購單`);
       } else {
         toast.error(result.error?.message || '掃描失敗');
       }
@@ -55,12 +58,12 @@ export default function PurchaseOrderMaintenancePage() {
         dryRun: true
       });
 
-      if (result.success) {
-        setFixResult(result);
-        if (result.needsFix === 0) {
+      if (result.success && result.data) {
+        setFixResult(result.data);
+        if (result.data.needsFix === 0) {
           toast.success('此採購單無需修復');
         } else {
-          toast.info(`分析完成：發現 ${result.needsFix} 個需要修復的項目`);
+          toast.info(`分析完成：發現 ${result.data.needsFix} 個需要修復的項目`);
         }
       } else {
         toast.error(result.error?.message || '分析失敗');
@@ -92,9 +95,9 @@ export default function PurchaseOrderMaintenancePage() {
         dryRun: false
       });
 
-      if (result.success) {
-        setFixResult(result);
-        toast.success(`修復完成：已修復 ${result.needsFix} 個項目`);
+      if (result.success && result.data) {
+        setFixResult(result.data);
+        toast.success(`修復完成：已修復 ${result.data.needsFix} 個項目`);
       } else {
         toast.error(result.error?.message || '修復失敗');
       }
