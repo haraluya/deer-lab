@@ -16,13 +16,16 @@ npm run install:functions      # 安裝 Functions 依賴
 
 ### 部署相關（Windows 環境）
 ```bash
-# 標準部署流程
+# 🚀 推薦：使用安全部署腳本（避免常見錯誤）
+.\scripts\safe-deploy.ps1
+
+# 標準部署流程（手動）
 npm run build
 copy .next functions\  /E /Y
 rmdir /s /q functions\.next\cache
 firebase deploy --only functions:nextServer
 
-# 使用優化部署腳本（推薦）
+# 使用優化部署腳本
 scripts\optimize-deploy.bat
 
 # 完整部署 (hosting + functions)
@@ -31,6 +34,10 @@ npm run deploy-full
 # 僅部署 hosting
 npm run deploy-only
 ```
+
+**⚠️ 部署注意事項**：
+- 優先使用 `safe-deploy.ps1` 腳本，已包含完整的檢查和錯誤預防
+- 詳細的故障排除指南請參考：[`docs/部署故障排除指南.md`](docs/部署故障排除指南.md)
 
 ### Functions 開發
 ```bash
